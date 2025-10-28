@@ -1,7 +1,22 @@
 {
   "name": "VOLTAGE",
-  "version": "0.1.0",
-  "private": true,
+  "description": "An open-source, FFmpeg-based video encoding API that supports multiple concurrent instances. Easily scale video processing with parallel encoding, efficient resource management, and flexible API endpoints for a reliable, production-ready solution.",
+  "version": "0.0.1",
+  "author": {
+    "name": "RADAAR",
+    "email": "dev@radaar.io",
+    "url": "http://www.radaar.io/"
+  },
+  "contributors": [
+    {
+      "name": "Mustafa Ercan Zirh",
+      "url": "https://github.com/ercanzirh"
+    },
+    {
+      "name": "Faruk Gercek",
+      "url": "https://github.com/favger"
+    }
+  ],
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
