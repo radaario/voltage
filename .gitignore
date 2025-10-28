@@ -3,6 +3,6 @@ dist
 storage
 .env
 db.sqlite*
-.DS_Store
 npm-debug.log*
+.DS_Store
 
