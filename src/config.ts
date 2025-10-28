@@ -22,7 +22,7 @@ export const config = {
     secret: process.env.VOLTAGE_STORAGE_SECRET,
     region: process.env.VOLTAGE_STORAGE_REGION ?? '',
     bucket: process.env.VOLTAGE_STORAGE_BUCKET ?? '',
-    path: process.env.VOLTAGE_STORAGE_PATH ?? '/tmp'
+    path: process.env.VOLTAGE_STORAGE_PATH ?? '/storage'
   },
   db: {
     kind: (process.env.VOLTAGE_DB_KIND ?? 'SQLITE') as 'SQLITE' | 'MYSQL' | 'MARIADB' | 'POSTGRESQL' | 'MSSQL' | 'AWS_REDSHIFT' | 'COCKROACHDB',

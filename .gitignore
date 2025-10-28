@@ -1,6 +1,8 @@
 node_modules
 dist
+storage
 .env
+db.sqlite*
 .DS_Store
 npm-debug.log*
 
