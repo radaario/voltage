@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VOLTAGE: Dashboard</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #ddd; padding: 8px; }
+      th { background: #f5f5f5; text-align: left; }
+      .status-queued { color: #8a6d3b; }
+      .status-processing { color: #31708f; }
+      .status-completed { color: #3c763d; }
+      .status-failed { color: #a94442; }
+    </style>
+  </head>
+  <body>
+    <h1>VOLTAGE: Jobs</h1>
+    <table id="jobs">
+      <thead>
+        <tr>
+          <th>Preview</th>
+          <th>Key</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Completed</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <script>
+      async function load() {
+        const res = await fetch('/jobs');
+        const rows = await res.json();
+        const tbody = document.querySelector('#jobs tbody');
+        tbody.innerHTML = '';
+        const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+        for (const j of rows) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><img src="/jobs/${j.key}/preview?v=${timestamp}" height="50" /></td>
+            <td>${j.key}</td>
+            <td>${j.priority}</td>
+            <td class="status-${j.status}">${j.status}</td>
+            <td>
+              ${j.completed_at}<br>
+              <small>${j.started_at}</small>
+            </td>
+            <td>${j.created_at}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      }
+      load();
+      setInterval(load, 3000);
+    </script>
+  </body>
+  </html>
+
