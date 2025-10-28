@@ -62,7 +62,7 @@ function getMimeType(extension: string): string {
 
 async function runFfprobe(filePath: string): Promise<any> {
   return new Promise((resolve, reject) => {
-    const ffprobe = spawn(config.ffmpeg.ffprobePath, [
+    const ffprobe = spawn(config.ffprobe.path, [
       '-v', 'quiet',
       '-print_format', 'json',
       '-show_format',

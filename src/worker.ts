@@ -1,6 +1,7 @@
 import { initDb, pool } from './db.js';
 import { logger } from './logger.js';
 import { config } from './config.js';
+import { getNow } from './utils/datetime.js';
 import { downloadInput } from './services/downloader.js';
 import { encode } from './services/encoder.js';
 import { uploadOutput } from './services/uploader.js';
@@ -16,8 +17,8 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
   try {
     await initDb();
 
-    /* WORKER: UPDATE */
-    await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: workerKey });
+  /* WORKER: UPDATE */
+  await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`, { key: workerKey, now: getNow() });
     
     const [rows] = await pool.query(`SELECT * FROM ${dbPrefix}jobs WHERE \`key\` = :key`, { key: jobKey });
     if ((rows as any[]).length === 0) {
@@ -27,7 +28,7 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
 
     const job = (rows as any[])[0];
 
-    await pool.execute(`UPDATE ${dbPrefix}jobs SET status = 'DOWNLOADING', started_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: job.key });
+  await pool.execute(`UPDATE ${dbPrefix}jobs SET status = 'DOWNLOADING', started_at = :now WHERE \`key\` = :key`, { key: job.key, now: getNow() });
     
     // Parse notification spec if available
     const notification: NotificationSpec | undefined = job.notification 
@@ -42,11 +43,11 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
     
     let input_metadata: InputMetadata | null = null;
     if (shouldExtractMetadata) {
-      /* WORKER: UPDATE */
-      await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: workerKey });
+  /* WORKER: UPDATE */
+  await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`, { key: workerKey, now: getNow() });
 
       // Update status to ANALYZING
-      await pool.execute(`UPDATE ${dbPrefix}jobs SET status = 'ANALYZING' WHERE \`key\` = :key`, { key: job.key });
+  await pool.execute(`UPDATE ${dbPrefix}jobs SET status = 'ANALYZING' WHERE \`key\` = :key`, { key: job.key });
       
       // Extract metadata from input file
       logger.info({ jobKey, inputPath }, 'Extracting metadata from input file');
@@ -68,8 +69,8 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
     await generatePreview(inputPath, job.key, input_metadata?.duration ?? 0);
     logger.info({ jobKey }, 'Preview generated successfully');
 
-    /* WORKER: UPDATE */
-    await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: workerKey });
+  /* WORKER: UPDATE */
+  await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`, { key: workerKey, now: getNow() });
     
     // Update status to ENCODING
     await pool.execute(`UPDATE ${dbPrefix}jobs SET status = 'ENCODING' WHERE \`key\` = :key`, { key: job.key });
@@ -84,14 +85,14 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
       await pool.execute(`UPDATE ${dbPrefix}job_outputs SET status = 'ENCODING' WHERE \`key\` = :key`, { key: out.key });
       
       try {
-        /* WORKER: UPDATE */
-        await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: workerKey });
+  /* WORKER: UPDATE */
+  await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`, { key: workerKey, now: getNow() });
 
         const spec = JSON.parse(out.spec_json);
         const outFile = await encode(inputPath, spec);
 
         // Update status to UPLOADING
-        await pool.execute(`UPDATE ${dbPrefix}jobs SET status = 'UPLOADING' WHERE \`key\` = :key`, { key: job.key });
+  await pool.execute(`UPDATE ${dbPrefix}jobs SET status = 'UPLOADING' WHERE \`key\` = :key`, { key: job.key });
         
         const result = await uploadOutput(spec, outFile, globalDestination);
         await pool.execute(
@@ -99,19 +100,19 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
           { key: out.key, res: JSON.stringify(result) }
         );
 
-        /* WORKER: UPDATE */
-        await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: workerKey });
+  /* WORKER: UPDATE */
+  await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`, { key: workerKey, now: getNow() });
         
         // Mark as COMPLETED after successful upload
-        await pool.execute(`UPDATE ${dbPrefix}job_outputs SET status = 'COMPLETED' WHERE \`key\` = :key`, { key: out.key });
+  await pool.execute(`UPDATE ${dbPrefix}job_outputs SET status = 'COMPLETED' WHERE \`key\` = :key`, { key: out.key });
       } catch (err: any) {
         const errorObj = {
           key: 'ENCODING_ERROR',
           message: String(err?.message ?? err)
         };
 
-        /* WORKER: UPDATE */
-        await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: workerKey });
+  /* WORKER: UPDATE */
+  await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`, { key: workerKey, now: getNow() });
 
         await pool.execute(
           `UPDATE ${dbPrefix}job_outputs SET status = 'FAILED', error = :err WHERE \`key\` = :key`,
@@ -122,10 +123,10 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
       }
     }
 
-    /* WORKER: UPDATE */
-    await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: workerKey });
+  /* WORKER: UPDATE */
+  await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`, { key: workerKey, now: getNow() });
 
-    await pool.execute(`UPDATE ${dbPrefix}jobs SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: job.key });
+  await pool.execute(`UPDATE ${dbPrefix}jobs SET status = 'COMPLETED', completed_at = :now WHERE \`key\` = :key`, { key: job.key, now: getNow() });
     
     if (notification) {
       // Fetch current job data and outputs for notification
@@ -236,16 +237,16 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
       await notify(notification, notificationPayload);
     }
 
-    /* WORKER: UPDATE */
-    await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: workerKey });
+  /* WORKER: UPDATE */
+  await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`, { key: workerKey, now: getNow() });
     
     logger.info({ instanceKey,  workerKey, jobKey }, 'Job completed successfully!');
     process.exit(0);
   } catch (err: any) {
     logger.error({ err, instanceKey,  workerKey, jobKey }, 'Job failed!');
 
-    /* WORKER: UPDATE */
-    await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: workerKey });
+  /* WORKER: UPDATE */
+  await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`, { key: workerKey, now: getNow() });
     
     const errorObj = {
       key: 'JOB_PROCESSING_ERROR',
@@ -392,8 +393,8 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
       }
     }
 
-    /* WORKER: UPDATE */
-    await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE \`key\` = :key`, { key: workerKey });
+  /* WORKER: UPDATE */
+  await pool.execute(`UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`, { key: workerKey, now: getNow() });
     
     process.exit(1);
   }

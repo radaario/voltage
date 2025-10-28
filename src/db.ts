@@ -156,11 +156,15 @@ function createMySQLPool(): DbPool {
   const mysqlPool = mysql.createPool({
     host: config.db.host,
     port: config.db.port,
-    user: config.db.user,
+    user: config.db.username,
     password: config.db.password,
     database: config.db.database,
     connectionLimit: 10,
-    namedPlaceholders: true
+    namedPlaceholders: true,
+    // If config.timezone is set, forward it to the MySQL driver so TIMESTAMP
+    // parsing/formatting happens in the requested timezone. mysql2 accepts
+    // strings like '+00:00' or named zones depending on the driver/OS.
+    timezone: config.timezone ?? undefined
   });
   
   const pool: DbPool = {
@@ -193,11 +197,29 @@ function createPostgreSQLPool(): DbPool {
   const pgPool = new PgPool({
     host: config.db.host,
     port: config.db.port,
-    user: config.db.user,
+    user: config.db.username,
     password: config.db.password,
     database: config.db.database,
     max: 10
   });
+  // If a timezone is configured, ensure each new client session uses it.
+  // We register a connect handler so clients borrowed from the pool have
+  // the session timezone set. We also guard calls where necessary.
+  if (config.timezone) {
+    try {
+      // pg.Pool emits 'connect' when a new client is connected
+      // Note: types may not include 'on' here but runtime supports it.
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      pgPool.on('connect', (client: any) => {
+        client.query(`SET TIME ZONE '${config.timezone}'`).catch((err: any) => {
+          logger.error({ err, timezone: config.timezone }, 'Failed to set Postgres session timezone');
+        });
+      });
+    } catch (err: any) {
+      logger.error({ err, timezone: config.timezone }, 'Failed to register Postgres connect handler for timezone');
+    }
+  }
   
   const convertSQLForPostgreSQL = (sql: string): string => {
     // Convert MySQL-specific syntax to PostgreSQL
@@ -257,6 +279,20 @@ function createPostgreSQLPool(): DbPool {
     
     async getConnection(): Promise<DbConnection> {
       const client = await pgPool.connect();
+      // Ensure session timezone is set for this connection as well. This
+      // covers the case where the pool connect handler may not have run or
+      // when borrowing an existing connection that needs the session set.
+      if (config.timezone) {
+        try {
+          // Setting timezone per-session
+          // Use a template literal but protect from injection by limiting
+          // to configured values; we assume config.timezone is trusted here.
+          await client.query(`SET TIME ZONE '${config.timezone}'`);
+        } catch (err: any) {
+          logger.error({ err, timezone: config.timezone }, 'Failed to set timezone on Postgres connection');
+        }
+      }
+
       return {
         async query(sql: string, params?: Record<string, any>): Promise<[any[], any]> {
           const convertedSql = convertSQLForPostgreSQL(sql);
@@ -293,7 +329,7 @@ function createMSSQLPool(): DbPool {
   const poolConfig: mssql.config = {
     server: config.db.host,
     port: config.db.port,
-    user: config.db.user,
+    user: config.db.username,
     password: config.db.password,
     database: config.db.database,
     options: {
@@ -314,6 +350,13 @@ function createMSSQLPool(): DbPool {
   mssqlPool.connect().catch((err: any) => {
     logger.error({ err }, 'MSSQL connection failed');
   });
+
+  // SQL Server doesn't provide a simple session-level 'SET TIME ZONE' like
+  // Postgres or MySQL. If a timezone is configured, log a warning so users
+  // know it won't automatically be applied at the connection/session level.
+  if (config.timezone) {
+    logger.warn({ timezone: config.timezone }, 'MSSQL does not support setting a session timezone; config.timezone will be ignored for MSSQL connections');
+  }
   
   const convertSQLForMSSQL = (sql: string): string => {
     // Convert MySQL-specific syntax to MSSQL
@@ -420,7 +463,7 @@ export async function initDb(): Promise<void> {
 
     // Instances table: track running instances/pods of this application
     await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}instances (
-      instance_key VARCHAR(255) PRIMARY KEY,
+      \`key\` VARCHAR(255) PRIMARY KEY,
       cpu_core_count INT NOT NULL DEFAULT 0,
       memory_total INT NOT NULL DEFAULT 0,
       memory_free INT NOT NULL DEFAULT 0,
@@ -437,10 +480,10 @@ export async function initDb(): Promise<void> {
     // Workers table: persist information about active workers so the cluster
     // can observe worker state across instances instead of relying on in-memory maps.
     await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}workers (
-      worker_key CHAR(36) PRIMARY KEY,
-      job_key CHAR(36) NOT NULL,
-      pid INT NULL,
+      \`key\` CHAR(36) PRIMARY KEY,
       instance_key VARCHAR(255) NULL,
+      pid INT NULL,
+      job_key CHAR(36) NOT NULL,
       status ENUM('RUNNING','EXITED') NOT NULL DEFAULT 'RUNNING',
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

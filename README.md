@@ -237,7 +237,7 @@ kubectl apply -f k8s/encoder-retention.yaml
 ### Notes on Scalability and Safety
 - Scale workers horizontally; MySQL row-level locks prevent double-processing.
 - Tune `visibility timeout` to exceed longest expected step; worker periodically extends it.
-- Consider isolating queue in a dedicated table, adding dead-letter handling on `attempts >= maxAttempts`.
+- Consider isolating queue in a dedicated table, adding dead-letter handling on `attempts >= max_attempts`.
 - For large assets, prefer presigned URLs for both download and upload.
 
 ### License

@@ -1,0 +1,17 @@
+export const SOCKET_EVENTS = {
+	connect: "connect",
+	disconnect: "disconnect",
+	connect_error: "connect_error",
+	CLIENT: {
+		GET_EVENTS: "SEND_EVENTS",
+		GET_SIGNIN_RESULT: "SEND_SIGNIN_RESULT",
+		SEND_CLEAR: "SEND_CLEAR",
+		SEND_EVENT_DELETE: "SEND_EVENT_DELETE"
+	},
+	SERVER: {
+		SEND_EVENTS: "SEND_EVENTS",
+		SEND_SIGNIN_RESULT: "SEND_SIGNIN_RESULT",
+		GET_CLEAR: "SEND_CLEAR",
+		GET_EVENT_DELETE: "SEND_EVENT_DELETE"
+	}
+};

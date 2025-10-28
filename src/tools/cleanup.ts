@@ -1,6 +1,7 @@
 import { pool } from '../db.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
+import { getNow } from '../utils/datetime.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
@@ -9,8 +10,8 @@ export async function main() {
   const hours = config.jobs.retention;
   
   const [rows] = await pool.query(
-    `SELECT \`key\` FROM jobs WHERE status = 'COMPLETED' AND completed_at IS NOT NULL AND completed_at < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL :h HOUR)`,
-    { h: hours }
+    `SELECT \`key\` FROM jobs WHERE status = 'COMPLETED' AND completed_at IS NOT NULL AND completed_at < DATE_SUB(:now, INTERVAL :hours HOUR)`,
+    { now: getNow(), hours: hours }
   );
   
   const keys = (rows as any[]).map((r) => r.key);
