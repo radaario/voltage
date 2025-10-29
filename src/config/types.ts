@@ -151,9 +151,9 @@ export type InputMetadata = {
 export type JobOutputRow = {
   key: string;
   job_key: string;
-  output_index: number;
-  spec_json: unknown;
-  result_json: unknown | null;
+  index: number;
+  specs: unknown;
+  result: unknown | null;
   status: 'PENDING' | 'ENCODING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
   updated_at: string;
   created_at: string;

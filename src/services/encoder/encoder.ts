@@ -1,5 +1,6 @@
-import { OutputSpec } from '../types.js';
-import { config } from '../config.js';
+import { config } from '../../config';
+import { OutputSpec } from '../../config/types.js';
+
 import { spawn } from 'child_process';
 import { tmpdir } from 'os';
 import path from 'path';

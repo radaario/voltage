@@ -1,10 +1,12 @@
+import { config } from '../../config';
+
+import { logger } from '../../utils/logger.js';
+
 import { spawn } from 'child_process';
-import { config } from '../config.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { tmpdir } from 'os';
 import { S3Client, PutObjectCommand, PutObjectCommandInput } from '@aws-sdk/client-s3';
-import { logger } from '../logger.js';
 
 export async function generatePreview(inputPath: string, jobKey: string, durationInSeconds: number): Promise<string> {
   try {

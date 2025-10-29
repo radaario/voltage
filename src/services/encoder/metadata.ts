@@ -1,10 +1,12 @@
+import { config } from '../../config';
+import { InputMetadata } from '../../config/types.js';
+
+import { logger } from '../../utils/logger.js';
+
 import { spawn } from 'child_process';
-import { config } from '../config.js';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
-import { InputMetadata } from '../types.js';
-import { logger } from '../logger.js';
 
 export async function extractMetadata(filePath: string): Promise<InputMetadata> {
   try {

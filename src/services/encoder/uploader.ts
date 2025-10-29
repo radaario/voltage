@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { OutputSpec, DestinationSpec, AWS_S3_ACL } from '../types.js';
+import { OutputSpec, DestinationSpec, AWS_S3_ACL } from '../../config/types.js';
 import fs from 'fs/promises';
 import { S3Client, PutObjectCommand, PutObjectCommandInput } from '@aws-sdk/client-s3';
-import { logger } from '../logger.js';
+import { logger } from '../../utils/logger.js';
 
 export async function uploadOutput(spec: OutputSpec, filePath: string, globalDestination?: DestinationSpec): Promise<Record<string, unknown>> {
   // Use output's destination if available, otherwise fall back to global destination

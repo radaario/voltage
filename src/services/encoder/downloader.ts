@@ -1,10 +1,10 @@
 import axios from 'axios';
-import { InputSpec } from '../types.js';
+import { InputSpec } from '../../config/types.js';
 import fs from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-import { logger } from '../logger.js';
+import { logger } from '../../utils/logger.js';
 
 export async function downloadInput(input: InputSpec): Promise<string> {
   const dir = await fs.mkdtemp(path.join(tmpdir(), 'enc-input-'));

@@ -1,8 +1,10 @@
+import { config } from '../../config';
+import { NotificationSpec } from '../../config/types.js';
+
+import { logger } from '../../utils/logger.js';
+
 import axios from 'axios';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
-import { config } from '../config.js';
-import { NotificationSpec } from '../types.js';
-import { logger } from '../logger.js';
 
 export async function notify(notification: NotificationSpec, payload: unknown): Promise<void> {
   try {

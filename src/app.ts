@@ -1,24 +1,23 @@
+import { config } from './config';
+import { CreateJobRequest, OutputSpec } from './config/types.js';
+
+import { createInstanceKey, getInstanceSystemInfo, uuid, uukey, hash, getNow } from './utils';
+import { logger } from './utils/logger.js';
+import { initDb, pool } from './utils/database.js';
+
 import 'express-async-errors';
 import os from 'os';
 import express, { Request, Response } from "express";
 import { spawn, ChildProcess } from 'child_process';
-import { config } from './config.js';
-import { logger } from './logger.js';
-import { initDb, pool } from './db.js';
-import { v4 as uuidv4 } from 'uuid';
-import { enqueueJob } from './queue.js';
-import { CreateJobRequest, OutputSpec } from './types.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs/promises';
-import crypto from 'crypto';
 import cors from "cors";
-import { getNow } from './utils/datetime.js';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 
 // INSTANCE: KEY
-const instanceKey = uuidv4();
+const instanceKey = createInstanceKey();
 
 const app = express();
 
@@ -32,7 +31,7 @@ app.use(express.json(...expressOptions));
 // cors
 app.use(cors());
 
-// Database prefix helper — append '_' only when a prefix is configured
+/* DATABASE: PREFIX */
 const dbPrefix = config.db.prefix ? `${config.db.prefix}_` : '';
 
 // Authentication middleware factory
@@ -61,7 +60,7 @@ const authMiddleware = (options: { forceAuth?: boolean } = {}) => {
     }
 
     // Expected tokens
-    const dashboardToken = crypto.createHash('md5').update(config.dashboard.password || '').digest('hex');
+    const dashboardToken = hash(config.dashboard.password || uuid());
     const apiToken = config.api.key;
 
     // Check if token matches either dashboard token or API key
@@ -72,263 +71,6 @@ const authMiddleware = (options: { forceAuth?: boolean } = {}) => {
     next();
   };
 };
-
-// Keep in-memory ChildProcess handles only. Worker metadata is persisted in DB.
-// Keys in processMap are workerKey (uuid per worker), not job keys.
-const processMap = new Map<string, ChildProcess>();
-
-// Function to spawn a worker child process for a specific job
-async function spawnWorkerForJob(jobKey: string): Promise<void> {
-  try {
-    // If there's already a RUNNING worker for this job in the DB, skip
-    const [existing] = await pool.query(`SELECT * FROM ${dbPrefix}workers WHERE job_key = :job_key AND status = 'RUNNING'`, { job_key: jobKey });
-    if ((existing as any[]).length > 0) {
-      logger.warn({ jobKey }, 'Worker already running for job!');
-      return;
-    }
-
-    // Respect global max workers by counting RUNNING rows in DB
-    const [countRows] = await pool.query(`SELECT COUNT(*) as cnt FROM ${dbPrefix}workers WHERE status = 'RUNNING'`);
-    const runningCount = (countRows as any[])[0]?.cnt ?? 0;
-    if (runningCount >= config.workers.max) {
-      logger.warn({ jobKey, activeCount: runningCount, max: config.workers.max }, 'max workers reached, cannot spawn new worker');
-      return;
-    }
-  } catch (err) {
-    logger.error({ err, jobKey }, 'failed to check existing workers in DB');
-    return;
-  }
-
-  const workerKey = uuidv4();
-  let child: ChildProcess;
-
-  /* WORKER: RUN */
-  if (config.env === 'prod') {
-    const workerScriptPath = path.join(process.cwd(), 'dist', 'worker.js');
-    child = spawn('node', [workerScriptPath, instanceKey, workerKey, jobKey], {
-      stdio: ['inherit', 'inherit', 'inherit'],
-      cwd: process.cwd()
-    });
-  } else {
-    const workerScriptPath = path.join(process.cwd(), 'src', 'worker.ts');
-    child = spawn('npx', ['tsx', workerScriptPath, instanceKey, workerKey, jobKey], {
-      stdio: ['inherit', 'inherit', 'inherit'],
-      cwd: process.cwd(),
-      shell: true
-    });
-  }
-
-  /* WORKER: INSERT */
-  try {
-    await pool.execute(
-      `INSERT INTO ${dbPrefix}workers (\`key\`, instance_key, pid, job_key, status, updated_at, created_at) VALUES (:worker_key, :instance_key, :pid, :job_key, 'RUNNING', :now, :now)`,
-      { worker_key: workerKey, instance_key: instanceKey, pid: child.pid, job_key: jobKey, now: getNow() }
-    );
-  } catch (err) {
-    logger.error({ err, jobKey }, 'Failed to insert worker!');
-  }
-
-  processMap.set(workerKey, child);
-
-  /* INSTANCE: UPDATE */
-  try {
-    await pool.execute(
-      `UPDATE ${dbPrefix}instances SET memory_free = :memory_free, workers_running_count = workers_running_count + 1, updated_at = :now WHERE \`key\` = :instance_key`,
-      { instance_key: instanceKey, memory_free: os.freemem(), now: getNow() }
-    );
-  } catch (err) {
-    logger.error({ err, instanceKey, workerKey, jobKey }, 'Failed to update instance!');
-  }
-
-  child.on('exit', async (code, signal) => {
-    logger.info({ instanceKey, jobKey, workerKey, code, signal }, 'Worker process exited!');
-    processMap.delete(workerKey);
-    
-    /* WORKER: UPDATE */
-    try {
-      await pool.execute(
-        `UPDATE ${dbPrefix}workers SET status = 'EXITED', exit_code = :code, exit_signal = :signal, updated_at = :now WHERE \`key\` = :worker_key`,
-        { code, signal, worker_key: workerKey, now: getNow() }
-      );
-    } catch (err) {
-      logger.error({ err, instanceKey, workerKey, jobKey }, 'Failed to update worker!');
-    }
-
-    /* INSTANCE: UPDATE */
-    try {
-      await pool.execute(
-        `UPDATE ${dbPrefix}instances SET memory_free = :memory_free, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
-        { instance_key: instanceKey, memory_free: os.freemem(), now: getNow() }
-      );
-    } catch (err) {
-      logger.error({ err, instanceKey, workerKey, jobKey }, 'Failed to update instance!');
-    }
-  });
-
-  child.on('error', async (err) => {
-    logger.error({ err, instanceKey, workerKey, jobKey }, 'worker process error');
-    processMap.delete(workerKey);
-    
-    /* WORKER: UPDATE */
-    try {
-      await pool.execute(
-        `UPDATE ${dbPrefix}workers SET status = 'EXITED', exit_code = NULL, exit_signal = 'ERROR', updated_at = :now WHERE \`key\` = :worker_key`,
-        { worker_key: workerKey, now: getNow() }
-      );
-    } catch (err) {
-      logger.error({ err, instanceKey, workerKey, jobKey }, 'Failed to update worker!');
-    }
-    
-    /* INSTANCE: UPDATE */
-    try {
-      await pool.execute(
-        `UPDATE ${dbPrefix}instances SET memory_free = :memory_free, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
-        { instance_key: instanceKey, memory_free: os.freemem(), now: getNow() }
-      );
-    } catch (err) {
-      logger.error({ err, instanceKey, workerKey, jobKey }, 'Failed to update instance!');
-    }
-  });
-
-  logger.info({ instanceKey, workerKey, jobKey }, 'Spawned worker process!');
-}
-
-// Instance interval: update own instance timestamp and prune old instances/workers
-async function instanceInterval(): Promise<void> {
-  const now = Date.now();
-
-  try {
-  // Update our own instance record (memory_free and heartbeat)
-    await pool.execute(
-      `UPDATE ${dbPrefix}instances SET memory_free = :memory_free, updated_at = :now WHERE \`key\` = :instance_key`,
-      { instance_key: instanceKey, memory_free: os.freemem(), now: getNow() }
-    );
-
-    // --- Instances maintenance ---
-    const [instances] = await pool.query(`SELECT * FROM ${dbPrefix}instances WHERE \`key\` != :instance_key`, { instance_key: instanceKey });
-    
-    for (const instance of instances) {
-      let instanceStatus = instance.status;
-      const last = new Date(instance.updated_at).getTime();
-      const age = now - last;
-
-      // If instance is RUNNING but hasn't heartbeated within running_timeout, mark it EXITED
-      if (instanceStatus === 'RUNNING' && age > config.instances.running_timeout) {
-        try {
-          instanceStatus = 'EXITED';
-          
-          await pool.execute(
-            `UPDATE ${dbPrefix}instances SET status = 'EXITED' WHERE \`key\` = :instance_key`,
-            { instance_key: instance.key }
-          );
-
-          logger.info({ instanceKey: instance.key }, 'marked stale running instance as EXITED');
-        } catch (err) {
-          logger.error({ err, instanceKey: instance.key }, 'failed to mark stale running instance as EXITED');
-        }
-      }
-
-      // If instance already EXITED and old enough, remove instance and its workers
-      if (instanceStatus === 'EXITED' && age > (config.instances.running_timeout + config.instances.exited_timeout)) {
-        try {
-          await pool.execute(
-            `DELETE FROM ${dbPrefix}workers WHERE \`key\` = :instance_key`,
-            { instance_key: instance.key }
-          );
-
-          await pool.execute(
-            `DELETE FROM ${dbPrefix}instances WHERE \`key\` = :instance_key`,
-            { instance_key: instance.key }
-          );
-          
-          logger.info({ instanceKey: instance.key }, 'removed stale exited instance and its workers');
-        } catch (err) {
-          logger.error({ err, instanceKey: instance.key }, 'failed to remove stale exited instance');
-        }
-        continue;
-      }
-    }
-
-    // --- Workers maintenance ---
-    const [workers] = await pool.query(`SELECT * FROM ${dbPrefix}workers`);
-
-    for (const worker of workers) {
-      let workerStatus = worker.status;
-      const last = new Date(worker.updated_at).getTime();
-      const age = now - last;
-
-      // If worker is RUNNING but hasn't heartbeated within running_timeout, mark it EXITED
-      if (workerStatus === 'RUNNING' && age > config.workers.running_timeout) {
-        try {
-          workerStatus = 'EXITED';
-          
-          await pool.execute(
-            `UPDATE ${dbPrefix}workers SET status = 'EXITED' WHERE \`key\` = :worker_key`,
-            { worker_key: worker.key }
-          );
-
-          // Decrement instance workers_running_count for the instance
-          try {
-            await pool.execute(
-              `UPDATE ${dbPrefix}instances SET workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END WHERE \`key\` = :instance_key`,
-              { instance_key: worker.instance_key }
-            );
-          } catch (err) {
-            logger.error({ err, instanceKey: worker.instance_key, workerKey: worker.key }, 'failed to decrement instance workers_running_count for stale worker');
-          }
-
-          // WORKER: PROCESS: KILL & CLEANUP
-          /*
-          if (processMap.has(worker.key)) {
-            const proc = processMap.get(worker.key);
-            
-            if (proc) {
-              try { proc.kill('SIGTERM'); } catch (_) { }
-            }
-
-            processMap.delete(worker.key);
-          }
-          */
-
-          logger.info({ instanceKey: worker.instance_key, workerKey: worker.key }, 'marked stale running worker as EXITED');
-        } catch (err) {
-          logger.error({ err, instanceKey: worker.instance_key, workerKey: worker.key }, 'failed to mark stale running worker as EXITED');
-        }
-      }
-
-      // Remove workers that are EXITED and old enough
-      if (workerStatus === 'EXITED' && age > (config.workers.running_timeout + config.workers.exited_timeout)) {
-        try {
-          await pool.execute(
-            `DELETE FROM ${dbPrefix}workers WHERE \`key\` = :worker_key`,
-            { worker_key: worker.key }
-          );
-          
-          // WORKER: PROCESS: KILL & CLEANUP
-          /*
-          if (processMap.has(worker.key)) {
-            const proc = processMap.get(worker.key);
-            
-            if (proc) {
-              try { proc.kill('SIGTERM'); } catch (_) { }
-            }
-
-            processMap.delete(worker.key);
-          }
-          */
-
-          logger.info({ instanceKey: worker.instance_key, workerKey: worker.key }, 'removed stale exited worker');
-        } catch (err) {
-          logger.error({ err, workerKey: worker.key }, 'failed to remove stale exited worker');
-        }
-        continue;
-      }
-    }
-  } catch (err) {
-    logger.error({ err }, 'instance interval maintenance failed');
-  }
-}
-
 
 // Sanitize sensitive fields from objects
 function sanitizeObject(obj: any): any {
@@ -364,32 +106,7 @@ function sanitizeObject(obj: any): any {
 
 // Queue monitoring function
 async function monitorQueue(): Promise<void> {
-  try {
-    // Check for available jobs in the queue that are still PENDING
-    // Order by priority (lower = higher priority), then by created_at
-    const [rows] = await pool.query(
-      `SELECT qj.key, qj.job_key FROM ${dbPrefix}queue_jobs qj
-       JOIN ${dbPrefix}jobs j ON qj.job_key = j.key
-       WHERE qj.available_at <= :now 
-         AND qj.visibility_timeout <= :now
-         AND j.status = 'PENDING' 
-       ORDER BY qj.priority ASC, qj.created_at ASC
-       LIMIT 1`,
-      { now: getNow() }
-    );
-    
-    const records = rows as Array<{ key: string; job_key: string }>;
-    if (records.length > 0) {
-      const record = records[0];
-      // Make sure no RUNNING worker exists in DB for that job before spawning
-      const [wk] = await pool.query(`SELECT * FROM ${dbPrefix}workers WHERE job_key = :job_key AND status = 'RUNNING'`, { job_key: record.job_key });
-      if ((wk as any[]).length === 0) {
-        spawnWorkerForJob(record.job_key);
-      }
-    }
-  } catch (err) {
-    logger.error({ err }, 'queue monitoring error');
-  }
+  
 }
 
 /* API: ROUTEs */
@@ -400,8 +117,6 @@ app.get(['/status', '/health'], (_req, res) => res.json({ metadata: {status: tru
 app.get('/config', async (_req, res) => {
   const sanitizedConfig: any = { ...config };
 
-  delete sanitizedConfig.cpu_cores_count;
-  delete sanitizedConfig.memory_total;
   delete sanitizedConfig.storage.key;
   delete sanitizedConfig.storage.secret;
   delete sanitizedConfig.db.username;
@@ -422,7 +137,7 @@ app.post('/dashboard/sign/in', async (req, res) => {
     }
 
     if (inputPassword === config.dashboard.password) {
-      const token = crypto.createHash('md5').update(inputPassword).digest('hex');
+      const token = hash(inputPassword);
       return res.json({ metadata: {status: true}, data: {token} });
     } else {
       return res.status(401).json({ metadata: {status: false, error: {code: 'PASSWORD_INVALID', message: 'Invalid password!'}} });
@@ -459,11 +174,14 @@ app.get('/instances', authMiddleware(), async (_req, res) => {
       workersByInstance[worker.instance_key].push(worker);
     }
 
-    // Attach workers array to each instance
-    const result = instances.map(instance => ({
-      ...instance,
-      workers: workersByInstance[instance.key] || []
-    }));
+    // Parse instance.system JSON and attach workers array to each instance
+    const result = instances.map(instance => {
+      return {
+        ...instance,
+        system: instance.system ? JSON.parse(instance.system) : null,
+        workers: workersByInstance[instance.key] || []
+      };
+    });
 
     return res.json( {metadata: {status: true}, data: result} );
   } catch (err) {
@@ -518,13 +236,13 @@ app.get('/jobs/:key', authMiddleware(), async (req, res) => {
     notification: job.notification ? sanitizeObject(JSON.parse(job.notification)) : null
   };
   
-  const [outs] = await pool.query(`SELECT * FROM ${dbPrefix}job_outputs WHERE job_key = :job_key ORDER BY output_index`, { job_key: job.key });
+  const [outs] = await pool.query(`SELECT * FROM ${dbPrefix}job_outputs WHERE job_key = :job_key ORDER BY \`index\``, { job_key: job.key });
   
   // Parse JSON fields in outputs and sanitize
   const parsedOuts = (outs as any[]).map(out => ({
     ...out,
-    spec_json: out.spec_json ? sanitizeObject(JSON.parse(out.spec_json)) : null,
-    result_json: out.result_json ? JSON.parse(out.result_json) : null
+    specs: out.specs ? sanitizeObject(JSON.parse(out.specs)) : null,
+    result: out.result ? JSON.parse(out.result) : null
   }));
   
   res.json({ job: parsedJob, outputs: parsedOuts });
@@ -537,7 +255,7 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
     return res.status(400).json({ metadata: {status: false, error: {code: 'REQUEST_INVALID', message: 'Require input and outputs[]!'}} });
   }
 
-  const jobKey = uuidv4();
+  const jobKey = uukey();
   const conn = await pool.getConnection();
 
   try {
@@ -551,18 +269,22 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
       { key: jobKey, metadata: metadata, input: JSON.stringify(body.input), destination: body.destination ? JSON.stringify(body.destination) : null, notification: body.notification ? JSON.stringify(body.notification) : null, priority: priority, now: getNow() }
     );
 
-    for (let i = 0; i < body.outputs.length; i++) {
-      const out: OutputSpec = body.outputs[i];
-      const outputKey = uuidv4();
+    for (let index = 0; index < body.outputs.length; index++) {
+      const out: OutputSpec = body.outputs[index];
+      const outputKey = uukey();
       await conn.execute(
-        `INSERT INTO ${dbPrefix}job_outputs (\`key\`, job_key, output_index, spec_json, status, updated_at, created_at) VALUES (:key, :job_key, :output_index, :spec_json, 'PENDING', :now, :now)`,
-        { key: outputKey, job_key: jobKey, output_index: i, spec_json: JSON.stringify(out), now: getNow() }
+        `INSERT INTO ${dbPrefix}job_outputs (\`key\`, job_key, \`index\`, specs, status, updated_at, created_at) VALUES (:key, :job_key, :index, :specs, 'PENDING', :now, :now)`,
+        { key: outputKey, job_key: jobKey, index, specs: JSON.stringify(out), now: getNow() }
       );
     }
 
     if (conn.commit) await conn.commit();
-    await enqueueJob(jobKey, priority);
     
+    await pool.execute(
+      `INSERT INTO ${dbPrefix}queue_jobs (\`key\`, job_key, priority, visibility_timeout, available_at, created_at) VALUES (:key, :jobKey, :priority, :now, :now, :now)`,
+      { key: uukey(), jobKey, priority, now: getNow() }
+    );
+
     // Trigger immediate queue check
     setTimeout(() => monitorQueue(), 100);
     
@@ -573,7 +295,7 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
     );
     
     // Send notification for QUEUED status if notification is specified
-    const { notify } = await import('./services/notifier.js');
+    const { notify } = await import('./services/encoder/notifier.js');
     const notificationPayload: any = { 
       key: jobKey,
       status: 'QUEUED',
@@ -755,8 +477,8 @@ process.on('SIGTERM', () => {
   
   // DB: INSTANCE: UPDATE
   pool.execute(
-    `UPDATE ${dbPrefix}instances SET memory_free = :memory_free, updated_at = :now, status = 'EXITED', exit_signal = 'SIGTERM' WHERE \`key\` = :instance_key`,
-    { instance_key: instanceKey, memory_free: os.freemem(), now: getNow() }
+    `UPDATE ${dbPrefix}instances SET system = :system, updated_at = :now, status = 'EXITED', exit_signal = 'SIGTERM' WHERE \`key\` = :instance_key`,
+    { instance_key: instanceKey, system: JSON.stringify(getInstanceSystemInfo()), now: getNow() }
   ).catch(err => logger.error({ err, instanceKey }, 'Failed to update instance record during shutdown!'));
   
   process.exit(0);
@@ -773,20 +495,67 @@ process.on('SIGINT', () => {
   
   // DB: INSTANCE: UPDATE
   pool.execute(
-    `UPDATE ${dbPrefix}instances SET memory_free = :memory_free, updated_at = :now, status = 'EXITED', exit_signal = 'SIGINT' WHERE \`key\` = :instance_key`,
-    { instance_key: instanceKey, memory_free: os.freemem(), now: getNow() }
+    `UPDATE ${dbPrefix}instances SET system = :system, updated_at = :now, status = 'EXITED', exit_signal = 'SIGINT' WHERE \`key\` = :instance_key`,
+    { instance_key: instanceKey, system: JSON.stringify(getInstanceSystemInfo()), now: getNow() }
   ).catch(err => logger.error({ err, instanceKey }, 'Failed to update instance record during shutdown'));
   
   process.exit(0);
 });
 
+/* MAINTAINER: INITIALIZE */
+function initMaintainer(): ChildProcess {
+  const maintainerPath = config.env === 'prod' 
+    ? path.join(process.cwd(), 'dist', 'services', 'maintainer.js')
+    : path.join(process.cwd(), 'src', 'services', 'maintainer.ts');
+
+  const child = config.env === 'prod'
+    ? spawn('node', [maintainerPath, instanceKey], {
+        stdio: ['inherit', 'inherit', 'inherit'],
+        cwd: process.cwd()
+      })
+    : spawn('npx', ['tsx', maintainerPath, instanceKey], {
+        stdio: ['inherit', 'inherit', 'inherit'],
+        cwd: process.cwd(),
+        shell: true
+      });
+
+  logger.info('Maintainer service started');
+
+  child.on('exit', (code, signal) => {
+    logger.info({ code, signal }, 'Maintainer service exited, restarting...');
+    // Restart the service after a short delay
+    setTimeout(() => {
+      initMaintainer();
+    }, 5000); // Wait 5 seconds before restarting
+  });
+
+  child.on('error', (err) => {
+    logger.error({ err }, 'Maintainer service error, restarting...');
+    // Restart the service after a short delay
+    setTimeout(() => {
+      initMaintainer();
+    }, 5000); // Wait 5 seconds before restarting
+  });
+
+  return child;
+}
+
 // Initialize and start the application
 async function main() {
   await initDb();
 
-  logger.info({ instanceKey }, 'application started with instance key');
-  
-  // INSTANCE: INSERT
+  logger.info({ instanceKey }, 'Application started with instance key!');
+
+  // WORKERs: UPDATE: EXITED
+  try {
+    await pool.execute(
+      `UPDATE ${dbPrefix}workers SET status = 'EXITED' WHERE instance_key = :instance_key`,
+      { instance_key: instanceKey }
+    );
+  } catch (err) {
+    logger.info({ err, instanceKey }, 'Failed to update workers for instance in DB!');
+  }
+
   try {
     // INSTANCE: DELETE
     await pool.execute(
@@ -794,29 +563,27 @@ async function main() {
       { instance_key: instanceKey }
     );
 
+    // INSTANCE: INSERT
     await pool.execute(
-      `INSERT INTO ${dbPrefix}instances (\`key\`, cpu_core_count, memory_total, memory_free, workers_per_cpu_core, workers_max, workers_running_count, updated_at, created_at) VALUES (:instance_key, :cpu_core_count, :memory_total, :memory_free, :workers_per_cpu_core, :workers_max, 0, :now, :now)`,
-      { instance_key: instanceKey, cpu_core_count: config.cpu_cores_count, memory_total: config.memory_total, memory_free: os.freemem(), workers_per_cpu_core: config.workers.per_cpu_core, workers_max: config.workers.max, now: getNow() }
+      `INSERT INTO ${dbPrefix}instances (\`key\`, system, workers_per_cpu_core, workers_max, workers_running_count, updated_at, created_at) VALUES (:instance_key, :system, :workers_per_cpu_core, :workers_max, 0, :now, :now)`,
+      { instance_key: instanceKey, system: JSON.stringify(getInstanceSystemInfo()), workers_per_cpu_core: config.workers.per_cpu_core, workers_max: config.workers.max, now: getNow() }
     );
   } catch (err) {
-    logger.error({ err, instanceKey }, 'failed to register instance in DB');
+    logger.error({ err, instanceKey }, 'Failed to register instance in DB!');
   }
   
-  // SERVER: START
+  /* SERVER: START */
   app.listen(config.port, () => {
-    logger.info({ port: config.port }, 'api listening');
+    logger.info({ port: config.port }, 'API listening!');
   });
 
-  // QUEUE: START
-  setInterval(monitorQueue, config.jobs.poll_interval);
-  logger.info('queue monitoring started');
-  
-  // Start periodic instance & worker maintenance
-  setInterval(instanceInterval, 30000); // Check every 30 seconds
-  logger.info({ max: config.workers.max, running_timeout: config.workers.running_timeout, exited_timeout: config.workers.exited_timeout }, 'worker pool management started');
+  /* MAINTAINER: INITILIZE */
+  initMaintainer();
+
+  logger.info('Queue monitoring started!');
 }
 
 main().catch((err) => {
-  logger.error({ err }, 'failed to start application');
+  logger.error({ err }, 'Failed to start application!');
   process.exit(1);
 });

@@ -1,5 +1,7 @@
-import { config } from './config.js';
+import { config } from '../config';
+
 import { logger } from './logger.js';
+
 import Database from 'better-sqlite3';
 import mysql from 'mysql2/promise';
 import pg from 'pg';
@@ -7,7 +9,7 @@ import mssql from 'mssql';
 
 const { Pool: PgPool } = pg;
 
-// Database prefix helper — append '_' only when a prefix is configured
+/* DATABASE: PREFIX */
 const dbPrefix = config.db.prefix ? `${config.db.prefix}_` : '';
 
 // Database interface for unified operations
@@ -464,9 +466,8 @@ export async function initDb(): Promise<void> {
     // Instances table: track running instances/pods of this application
     await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}instances (
       \`key\` VARCHAR(255) PRIMARY KEY,
-      cpu_core_count INT NOT NULL DEFAULT 0,
-      memory_total INT NOT NULL DEFAULT 0,
-      memory_free INT NOT NULL DEFAULT 0,
+      type ENUM('MASTER','SLAVE') NOT NULL DEFAULT 'SLAVE',
+      system JSON NOT NULL,
       workers_per_cpu_core INT NOT NULL DEFAULT 0,
       workers_max INT NOT NULL DEFAULT 0,
       workers_running_count INT NOT NULL DEFAULT 0,
@@ -511,12 +512,12 @@ export async function initDb(): Promise<void> {
     await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}job_outputs (
       \`key\` CHAR(36) PRIMARY KEY,
       job_key CHAR(36) NOT NULL,
-      output_index INT NOT NULL,
-      spec_json JSON NOT NULL,
+      \`index\` INT NOT NULL,
+      specs JSON NOT NULL,
       status ENUM('PENDING','ENCODING','UPLOADING','COMPLETED','CANCELLED','FAILED') NOT NULL DEFAULT 'PENDING',
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      result_json JSON NULL,
+      result JSON NULL,
       error JSON NULL,
       FOREIGN KEY (job_key) REFERENCES ${dbPrefix}jobs(\`key\`) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);

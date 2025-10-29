@@ -16,8 +16,6 @@ export const config = {
   version: process.env.APP_VERSION ?? '0.0.1',
   env: (process.env.APP_ENV ?? 'local') as 'local' | 'dev' | 'test' | 'prod',
   port: Number(process.env.APP_PORT ?? 8080),
-  cpu_cores_count: cpuCoresCount,
-  memory_total: os.totalmem(),
   timezone: (process.env.VOLTAGE_TIMEZONE ?? 'UTC'),
   storage: {
     kind: (process.env.VOLTAGE_STORAGE_KIND ?? 'LOCAL') as 'LOCAL' | 'AWS_S3',
@@ -38,7 +36,7 @@ export const config = {
     filename: process.env.VOLTAGE_DB_FILENAME ?? './db.sqlite' // SQLite specific
   },
   api: {
-    key: process.env.VOLTAGE_API_KEY ?? '',
+    key: process.env.VOLTAGE_API_KEY ?? '5ef438b9bd1e3f62d2e91385e72b2972',
     request_body_limit: process.env.VOLTAGE_API_REQUEST_BODY_LIMIT ?? 0, // in MB, 0 means no limit
   },
   dashboard: {
@@ -46,12 +44,15 @@ export const config = {
     password: dashboardPassword,
   },
   instances: {
+    key_method: (process.env.VOLTAGE_INSTANCES_KEY_METHOD ?? 'IP_ADDRESS') as 'IP_ADDRESS' | 'UNIQUE_KEY',
+    maintain_interval: Number(process.env.VOLTAGE_INSTANCES_MAINTAIN_INTERVAL ?? 10000), // in milliseconds, default 10 seconds
     running_timeout: Number(process.env.VOLTAGE_INSTANCES_RUNNING_TIMEOUT ?? 60000), // in milliseconds, default 1 minute
     exited_timeout: Number(process.env.VOLTAGE_INSTANCES_EXITED_TIMEOUT ?? 60000), // in milliseconds, default 1 minute
   },
   workers: {
     per_cpu_core: Number(process.env.VOLTAGE_WORKERS_PER_CPU_CORE ?? 1), // number of workers to run per CPU core
     max: cpuCoresCount * Number(process.env.VOLTAGE_WORKERS_PER_CPU_CORE ?? 1), // maximum number of workers
+    maintain_interval: Number(process.env.VOLTAGE_WORKERS_MAINTAIN_INTERVAL ?? 10000), // in milliseconds, default 10 seconds
     running_timeout: Number(process.env.VOLTAGE_WORKERS_RUNNING_TIMEOUT ?? 60000), // in milliseconds, default 1 minute
     exited_timeout: Number(process.env.VOLTAGE_WORKERS_EXITED_TIMEOUT ?? 60000), // in milliseconds, default 1 minute
   },
@@ -62,10 +63,11 @@ export const config = {
     path: process.env.FFPROBE_PATH ?? ffprobePathDefault,
   },
   jobs: {
-    poll_interval: Number(process.env.VOLTAGE_JOBS_POLL_INTERVAL ?? 1000), // in milliseconds
-    visibility_timeout: Number(process.env.VOLTAGE_JOBS_VISIBILITY_TIMEOUT ?? 10 * 60 * 1000), // in milliseconds
-    max_attempts: Number(process.env.VOLTAGE_JOBS_MAX_ATTEMPTS ?? 3), // number of attempts
-    retention: Number(process.env.VOLTAGE_JOBS_RETENTION ?? 24 * 7) // in hours
+    poll_interval: Number(process.env.VOLTAGE_JOBS_POLL_INTERVAL ?? 1000), // in milliseconds, default 1 second
+    visibility_timeout: Number(process.env.VOLTAGE_JOBS_VISIBILITY_TIMEOUT ?? 10 * 60 * 1000), // in milliseconds, default 10 minutes
+    max_attempts: Number(process.env.VOLTAGE_JOBS_MAX_ATTEMPTS ?? 3), // number of attempts, default 3
+    cleanup_interval: Number(process.env.VOLTAGE_JOBS_CLEANUP_INTERVAL ?? 3600000), // in milliseconds, default 1 hour
+    retention: Number(process.env.VOLTAGE_JOBS_RETENTION ?? 1) // in hours, default 7 days = 24 * 7
   }
 };
 
