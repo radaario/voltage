@@ -53,12 +53,12 @@ function Login() {
 	};
 
 	return (
-		<div className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
+		<div className="layout-container">
 			<Header />
-			<main className="m-auto px-4 py-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+			<main className="layout-main flex justify-center align-middle">
 				<form
 					onSubmit={onSubmit}
-					className="flex flex-col items-center justify-center bg-gray-100 p-15 rounded gap-2.5 w-[500px]">
+					className="m-auto flex flex-col items-center justify-center bg-gray-100 dark:bg-neutral-900 p-15 rounded gap-2.5 w-[500px]">
 					<div className="text-2xl font-bold mb-4">Voltage Login</div>
 					{!isEmpty(errorMessage) && (
 						<div className="block w-full p-2.5 rounded border-4 border-red-600 text-red-600">{errorMessage}</div>
@@ -70,7 +70,7 @@ function Login() {
 						disabled={sending}
 						value={password}
 						autoFocus={true}
-						className="w-full h-12 border border-gray-300 dark:border-gray-700 outline-0 rounded text-lg px-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full h-12 border border-gray-300 dark:border-gray-700 outline-0 rounded text-lg px-4 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white transition-colors duration-200 focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500"
 					/>
 					<button
 						type="submit"

@@ -1,7 +1,7 @@
 import { useTheme } from "@/contexts/ThemeContext";
 import { SunIcon, MoonIcon, ArrowPathIcon, CodeBracketIcon, ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
-import radaarLogo from "@/assets/radaar-logo.webp";
 import { useAuth } from "@/hooks/useAuth";
+import { APP } from "@/constants";
 
 function Header() {
 	const { theme, toggleTheme } = useTheme();
@@ -19,11 +19,11 @@ function Header() {
 	return (
 		<header className="layout-header">
 			<div className="flex items-center">
-				<img
-					src={radaarLogo}
-					alt="RADAAR"
-					className="h-9 w-auto"
-				/>
+				<h2
+					className="select-none leading-none text-2xl sm:text-3xl font-black tracking-wider uppercase bg-linear-to-r from-emerald-500 via-green-500 to-lime-500 dark:from-emerald-300 dark:via-green-300 dark:to-lime-300 text-transparent bg-clip-text drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
+					aria-label="Voltage logo text">
+					{APP.NAME}
+				</h2>
 			</div>
 			<div className="flex items-center space-x-2">
 				<button
