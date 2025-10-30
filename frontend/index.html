@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <script>
+        // Immediately check system/stored theme preference and apply it
+        (function() {
+            const storedTheme = localStorage.getItem('theme');
+            if (storedTheme) {
+                document.documentElement.classList.add(storedTheme);
+            } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.add('light');
+                localStorage.setItem('theme', 'light');
+            }
+        })();
+    </script>
+	<!-- content -->
+	<title>DASHBOARD | VOLTAGE</title>
+	
+	<!-- metadata -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+	<meta charset="UTF-8" />
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+	<!-- favicon -->
+	<link rel="shortcut icon" type="image/vnd.microsoft.icon" href="https://www.radaar.io/_FILES/General/Header/FavIcon.webp?v=20231003082850" />
+</head>
+<body>
+	<div id="root"></div>
+	<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

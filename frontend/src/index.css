@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *)); /* @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *)); */
+@custom-variant light (&:where([.light], [.light] *));
+
+@layer base {
+	html,
+	body,
+	#root {
+		@apply h-full;
+	}
+
+	body {
+		background-color: var(--color-background);
+		color: var(--color-header);
+	}
+}
+
+.light {
+	--color-background: var(--color-white);
+	--color-header: var(--color-gray-100);
+	--color-footer: var(--color-gray-100);
+	--color-table: var(--color-gray-200);
+	--color-thead: var(--color-gray-300);
+	--color-tbody: var(--color-gray-100);
+	--color-tr-border: var(--color-gray-100);
+}
+
+.dark {
+	--color-background: #212121;
+	--color-header: #181818;
+	--color-footer: #1e1e1e;
+	--color-table: #181818;
+	--color-thead: #232323;
+	--color-tbody: #313131;
+	--color-tr-border: #474747;
+}
+
+@theme {
+	/* --color-background: var(--color-background); */
+}
+
+@layer components {
+	/* layout-container */
+	.layout-container {
+		@apply min-h-screen flex flex-col;
+	}
+
+	/* layout-main */
+	.layout-main {
+		@apply grow container mx-auto px-4 py-8 text-gray-900 dark:text-gray-100;
+	}
+
+	/* header */
+	.layout-header {
+		background-color: var(--color-header);
+		@apply relative flex items-center justify-between gap-2.5  text-gray-900 dark:text-gray-100 px-6 py-4 shadow-sm;
+	}
+
+	/* fooer */
+	.layout-footer {
+		background-color: var(--color-footer);
+		@apply text-gray-900 dark:text-gray-100 shadow mt-auto;
+	}
+
+	/* table advanced */
+	.table-advanced {
+		background-color: var(--color-table);
+		@apply shadow rounded-lg;
+	}
+
+	.table-advanced-header {
+		@apply px-4 py-5 sm:px-6 text-gray-900 dark:text-white;
+	}
+
+	.table-advanced thead {
+		background-color: var(--color-thead);
+	}
+
+	.table-advanced thead th {
+		@apply px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider;
+	}
+
+	.table-advanced tbody {
+		background-color: var(--color-tbody);
+	}
+
+	.table-advanced tr {
+		border-color: var(--color-tr-border);
+	}
+}
