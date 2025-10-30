@@ -1,7 +1,7 @@
 import { config } from './config';
 import { CreateJobRequest, OutputSpec } from './config/types.js';
 
-import { createInstanceKey, getInstanceSystemInfo, uuid, uukey, hash, getNow } from './utils';
+import { createInstanceKey, getInstanceSystemInfo, uuid, uukey, hash, getNow, sanitizeData } from './utils';
 import { logger } from './utils/logger.js';
 import { initDb, pool } from './utils/database.js';
 
@@ -71,43 +71,6 @@ const authMiddleware = (options: { forceAuth?: boolean } = {}) => {
     next();
   };
 };
-
-// Sanitize sensitive fields from objects
-function sanitizeObject(obj: any): any {
-  if (!obj || typeof obj !== 'object') return obj;
-  
-  const sanitized = { ...obj };
-  const sensitiveFields = ['password', 'secret', 'key', 'username', 'host', 'accessKeyId', 'secretAccessKey'];
-  
-  // Remove sensitive fields
-  for (const field of sensitiveFields) {
-    if (field in sanitized) {
-      delete sanitized[field];
-    }
-  }
-  
-  // For HTTP/HTTPS URLs in notification, remove query params and auth
-  if (sanitized.url && typeof sanitized.url === 'string') {
-    try {
-      const url = new URL(sanitized.url);
-      // Remove credentials from URL if present
-      url.username = '';
-      url.password = '';
-      // Remove query parameters that might contain sensitive data
-      url.search = '';
-      sanitized.url = url.toString();
-    } catch (e) {
-      // If URL parsing fails, keep as is
-    }
-  }
-  
-  return sanitized;
-}
-
-// Queue monitoring function
-async function monitorQueue(): Promise<void> {
-  
-}
 
 /* API: ROUTEs */
 // Support both /health and /status for health checks (some load balancers
@@ -201,51 +164,93 @@ app.get('/workers', authMiddleware(), async (_req, res) => {
   }
 });
 
-app.get('/jobs', authMiddleware(), async (_req, res) => {
-  const [rows] = await pool.query(`SELECT * FROM ${dbPrefix}jobs ORDER BY created_at DESC LIMIT 200`);
+app.get('/jobs', authMiddleware(), async (req, res) => {
+  const defaultLimit = 25;
+  const rawLimit = req.query.limit;
+  const rawPage = req.query.page;
+  const searchQuery = req.query.q ? String(req.query.q).trim() : '';
+
+  let limit = rawLimit !== undefined ? parseInt(String(rawLimit), 10) : defaultLimit;
+  if (isNaN(limit) || limit < 1) limit = defaultLimit;
+
+  let page = rawPage !== undefined ? parseInt(String(rawPage), 10) : 1;
+  if (isNaN(page) || page < 1) page = 1;
+
+  const offset = (page - 1) * limit;
+
+  // Build WHERE clause for search
+  let whereClause = '';
+  const params: any = { limit, offset };
   
+  if (searchQuery) {
+    const searchPattern = `%${searchQuery}%`;
+    whereClause = ` WHERE (\`key\` LIKE :search OR input LIKE :search OR destination LIKE :search OR notification LIKE :search OR metadata LIKE :search)`;
+    params.search = searchPattern;
+  }
+
+  // Get total count for pagination metadata
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(*) as total FROM ${dbPrefix}jobs${whereClause}`,
+    searchQuery ? { search: params.search } : {}
+  ) as any;
+
+  // Get paginated data
+  const [rawRows] = await pool.query(
+    `SELECT * FROM ${dbPrefix}jobs${whereClause} ORDER BY created_at DESC LIMIT :limit OFFSET :offset`,
+    params
+  );
+
   // Parse JSON fields and sanitize sensitive information
-  const parsedRows = (rows as any[]).map(row => ({
+  const data = (rawRows as any[]).map(row => ({
     ...row,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
-    input: row.input ? sanitizeObject(JSON.parse(row.input)) : null,
-    input_metadata: row.input_metadata ? JSON.parse(row.input_metadata) : null,
-    destination: row.destination ? sanitizeObject(JSON.parse(row.destination)) : null,
-    notification: row.notification ? sanitizeObject(JSON.parse(row.notification)) : null
+    input: row.input ? sanitizeData(JSON.parse(row.input)) : null,
+    outputs: row.outputs ? sanitizeData(JSON.parse(row.outputs)) : null,
+    destination: row.destination ? sanitizeData(JSON.parse(row.destination)) : null,
+    notification: row.notification ? sanitizeData(JSON.parse(row.notification)) : null,
+    metadata: row.metadata ? JSON.parse(row.metadata) : null
   }));
 
-  res.json(parsedRows);
+  // Calculate pagination metadata
+  const totalPages = Math.ceil(total / limit);
+  const hasMore = page < totalPages;
+  const nextPage = hasMore ? page + 1 : null;
+  const prevPage = page > 1 ? page - 1 : null;
+
+  return res.json({
+    metadata: {status: true},
+    data,
+    pagination: {
+      limit,
+      page,
+      total,
+      total_pages: totalPages,
+      has_more: hasMore,
+      next_page: nextPage,
+      prev_page: prevPage
+    }
+  });
 });
 
 app.get('/jobs/:key', authMiddleware(), async (req, res) => {
-  const [rows] = await pool.query(`SELECT * FROM ${dbPrefix}jobs WHERE \`key\` = :key`, { key: req.params.key });
+  const [rawRows] = await pool.query(`SELECT * FROM ${dbPrefix}jobs WHERE \`key\` = :key`, { key: req.params.key });
   
-  if ((rows as any[]).length === 0) {
+  if ((rawRows as any[]).length === 0) {
     return res.status(404).json({ metadata: {status: false, error: {code: 'NOT_FOUND', message: 'Not found!'}} });
   }
   
-  const job = (rows as any[])[0];
+  const rawData = (rawRows as any[])[0];
   
   // Parse JSON fields in job and sanitize sensitive information
-  const parsedJob = {
-    ...job,
-    metadata: job.metadata ? JSON.parse(job.metadata) : null,
-    input: job.input ? sanitizeObject(JSON.parse(job.input)) : null,
-    input_metadata: job.input_metadata ? JSON.parse(job.input_metadata) : null,
-    destination: job.destination ? sanitizeObject(JSON.parse(job.destination)) : null,
-    notification: job.notification ? sanitizeObject(JSON.parse(job.notification)) : null
+  const data = {
+    ...rawData,
+    input: rawData.input ? sanitizeData(JSON.parse(rawData.input)) : null,
+    outputs: rawData.outputs ? sanitizeData(JSON.parse(rawData.outputs)) : null,
+    destination: rawData.destination ? sanitizeData(JSON.parse(rawData.destination)) : null,
+    notification: rawData.notification ? sanitizeData(JSON.parse(rawData.notification)) : null,
+    metadata: rawData.metadata ? JSON.parse(rawData.metadata) : null
   };
   
-  const [outs] = await pool.query(`SELECT * FROM ${dbPrefix}job_outputs WHERE job_key = :job_key ORDER BY \`index\``, { job_key: job.key });
-  
-  // Parse JSON fields in outputs and sanitize
-  const parsedOuts = (outs as any[]).map(out => ({
-    ...out,
-    specs: out.specs ? sanitizeObject(JSON.parse(out.specs)) : null,
-    result: out.result ? JSON.parse(out.result) : null
-  }));
-  
-  res.json({ job: parsedJob, outputs: parsedOuts });
+  res.json({ metadata: { status: true }, data });
 });
 
 app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Request, res: Response) => {
@@ -261,100 +266,53 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
   try {
     if (conn.beginTransaction) await conn.beginTransaction();
 
-    const metadata = body.metadata ? JSON.stringify(body.metadata) : null;
+    const now = getNow();
     const priority = body.priority ?? 1000; // Default priority is 1000
 
+    const outputs = [];
+    for (let index = 0; index < body.outputs.length; index++) {
+      const output: OutputSpec = body.outputs[index];
+      outputs.push({ key: uukey(), job_key: jobKey, index, specs: output, status: 'PENDING', updated_at: now, created_at: now, result: null, error: null });
+    }
+
+    console.log("OUTPUTS:", outputs);
+
     await conn.execute(
-      `INSERT INTO ${dbPrefix}jobs (\`key\`, metadata, input, destination, notification, priority, status, updated_at, created_at) VALUES (:key, :metadata, :input, :destination, :notification, :priority, 'QUEUED', :now, :now)`,
-      { key: jobKey, metadata: metadata, input: JSON.stringify(body.input), destination: body.destination ? JSON.stringify(body.destination) : null, notification: body.notification ? JSON.stringify(body.notification) : null, priority: priority, now: getNow() }
+      `INSERT INTO ${dbPrefix}jobs (\`key\`, input, outputs, destination, notification, metadata, priority, status, updated_at, created_at) VALUES (:key, :input, :outputs, :destination, :notification, :metadata, :priority, 'QUEUED', :now, :now)`,
+      { 
+        key: jobKey,
+        input: body.input ? JSON.stringify(body.input) : null,
+        outputs: outputs ? JSON.stringify(outputs) : null,
+        destination: body.destination ? JSON.stringify(body.destination) : null,
+        notification: body.notification ? JSON.stringify(body.notification) : null,
+        metadata: body.metadata ? JSON.stringify(body.metadata) : null,
+        priority: priority,
+        now: getNow()
+      }
     );
 
-    for (let index = 0; index < body.outputs.length; index++) {
-      const out: OutputSpec = body.outputs[index];
-      const outputKey = uukey();
+    for (const output of outputs) {
       await conn.execute(
         `INSERT INTO ${dbPrefix}job_outputs (\`key\`, job_key, \`index\`, specs, status, updated_at, created_at) VALUES (:key, :job_key, :index, :specs, 'PENDING', :now, :now)`,
-        { key: outputKey, job_key: jobKey, index, specs: JSON.stringify(out), now: getNow() }
+        { ...output, specs: JSON.stringify(output.specs), now }
       );
     }
 
     if (conn.commit) await conn.commit();
     
     await pool.execute(
-      `INSERT INTO ${dbPrefix}queue_jobs (\`key\`, job_key, priority, visibility_timeout, available_at, created_at) VALUES (:key, :jobKey, :priority, :now, :now, :now)`,
+      `INSERT INTO ${dbPrefix}jobs_queue (\`key\`, job_key, priority, visibility_timeout, available_at, created_at) VALUES (:key, :jobKey, :priority, :now, :now, :now)`,
       { key: uukey(), jobKey, priority, now: getNow() }
     );
 
-    // Trigger immediate queue check
-    setTimeout(() => monitorQueue(), 100);
-    
     // Immediately transition from QUEUED to PENDING
     await pool.execute(
       `UPDATE ${dbPrefix}jobs SET status = 'PENDING' WHERE \`key\` = :key`,
       { key: jobKey }
     );
     
-    // Send notification for QUEUED status if notification is specified
-    const { notify } = await import('./services/encoder/notifier.js');
-    const notificationPayload: any = { 
-      key: jobKey,
-      status: 'QUEUED',
-      priority: priority
-    };
-
-    // Include custom metadata if present
-    if (body.metadata) {
-      notificationPayload.metadata = body.metadata;
-    }
-    
-    // Include sanitized input
-    const sanitizedInput: any = { ...body.input };
-    delete sanitizedInput.username;
-    delete sanitizedInput.password;
-    delete sanitizedInput.key;
-    delete sanitizedInput.secret;
-    notificationPayload.input = sanitizedInput;
-    
-    // Include sanitized outputs
-    const sanitizedOutputs = body.outputs.map(out => {
-      const sanitizedOut: any = { ...out };
-      
-      if (sanitizedOut.destination) {
-        const dest: any = sanitizedOut.destination;
-        delete dest.username;
-        delete dest.password;
-        delete dest.key;
-        delete dest.secret;
-      }
-
-      return sanitizedOut;
-    });
-    
-    notificationPayload.outputs = sanitizedOutputs;
-    
-    // Include sanitized destination if present
-    if (body.destination) {
-      const sanitizedDest: any = { ...body.destination };
-      delete sanitizedDest.username;
-      delete sanitizedDest.password;
-      delete sanitizedDest.key;
-      delete sanitizedDest.secret;
-      notificationPayload.destination = sanitizedDest;
-    }
-
-    // Include sanitized notification if present
-    if (body.notification) {
-      const sanitizedNotif: any = { ...body.notification };
-      delete sanitizedNotif.username;
-      delete sanitizedNotif.password;
-      delete sanitizedNotif.key;
-      delete sanitizedNotif.secret;
-      notificationPayload.notification = sanitizedNotif;
-    }
-      
-    if (body.notification) {
-      await notify(body.notification, notificationPayload);
-    }
+    const { notifyJob } = await import('./services/encoder/notifier.js');
+    const notificationPayload = await notifyJob(jobKey, 'QUEUED', priority, {...body, outputs});
     
     return res.status(202).json({ metadata: {status: true}, data: notificationPayload });
   } catch (err) {

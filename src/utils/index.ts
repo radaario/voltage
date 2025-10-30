@@ -137,3 +137,28 @@ export function subtractNow(amount: number, unit: moment.unitOfTime.DurationCons
 
   return m.subtract(amount, unit).format('YYYY-MM-DD HH:mm:ss');
 }
+
+// Sanitize sensitive fields from objects
+export function sanitizeData(data: any): any {
+  if (!data || typeof data !== 'object') return data;
+  
+  const sanitized = { ...data };
+  const sensitiveFields = ['password', 'key', 'secret'];
+  
+  // Remove sensitive fields
+  for (const field of sensitiveFields) {
+    if (field in sanitized) {
+      delete sanitized[field];
+    }
+  }
+
+  for (const key in sanitized) {
+    if (typeof sanitized[key] === 'object') {
+      sanitized[key] = sanitizeData(sanitized[key]);
+    } else if (Array.isArray(sanitized[key])) {
+      sanitized[key] = sanitized[key].map((item: any) => sanitizeData(item));
+    }
+  }
+  
+  return sanitized;
+}

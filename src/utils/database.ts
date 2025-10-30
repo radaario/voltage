@@ -495,11 +495,11 @@ export async function initDb(): Promise<void> {
     
     await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}jobs (
       \`key\` CHAR(36) PRIMARY KEY,
-      metadata JSON NULL,
       input JSON NOT NULL,
-      input_metadata JSON NULL,
+      outputs JSON NULL,
       destination JSON NULL,
       notification JSON NULL,
+      metadata JSON NULL,
       status ENUM('QUEUED','PENDING','DOWNLOADING','ANALYZING','ENCODING','UPLOADING','COMPLETED','CANCELLED','FAILED') NOT NULL DEFAULT 'QUEUED',
       priority INT NOT NULL DEFAULT 1000,
       started_at TIMESTAMP NULL,
@@ -522,7 +522,7 @@ export async function initDb(): Promise<void> {
       FOREIGN KEY (job_key) REFERENCES ${dbPrefix}jobs(\`key\`) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
 
-    await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}queue_jobs (
+    await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}jobs_queue (
       \`key\` CHAR(36) PRIMARY KEY,
       job_key CHAR(36) NOT NULL,
       priority INT NOT NULL DEFAULT 1000,
@@ -545,9 +545,9 @@ export async function initDb(): Promise<void> {
     
     // Create indexes separately for SQLite (MySQL ignores IF NOT EXISTS for indexes in tables)
     if (config.db.kind === 'SQLITE') {
-      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}queue_jobs_available_at ON ${dbPrefix}queue_jobs(available_at);`);
-      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}queue_jobs_visibility_timeout ON ${dbPrefix}queue_jobs(visibility_timeout);`);
-      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}queue_jobs_priority ON ${dbPrefix}queue_jobs(priority);`);
+      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}jobs_queue_available_at ON ${dbPrefix}jobs_queue(available_at);`);
+      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}jobs_queue_visibility_timeout ON ${dbPrefix}jobs_queue(visibility_timeout);`);
+      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}jobs_queue_priority ON ${dbPrefix}jobs_queue(priority);`);
     }
     
     if (conn.commit) await conn.commit();

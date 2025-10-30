@@ -4,12 +4,12 @@ import { getNow } from '../utils';
 import { logger } from '../utils/logger.js';
 import { initDb, pool } from '../utils/database.js';
 
-import { InputMetadata, DestinationSpec, NotificationSpec } from '../config/types.js';
+import { DestinationSpec, NotificationSpec } from '../config/types.js';
 
 import { downloadInput } from './encoder/downloader.js';
 import { encode } from './encoder/encoder.js';
 import { uploadOutput } from './encoder/uploader.js';
-import { notify } from './encoder/notifier.js';
+import { notifyJob } from './encoder/notifier.js';
 import { extractMetadata } from './encoder/metadata.js';
 import { generatePreview } from './encoder/preview.js';
 
@@ -33,6 +33,7 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
     }
 
     const job = (rows as any[])[0];
+    let inputSpec = JSON.parse(job.input as string);
 
     await pool.execute(
       `UPDATE ${dbPrefix}jobs SET status = 'DOWNLOADING', started_at = :now WHERE \`key\` = :key`,
@@ -44,45 +45,36 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
       ? JSON.parse(job.notification as string) 
       : undefined;
 
-    const inputSpec = JSON.parse(job.input as string);
     const inputPath = await downloadInput(inputSpec);
     
-    // Check if metadata extraction is requested from input spec
-    const shouldExtractMetadata = inputSpec.extract_metadata === true;
+    /* WORKER: UPDATE */
+    await pool.execute(
+      `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
+      { key: workerKey, now: getNow() }
+    );
+
+    // Update status to ANALYZING
+    await pool.execute(
+      `UPDATE ${dbPrefix}jobs SET status = 'ANALYZING' WHERE \`key\` = :key`,
+      { key: job.key }
+    );
     
-    let input_metadata: InputMetadata | null = null;
-    if (shouldExtractMetadata) {
-  
-      /* WORKER: UPDATE */
-      await pool.execute(
-        `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
-        { key: workerKey, now: getNow() }
-      );
+    // Extract metadata from input file
+    logger.info({ jobKey, inputPath }, 'Extracting metadata from input file');
+    const inputMetadata = await extractMetadata(inputPath);
+    if (inputMetadata) inputSpec = { ...inputSpec, ...inputMetadata };
+    
+    // Save video metadata to database
+    await pool.execute(
+      `UPDATE ${dbPrefix}jobs SET input = :input WHERE \`key\` = :key`,
+      { key: job.key, input: JSON.stringify(inputSpec) }
+    );
 
-      // Update status to ANALYZING
-      await pool.execute(
-        `UPDATE ${dbPrefix}jobs SET status = 'ANALYZING' WHERE \`key\` = :key`,
-        { key: job.key }
-      );
-      
-      // Extract metadata from input file
-      logger.info({ jobKey, inputPath }, 'Extracting metadata from input file');
-      input_metadata = await extractMetadata(inputPath);
-      
-      // Save video metadata to database
-      await pool.execute(
-        `UPDATE ${dbPrefix}jobs SET input_metadata = :input_metadata WHERE \`key\` = :key`,
-        { key: job.key, input_metadata: JSON.stringify(input_metadata) }
-      );
-
-      logger.info({ jobKey }, 'Input metadata saved to database');
-    } else {
-      logger.info({ jobKey }, 'Skipping ANALYZING stage (Input metadata extraction not requested)');
-    }
+    logger.info({ jobKey }, 'Input metadata saved to database');
 
     // Generate preview from middle of video
-    logger.info({ jobKey, duration: input_metadata?.duration ?? 0 }, 'Generating preview from video');
-    await generatePreview(inputPath, job.key, input_metadata?.duration ?? 0);
+    logger.info({ jobKey, duration: inputSpec?.duration ?? 0 }, 'Generating preview from video');
+    await generatePreview(inputPath, job.key, inputSpec?.duration ?? 0);
     logger.info({ jobKey }, 'Preview generated successfully');
 
     /* WORKER: UPDATE */
@@ -180,107 +172,9 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
       const currentJob = (jobRows as any[])[0];
       const [outputRows] = await pool.query(`SELECT * FROM ${dbPrefix}job_outputs WHERE job_key = :job_key ORDER BY \`index\``, { job_key: job.key });
       
-      // Build notification payload
-      const notificationPayload: any = { 
-        key: currentJob.key,
-        status: 'COMPLETED',
-        priority: currentJob.priority
-      };
-
-      // Include custom metadata if it exists
-      if (currentJob.metadata) {
-        try {
-          notificationPayload.metadata = JSON.parse(currentJob.metadata);
-        } catch (err) {
-          // If parsing fails, skip metadata
-        }
-      }
+      currentJob.outputs = outputRows;
       
-      // Parse and sanitize input
-      let parsedInput = null;
-      if (currentJob.input) {
-        try {
-          parsedInput = JSON.parse(currentJob.input);
-          // Remove sensitive fields
-          delete parsedInput.username;
-          delete parsedInput.password;
-          delete parsedInput.key;
-          delete parsedInput.secret;
-          
-          // If extract_metadata was true and input_metadata exists, merge it directly into input
-          if (parsedInput.extract_metadata && currentJob.input_metadata) {
-            try {
-              const inputMetadata = JSON.parse(currentJob.input_metadata);
-              if (typeof inputMetadata === 'object' && inputMetadata !== null) {
-                // Spread video metadata properties directly into input
-                parsedInput = { ...parsedInput, ...inputMetadata };
-              }
-            } catch (err) {
-              // If parsing fails, skip merging
-            }
-          }
-          
-          notificationPayload.input = parsedInput;
-        } catch (err) {
-          // If parsing fails, skip input
-        }
-      }
-      
-      // Parse and sanitize outputs
-      if (outputRows && (outputRows as any[]).length > 0) {
-        const outputs = (outputRows as any[]).map((out: any) => {
-          try {
-            const specs = JSON.parse(out.specs);
-            // Sanitize destination in spec if present
-            if (specs.destination) {
-              delete specs.destination.username;
-              delete specs.destination.password;
-              delete specs.destination.key;
-              delete specs.destination.secret;
-            }
-            return {
-              index: out.index,
-              specs: specs,
-              status: out.status,
-              result: out.result ? JSON.parse(out.result) : null
-            };
-          } catch (err) {
-            return null;
-          }
-        }).filter((out: any) => out !== null);
-        
-        notificationPayload.outputs = outputs;
-      }
-      
-      // Parse and sanitize destination if present
-      if (currentJob.destination) {
-        try {
-          const dest = JSON.parse(currentJob.destination);
-          delete dest.username;
-          delete dest.password;
-          delete dest.key;
-          delete dest.secret;
-          notificationPayload.destination = dest;
-        } catch (err) {
-          // If parsing fails, skip destination
-        }
-      }
-
-      // Parse and sanitize notification if present
-      if (currentJob.notification) {
-        try {
-          const notif = JSON.parse(currentJob.notification);
-          delete notif.username;
-          delete notif.password;
-          delete notif.key;
-          delete notif.secret;
-          notificationPayload.notification = notif;
-        } catch (err) {
-          // If parsing fails, skip notification
-        }
-      }
-      
-      await notify(notification, notificationPayload);
+      await notifyJob(currentJob.key, 'COMPLETED', currentJob.priority, currentJob);
     }
 
     /* WORKER: UPDATE */
@@ -345,7 +239,7 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
             // If parsing fails, skip metadata
           }
         }
-        
+
         // Parse and sanitize input
         let parsedInput = null;
         if (job.input) {
@@ -356,19 +250,6 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
             delete parsedInput.password;
             delete parsedInput.key;
             delete parsedInput.secret;
-            
-            // If extract_metadata was true and input_metadata exists, merge it directly into input
-            if (parsedInput.extract_metadata && job.input_metadata) {
-              try {
-                const inputMetadata = JSON.parse(job.input_metadata);
-                if (typeof inputMetadata === 'object' && inputMetadata !== null) {
-                  // Spread video metadata properties directly into input
-                  parsedInput = { ...parsedInput, ...inputMetadata };
-                }
-              } catch (err) {
-                // If parsing fails, skip merging
-              }
-            }
             
             notificationPayload.input = parsedInput;
           } catch (err) {
@@ -441,7 +322,7 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
           }
         }
         
-        await notify(notification, notificationPayload);
+        await notifyJob(job.key, 'FAILED', job.priority, job);
       }
     }
 

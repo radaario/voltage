@@ -1,5 +1,4 @@
 import { config } from '../../config';
-import { InputMetadata } from '../../config/types.js';
 
 import { logger } from '../../utils/logger.js';
 
@@ -8,25 +7,23 @@ import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
 
-export async function extractMetadata(filePath: string): Promise<InputMetadata> {
+export async function extractMetadata(filePath: string): Promise<any[]> {
   try {
-    // Get file stats
-    const stats = await fs.stat(filePath);
+    /* FILE: INFO: EXTRACT */
     const fileName = path.basename(filePath);
     const fileExtension = path.extname(fileName).toLowerCase().replace(/^\./, '');
+    const fileStats = await fs.stat(filePath);
+    const fileMimeType = getMimeType(fileExtension);
     
-    // Get MIME type based on extension
-    const mimeType = getMimeType(fileExtension);
-    
-    // Run ffprobe to get media metadata
+    /* FFPROBE: RUN */
     const ffprobeData = await runFfprobe(filePath);
     
-    // Parse the ffprobe output
+    /* METADATA: EXTRACT */
     const metadata = parseFfprobeOutput(ffprobeData, {
-      name: fileName,
-      extension: fileExtension,
-      mime_type: mimeType,
-      size: stats.size
+      file_name: fileName,
+      file_extension: fileExtension,
+      file_mime_type: fileMimeType,
+      file_size: fileStats.size
     });
     
     logger.info({ filePath, fileName }, 'Metadata extracted successfully');
@@ -62,7 +59,7 @@ function getMimeType(extension: string): string {
   return mimeTypes[extension] || 'application/octet-stream';
 }
 
-async function runFfprobe(filePath: string): Promise<any> {
+async function runFfprobe(filePath: string): Promise<any[]> {
   return new Promise((resolve, reject) => {
     const ffprobe = spawn(config.ffprobe.path, [
       '-v', 'quiet',
@@ -102,68 +99,68 @@ async function runFfprobe(filePath: string): Promise<any> {
   });
 }
 
-function parseFfprobeOutput(data: any, fileInfo: { name: string; extension: string; mime_type: string; size: number }): InputMetadata {
+function parseFfprobeOutput(data: any, fileInfo: any): any[] {
   const format = data.format || {};
   const streams = data.streams || [];
   
-  // Find video and audio streams
+  /* VIDEO & AUDIO: STREAMs: FIND */
   const videoStream = streams.find((s: any) => s.codec_type === 'video');
   const audioStream = streams.find((s: any) => s.codec_type === 'audio');
   
-  // Calculate duration
+  /* DURATION: CALCULATION */
   const duration = parseFloat(format.duration || '0');
   const durationInTimestamp = Math.round(duration * 1000000); // Convert to microseconds
   
-  // Parse video metadata
-  let video = null;
+  /* VIDEO: INFO: PARSE */
+  let videoInfo = null;
   if (videoStream) {
-    const width = parseInt(videoStream.width || '0');
-    const height = parseInt(videoStream.height || '0');
-    const codedWidth = parseInt(videoStream.coded_width || videoStream.width || '0');
-    const codedHeight = parseInt(videoStream.coded_height || videoStream.height || '0');
+    const videoWidth = parseInt(videoStream.width || '0');
+    const videoHeight = parseInt(videoStream.height || '0');
+    const videoCodedWidth = parseInt(videoStream.coded_width || videoStream.width || '0');
+    const videoCodedHeight = parseInt(videoStream.coded_height || videoStream.height || '0');
     
     // Calculate aspect ratio
-    const aspectRatioDecimal = width > 0 && height > 0 ? width / height : 0;
-    const aspectRatio = getAspectRatio(aspectRatioDecimal);
+    const videoAspectRatioDecimal = videoWidth > 0 && videoHeight > 0 ? videoWidth / videoHeight : 0;
+    const videoAspectRatio = getAspectRatio(videoAspectRatioDecimal);
     
-    video = {
-      width,
-      width_coded: codedWidth,
-      height,
-      height_coded: codedHeight,
-      aspect_ratio: aspectRatio,
-      aspect_ratio_in_decimal: aspectRatioDecimal,
-      frames: parseInt(videoStream.nb_frames || '0'),
-      frame_rate: parseFloat(videoStream.r_frame_rate?.split('/')[0] || '0') / parseFloat(videoStream.r_frame_rate?.split('/')[1] || '1'),
-      codec: videoStream.codec_name || '',
-      profile: videoStream.profile || '',
-      level: videoStream.level || '',
-      bit_rate: parseInt(videoStream.bit_rate || '0'),
-      has_b_frames: parseInt(videoStream.has_b_frames || '0'),
-      pixel_format: videoStream.pix_fmt || '',
-      chroma_location: videoStream.chroma_location || ''
+    videoInfo = {
+      video_width: videoWidth,
+      video_width_coded: videoCodedWidth,
+      video_height: videoHeight,
+      video_height_coded: videoCodedHeight,
+      video_aspect_ratio: videoAspectRatio,
+      video_aspect_ratio_in_decimal: videoAspectRatioDecimal,
+      video_frames: parseInt(videoStream.nb_frames || '0'),
+      video_frame_rate: parseFloat(videoStream.r_frame_rate?.split('/')[0] || '0') / parseFloat(videoStream.r_frame_rate?.split('/')[1] || '1'),
+      video_codec: videoStream.codec_name || '',
+      video_profile: videoStream.profile || '',
+      video_level: videoStream.level || '',
+      video_bit_rate: parseInt(videoStream.bit_rate || '0'),
+      video_has_b_frames: parseInt(videoStream.has_b_frames || '0'),
+      video_pixel_format: videoStream.pix_fmt || '',
+      video_chroma_location: videoStream.chroma_location || ''
     };
   }
   
-  // Parse audio metadata
-  let audio = null;
+  /* AUDIO: INFO: PARSE */
+  let audioInfo = null;
   if (audioStream) {
-    audio = {
-      codec: audioStream.codec_name || '',
-      profile: audioStream.profile || '',
-      channels: parseInt(audioStream.channels || '0'),
-      channel_layout: audioStream.channel_layout || '',
-      sample_rate: parseInt(audioStream.sample_rate || '0'),
-      bit_rate: parseInt(audioStream.bit_rate || '0')
+    audioInfo = {
+      audio_codec: audioStream.codec_name || '',
+      audio_profile: audioStream.profile || '',
+      audio_channels: parseInt(audioStream.channels || '0'),
+      audio_channel_layout: audioStream.channel_layout || '',
+      audio_sample_rate: parseInt(audioStream.sample_rate || '0'),
+      audio_bit_rate: parseInt(audioStream.bit_rate || '0')
     };
   }
   
   return {
-    file: fileInfo,
+    ...fileInfo,
     duration,
     duration_in_ts: durationInTimestamp,
-    video,
-    audio
+    ...videoInfo,
+    ...audioInfo
   };
 }
 

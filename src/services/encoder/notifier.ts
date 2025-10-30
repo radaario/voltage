@@ -1,10 +1,38 @@
 import { config } from '../../config';
 import { NotificationSpec } from '../../config/types.js';
 
+import { sanitizeData } from '../../utils';
 import { logger } from '../../utils/logger.js';
 
 import axios from 'axios';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
+
+export async function notifyJob(jobKey: string, status: string, priority: number, job: any): Promise<any> {
+  const payload: any = { 
+    key: jobKey,
+    status: status,
+    priority: priority
+  };
+
+  for (const key of ['error', 'metadata', 'input', 'outputs', 'destination', 'notification']) {
+    if (job[key]) {
+      if (typeof job[key] === 'string'){
+        try {
+          job[key] = JSON.parse(job[key]);
+        } catch (e) {
+        }
+      }
+
+      payload[key] = sanitizeData(job[key]);
+    }
+  }
+
+  if (job.notification) {
+    await notify(job.notification, payload);
+  }
+
+  return payload;
+}
 
 export async function notify(notification: NotificationSpec, payload: unknown): Promise<void> {
   try {

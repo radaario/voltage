@@ -5,4 +5,5 @@ storage
 db.sqlite*
 npm-debug.log*
 .DS_Store
+notes.txt
 

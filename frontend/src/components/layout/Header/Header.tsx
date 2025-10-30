@@ -2,6 +2,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { SunIcon, MoonIcon, ArrowPathIcon, CodeBracketIcon, ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { APP } from "@/constants";
+import { NavLink } from "react-router-dom";
 
 function Header() {
 	const { theme, toggleTheme } = useTheme();
@@ -20,13 +21,49 @@ function Header() {
 		<header className="layout-header">
 			<div className="flex items-center">
 				<h2
-					className="select-none leading-none text-2xl sm:text-3xl font-black tracking-wider uppercase bg-linear-to-r from-emerald-500 via-green-500 to-lime-500 dark:from-emerald-300 dark:via-green-300 dark:to-lime-300 text-transparent bg-clip-text drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
+					className="select-none leading-none text-2xl sm:text-3xl font-black tracking-wider uppercase bg-neutral-700 dark:bg-white text-transparent bg-clip-text drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
 					aria-label="Voltage logo text">
 					{APP.NAME}
 				</h2>
 			</div>
+			<nav className="hidden md:flex items-center space-x-1">
+				<NavLink
+					to="/jobs"
+					className={({ isActive }) =>
+						`px-3 py-2 rounded-md text-md font-medium transition-colors ${
+							isActive
+								? "bg-dark-background-primary text-indigo-700"
+								: "text-dark-text-primary hover:bg-dark-background-primary"
+						}`
+					}>
+					Jobs
+				</NavLink>
+				<NavLink
+					to="/instances"
+					className={({ isActive }) =>
+						`px-3 py-2 rounded-md text-md font-medium transition-colors ${
+							isActive
+								? "bg-dark-background-primary text-indigo-700"
+								: "text-dark-text-primary hover:bg-dark-background-primary"
+						}`
+					}>
+					Instances & Workers
+				</NavLink>
+				<NavLink
+					to="/logs"
+					className={({ isActive }) =>
+						`px-3 py-2 rounded-md text-md font-medium transition-colors ${
+							isActive
+								? "bg-dark-background-primary text-indigo-700"
+								: "text-dark-text-primary hover:bg-dark-background-primary"
+						}`
+					}>
+					Logs
+				</NavLink>
+			</nav>
 			<div className="flex items-center space-x-2">
 				<button
+					role="button"
 					className="p-2 rounded bg-dark-background-tertiary dark:bg-dark-background-tertiary text-dark-text-primary dark:text-dark-text-primary hover:bg-dark-background-primary dark:hover:bg-dark-background-primary hover:rounded-lg transition-all duration-300 cursor-pointer"
 					title="All Refresh"
 					onClick={handleAllRefresh}>

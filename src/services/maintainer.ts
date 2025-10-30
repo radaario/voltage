@@ -134,7 +134,7 @@ async function pollJobs(): Promise<void> {
         // Check for available jobs in the queue that are still PENDING
         // Order by priority (lower = higher priority), then by created_at
         const [rows] = await pool.query(
-            `SELECT qj.key, qj.job_key FROM ${dbPrefix}queue_jobs qj JOIN ${dbPrefix}jobs j ON qj.job_key = j.key WHERE qj.available_at <= :now AND qj.visibility_timeout <= :now AND j.status = 'PENDING' ORDER BY qj.priority ASC, qj.created_at ASC LIMIT 1`,
+            `SELECT qj.key, qj.job_key FROM ${dbPrefix}jobs_queue qj JOIN ${dbPrefix}jobs j ON qj.job_key = j.key WHERE qj.available_at <= :now AND qj.visibility_timeout <= :now AND j.status = 'PENDING' ORDER BY qj.priority ASC, qj.created_at ASC LIMIT 1`,
             { now: getNow() }
         );
         
@@ -315,6 +315,8 @@ async function cleanupJobs() {
   }
   
   await pool.execute(`DELETE FROM ${dbPrefix}jobs WHERE \`key\` IN (${keys.map(() => '?').join(',')})`, keys);
+  await pool.execute(`DELETE FROM ${dbPrefix}job_outputs WHERE job_key IN (${keys.map(() => '?').join(',')})`, keys);
+  await pool.execute(`DELETE FROM ${dbPrefix}jobs_queue WHERE job_key IN (${keys.map(() => '?').join(',')})`, keys);
   
   logger.info({ count: keys.length }, 'Cleanup completed jobs!');
 }

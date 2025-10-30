@@ -6,12 +6,10 @@ export type InputSpec =
       username?: string;
       password?: string;
       url: string;
-      extract_metadata?: boolean;
     }
   | { 
       service: 'BASE64'; 
       content: string;
-      extract_metadata?: boolean;
     }
   | { 
       service: 'FTP'; 
@@ -19,7 +17,6 @@ export type InputSpec =
       username?: string;
       password?: string;
       path: string;
-      extract_metadata?: boolean;
     }
   | { 
       service: 'AWS_S3'; 
@@ -28,7 +25,6 @@ export type InputSpec =
       region: string;
       bucket: string;
       path: string;
-      extract_metadata?: boolean;
     };
 
 export type DestinationSpec =
@@ -88,21 +84,20 @@ export type NotificationSpec =
     };
 
 export type CreateJobRequest = {
-  metadata?: Record<string, any>[]; // custom metadata to be sent back with notifications
   input: InputSpec;
   outputs: OutputSpec[];
   destination?: DestinationSpec; // optional global destination for outputs that don't have their own
   notification?: NotificationSpec;
+  metadata?: Record<string, any>[]; // custom metadata to be sent back with notifications
   priority?: number; // priority value (lower = higher priority, default: 1000)
 };
 
 export type JobRow = {
   key: string;
-  metadata: unknown | null;
   input: unknown;
-  input_metadata: unknown | null;
   destination: unknown | null;
   notification: unknown | null;
+  metadata: unknown | null;
   status: 'QUEUED' | 'PENDING' | 'DOWNLOADING' | 'ANALYZING' | 'ENCODING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED';
   priority: number;
   started_at: string | null;
@@ -110,42 +105,6 @@ export type JobRow = {
   updated_at: string;
   created_at: string;
   error: unknown | null;
-};
-
-export type InputMetadata = {
-  file: {
-    name: string;
-    extension: string;
-    mime_type: string;
-    size: number;
-  };
-  duration: number; // in seconds, e.g. 60.066667
-  duration_in_ts: number; // in timestamp format, e.g. 922624
-  video: null | {
-    width: number;
-    width_coded: number;
-    height: number;
-    height_coded: number;
-    aspect_ratio: string; // e.g. "16:9", "4:3"
-    aspect_ratio_in_decimal: number; // e.g. 1.777777777777778
-    frames: number;
-    frame_rate: number;
-    codec: string;
-    profile: string;
-    level: string;
-    bit_rate: number;
-    has_b_frames: number;
-    pixel_format: string; // e.g. "yuv420p", "yuv422p", "yuv444p"
-    chroma_location: string;
-  };
-  audio: null | {
-    codec: string;
-    profile: string;
-    channels: number;
-    channel_layout: string; // e.g. "5.1"
-    sample_rate: number;
-    bit_rate: number;
-  };
 };
 
 export type JobOutputRow = {
