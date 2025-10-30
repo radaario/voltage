@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, Outlet } from "react-router-dom";
 import type { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
 import JobsTable from "./JobsTable";
-import JobDetailModal from "@/components/modals/JobDetailModal/JobDetailModal";
 import DeleteConfirmModal from "@/components/modals/DeleteConfirmModal/DeleteConfirmModal";
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 
@@ -33,18 +33,19 @@ interface JobsResponse {
 const Jobs: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
+	const navigate = useNavigate();
 
 	// states
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchInput, setSearchInput] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
-	const [currentLimit, setCurrentLimit] = useState(10);
-	const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [currentLimit, setCurrentLimit] = useState(6);
 	const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
+	const previousDataRef = useRef<Job[]>([]);
+	const [newJobKeys, setNewJobKeys] = useState<Set<string>>(new Set());
 
 	// Fetch jobs with React Query
-	const { data, isLoading, error, refetch } = useQuery<JobsResponse>({
+	const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<JobsResponse>({
 		queryKey: ["jobs", currentPage, currentLimit, searchQuery, authToken],
 		queryFn: async () => {
 			const params = new URLSearchParams();
@@ -63,8 +64,44 @@ const Jobs: React.FC = () => {
 
 			return response.json();
 		},
-		enabled: !!authToken
+		enabled: !!authToken,
+		refetchInterval: 5000 // 5 saniyede bir otomatik refresh
 	});
+
+	// Detect new jobs when data updates
+	useEffect(() => {
+		if (!data?.data || currentPage !== 1) {
+			return;
+		}
+
+		const currentJobs = data.data;
+		const previousJobs = previousDataRef.current;
+
+		// Skip first load
+		if (previousJobs.length === 0) {
+			previousDataRef.current = currentJobs;
+			return;
+		}
+
+		// Find new jobs by comparing keys
+		const previousKeys = new Set(previousJobs.map((j) => j.key));
+		const newKeys = currentJobs.filter((job) => !previousKeys.has(job.key)).map((job) => job.key);
+
+		if (newKeys.length > 0) {
+			setNewJobKeys(new Set(newKeys));
+			// Clear animation after 2 seconds
+			const timer = setTimeout(() => {
+				setNewJobKeys(new Set());
+			}, 2000);
+
+			// Update ref
+			previousDataRef.current = currentJobs;
+
+			return () => clearTimeout(timer);
+		}
+
+		previousDataRef.current = currentJobs;
+	}, [dataUpdatedAt, data, currentPage]);
 
 	// Create job mutation
 	const createJobMutation = useMutation({
@@ -103,6 +140,7 @@ const Jobs: React.FC = () => {
 			return resp.json();
 		},
 		onSuccess: () => {
+			setCurrentPage(1);
 			// Invalidate and refetch jobs
 			queryClient.invalidateQueries({ queryKey: ["jobs"] });
 		}
@@ -120,12 +158,17 @@ const Jobs: React.FC = () => {
 				throw new Error(errText || "Failed to delete job");
 			}
 
+			// 204 No Content doesn't have a body
+			if (resp.status === 204) {
+				return null;
+			}
+
 			return resp.json();
 		},
-		onSuccess: () => {
+		onSuccess: async () => {
 			// Invalidate and refetch jobs immediately
-			queryClient.invalidateQueries({ queryKey: ["jobs"] });
-			refetch();
+			await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+			await refetch();
 		}
 	});
 
@@ -160,8 +203,7 @@ const Jobs: React.FC = () => {
 	};
 
 	const handleViewJob = (job: Job) => {
-		setSelectedJob(job);
-		setIsModalOpen(true);
+		navigate(`/jobs/${job.key}/job`);
 	};
 
 	const handleDeleteJob = (job: Job) => {
@@ -181,16 +223,11 @@ const Jobs: React.FC = () => {
 		}
 	};
 
-	const handleCloseModal = () => {
-		setIsModalOpen(false);
-		setSelectedJob(null);
-	};
-
 	// Prepare pagination data
 	const pagination: PaginationInfo = {
 		total: data?.pagination?.total || 0,
 		page: data?.pagination?.page || 1,
-		limit: data?.pagination?.limit || 20,
+		limit: data?.pagination?.limit || 6,
 		totalPages: data?.pagination?.total_pages || 0,
 		has_more: data?.pagination?.has_more,
 		next_page: data?.pagination?.next_page,
@@ -217,7 +254,7 @@ const Jobs: React.FC = () => {
 						onClick={handleRefresh}
 						title="Refresh"
 						disabled={isLoading}
-						className={`p-2 rounded-md transition-all ${
+						className={`p-2 -mb-1 rounded-md transition-all ${
 							isLoading
 								? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
 								: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400"
@@ -292,15 +329,9 @@ const Jobs: React.FC = () => {
 					onLimitChange={handleLimitChange}
 					onViewJob={handleViewJob}
 					onDeleteJob={handleDeleteJob}
+					newJobKeys={newJobKeys}
 				/>
 			</div>
-
-			{/* Job Detail Modal */}
-			<JobDetailModal
-				isOpen={isModalOpen}
-				onClose={handleCloseModal}
-				job={selectedJob}
-			/>
 
 			{/* Delete Confirmation Modal */}
 			{jobToDelete && (
@@ -327,6 +358,9 @@ const Jobs: React.FC = () => {
 					isDeleting={deleteJobMutation.isPending}
 				/>
 			)}
+
+			{/* Route-based Job Detail Modal */}
+			<Outlet />
 		</div>
 	);
 };

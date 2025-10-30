@@ -88,6 +88,7 @@ export interface Job {
 		| "CANCELLED"
 		| "DELETED";
 	priority: number;
+	progress?: number;
 	started_at: string | null;
 	completed_at: string | null;
 	updated_at: string;

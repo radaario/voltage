@@ -26,7 +26,7 @@ function Header() {
 					{APP.NAME}
 				</h2>
 			</div>
-			<nav className="hidden md:flex items-center space-x-1">
+			<nav className="hidden md:flex items-center space-x-3">
 				<NavLink
 					to="/jobs"
 					className={({ isActive }) =>
@@ -47,7 +47,7 @@ function Header() {
 								: "text-dark-text-primary hover:bg-dark-background-primary"
 						}`
 					}>
-					Instances & Workers
+					Instances
 				</NavLink>
 				<NavLink
 					to="/logs"

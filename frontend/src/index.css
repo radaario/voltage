@@ -92,4 +92,55 @@
 	.table-advanced tr {
 		border-color: var(--color-tr-border);
 	}
+
+	/* New job animation - slide in from top with highlight */
+	@keyframes slideInHighlight {
+		0% {
+			transform: translateY(-20px);
+			opacity: 0;
+		}
+		50% {
+			transform: translateY(0);
+			opacity: 1;
+		}
+		100% {
+			transform: translateY(0);
+			opacity: 1;
+		}
+	}
+
+	@keyframes highlightPulse {
+		0% {
+			background-color: rgb(59 130 246 / 0.15);
+		}
+		50% {
+			background-color: rgb(59 130 246 / 0.25);
+		}
+		100% {
+			background-color: transparent;
+		}
+	}
+
+	.animate-slide-in-highlight {
+		animation:
+			slideInHighlight 0.5s ease-out,
+			highlightPulse 2s ease-out;
+	}
+
+	.dark .animate-slide-in-highlight {
+		@keyframes highlightPulseDark {
+			0% {
+				background-color: rgb(59 130 246 / 0.2);
+			}
+			50% {
+				background-color: rgb(59 130 246 / 0.3);
+			}
+			100% {
+				background-color: transparent;
+			}
+		}
+		animation:
+			slideInHighlight 0.5s ease-out,
+			highlightPulseDark 2s ease-out;
+	}
 }

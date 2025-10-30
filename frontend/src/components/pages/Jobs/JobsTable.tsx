@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Job } from "@/interfaces/job";
 import TimeAgo from "timeago-react";
@@ -30,11 +30,69 @@ interface JobsTableProps {
 	onLimitChange: (limit: number) => void;
 	onViewJob: (job: Job) => void;
 	onDeleteJob: (job: Job) => void;
+	newJobKeys: Set<string>;
 }
 
 const columnHelper = createColumnHelper<Job>();
 
-const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onViewJob, onDeleteJob }: JobsTableProps) => {
+// Memoized preview image component to prevent reloading on every render
+const JobPreviewImage = memo(
+	({ jobKey, authToken }: { jobKey: string; authToken: string | null }) => {
+		return (
+			<div className="w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 rounded overflow-hidden">
+				<img
+					key={jobKey}
+					src={`${import.meta.env.VITE_API_BASE_URL}/jobs/${jobKey}/preview?token=${authToken}`}
+					alt="Preview"
+					className="w-full h-full object-cover"
+					onError={(e) => {
+						const target = e.target as HTMLImageElement;
+						target.style.display = "none";
+					}}
+				/>
+			</div>
+		);
+	},
+	(prevProps, nextProps) => {
+		// Custom comparison: only re-render if jobKey changes
+		return prevProps.jobKey === nextProps.jobKey && prevProps.authToken === nextProps.authToken;
+	}
+);
+
+JobPreviewImage.displayName = "JobPreviewImage";
+
+// Memoized table row to prevent unnecessary re-renders
+const TableRow = memo(
+	({ row, onViewJob, isNew }: { row: any; onViewJob: (job: Job) => void; isNew: boolean }) => {
+		return (
+			<tr
+				onClick={() => onViewJob(row.original)}
+				className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer ${
+					isNew ? "animate-slide-in-highlight" : ""
+				}`}>
+				{row.getVisibleCells().map((cell: any) => (
+					<td
+						key={cell.id}
+						className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+						{flexRender(cell.column.columnDef.cell, cell.getContext())}
+					</td>
+				))}
+			</tr>
+		);
+	},
+	(prevProps, nextProps) => {
+		// Only re-render if the row data actually changed or isNew status changed
+		return (
+			prevProps.row.id === nextProps.row.id &&
+			prevProps.row.original === nextProps.row.original &&
+			prevProps.isNew === nextProps.isNew
+		);
+	}
+);
+
+TableRow.displayName = "TableRow";
+
+const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onViewJob, onDeleteJob, newJobKeys }: JobsTableProps) => {
 	const { authToken } = useAuth();
 
 	// Generate page numbers to display
@@ -88,17 +146,10 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 
 					return (
 						<div className="flex items-center gap-3">
-							<div className="w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden">
-								<img
-									src={`${import.meta.env.VITE_API_BASE_URL}/jobs/${job.key}/preview?token=${authToken}`}
-									alt="Preview"
-									className="w-full h-full object-cover"
-									onError={(e) => {
-										const target = e.target as HTMLImageElement;
-										target.style.display = "none";
-									}}
-								/>
-							</div>
+							<JobPreviewImage
+								jobKey={job.key}
+								authToken={authToken}
+							/>
 							<div className="flex flex-col min-w-0">
 								<div className="font-medium text-gray-900 dark:text-white truncate">{filename}</div>
 								<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{job.key}</div>
@@ -111,21 +162,25 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 				header: "Status",
 				cell: (info) => {
 					const status = info.getValue();
-					let colorClass = "bg-gray-100 text-gray-800 border-gray-300";
+					const job = info.row.original;
+					let colorClass =
+						"bg-gray-100 text-gray-800 border-gray-300 dark:bg-neutral-800 dark:text-gray-300 dark:border-neutral-700";
 
 					if (status === "COMPLETED") {
-						colorClass = "bg-green-50 text-green-700 border-green-200";
+						colorClass =
+							"bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
 					} else if (status === "FAILED") {
-						colorClass = "bg-red-50 text-red-700 border-red-200";
+						colorClass = "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
 					} else if (status === "RUNNING" || status === "ENCODING" || status === "DOWNLOADING" || status === "UPLOADING") {
-						colorClass = "bg-blue-50 text-blue-700 border-blue-200";
+						colorClass = "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800";
 					} else if (status === "PENDING" || status === "QUEUED") {
-						colorClass = "bg-yellow-50 text-yellow-700 border-yellow-200";
+						colorClass =
+							"bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800";
 					}
 
 					return (
 						<span className={`inline-flex items-center px-3 py-1 rounded border text-sm font-medium ${colorClass}`}>
-							{status}
+							{status} - %{job.progress || 0}
 						</span>
 					);
 				}
@@ -227,7 +282,7 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 									onViewJob(job);
 								}}
 								title="View Details"
-								className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+								className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
 								<EyeIcon className="h-5 w-5" />
 							</button>
 							<button
@@ -237,7 +292,7 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 									onDeleteJob(job);
 								}}
 								title="Delete Job"
-								className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+								className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-red-600 dark:hover:text-red-400 transition-colors">
 								<TrashIcon className="h-5 w-5" />
 							</button>
 						</div>
@@ -260,14 +315,14 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 		<div className="w-full relative">
 			{/* Loading Overlay */}
 			{loading && (
-				<div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center z-10 rounded-lg">
+				<div className="absolute inset-0 bg-white/50 dark:bg-neutral-900/50 flex items-center justify-center z-10 rounded-lg">
 					<div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent"></div>
 				</div>
 			)}
 
 			<div className="overflow-x-auto">
-				<table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-					<thead className="bg-gray-50 dark:bg-gray-800">
+				<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+					<thead className="bg-gray-50 dark:bg-neutral-800">
 						{table.getHeaderGroups().map((headerGroup) => (
 							<tr key={headerGroup.id}>
 								{headerGroup.headers.map((header) => (
@@ -283,7 +338,7 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 							</tr>
 						))}
 					</thead>
-					<tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+					<tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-800">
 						{table.getRowModel().rows.length === 0 ? (
 							<tr>
 								<td
@@ -293,31 +348,29 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 								</td>
 							</tr>
 						) : (
-							table.getRowModel().rows.map((row) => (
-								<tr
-									key={row.id}
-									onClick={() => onViewJob(row.original)}
-									className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
-									{row.getVisibleCells().map((cell) => (
-										<td
-											key={cell.id}
-											className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-											{flexRender(cell.column.columnDef.cell, cell.getContext())}
-										</td>
-									))}
-								</tr>
-							))
+							table.getRowModel().rows.map((row) => {
+								const job = row.original;
+								const isNew = newJobKeys.has(job.key);
+								return (
+									<TableRow
+										key={row.id}
+										row={row}
+										onViewJob={onViewJob}
+										isNew={isNew}
+									/>
+								);
+							})
 						)}
 					</tbody>
 				</table>
 			</div>
 
 			{/* Pagination Controls */}
-			<div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+			<div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800/50">
 				<div className="flex items-center gap-1">
 					{/* First Page Button */}
 					<button
-						className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-gray-700 dark:text-gray-200"
+						className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
 						onClick={() => onPageChange(1)}
 						disabled={!pagination.prev_page || pagination.totalPages === 0}
 						title="First page">
@@ -326,7 +379,7 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 
 					{/* Previous Page Button */}
 					<button
-						className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-gray-700 dark:text-gray-200"
+						className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
 						onClick={() => onPageChange(pagination.prev_page!)}
 						disabled={!pagination.prev_page || pagination.totalPages === 0}
 						title="Previous page">
@@ -351,9 +404,9 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 								key={pageNum}
 								className={`px-3 py-1.5 text-sm border rounded-md transition-colors font-medium ${
 									isActive
-										? "bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700"
-										: "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-700"
-								}`}
+										? "bg-gray-700 border-gray-700 text-white hover:bg-gray-800 dark:bg-neutral-600 dark:border-neutral-600 dark:hover:bg-neutral-700"
+										: "bg-white dark:bg-neutral-800 border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700"
+								} disabled:opacity-50 disabled:cursor-not-allowed`}
 								onClick={() => onPageChange(pageNum as number)}
 								disabled={pagination.totalPages === 0}>
 								{pageNum}
@@ -363,7 +416,7 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 
 					{/* Next Page Button */}
 					<button
-						className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-gray-700 dark:text-gray-200"
+						className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
 						onClick={() => onPageChange(pagination.next_page!)}
 						disabled={!pagination.has_more || !pagination.next_page || pagination.totalPages === 0}
 						title="Next page">
@@ -372,7 +425,7 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 
 					{/* Last Page Button */}
 					<button
-						className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-gray-700 dark:text-gray-200"
+						className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
 						onClick={() => onPageChange(pagination.totalPages)}
 						disabled={!pagination.has_more || !pagination.next_page || pagination.totalPages === 0}
 						title="Last page">
@@ -388,8 +441,8 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 					<select
 						value={pagination.limit}
 						onChange={(e) => onLimitChange(Number(e.target.value))}
-						className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500">
-						{[10, 25, 50, 100].map((pageSize) => (
+						className="px-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-600 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500">
+						{[6, 10, 25, 50].map((pageSize) => (
 							<option
 								key={pageSize}
 								value={pageSize}>
