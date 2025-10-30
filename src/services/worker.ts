@@ -52,6 +52,7 @@ async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: stri
 
     /* JOB: OUTPUTs: PARSE */
     for (let index = 0; index < job.outputs.length; index++) {
+      if (typeof job.outputs[index].specs === 'object') job.outputs[index].specs = JSON.stringify(job.outputs[index].specs);
       job.outputs[index].specs = job.outputs[index].specs ? JSON.parse(job.outputs[index].specs) : null;
     }
 
@@ -174,8 +175,8 @@ async function startJob(job: any): Promise<void> {
 
   try {
     await pool.execute(
-      `UPDATE ${dbPrefix}jobs SET status = :status, started_at = :now, updated_at = :now WHERE \`key\` = :key`,
-      { key: job.key, status: job.status, now: getNow() }
+      `UPDATE ${dbPrefix}jobs SET status = :status, progress = :progress, started_at = :now, updated_at = :now WHERE \`key\` = :key`,
+      { key: job.key, status: job.status, progress: job.progress, now: getNow() }
     );
   } catch (err) {
   }
@@ -186,12 +187,13 @@ async function updateJob(job: any): Promise<void> {
 
   try {
     await pool.execute(
-      `UPDATE ${dbPrefix}jobs SET input = :input, outputs = :outputs, status = :status, updated_at = :now, error = :error WHERE \`key\` = :key`,
+      `UPDATE ${dbPrefix}jobs SET input = :input, outputs = :outputs, status = :status, progress = :progress, updated_at = :now, error = :error WHERE \`key\` = :key`,
       {
         key: job.key,
         input: job.input ? JSON.stringify(job.input) : null,
         outputs: job.outputs ? JSON.stringify(job.outputs) : null,
         status: job.status,
+        progress: job.progress,
         now: getNow(),
         error: job.error ? JSON.stringify(job.error) : null
       }

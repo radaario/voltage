@@ -250,8 +250,6 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
       outputs.push({ key: uukey(), job_key: jobKey, index, specs: output, status: 'PENDING', updated_at: now, created_at: now, result: null, error: null });
     }
 
-    console.log("OUTPUTS:", outputs);
-
     await conn.execute(
       `INSERT INTO ${dbPrefix}jobs (\`key\`, priority, input, outputs, destination, notification, metadata, status, updated_at, created_at) VALUES (:key, :priority, :input, :outputs, :destination, :notification, :metadata, 'QUEUED', :now, :now)`,
       { 
