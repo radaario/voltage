@@ -70,14 +70,14 @@ export async function downloadInput(input: InputSpec): Promise<string> {
   throw new Error(`Unsupported input service: ${input.service}`);
 }
 
-async function downloadFromS3(input: { service: 'AWS_S3'; path: string; key: string; secret: string; region: string; bucket: string }, filePath: string): Promise<string> {
+async function downloadFromS3(input: { service: 'AWS_S3'; path: string; access_key_id: string; secret_access_key: string; region: string; bucket: string }, filePath: string): Promise<string> {
   try {
     // Initialize S3 client with credentials from request
     const s3ClientConfig: any = {
       region: input.region,
       credentials: {
-        accessKeyId: input.key,
-        secretAccessKey: input.secret,
+        accessKeyId: input.access_key_id,
+        secretAccessKey: input.secret_access_key,
       }
     };
 

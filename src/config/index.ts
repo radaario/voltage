@@ -19,8 +19,8 @@ export const config = {
   timezone: (process.env.VOLTAGE_TIMEZONE ?? 'UTC'),
   storage: {
     kind: (process.env.VOLTAGE_STORAGE_KIND ?? 'LOCAL') as 'LOCAL' | 'AWS_S3',
-    key: process.env.VOLTAGE_STORAGE_KEY ?? '',
-    secret: process.env.VOLTAGE_STORAGE_SECRET,
+    access_key_id: process.env.VOLTAGE_STORAGE_ACCESS_KEY_ID ?? '',
+    secret_access_key: process.env.VOLTAGE_STORAGE_SECRET_ACCESS_KEY ?? '',
     region: process.env.VOLTAGE_STORAGE_REGION ?? '',
     bucket: process.env.VOLTAGE_STORAGE_BUCKET ?? '',
     path: process.env.VOLTAGE_STORAGE_PATH ?? '/storage'
@@ -38,6 +38,7 @@ export const config = {
   api: {
     key: process.env.VOLTAGE_API_KEY ?? '5ef438b9bd1e3f62d2e91385e72b2972',
     request_body_limit: process.env.VOLTAGE_API_REQUEST_BODY_LIMIT ?? 0, // in MB, 0 means no limit
+    sensitive_fields: process.env.VOLTAGE_API_SENSITIVE_FIELDS ?? 'password,secret_access_key',
   },
   dashboard: {
     is_authentication_required: dashboardPassword ? true : false,

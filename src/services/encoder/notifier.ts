@@ -86,12 +86,12 @@ async function notifyHttp(notification: { service: 'HTTP' | 'HTTPS'; method?: 'G
   await axios.request(requestConfig);
 }
 
-async function notifySns(notification: { service: 'AWS_SNS'; key: string; secret: string; region: string; topic: string }, payload: unknown): Promise<void> {
+async function notifySns(notification: { service: 'AWS_SNS'; access_key_id: string; secret_access_key: string; region: string; topic: string }, payload: unknown): Promise<void> {
   const snsClient = new SNSClient({
     region: notification.region,
     credentials: {
-      accessKeyId: notification.key,
-      secretAccessKey: notification.secret,
+      accessKeyId: notification.access_key_id,
+      secretAccessKey: notification.secret_access_key,
     }
   });
 

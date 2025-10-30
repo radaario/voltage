@@ -78,16 +78,7 @@ const authMiddleware = (options: { forceAuth?: boolean } = {}) => {
 app.get(['/status', '/health'], (_req, res) => res.json({ metadata: {status: true} }));
 
 app.get('/config', async (_req, res) => {
-  const sanitizedConfig: any = { ...config };
-
-  delete sanitizedConfig.storage.key;
-  delete sanitizedConfig.storage.secret;
-  delete sanitizedConfig.db.username;
-  delete sanitizedConfig.db.password;
-  delete sanitizedConfig.api.key;
-  delete sanitizedConfig.dashboard.password;
-
-  return res.json({ metadata: {status: true}, data: sanitizedConfig });
+  return res.json({ metadata: {status: true}, data: sanitizeData(config) });
 });
 
 app.post('/dashboard/sign/in', async (req, res) => {
@@ -201,14 +192,7 @@ app.get('/jobs', authMiddleware(), async (req, res) => {
   );
 
   // Parse JSON fields and sanitize sensitive information
-  const data = (rawRows as any[]).map(row => ({
-    ...row,
-    input: row.input ? sanitizeData(JSON.parse(row.input)) : null,
-    outputs: row.outputs ? sanitizeData(JSON.parse(row.outputs)) : null,
-    destination: row.destination ? sanitizeData(JSON.parse(row.destination)) : null,
-    notification: row.notification ? sanitizeData(JSON.parse(row.notification)) : null,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null
-  }));
+  const data = sanitizeData(rawRows);
 
   // Calculate pagination metadata
   const totalPages = Math.ceil(total / limit);
@@ -239,16 +223,7 @@ app.get('/jobs/:key', authMiddleware(), async (req, res) => {
   }
   
   const rawData = (rawRows as any[])[0];
-  
-  // Parse JSON fields in job and sanitize sensitive information
-  const data = {
-    ...rawData,
-    input: rawData.input ? sanitizeData(JSON.parse(rawData.input)) : null,
-    outputs: rawData.outputs ? sanitizeData(JSON.parse(rawData.outputs)) : null,
-    destination: rawData.destination ? sanitizeData(JSON.parse(rawData.destination)) : null,
-    notification: rawData.notification ? sanitizeData(JSON.parse(rawData.notification)) : null,
-    metadata: rawData.metadata ? JSON.parse(rawData.metadata) : null
-  };
+  const data = sanitizeData(rawData);
   
   res.json({ metadata: { status: true }, data });
 });
@@ -362,8 +337,8 @@ app.get('/jobs/:key/preview', authMiddleware(), async (req: Request, res: Respon
         const s3Client = new S3Client({
           region: config.storage.region,
           credentials: {
-            accessKeyId: config.storage.key,
-            secretAccessKey: config.storage.secret || '',
+            accessKeyId: config.storage.access_key_id,
+            secretAccessKey: config.storage.secret_access_key || '',
           }
         });
 

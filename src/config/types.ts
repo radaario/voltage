@@ -19,9 +19,9 @@ export type InputSpec =
       path: string;
     }
   | { 
-      service: 'AWS_S3'; 
-      key: string; // access key id
-      secret: string; // access key secret
+      service: 'AWS_S3';
+      access_key_id: string; // Access Key ID
+      secret_access_key: string; // Access Key Secret
       region: string;
       bucket: string;
       path: string;
@@ -43,8 +43,8 @@ export type DestinationSpec =
   | {
     service: 'AWS_S3' | 'OTHER_S3' | 'GOOGLE_CLOUD_STORAGE' | 'DO_SPACES' | 'LINODE' | 'WASABI' | 'BACKBLAZE' | 'RACKSPACE' | 'MICROSOFT_AZURE';
     endpoint?: string; // Custom endpoint for non-AWS S3 compatible services
-    key: string; // Access Key Id
-    secret: string; // Access Key Secret
+    access_key_id: string; // Access Key ID
+    secret_access_key: string; // Access Key Secret
     region: string;
     bucket: string;
     acl?: AWS_S3_ACL;
@@ -77,10 +77,10 @@ export type NotificationSpec =
     }
   | {
       service: 'AWS_SNS';
-      key: string; // access key id
-      secret: string; // access key secret
+      access_key_id: string; // Access Key ID
+      secret_access_key: string; // Access Key Secret
       region: string;
-      topic: string; // topic arn
+      topic: string; // Topic ARN
     };
 
 export type CreateJobRequest = {

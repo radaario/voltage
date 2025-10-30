@@ -140,23 +140,41 @@ export function subtractNow(amount: number, unit: moment.unitOfTime.DurationCons
 
 // Sanitize sensitive fields from objects
 export function sanitizeData(data: any): any {
-  if (!data || typeof data !== 'object') return data;
+  // Handle null or undefined
+  if (data === null || data === undefined) return data;
   
-  const sanitized = { ...data };
-  const sensitiveFields = ['password', 'key', 'secret'];
-  
-  // Remove sensitive fields
-  for (const field of sensitiveFields) {
-    if (field in sanitized) {
-      delete sanitized[field];
+  // Handle string - try to parse as JSON
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data);
+      return sanitizeData(parsed); // Recursively sanitize parsed data
+    } catch (e) {
+      return data; // Return as is if not valid JSON
     }
   }
 
-  for (const key in sanitized) {
-    if (typeof sanitized[key] === 'object') {
-      sanitized[key] = sanitizeData(sanitized[key]);
-    } else if (Array.isArray(sanitized[key])) {
-      sanitized[key] = sanitized[key].map((item: any) => sanitizeData(item));
+  // Handle primitive types
+  if (typeof data !== 'object') return data;
+  
+  const sensitiveFields = config.api.sensitive_fields ? config.api.sensitive_fields.split(',').map(f => f.trim()) : null;
+  
+  // Handle arrays
+  if (Array.isArray(data)) {
+    return data.map((item: any) => sanitizeData(item));
+  }
+  
+  // Handle objects
+  const sanitized: any = {};
+  
+  for (const key in data) {
+    if (data.hasOwnProperty(key)) {
+      // Skip sensitive fields
+      if (sensitiveFields && sensitiveFields.includes(key)) {
+        continue;
+      }
+      
+      // Recursively sanitize nested objects and arrays
+      sanitized[key] = sanitizeData(data[key]);
     }
   }
   

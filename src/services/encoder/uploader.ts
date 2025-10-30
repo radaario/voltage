@@ -39,8 +39,8 @@ export async function uploadOutput(spec: OutputSpec, filePath: string, globalDes
 
     const s3Destination = destination as { 
       service: typeof s3CompatibleServices[number];
-      key: string;
-      secret: string;
+      access_key_id: string;
+      secret_access_key: string;
       region: string;
       bucket: string;
       acl?: AWS_S3_ACL;
@@ -85,8 +85,8 @@ export async function uploadOutput(spec: OutputSpec, filePath: string, globalDes
 
 async function uploadToS3(destination: { 
   service: 'AWS_S3' | 'OTHER_S3' | 'GOOGLE_CLOUD_STORAGE' | 'DO_SPACES' | 'LINODE' | 'WASABI' | 'BACKBLAZE' | 'RACKSPACE' | 'MICROSOFT_AZURE';
-  key: string; 
-  secret: string; 
+  access_key_id: string; 
+  secret_access_key: string; 
   region: string; 
   bucket: string; 
   acl?: string;
@@ -97,8 +97,8 @@ async function uploadToS3(destination: {
     const s3ClientConfig: any = {
       region: destination.region,
       credentials: {
-        accessKeyId: destination.key,
-        secretAccessKey: destination.secret,
+        accessKeyId: destination.access_key_id,
+        secretAccessKey: destination.secret_access_key,
       },
       ...(destination.endpoint ? { endpoint: destination.endpoint } : {}),
     };

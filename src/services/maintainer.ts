@@ -326,8 +326,8 @@ async function deleteJobFromS3(jobKey: string): Promise<void> {
     const s3Client = new S3Client({
       region: config.storage.region,
       credentials: {
-        accessKeyId: config.storage.key,
-        secretAccessKey: config.storage.secret || '',
+        accessKeyId: config.storage.access_key_id,
+        secretAccessKey: config.storage.secret_access_key || '',
       }
     });
 
