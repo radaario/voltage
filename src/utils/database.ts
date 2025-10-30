@@ -495,13 +495,14 @@ export async function initDb(): Promise<void> {
     
     await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}jobs (
       \`key\` CHAR(36) PRIMARY KEY,
+      priority INT NOT NULL DEFAULT 1000,
       input JSON NOT NULL,
       outputs JSON NULL,
       destination JSON NULL,
       notification JSON NULL,
       metadata JSON NULL,
       status ENUM('QUEUED','PENDING','DOWNLOADING','ANALYZING','ENCODING','UPLOADING','COMPLETED','CANCELLED','FAILED') NOT NULL DEFAULT 'QUEUED',
-      priority INT NOT NULL DEFAULT 1000,
+      progress DECIMAL(10,2) NOT NULL DEFAULT 0.00,
       started_at TIMESTAMP NULL,
       completed_at TIMESTAMP NULL,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -509,6 +510,7 @@ export async function initDb(): Promise<void> {
       error JSON NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
 
+    /*
     await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}job_outputs (
       \`key\` CHAR(36) PRIMARY KEY,
       job_key CHAR(36) NOT NULL,
@@ -521,6 +523,7 @@ export async function initDb(): Promise<void> {
       error JSON NULL,
       FOREIGN KEY (job_key) REFERENCES ${dbPrefix}jobs(\`key\`) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+    */
 
     await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}jobs_queue (
       \`key\` CHAR(36) PRIMARY KEY,
@@ -532,9 +535,9 @@ export async function initDb(): Promise<void> {
       attempts INT NOT NULL DEFAULT 0,
       available_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX (priority),
       INDEX (available_at),
       INDEX (visibility_timeout),
-      INDEX (priority),
       FOREIGN KEY (job_key) REFERENCES ${dbPrefix}jobs(\`key\`) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
 
@@ -545,9 +548,9 @@ export async function initDb(): Promise<void> {
     
     // Create indexes separately for SQLite (MySQL ignores IF NOT EXISTS for indexes in tables)
     if (config.db.kind === 'SQLITE') {
+      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}jobs_queue_priority ON ${dbPrefix}jobs_queue(priority);`);
       await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}jobs_queue_available_at ON ${dbPrefix}jobs_queue(available_at);`);
       await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}jobs_queue_visibility_timeout ON ${dbPrefix}jobs_queue(visibility_timeout);`);
-      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}jobs_queue_priority ON ${dbPrefix}jobs_queue(priority);`);
     }
     
     if (conn.commit) await conn.commit();

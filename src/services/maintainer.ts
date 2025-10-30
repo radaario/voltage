@@ -315,7 +315,6 @@ async function cleanupJobs() {
   }
   
   await pool.execute(`DELETE FROM ${dbPrefix}jobs WHERE \`key\` IN (${keys.map(() => '?').join(',')})`, keys);
-  await pool.execute(`DELETE FROM ${dbPrefix}job_outputs WHERE job_key IN (${keys.map(() => '?').join(',')})`, keys);
   await pool.execute(`DELETE FROM ${dbPrefix}jobs_queue WHERE job_key IN (${keys.map(() => '?').join(',')})`, keys);
   
   logger.info({ count: keys.length }, 'Cleanup completed jobs!');

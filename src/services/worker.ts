@@ -4,7 +4,7 @@ import { getNow } from '../utils';
 import { logger } from '../utils/logger.js';
 import { initDb, pool } from '../utils/database.js';
 
-import { DestinationSpec, NotificationSpec } from '../config/types.js';
+import { JobRow } from '../config/types.js';
 
 import { downloadInput } from './encoder/downloader.js';
 import { encode } from './encoder/encoder.js';
@@ -13,218 +13,202 @@ import { notifyJob } from './encoder/notifier.js';
 import { extractMetadata } from './encoder/metadata.js';
 import { generatePreview } from './encoder/preview.js';
 
-async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: string): Promise<void> {
-  // dbPrefix available throughout the function
-  const dbPrefix = config.db.prefix ? `${config.db.prefix}_` : '';
-  
-  try {
-    await initDb();
+// dbPrefix available throughout the function
+const dbPrefix = config.db.prefix ? `${config.db.prefix}_` : '';
+await initDb();
 
-    /* WORKER: UPDATE */
-    await pool.execute(
-      `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
-      { key: workerKey, now: getNow() }
-    );
-    
+async function runWorkerJob(instanceKey: string, workerKey: string, jobKey: string): Promise<void> {
+  const jobProgressForEachStep = 20.00; // Each step contributes 20% to the total progress
+
+  let job: JobRow = {
+    key: jobKey,
+    status: 'PENDING',
+    progress: 0.00
+  };
+
+  try {
+    await updateWorker(workerKey, 'RUNNING');
+
+    /* JOB: SELECT */
     const [rows] = await pool.query(`SELECT * FROM ${dbPrefix}jobs WHERE \`key\` = :key`, { key: jobKey });
     if ((rows as any[]).length === 0) {
       logger.warn({ jobKey }, 'Job not found!');
       process.exit(0);
     }
 
-    const job = (rows as any[])[0];
-    let inputSpec = JSON.parse(job.input as string);
-
-    await pool.execute(
-      `UPDATE ${dbPrefix}jobs SET status = 'DOWNLOADING', started_at = :now WHERE \`key\` = :key`,
-      { key: job.key, now: getNow() }
-    );
+    job = (rows as any[])[0];
     
-    // Parse notification spec if available
-    const notification: NotificationSpec | undefined = job.notification 
-      ? JSON.parse(job.notification as string) 
-      : undefined;
+    if (!job.key) throw new Error('Job key is missing!');
 
-    const inputPath = await downloadInput(inputSpec);
+    /* JOB: PARSE */
+    job.input = job.input ? JSON.parse(job.input as string) : null;
+    job.outputs = job.outputs ? JSON.parse(job.outputs as string) : null;
+    job.destination = job.destination ? JSON.parse(job.destination as string) : null;
+    job.notification = job.notification ? JSON.parse(job.notification as string) : null;
+    job.metadata = job.metadata ? JSON.parse(job.metadata as string) : null;
+    job.error = job.error ? JSON.parse(job.error as string) : null;
+
+    if (!job.outputs) throw new Error('Job outputs are missing!');
+
+    /* JOB: OUTPUTs: PARSE */
+    for (let index = 0; index < job.outputs.length; index++) {
+      job.outputs[index].specs = job.outputs[index].specs ? JSON.parse(job.outputs[index].specs) : null;
+    }
+
+    let jobOutputsEncodedFiles = [];
+    let jobOutputsFaileds = [];
     
-    /* WORKER: UPDATE */
-    await pool.execute(
-      `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
-      { key: workerKey, now: getNow() }
-    );
+    /* JOB: INPUT: DOWNLOADING */
+    logger.info({ jobKey }, 'Downloading job input file!');
+    job.status = 'DOWNLOADING';
 
-    // Update status to ANALYZING
-    await pool.execute(
-      `UPDATE ${dbPrefix}jobs SET status = 'ANALYZING' WHERE \`key\` = :key`,
-      { key: job.key }
-    );
+    await startJob(job);
+    await updateWorker(workerKey, 'RUNNING');
     
-    // Extract metadata from input file
-    logger.info({ jobKey, inputPath }, 'Extracting metadata from input file');
-    const inputMetadata = await extractMetadata(inputPath);
-    if (inputMetadata) inputSpec = { ...inputSpec, ...inputMetadata };
+    const jobInputPath = await downloadInput(job.input);
+    if (!jobInputPath) throw new Error('Job input file couldn\'t be downloaded!');
     
-    // Save video metadata to database
-    await pool.execute(
-      `UPDATE ${dbPrefix}jobs SET input = :input WHERE \`key\` = :key`,
-      { key: job.key, input: JSON.stringify(inputSpec) }
-    );
+    /* JOB: INPUT: ANALYZING */
+    logger.info({ jobKey, jobInputPath }, 'Extracting metadata from job input file!');
+    job.status = 'ANALYZING';
+    job.progress += jobProgressForEachStep;
 
-    logger.info({ jobKey }, 'Input metadata saved to database');
-
-    // Generate preview from middle of video
-    logger.info({ jobKey, duration: inputSpec?.duration ?? 0 }, 'Generating preview from video');
-    await generatePreview(inputPath, job.key, inputSpec?.duration ?? 0);
-    logger.info({ jobKey }, 'Preview generated successfully');
-
-    /* WORKER: UPDATE */
-    await pool.execute(
-      `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
-      { key: workerKey, now: getNow() }
-    );
+    await updateJob(job);
+    await updateWorker(workerKey, 'RUNNING');
     
-    // Update status to ENCODING
-    await pool.execute(
-      `UPDATE ${dbPrefix}jobs SET status = 'ENCODING' WHERE \`key\` = :key`,
-      { key: job.key }
-    );
+    const jobInputMetadata = await extractMetadata(jobInputPath);
+    if (!jobInputMetadata) throw new Error('Job input file metadata couldn\'t be extracted!');
     
-    // Parse global destination if available
-    const globalDestination: DestinationSpec | undefined = job.destination 
-      ? JSON.parse(job.destination as string) 
-      : undefined;
+    job.input = { ...job.input, ...jobInputMetadata };
 
-    const [outs] = await pool.query(`SELECT * FROM ${dbPrefix}job_outputs WHERE job_key = :job_key ORDER BY \`index\``, { job_key: job.key });
-    for (const out of outs as any[]) {
-      await pool.execute(
-        `UPDATE ${dbPrefix}job_outputs SET status = 'ENCODING' WHERE \`key\` = :key`,
-        { key: out.key }
-      );
+    /* JOB: INPUT: PREVIEW */
+    logger.info({ jobKey, duration: job.input?.duration ?? 0 }, 'Generating preview from input file!');
+    
+    try{
+      await generatePreview(jobInputPath, job.key, job.input?.duration ?? 0);
+      logger.info({ jobKey }, 'Preview generated successfully!');
+    } catch (err) {
+      logger.warn({ jobKey, err }, 'Preview generation failed!');
+    }
+    
+    /* JOB: OUTPUTs: ENCODING */
+    logger.info({ jobKey }, 'Encoding job outputs!');
+    job.status = 'ENCODING';
+
+    await updateJob(job);
+    await updateWorker(workerKey, 'RUNNING');
+    
+    for (let index = 0; index < job.outputs.length; index++) {
+      if (job.outputs[index].status !== 'FAILED') continue;
       
-      try {
-        /* WORKER: UPDATE */
-        await pool.execute(
-          `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
-          { key: workerKey, now: getNow() }
-        );
+      job.outputs[index].status = 'ENCODING';
 
-        const specs = JSON.parse(out.specs);
-        const outFile = await encode(inputPath, specs);
-
-        // Update status to UPLOADING
-        await pool.execute(
-          `UPDATE ${dbPrefix}jobs SET status = 'UPLOADING' WHERE \`key\` = :key`,
-          { key: job.key }
-        );
-        
-        const result = await uploadOutput(specs, outFile, globalDestination);
-        await pool.execute(
-          `UPDATE ${dbPrefix}job_outputs SET status = 'UPLOADING', result = :res WHERE \`key\` = :key`,
-          { key: out.key, res: JSON.stringify(result) }
-        );
-
-        /* WORKER: UPDATE */
-        await pool.execute(
-          `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
-          { key: workerKey, now: getNow() }
-        );
-        
-        // Mark as COMPLETED after successful upload
-        await pool.execute(
-          `UPDATE ${dbPrefix}job_outputs SET status = 'COMPLETED' WHERE \`key\` = :key`,
-          { key: out.key }
-        );
-      } catch (err: any) {
-        const errorObj = {
-          key: 'ENCODING_ERROR',
-          message: String(err?.message ?? err)
-        };
-
-        /* WORKER: UPDATE */
-        await pool.execute(
-          `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
-          { key: workerKey, now: getNow() }
-        );
-
-        await pool.execute(
-          `UPDATE ${dbPrefix}job_outputs SET status = 'FAILED', error = :err WHERE \`key\` = :key`,
-          { key: out.key, err: JSON.stringify(errorObj) }
-        );
-        
-        throw err;
+      try{
+        jobOutputsEncodedFiles[job.outputs[index].key] = await encode(jobInputPath, job.outputs[index].specs);
+      } catch (err){
+        jobOutputsFaileds.push(job.outputs[index].key);
+        job.outputs[index].status = 'FAILED';
       }
+
+      job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
+
+      await updateJob(job);
+      await updateWorker(workerKey, 'RUNNING');
     }
 
-    /* WORKER: UPDATE */
-    await pool.execute(
-      `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
-      { key: workerKey, now: getNow() }
-    );
+    /* JOB: OUTPUTs: UPLOADING */
+    logger.info({ jobKey }, 'Uploading job outputs!');
+    job.status = 'UPLOADING';
 
-    await pool.execute(
-      `UPDATE ${dbPrefix}jobs SET status = 'COMPLETED', completed_at = :now WHERE \`key\` = :key`,
-      { key: job.key, now: getNow() }
-    );
-    
-    if (notification) {
-      // Fetch current job data and outputs for notification
-      const [jobRows] = await pool.query(`SELECT * FROM ${dbPrefix}jobs WHERE \`key\` = :key`, { key: job.key });
-      const currentJob = (jobRows as any[])[0];
-      const [outputRows] = await pool.query(`SELECT * FROM ${dbPrefix}job_outputs WHERE job_key = :job_key ORDER BY \`index\``, { job_key: job.key });
+    await updateJob(job);
+    await updateWorker(workerKey, 'RUNNING');
+
+    for (let index = 0; index < job.outputs.length; index++) {
+      if (job.outputs[index].status !== 'FAILED') continue;
       
-      currentJob.outputs = outputRows;
-      
-      await notifyJob(currentJob.key, 'COMPLETED', currentJob.priority, currentJob);
+      job.outputs[index].status = 'UPLOADING';
+
+      if (jobOutputsEncodedFiles[job.outputs[index].key]) {
+        job.outputs[index].status = 'UPLOADING';
+        job.outputs[index].result = await uploadOutput(job.outputs[index].specs, jobOutputsEncodedFiles[job.outputs[index].key], job.destination);
+      } else{
+        jobOutputsFaileds.push(job.outputs[index].key);
+        job.outputs[index].status = 'FAILED';
+      }
+
+      job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
+
+      await updateJob(job);
+      await updateWorker(workerKey, 'RUNNING');
     }
 
-    /* WORKER: UPDATE */
-    await pool.execute(
-      `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
-      { key: workerKey, now: getNow() }
-    );
-    
+    if (jobOutputsFaileds.length > 0) throw new Error(`Some outputs failed: ${jobOutputsFaileds.join(', ')}`);
+
+    job.status = 'COMPLETED';
+    job.error = null
+  } catch (err: any) {
+    job.status = 'FAILED';
+    job.error = { message: err.message || 'Unknown error' };
+  }
+
+  job.progress = 100.00;
+
+  await updateJob(job);
+  await updateWorker(workerKey, 'EXITED');
+
+  if (job.notification) {
+    await notifyJob({...job});
+  }
+
+  if (job.status === 'COMPLETED') {
     logger.info({ instanceKey,  workerKey, jobKey }, 'Job completed successfully!');
     process.exit(0);
-  } catch (err: any) {
-    logger.error({ err, instanceKey,  workerKey, jobKey }, 'Job failed!');
-
-    /* WORKER: UPDATE */
-    await pool.execute(
-      `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
-      { key: workerKey, now: getNow() }
-    );
-    
-    const errorObj = {
-      key: 'JOB_PROCESSING_ERROR',
-      message: String(err?.message ?? err)
-    };
-
-    await pool.execute(
-      `UPDATE ${dbPrefix}jobs SET status = 'FAILED', error = :err WHERE \`key\` = :key`,
-      { key: jobKey, err: JSON.stringify(errorObj) }
-    );
-    
-    const [rows] = await pool.query(`SELECT * FROM ${dbPrefix}jobs WHERE \`key\` = :key`, { key: jobKey });
-    
-    if ((rows as any[]).length > 0) {
-      const job = (rows as any[])[0];
-      const notification: NotificationSpec | undefined = job.notification 
-        ? JSON.parse(job.notification as string) 
-        : undefined;
-
-      if (notification) {
-        const [outputRows] = await pool.query(`SELECT * FROM ${dbPrefix}job_outputs WHERE job_key = :job_key ORDER BY \`index\``, { job_key: job.key });
-        await notifyJob(job.key, 'FAILED', job.priority, job);
-      }
-    }
-
-    /* WORKER: UPDATE */
-    await pool.execute(
-      `UPDATE ${dbPrefix}workers SET status = 'RUNNING', updated_at = :now WHERE \`key\` = :key`,
-      { key: workerKey, now: getNow() }
-    );
-    
+  } else {
+    logger.info({ instanceKey,  workerKey, jobKey }, 'Job failed!');
     process.exit(1);
+  }
+}
+
+async function startJob(job: any): Promise<void> {
+  if (!job.key) return;
+
+  try {
+    await pool.execute(
+      `UPDATE ${dbPrefix}jobs SET status = :status, started_at = :now, updated_at = :now WHERE \`key\` = :key`,
+      { key: job.key, status: job.status, now: getNow() }
+    );
+  } catch (err) {
+  }
+}
+
+async function updateJob(job: any): Promise<void> {
+  if (!job.key) return;
+
+  try {
+    await pool.execute(
+      `UPDATE ${dbPrefix}jobs SET input = :input, outputs = :outputs, status = :status, updated_at = :now, error = :error WHERE \`key\` = :key`,
+      {
+        key: job.key,
+        input: job.input ? JSON.stringify(job.input) : null,
+        outputs: job.outputs ? JSON.stringify(job.outputs) : null,
+        status: job.status,
+        now: getNow(),
+        error: job.error ? JSON.stringify(job.error) : null
+      }
+    );
+  } catch (err) {
+  }
+}
+
+async function updateWorker(workerKey: string, status: string): Promise<void> {
+  if (!workerKey) return;
+
+  try {
+    await pool.execute(
+      `UPDATE ${dbPrefix}workers SET status = :status, updated_at = :now WHERE \`key\` = :key`,
+      { key: workerKey, status, now: getNow() }
+    );
+  } catch (err) {
   }
 }
 

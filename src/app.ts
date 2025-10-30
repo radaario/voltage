@@ -253,25 +253,18 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
     console.log("OUTPUTS:", outputs);
 
     await conn.execute(
-      `INSERT INTO ${dbPrefix}jobs (\`key\`, input, outputs, destination, notification, metadata, priority, status, updated_at, created_at) VALUES (:key, :input, :outputs, :destination, :notification, :metadata, :priority, 'QUEUED', :now, :now)`,
+      `INSERT INTO ${dbPrefix}jobs (\`key\`, priority, input, outputs, destination, notification, metadata, status, updated_at, created_at) VALUES (:key, :priority, :input, :outputs, :destination, :notification, :metadata, 'QUEUED', :now, :now)`,
       { 
         key: jobKey,
+        priority: priority,
         input: body.input ? JSON.stringify(body.input) : null,
         outputs: outputs ? JSON.stringify(outputs) : null,
         destination: body.destination ? JSON.stringify(body.destination) : null,
         notification: body.notification ? JSON.stringify(body.notification) : null,
         metadata: body.metadata ? JSON.stringify(body.metadata) : null,
-        priority: priority,
         now: getNow()
       }
     );
-
-    for (const output of outputs) {
-      await conn.execute(
-        `INSERT INTO ${dbPrefix}job_outputs (\`key\`, job_key, \`index\`, specs, status, updated_at, created_at) VALUES (:key, :job_key, :index, :specs, 'PENDING', :now, :now)`,
-        { ...output, specs: JSON.stringify(output.specs), now }
-      );
-    }
 
     if (conn.commit) await conn.commit();
     
@@ -287,7 +280,7 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
     );
     
     const { notifyJob } = await import('./services/encoder/notifier.js');
-    const notificationPayload = await notifyJob(jobKey, 'QUEUED', priority, {...body, outputs});
+    const notificationPayload = await notifyJob({key: jobKey, priority, status: 'QUEUED', ...body, outputs});
     
     return res.status(202).json({ metadata: {status: true}, data: notificationPayload });
   } catch (err) {

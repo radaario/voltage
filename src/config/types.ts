@@ -84,27 +84,29 @@ export type NotificationSpec =
     };
 
 export type CreateJobRequest = {
+  priority?: number; // priority value (lower = higher priority, default: 1000)
   input: InputSpec;
   outputs: OutputSpec[];
   destination?: DestinationSpec; // optional global destination for outputs that don't have their own
   notification?: NotificationSpec;
   metadata?: Record<string, any>[]; // custom metadata to be sent back with notifications
-  priority?: number; // priority value (lower = higher priority, default: 1000)
 };
 
 export type JobRow = {
   key: string;
-  input: unknown;
-  destination: unknown | null;
-  notification: unknown | null;
-  metadata: unknown | null;
+  priority?: number | 1000;
+  input?: any | null;
+  outputs?: any | null;
+  destination?: any | null;
+  notification?: any | null;
+  metadata?: any | null;
   status: 'QUEUED' | 'PENDING' | 'DOWNLOADING' | 'ANALYZING' | 'ENCODING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED';
-  priority: number;
-  started_at: string | null;
-  completed_at: string | null;
-  updated_at: string;
-  created_at: string;
-  error: unknown | null;
+  progress: number | 0.00; // PENDING = 0; DOWNLOADING = 20; ANALYZING = 40; ENCODING = 60; UPLOADING = 80; COMPLETED = 100;
+  started_at?: string | null;
+  completed_at?: string | null;
+  updated_at?: string;
+  created_at?: string;
+  error?: any | null;
 };
 
 export type JobOutputRow = {

@@ -7,11 +7,12 @@ import { logger } from '../../utils/logger.js';
 import axios from 'axios';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 
-export async function notifyJob(jobKey: string, status: string, priority: number, job: any): Promise<any> {
+export async function notifyJob(job: any): Promise<any> {
   const payload: any = { 
-    key: jobKey,
-    status: status,
-    priority: priority
+    key: job.key,
+    priority: job.priority,
+    status: job.status,
+    progress: job.progress || 0.00,
   };
 
   for (const key of ['error', 'metadata', 'input', 'outputs', 'destination', 'notification']) {
