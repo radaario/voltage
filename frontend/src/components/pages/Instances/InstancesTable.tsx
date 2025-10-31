@@ -299,7 +299,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 					{table.getRowModel().rows.map((row) => (
 						<Fragment key={row.id}>
 							{/* Main Instance Row */}
-							<tr className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+							<tr className="group hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors">
 								{row.getVisibleCells().map((cell) => (
 									<td
 										key={cell.id}

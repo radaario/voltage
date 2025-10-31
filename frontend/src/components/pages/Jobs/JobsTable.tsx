@@ -3,6 +3,7 @@ import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "
 import { Job } from "@/interfaces/job";
 import TimeAgo from "timeago-react";
 import { useAuth } from "@/hooks/useAuth";
+import Tooltip from "@/components/base/Tooltip/Tooltip";
 import {
 	ChevronDoubleLeftIcon,
 	ChevronLeftIcon,
@@ -39,7 +40,7 @@ const columnHelper = createColumnHelper<Job>();
 const JobPreviewImage = memo(
 	({ jobKey, authToken }: { jobKey: string; authToken: string | null }) => {
 		return (
-			<div className="w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 rounded overflow-hidden">
+			<div className="w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 group-hover:bg-gray-200 dark:group-hover:bg-neutral-700 rounded overflow-hidden transition-colors">
 				<img
 					key={jobKey}
 					src={`${import.meta.env.VITE_API_BASE_URL}/jobs/${jobKey}/preview?token=${authToken}`}
@@ -67,7 +68,7 @@ const TableRow = memo(
 		return (
 			<tr
 				onClick={() => onViewJob(row.original)}
-				className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer ${
+				className={`group hover:bg-gray-50 dark:hover:bg-neutral-800 transition-all cursor-pointer ${
 					isNew ? "animate-slide-in-highlight" : ""
 				}`}>
 				{row.getVisibleCells().map((cell: any) => (
@@ -178,9 +179,18 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 							"bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800";
 					}
 
+					const progress = job.progress || 0;
+
 					return (
-						<span className={`inline-flex items-center px-3 py-1 rounded border text-sm font-medium ${colorClass}`}>
-							{status} - %{job.progress || 0}
+						<span
+							className={`relative inline-flex items-center px-3 py-1 rounded border text-sm font-medium overflow-hidden ${colorClass}`}>
+							{/* Progress Bar Overlay */}
+							<span
+								className="absolute inset-0 bg-current opacity-10 transition-all duration-300"
+								style={{ width: `${progress}%` }}
+							/>
+							{/* Text */}
+							<span className="relative z-10">{status}</span>
 						</span>
 					);
 				}
@@ -275,26 +285,28 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 					const job = info.row.original;
 					return (
 						<div className="flex items-center gap-1">
-							<button
-								type="button"
-								onClick={(e) => {
-									e.stopPropagation();
-									onViewJob(job);
-								}}
-								title="View Details"
-								className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-								<EyeIcon className="h-5 w-5" />
-							</button>
-							<button
-								type="button"
-								onClick={(e) => {
-									e.stopPropagation();
-									onDeleteJob(job);
-								}}
-								title="Delete Job"
-								className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-								<TrashIcon className="h-5 w-5" />
-							</button>
+							<Tooltip content="View Details">
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation();
+										onViewJob(job);
+									}}
+									className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-gray-900 dark:hover:text-white transition-colors">
+									<EyeIcon className="h-5 w-5" />
+								</button>
+							</Tooltip>
+							<Tooltip content="Delete Job">
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation();
+										onDeleteJob(job);
+									}}
+									className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+									<TrashIcon className="h-5 w-5" />
+								</button>
+							</Tooltip>
 						</div>
 					);
 				}
@@ -316,7 +328,7 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 			{/* Loading Overlay */}
 			{loading && (
 				<div className="absolute inset-0 bg-white/50 dark:bg-neutral-900/50 flex items-center justify-center z-10 rounded-lg">
-					<div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent"></div>
+					<div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-500 dark:border-gray-400 border-t-transparent"></div>
 				</div>
 			)}
 
@@ -366,7 +378,7 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 			</div>
 
 			{/* Pagination Controls */}
-			<div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800/50">
+			<div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
 				<div className="flex items-center gap-1">
 					{/* First Page Button */}
 					<button
@@ -441,7 +453,7 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 					<select
 						value={pagination.limit}
 						onChange={(e) => onLimitChange(Number(e.target.value))}
-						className="px-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-600 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500">
+						className="px-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500">
 						{[6, 10, 25, 50].map((pageSize) => (
 							<option
 								key={pageSize}

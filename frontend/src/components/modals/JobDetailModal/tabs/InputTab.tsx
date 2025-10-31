@@ -114,13 +114,13 @@ const InputTab: React.FC = () => {
 						href={value}
 						target="_blank"
 						rel="noreferrer"
-						className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline"
+						className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:underline"
 						title={value}>
 						<LinkIcon className="h-4 w-4" />
 						<span>{label}</span>
 						<ArrowTopRightOnSquareIcon className="h-4 w-4" />
 						{isVideoExt(ext) && (
-							<span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+							<span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-gray-300 border border-gray-200 dark:border-neutral-700">
 								{ext.toUpperCase()}
 							</span>
 						)}
@@ -139,7 +139,7 @@ const InputTab: React.FC = () => {
 				if (isFileNameKey && authToken) {
 					return (
 						<div className="flex items-center gap-3">
-							<div className="w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden">
+							<div className="w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 rounded overflow-hidden">
 								<img
 									src={`${import.meta.env.VITE_API_BASE_URL}/jobs/${job.key}/preview?token=${authToken}`}
 									alt="Preview"
@@ -242,9 +242,9 @@ const InputTab: React.FC = () => {
 			<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Input Configuration</h4>
 
 			{/* Input Table */}
-			<div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
-				<table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-					<thead className="bg-gray-50 dark:bg-gray-900">
+			<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg">
+				<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+					<thead className="bg-gray-50 dark:bg-neutral-900">
 						<tr>
 							<th
 								scope="col"
@@ -258,11 +258,11 @@ const InputTab: React.FC = () => {
 							</th>
 						</tr>
 					</thead>
-					<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+					<tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
 						{inputEntries.map(([key, value]) => (
 							<tr
 								key={key}
-								className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+								className="hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors">
 								<td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 dark:text-white uppercase">
 									{key}
 								</td>

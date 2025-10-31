@@ -18,16 +18,61 @@
 	button:not(:disabled) {
 		cursor: pointer;
 	}
+
+	/* Scrollbar styling for light mode */
+	::-webkit-scrollbar {
+		width: 12px;
+		height: 12px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: #f1f1f1;
+		border-radius: 10px;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: #c1c1c1;
+		border-radius: 10px;
+		border: 2px solid #f1f1f1;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: #a8a8a8;
+	}
+
+	/* Scrollbar styling for dark mode */
+	.dark ::-webkit-scrollbar-track {
+		background: #2a2a2a;
+	}
+
+	.dark ::-webkit-scrollbar-thumb {
+		background: #4a4a4a;
+		border: 2px solid #2a2a2a;
+	}
+
+	.dark ::-webkit-scrollbar-thumb:hover {
+		background: #5a5a5a;
+	}
+
+	/* Firefox scrollbar */
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: #c1c1c1 #f1f1f1;
+	}
+
+	.dark * {
+		scrollbar-color: #4a4a4a #2a2a2a;
+	}
 }
 
 .light {
 	--color-background: var(--color-white);
-	--color-header: var(--color-gray-100);
-	--color-footer: var(--color-gray-100);
-	--color-table: var(--color-gray-200);
-	--color-thead: var(--color-gray-300);
-	--color-tbody: var(--color-gray-100);
-	--color-tr-border: var(--color-gray-100);
+	--color-header: var(--color-neutral-100);
+	--color-footer: var(--color-neutral-100);
+	--color-table: var(--color-neutral-200);
+	--color-thead: var(--color-neutral-300);
+	--color-tbody: var(--color-neutral-100);
+	--color-tr-border: var(--color-neutral-100);
 }
 
 .dark {

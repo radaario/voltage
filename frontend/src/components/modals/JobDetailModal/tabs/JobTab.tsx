@@ -19,7 +19,7 @@ const JobTab: React.FC = () => {
 		} else if (status === "PENDING" || status === "QUEUED") {
 			return "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800";
 		}
-		return "bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
+		return "bg-gray-100 text-gray-800 border-gray-300 dark:bg-neutral-800 dark:text-gray-300 dark:border-neutral-700";
 	};
 
 	return (
@@ -27,7 +27,7 @@ const JobTab: React.FC = () => {
 			{/* Basic Info */}
 			<div>
 				<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Basic Information</h4>
-				<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-2">
+				<div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-4 space-y-2">
 					<div className="flex justify-between">
 						<span className="text-sm text-gray-600 dark:text-gray-400">Job Key:</span>
 						<span className="text-sm font-mono text-gray-900 dark:text-white">{job.key}</span>
@@ -53,7 +53,7 @@ const JobTab: React.FC = () => {
 			{/* Full JSON */}
 			<div>
 				<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Full Data</h4>
-				<pre className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 text-xs overflow-x-auto">
+				<pre className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-4 text-xs overflow-x-auto">
 					<code className="text-gray-800 dark:text-gray-200">{JSON.stringify(job, null, 2)}</code>
 				</pre>
 			</div>

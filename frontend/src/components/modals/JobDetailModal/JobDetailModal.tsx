@@ -83,16 +83,16 @@ const JobDetailModal: React.FC = () => {
 			<div className="flex min-h-full items-center justify-center p-4">
 				{/* Modal Panel */}
 				<div
-					className={`relative overflow-hidden w-full max-w-5xl h-[85vh] flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-xl z-10 transition-all duration-300 ${
+					className={`relative overflow-hidden w-full max-w-5xl h-[85vh] flex flex-col bg-white dark:bg-neutral-800 rounded-2xl shadow-xl z-10 transition-all duration-300 ${
 						isAnimating ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 					}`}
 					onClick={(e) => e.stopPropagation()}>
 					{/* Header */}
-					<div className="shrink-0 flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+					<div className="shrink-0 flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 						<div className="flex items-center gap-4">
 							{/* Preview Image */}
 							{job && (
-								<div className="w-24 h-16 relative shrink-0 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden">
+								<div className="w-24 h-16 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden">
 									<img
 										src={`${import.meta.env.VITE_API_BASE_URL}/jobs/${job.key}/preview?token=${authToken}`}
 										alt="Preview"
@@ -119,13 +119,13 @@ const JobDetailModal: React.FC = () => {
 						<button
 							type="button"
 							onClick={handleClose}
-							className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+							className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors">
 							<XMarkIcon className="h-6 w-6" />
 						</button>
 					</div>
 
 					{/* Tabs */}
-					<div className="shrink-0 border-b border-gray-200 dark:border-gray-700">
+					<div className="shrink-0 border-b border-gray-200 dark:border-neutral-700">
 						<nav className="flex px-6 gap-8">
 							{tabs.map((tab) => (
 								<NavLink
@@ -134,7 +134,7 @@ const JobDetailModal: React.FC = () => {
 									className={({ isActive }) =>
 										`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
 											isActive
-												? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
+												? "border-neutral-700 text-gray-900 dark:border-neutral-400 dark:text-white"
 												: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
 										}`
 									}>
@@ -149,7 +149,7 @@ const JobDetailModal: React.FC = () => {
 					<div className="flex-1 overflow-y-auto p-6">
 						{isLoading ? (
 							<div className="flex justify-center items-center py-12">
-								<div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent"></div>
+								<div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-500 dark:border-gray-400 border-t-transparent"></div>
 							</div>
 						) : (
 							<Outlet context={{ job }} />

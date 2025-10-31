@@ -5,6 +5,7 @@ import type { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
 import JobsTable from "./JobsTable";
 import DeleteConfirmModal from "@/components/modals/DeleteConfirmModal/DeleteConfirmModal";
+import Tooltip from "@/components/base/Tooltip/Tooltip";
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
@@ -109,7 +110,8 @@ const Jobs: React.FC = () => {
 			const payload = {
 				input: {
 					service: "HTTPS",
-					url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4"
+					// url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4"
+					url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4"
 				},
 				outputs: [
 					{
@@ -238,7 +240,7 @@ const Jobs: React.FC = () => {
 	if (isLoading && !data) {
 		return (
 			<div className="flex justify-center items-center h-64">
-				<div className="animate-spin rounded-full h-10 w-10 border-2 border-b-white border-indigo-500"></div>
+				<div className="animate-spin rounded-full h-10 w-10 border-2 border-b-white border-gray-500 dark:border-gray-400"></div>
 			</div>
 		);
 	}
@@ -249,18 +251,19 @@ const Jobs: React.FC = () => {
 			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 				<div className="flex items-center gap-3">
 					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Latest jobs</h3>
-					<button
-						type="button"
-						onClick={handleRefresh}
-						title="Refresh"
-						disabled={isLoading}
-						className={`p-2 -mb-1 rounded-md transition-all ${
-							isLoading
-								? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
-								: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400"
-						}`}>
-						<ArrowPathIcon className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
-					</button>
+					<Tooltip content="Refresh jobs">
+						<button
+							type="button"
+							onClick={handleRefresh}
+							disabled={isLoading}
+							className={`p-2 -mb-1 rounded-md transition-all ${
+								isLoading
+									? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
+									: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 hover:text-gray-900 dark:hover:text-white"
+							}`}>
+							<ArrowPathIcon className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
+						</button>
+					</Tooltip>
 				</div>
 				<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
 					{/* Search Box */}
@@ -276,7 +279,7 @@ const Jobs: React.FC = () => {
 								value={searchInput}
 								onChange={(e) => setSearchInput(e.target.value)}
 								placeholder="Search jobs..."
-								className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+								className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-neutral-600 rounded-md leading-5 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
 							/>
 							{searchInput && (
 								<button
@@ -287,12 +290,13 @@ const Jobs: React.FC = () => {
 								</button>
 							)}
 						</div>
-						<button
-							type="submit"
-							title="Search"
-							className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-							<MagnifyingGlassIcon className="h-5 w-5" />
-						</button>
+						<Tooltip content="Search jobs">
+							<button
+								type="submit"
+								className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors">
+								<MagnifyingGlassIcon className="h-5 w-5" />
+							</button>
+						</Tooltip>
 					</form>
 
 					{/* Create Button */}
@@ -320,7 +324,7 @@ const Jobs: React.FC = () => {
 			)}
 
 			{/* Table */}
-			<div className="bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+			<div className="bg-gray-100 dark:bg-gray-900 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 				<JobsTable
 					data={data?.data || []}
 					loading={isLoading}
