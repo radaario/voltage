@@ -1,4 +1,4 @@
-import { config } from '../config';
+import { config } from '../config/index.js';
 
 import os from 'os';
 import crypto from 'crypto';
@@ -54,7 +54,7 @@ export function getInstanceCpuFrequencyMHz(): number {
     if (cpus.length === 0) return 0;
     const totalSpeed = cpus.reduce((acc, cpu) => acc + cpu.speed, 0);
     return totalSpeed / cpus.length;
-  } catch (e) {
+  } catch (err: Error | any) {
   }
   
   return 0;
@@ -67,7 +67,7 @@ export function getInstanceCpuUsagePercent(): number {
     const totalTick = cpus.reduce((acc, cpu) => acc + Object.values(cpu.times).reduce((a, b) => a + b, 0), 0);
     const idlePercentage = (totalIdle / totalTick) * 100;
     return parseFloat((100 - idlePercentage).toFixed(2)); // Return CPU usage percentage as a two decimal float
-  } catch (e) {
+  } catch (err: Error | any) {
   }
   
   return 0;
@@ -79,7 +79,7 @@ export function getInstanceMemoryUsagePercent(): number {
     const freeMemory = os.freemem();
     const usedMemory = totalMemory - freeMemory;
     return parseFloat(((usedMemory / totalMemory) * 100).toFixed(2)); // Return memory usage percentage
-  } catch (e) {
+  } catch (err: Error | any) {
   }
   
   return 0;
@@ -103,7 +103,7 @@ export function getNow(): string {
   if (config.timezone && config.timezone !== '') {
     try {
       m = m.tz(config.timezone);
-    } catch (e) {
+    } catch (err: Error | any) {
       // invalid timezone — fall back to local moment
     }
   }
@@ -116,7 +116,7 @@ export function addNow(amount: number, unit: moment.unitOfTime.DurationConstruct
   if (config.timezone && config.timezone !== '') {
     try {
       m = m.tz(config.timezone);
-    } catch (e) {
+    } catch (err: Error | any) {
       // invalid timezone — fall back to local moment
     }
   }
@@ -130,7 +130,7 @@ export function subtractNow(amount: number, unit: moment.unitOfTime.DurationCons
   if (config.timezone && config.timezone !== '') {
     try {
       m = m.tz(config.timezone);
-    } catch (e) {
+    } catch (err: Error | any) {
       // invalid timezone — fall back to local moment
     }
   }
@@ -139,7 +139,7 @@ export function subtractNow(amount: number, unit: moment.unitOfTime.DurationCons
 }
 
 // Sanitize sensitive fields from objects
-export function sanitizeData(data: any): any {
+export function sanitizeData(data: any, sensitiveFields: string[] = []): any {
   // Handle null or undefined
   if (data === null || data === undefined) return data;
   
@@ -147,20 +147,21 @@ export function sanitizeData(data: any): any {
   if (typeof data === 'string') {
     try {
       const parsed = JSON.parse(data);
-      return sanitizeData(parsed); // Recursively sanitize parsed data
-    } catch (e) {
+      return sanitizeData(parsed, sensitiveFields); // Recursively sanitize parsed data
+    } catch (err) {
       return data; // Return as is if not valid JSON
     }
   }
 
   // Handle primitive types
   if (typeof data !== 'object') return data;
-  
-  const sensitiveFields = config.api.sensitive_fields ? config.api.sensitive_fields.split(',').map(f => f.trim()) : null;
-  
+
+  const coreSensitiveFields: string[] = config.api.sensitive_fields ? config.api.sensitive_fields.split(',').map(f => f.trim()) : [];
+  const allSensitiveFields = [...coreSensitiveFields, ...sensitiveFields];
+
   // Handle arrays
   if (Array.isArray(data)) {
-    return data.map((item: any) => sanitizeData(item));
+    return data.map((item: any) => sanitizeData(item, sensitiveFields));
   }
   
   // Handle objects
@@ -169,14 +170,36 @@ export function sanitizeData(data: any): any {
   for (const key in data) {
     if (data.hasOwnProperty(key)) {
       // Skip sensitive fields
-      if (sensitiveFields && sensitiveFields.includes(key)) {
+      if (allSensitiveFields && allSensitiveFields.includes(key)) {
         continue;
       }
       
       // Recursively sanitize nested objects and arrays
-      sanitized[key] = sanitizeData(data[key]);
+      sanitized[key] = sanitizeData(data[key], sensitiveFields);
     }
   }
   
   return sanitized;
+}
+
+export function getContentTypeFromFileExtension(filename: string): string {
+  const ext = filename.toLowerCase().split('.').pop();
+  
+  const contentTypes: Record<string, string> = {
+    'mp4': 'video/mp4',
+    'mkv': 'video/x-matroska',
+    'mov': 'video/quicktime',
+    'webm': 'video/webm',
+    'ts': 'video/mp2t',
+    'avi': 'video/x-msvideo',
+    'wmv': 'video/x-ms-wmv',
+    'flv': 'video/x-flv',
+    'm4v': 'video/x-m4v',
+    '3gp': 'video/3gpp',
+    '3g2': 'video/3gpp2',
+    'ogg': 'video/ogg',
+    'ogv': 'video/ogg'
+  };
+  
+  return contentTypes[ext || ''] || 'application/octet-stream';
 }

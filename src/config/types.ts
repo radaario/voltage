@@ -2,55 +2,57 @@ export type AWS_S3_ACL = 'PUBLIC_READ' | 'PUBLIC_READ_WRITE' |  'AUTHENTICATED_R
 
 export type InputSpec =
   | { 
-      service: 'HTTP' | 'HTTPS'; 
+      type: 'BASE64'; 
+      content: string;
+    }  
+  | { 
+      type: 'HTTP' | 'HTTPS'; 
       username?: string;
       password?: string;
       url: string;
     }
   | { 
-      service: 'BASE64'; 
-      content: string;
-    }
-  | { 
-      service: 'FTP'; 
-      host: string;
-      username?: string;
-      password?: string;
+      type: 'AWS_S3' | 'GOOGLE_CLOUD_STORAGE' | 'DO_SPACES' | 'LINODE' | 'WASABI' | 'BACKBLAZE' | 'RACKSPACE' | 'MICROSOFT_AZURE' | 'OTHER_S3';
+      access_key: string; // Access Key ID
+      access_secret: string; // Access Key Secret
+      region: string;
+      bucket: string;
       path: string;
     }
   | { 
-      service: 'AWS_S3';
-      access_key_id: string; // Access Key ID
-      secret_access_key: string; // Access Key Secret
-      region: string;
-      bucket: string;
+      type: 'FTP' | 'SFTP'; 
+      host: string;
+      username?: string;
+      password?: string;
       path: string;
     };
 
 export type DestinationSpec =
   | {
-      service: 'HTTP' | 'HTTPS';
+      type: 'HTTP' | 'HTTPS';
       method?: 'POST' | 'PUT';
       headers?: Record<string, string>;
       url: string;
     }
   | {
-      service: 'FTP' | 'SFTP';
-      host: string;
-      username: string;
-      password: string;
-    }
-  | {
-    service: 'AWS_S3' | 'OTHER_S3' | 'GOOGLE_CLOUD_STORAGE' | 'DO_SPACES' | 'LINODE' | 'WASABI' | 'BACKBLAZE' | 'RACKSPACE' | 'MICROSOFT_AZURE';
-    endpoint?: string; // Custom endpoint for non-AWS S3 compatible services
-    access_key_id: string; // Access Key ID
-    secret_access_key: string; // Access Key Secret
+    type: 'AWS_S3' | 'GOOGLE_CLOUD_STORAGE' | 'DO_SPACES' | 'LINODE' | 'WASABI' | 'BACKBLAZE' | 'RACKSPACE' | 'MICROSOFT_AZURE' | 'OTHER_S3';
+    endpoint?: string; // Custom endpoint for non-AWS S3 compatible types
+    access_key: string; // Access Key ID
+    access_secret: string; // Access Key Secret
     region: string;
     bucket: string;
     acl?: AWS_S3_ACL;
     expires?: number;
     cache_control?: string;
-  };
+    }
+  | {
+      type: 'FTP' | 'SFTP';
+      host: string;
+      port?: number; // optional, default FTP: 21, SFTP: 22
+      username: string;
+      password: string;
+      secure?: boolean; // for FTP (FTPS with explicit TLS)
+    };
 
 export type OutputSpec = {
   container: 'mp4' | 'mkv' | 'mov' | 'webm' | 'ts' | string;
@@ -70,15 +72,15 @@ export type OutputSpec = {
 
 export type NotificationSpec =
   | {
-      service: 'HTTP' | 'HTTPS';
+      type: 'HTTP' | 'HTTPS';
       method?: 'GET' | 'POST' | 'PUT';
       headers?: Record<string, string>;
       url: string;
     }
   | {
-      service: 'AWS_SNS';
-      access_key_id: string; // Access Key ID
-      secret_access_key: string; // Access Key Secret
+      type: 'AWS_SNS';
+      access_key: string; // Access Key ID
+      access_secret: string; // Access Key Secret
       region: string;
       topic: string; // Topic ARN
     };
@@ -106,7 +108,7 @@ export type JobRow = {
   completed_at?: string | null;
   updated_at?: string;
   created_at?: string;
-  error?: any | null;
+  outcome?: any | null;
 };
 
 export type JobOutputRow = {

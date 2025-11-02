@@ -1,7 +1,7 @@
-import { config } from '../../config';
+import { config } from '../../config/index.js';
 import { NotificationSpec } from '../../config/types.js';
 
-import { sanitizeData } from '../../utils';
+import { sanitizeData } from '../../utils/index.js';
 import { logger } from '../../utils/logger.js';
 
 import axios from 'axios';
@@ -20,7 +20,7 @@ export async function notifyJob(job: any): Promise<any> {
       if (typeof job[key] === 'string'){
         try {
           job[key] = JSON.parse(job[key]);
-        } catch (e) {
+        } catch (err: Error | any) {
         }
       }
 
@@ -37,26 +37,26 @@ export async function notifyJob(job: any): Promise<any> {
 
 export async function notify(notification: NotificationSpec, payload: unknown): Promise<void> {
   try {
-    if ('service' in notification) {
-      if (notification.service === 'HTTP' || notification.service === 'HTTPS') {
+    if ('type' in notification) {
+      if (notification.type === 'HTTP' || notification.type === 'HTTPS') {
         // HTTP/HTTPS notification
         await notifyHttp(notification, payload);
-      } else if (notification.service === 'AWS_SNS') {
+      } else if (notification.type === 'AWS_SNS') {
         // AWS SNS notification
         await notifySns(notification, payload);
       } else {
-        logger.warn({ notification }, 'Unknown notification service');
+        logger.warn({ notification }, 'Unknown notification type');
       }
     } else {
       logger.warn({ notification }, 'Invalid notification format');
     }
-  } catch (error) {
-    logger.error({ error, notification }, 'Notification failed');
+  } catch (err: Error | any) {
+    logger.error({ err, notification }, 'Notification failed');
     // Best-effort notification; ignore failures
   }
 }
 
-async function notifyHttp(notification: { service: 'HTTP' | 'HTTPS'; method?: 'GET' | 'POST' | 'PUT'; headers?: Record<string, string>; url: string }, payload: unknown): Promise<void> {
+async function notifyHttp(notification: { type: 'HTTP' | 'HTTPS'; method?: 'GET' | 'POST' | 'PUT'; headers?: Record<string, string>; url: string }, payload: unknown): Promise<void> {
   const method = notification.method || 'POST';
   const headers = { 'Content-Type': 'application/json', 'User-Agent': `${config.name}/${config.version}`, ...(notification.headers || {}) };
   
@@ -87,12 +87,12 @@ async function notifyHttp(notification: { service: 'HTTP' | 'HTTPS'; method?: 'G
   await axios.request(requestConfig);
 }
 
-async function notifySns(notification: { service: 'AWS_SNS'; access_key_id: string; secret_access_key: string; region: string; topic: string }, payload: unknown): Promise<void> {
+async function notifySns(notification: { type: 'AWS_SNS'; access_key: string; access_secret: string; region: string; topic: string }, payload: unknown): Promise<void> {
   const snsClient = new SNSClient({
     region: notification.region,
     credentials: {
-      accessKeyId: notification.access_key_id,
-      secretAccessKey: notification.secret_access_key,
+      accessKeyId: notification.access_key,
+      secretAccessKey: notification.access_secret,
     }
   });
 

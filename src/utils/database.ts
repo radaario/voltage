@@ -1,4 +1,11 @@
-import { config } from '../config';
+import { config } from '../config/index.js';
+
+// Returns the database prefix with a trailing '_' if needed
+export function dbTablePrefix(): string {
+  const raw = config.database.table_prefix;
+  if (!raw) return '';
+  return raw.replace(/[-_]/g, '') + '_';
+}
 
 import { logger } from './logger.js';
 
@@ -8,9 +15,6 @@ import pg from 'pg';
 import mssql from 'mssql';
 
 const { Pool: PgPool } = pg;
-
-/* DATABASE: PREFIX */
-const dbPrefix = config.db.prefix ? `${config.db.prefix}_` : '';
 
 // Database interface for unified operations
 export interface DbConnection {
@@ -27,13 +31,11 @@ export interface DbPool extends DbConnection {
   getConnection(): Promise<DbConnection>;
 }
 
-let dbPool: DbPool;
-
-// Initialize database pool based on config.db.kind
+// Initialize database pool based on config.database.type
 function createDatabasePool(): DbPool {
-  const kind = config.db.kind;
+  const type = config.database.type.toUpperCase();
   
-  switch (kind) {
+  switch (type) {
     case 'SQLITE':
       return createSQLitePool();
     case 'MYSQL':
@@ -45,16 +47,14 @@ function createDatabasePool(): DbPool {
       return createPostgreSQLPool();
     case 'MSSQL':
       return createMSSQLPool();
-    
     default:
-      throw new Error(`Unsupported database kind: ${kind}`);
+      throw new Error(`Unsupported database type: ${type}`);
   }
 }
 
 // SQLite implementation
 function createSQLitePool(): DbPool {
-  const filename = (config.db as any).filename ?? './db.sqlite';
-  const db = new Database(filename);
+  const db = new Database(config.database.file_name ?? './db.sqlite');
   db.pragma('journal_mode = WAL');
   
   const convertSQLForSQLite = (sql: string): string => {
@@ -109,7 +109,7 @@ function createSQLitePool(): DbPool {
         const stmt = db.prepare(finalSql);
         const rows = stmt.all(...paramArray);
         return [rows, null];
-      } catch (err: any) {
+      } catch (err: Error | any) {
         logger.error({ err, sql: finalSql, params: paramArray }, 'SQLite query error');
         throw err;
       }
@@ -123,7 +123,7 @@ function createSQLitePool(): DbPool {
         const stmt = db.prepare(finalSql);
         const result = stmt.run(...paramArray);
         return result;
-      } catch (err: any) {
+      } catch (err: Error | any) {
         logger.error({ err, sql: finalSql, params: paramArray }, 'SQLite execute error');
         throw err;
       }
@@ -156,11 +156,11 @@ function createSQLitePool(): DbPool {
 // MySQL/MariaDB implementation
 function createMySQLPool(): DbPool {
   const mysqlPool = mysql.createPool({
-    host: config.db.host,
-    port: config.db.port,
-    user: config.db.username,
-    password: config.db.password,
-    database: config.db.database,
+    host: config.database.host,
+    port: config.database.port,
+    user: config.database.username,
+    password: config.database.password,
+    database: config.database.name,
     connectionLimit: 10,
     namedPlaceholders: true,
     // If config.timezone is set, forward it to the MySQL driver so TIMESTAMP
@@ -197,11 +197,11 @@ function createMySQLPool(): DbPool {
 // PostgreSQL implementation (also works for AWS Redshift and CockroachDB)
 function createPostgreSQLPool(): DbPool {
   const pgPool = new PgPool({
-    host: config.db.host,
-    port: config.db.port,
-    user: config.db.username,
-    password: config.db.password,
-    database: config.db.database,
+    host: config.database.host,
+    port: config.database.port,
+    user: config.database.username,
+    password: config.database.password,
+    database: config.database.name,
     max: 10
   });
   // If a timezone is configured, ensure each new client session uses it.
@@ -218,7 +218,7 @@ function createPostgreSQLPool(): DbPool {
           logger.error({ err, timezone: config.timezone }, 'Failed to set Postgres session timezone');
         });
       });
-    } catch (err: any) {
+    } catch (err: Error | any) {
       logger.error({ err, timezone: config.timezone }, 'Failed to register Postgres connect handler for timezone');
     }
   }
@@ -260,7 +260,7 @@ function createPostgreSQLPool(): DbPool {
       try {
         const result = await pgPool.query(finalSql, paramArray);
         return [result.rows, result];
-      } catch (err: any) {
+      } catch (err: Error | any) {
         logger.error({ err, sql: finalSql, params: paramArray }, 'PostgreSQL query error');
         throw err;
       }
@@ -273,7 +273,7 @@ function createPostgreSQLPool(): DbPool {
       try {
         const result = await pgPool.query(finalSql, paramArray);
         return result;
-      } catch (err: any) {
+      } catch (err: Error | any) {
         logger.error({ err, sql: finalSql, params: paramArray }, 'PostgreSQL execute error');
         throw err;
       }
@@ -290,7 +290,7 @@ function createPostgreSQLPool(): DbPool {
           // Use a template literal but protect from injection by limiting
           // to configured values; we assume config.timezone is trusted here.
           await client.query(`SET TIME ZONE '${config.timezone}'`);
-        } catch (err: any) {
+        } catch (err: Error | any) {
           logger.error({ err, timezone: config.timezone }, 'Failed to set timezone on Postgres connection');
         }
       }
@@ -329,11 +329,11 @@ function createPostgreSQLPool(): DbPool {
 // MSSQL implementation
 function createMSSQLPool(): DbPool {
   const poolConfig: mssql.config = {
-    server: config.db.host,
-    port: config.db.port,
-    user: config.db.username,
-    password: config.db.password,
-    database: config.db.database,
+    server: config.database.host,
+    port: config.database.port,
+    user: config.database.username,
+    password: config.database.password,
+    database: config.database.name,
     options: {
       encrypt: true,
       trustServerCertificate: true,
@@ -397,7 +397,7 @@ function createMSSQLPool(): DbPool {
         
         const result = await request.query(finalSql);
         return [result.recordset || [], result];
-      } catch (err: any) {
+      } catch (err: Error | any) {
         logger.error({ err, sql: finalSql, params: finalParams }, 'MSSQL query error');
         throw err;
       }
@@ -418,7 +418,7 @@ function createMSSQLPool(): DbPool {
         
         const result = await request.query(finalSql);
         return result;
-      } catch (err: any) {
+      } catch (err: Error | any) {
         logger.error({ err, sql: finalSql, params: finalParams }, 'MSSQL execute error');
         throw err;
       }
@@ -454,17 +454,17 @@ function createMSSQLPool(): DbPool {
 }
 
 // Export the pool
-export const pool: DbPool = createDatabasePool();
-dbPool = pool;
+export const dbPool: DbPool = createDatabasePool();
 
 export async function initDb(): Promise<void> {
-  logger.info({ dbKind: config.db.kind }, 'Ensuring database schema exists');
-  const conn = await pool.getConnection();
+  logger.info({ dbType: config.database.type.toUpperCase() }, 'Ensuring database schema exists...');
+  const conn = await dbPool.getConnection();
+
   try {
     if (conn.beginTransaction) await conn.beginTransaction();
 
     // Instances table: track running instances/pods of this application
-    await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}instances (
+      await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbTablePrefix()}instances (
       \`key\` VARCHAR(255) PRIMARY KEY,
       type ENUM('MASTER','SLAVE') NOT NULL DEFAULT 'SLAVE',
       system JSON NOT NULL,
@@ -474,13 +474,12 @@ export async function initDb(): Promise<void> {
       status ENUM('RUNNING','EXITED') NOT NULL DEFAULT 'RUNNING',
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      exit_code INT NULL,
-      exit_signal VARCHAR(50) NULL
+      outcome JSON NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
 
     // Workers table: persist information about active workers so the cluster
     // can observe worker state across instances instead of relying on in-memory maps.
-    await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}workers (
+      await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbTablePrefix()}workers (
       \`key\` CHAR(36) PRIMARY KEY,
       instance_key VARCHAR(255) NULL,
       pid INT NULL,
@@ -488,16 +487,15 @@ export async function initDb(): Promise<void> {
       status ENUM('RUNNING','EXITED') NOT NULL DEFAULT 'RUNNING',
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      exit_code INT NULL,
-      exit_signal VARCHAR(50) NULL,
-      FOREIGN KEY (job_key) REFERENCES ${dbPrefix}jobs(\`key\`) ON DELETE CASCADE
+      outcome JSON NULL,
+      FOREIGN KEY (job_key) REFERENCES ${dbTablePrefix()}jobs(\`key\`) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
-    
-    await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}jobs (
+
+    await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbTablePrefix()}jobs (
       \`key\` CHAR(36) PRIMARY KEY,
       priority INT NOT NULL DEFAULT 1000,
       input JSON NOT NULL,
-      outputs JSON NULL,
+      outputs JSON NOT NULL,
       destination JSON NULL,
       notification JSON NULL,
       metadata JSON NULL,
@@ -507,11 +505,11 @@ export async function initDb(): Promise<void> {
       completed_at TIMESTAMP NULL,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      error JSON NULL
+      outcome JSON NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
 
     /*
-    await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}job_outputs (
+    await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbTablePrefix()}job_outputs (
       \`key\` CHAR(36) PRIMARY KEY,
       job_key CHAR(36) NOT NULL,
       \`index\` INT NOT NULL,
@@ -521,11 +519,11 @@ export async function initDb(): Promise<void> {
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       result JSON NULL,
       error JSON NULL,
-      FOREIGN KEY (job_key) REFERENCES ${dbPrefix}jobs(\`key\`) ON DELETE CASCADE
+      FOREIGN KEY (job_key) REFERENCES ${dbTablePrefix()}jobs(\`key\`) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
     */
 
-    await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbPrefix}jobs_queue (
+      await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbTablePrefix()}jobs_queue (
       \`key\` CHAR(36) PRIMARY KEY,
       job_key CHAR(36) NOT NULL,
       priority INT NOT NULL DEFAULT 1000,
@@ -538,23 +536,23 @@ export async function initDb(): Promise<void> {
       INDEX (priority),
       INDEX (available_at),
       INDEX (visibility_timeout),
-      FOREIGN KEY (job_key) REFERENCES ${dbPrefix}jobs(\`key\`) ON DELETE CASCADE
+      FOREIGN KEY (job_key) REFERENCES ${dbTablePrefix()}jobs(\`key\`) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
 
     // Index to quickly find workers by job_key
-    if (config.db.kind === 'SQLITE') {
-      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}workers_job_key ON ${dbPrefix}workers(job_key);`);
+    if (config.database.type.toUpperCase() === 'SQLITE') {
+      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbTablePrefix()}workers_job_key ON ${dbTablePrefix()}workers(job_key);`);
     }
     
     // Create indexes separately for SQLite (MySQL ignores IF NOT EXISTS for indexes in tables)
-    if (config.db.kind === 'SQLITE') {
-      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}jobs_queue_priority ON ${dbPrefix}jobs_queue(priority);`);
-      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}jobs_queue_available_at ON ${dbPrefix}jobs_queue(available_at);`);
-      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbPrefix}jobs_queue_visibility_timeout ON ${dbPrefix}jobs_queue(visibility_timeout);`);
+    if (config.database.type.toUpperCase() === 'SQLITE') {
+      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbTablePrefix()}jobs_queue_priority ON ${dbTablePrefix()}jobs_queue(priority);`);
+      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbTablePrefix()}jobs_queue_available_at ON ${dbTablePrefix()}jobs_queue(available_at);`);
+      await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${dbTablePrefix()}jobs_queue_visibility_timeout ON ${dbTablePrefix()}jobs_queue(visibility_timeout);`);
     }
     
     if (conn.commit) await conn.commit();
-  } catch (err) {
+  } catch (err: Error | any) {
     if (conn.rollback) await conn.rollback();
     throw err;
   } finally {

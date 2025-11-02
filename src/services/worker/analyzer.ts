@@ -1,22 +1,26 @@
-import { config } from '../../config';
+import { config } from '../../config/index.js';
 
 import { logger } from '../../utils/logger.js';
 
 import { spawn } from 'child_process';
-import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
 
-export async function extractMetadata(filePath: string): Promise<any[]> {
+export async function analyzeInputMetadata(job: any): Promise<any[]> {
   try {
+    const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
+    const jobTempInputFilePath = path.join(jobTempFolder, 'input');
+
+    logger.info({ jobKey: job.key }, 'Extracting metadata from job input...');
+
     /* FILE: INFO: EXTRACT */
-    const fileName = path.basename(filePath);
+    const fileName = path.basename(jobTempInputFilePath);
     const fileExtension = path.extname(fileName).toLowerCase().replace(/^\./, '');
-    const fileStats = await fs.stat(filePath);
+    const fileStats = await fs.stat(jobTempInputFilePath);
     const fileMimeType = getMimeType(fileExtension);
     
     /* FFPROBE: RUN */
-    const ffprobeData = await runFfprobe(filePath);
+    const ffprobeData = await runFfprobe(jobTempInputFilePath);
     
     /* METADATA: EXTRACT */
     const metadata = parseFfprobeOutput(ffprobeData, {
@@ -26,11 +30,11 @@ export async function extractMetadata(filePath: string): Promise<any[]> {
       file_size: fileStats.size
     });
     
-    logger.info({ filePath, fileName }, 'Metadata extracted successfully');
+    logger.info({ jobKey: job.key }, 'Metadata successfully extracted from job input!');
     return metadata;
-  } catch (error) {
-    logger.error({ error, filePath }, 'Failed to extract metadata');
-    throw new Error(`Metadata extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } catch (err: Error | any) {
+    logger.error({ jobKey: job.key, err }, 'Failed to extract metadata from job input!');
+    throw new Error(`Metadata extraction failed: ${err.message || 'Unknown error'}`);
   }
 }
 
@@ -61,7 +65,7 @@ function getMimeType(extension: string): string {
 
 async function runFfprobe(filePath: string): Promise<any[]> {
   return new Promise((resolve, reject) => {
-    const ffprobe = spawn(config.ffprobe.path, [
+    const ffprobe = spawn(config.utils.ffprobe.path, [
       '-v', 'quiet',
       '-print_format', 'json',
       '-show_format',
@@ -85,16 +89,16 @@ async function runFfprobe(filePath: string): Promise<any[]> {
         try {
           const result = JSON.parse(stdout);
           resolve(result);
-        } catch (error) {
-          reject(new Error(`Failed to parse ffprobe output: ${error}`));
+        } catch (err: Error | any) {
+          reject(new Error(`Failed to parse ffprobe output: ${err.message}`));
         }
       } else {
         reject(new Error(`ffprobe failed with code ${code}: ${stderr}`));
       }
     });
 
-    ffprobe.on('error', (error) => {
-      reject(new Error(`Failed to start ffprobe: ${error.message}`));
+    ffprobe.on('error', (err: Error | any) => {
+      reject(new Error(`Failed to start ffprobe: ${err.message}`));
     });
   });
 }
