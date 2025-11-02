@@ -26,12 +26,16 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 	useEffect(() => {
 		if (isOpen) {
 			setShouldRender(true);
+			// Get scrollbar width before hiding
+			const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
 			document.body.style.overflow = "hidden";
+			document.body.style.paddingRight = `${scrollbarWidth}px`;
 			// Trigger animation after render
 			setTimeout(() => setIsAnimating(true), 10);
 		} else {
 			setIsAnimating(false);
 			document.body.style.overflow = "unset";
+			document.body.style.paddingRight = "";
 			// Wait for animation to finish before unmounting
 			const timer = setTimeout(() => setShouldRender(false), 300);
 			return () => clearTimeout(timer);
@@ -39,6 +43,7 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 
 		return () => {
 			document.body.style.overflow = "unset";
+			document.body.style.paddingRight = "";
 		};
 	}, [isOpen]);
 
@@ -105,7 +110,7 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 									</button>
 								)}
 							</div>
-							<p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{message}</p>
+							<div className="mt-2 text-sm text-gray-600 dark:text-gray-400">{message}</div>
 						</div>
 					</div>
 

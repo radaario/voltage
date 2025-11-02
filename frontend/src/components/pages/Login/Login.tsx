@@ -4,6 +4,10 @@ import { useNavigate } from "react-router-dom";
 import ScreenLoading from "@/components/composite/ScreenLoading/ScreenLoading";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/Header/Header";
+import Logo from "@/components/base/Logo/Logo";
+import Button from "@/components/base/Button/Button";
+import Input from "@/components/base/Input/Input";
+import { LockClosedIcon } from "@heroicons/react/24/outline";
 
 function Login() {
 	const { login } = useAuth();
@@ -55,31 +59,57 @@ function Login() {
 	return (
 		<div className="layout-container">
 			<Header />
-			<main className="layout-main flex justify-center align-middle">
-				<form
-					onSubmit={onSubmit}
-					className="m-auto flex flex-col items-center justify-center bg-gray-100 dark:bg-neutral-900 p-15 rounded gap-2.5 w-[500px]">
-					<div className="text-2xl font-bold mb-4">Voltage Login</div>
-					{!isEmpty(errorMessage) && (
-						<div className="block w-full p-2.5 rounded border-4 border-red-600 text-red-600">{errorMessage}</div>
-					)}
-					<input
-						type="password"
-						onChange={onChangePassword}
-						placeholder="Password"
-						disabled={sending}
-						value={password}
-						autoFocus={true}
-						className="w-full h-12 border border-gray-300 dark:border-gray-700 outline-0 rounded text-lg px-4 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white transition-colors duration-200 focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500"
-					/>
-					<button
-						type="submit"
-						disabled={sending}
-						className="ml-auto py-4 px-8 border-0 w-full rounded bg-black text-white font-bold text-lg cursor-pointer transition-colors duration-200 hover:bg-neutral-950 disabled:opacity-50 disabled:cursor-not-allowed">
-						Sign In
-					</button>
-					{sending && <ScreenLoading />}
-				</form>
+			<main className="layout-main flex justify-center items-center p-4">
+				<div className="w-full max-w-md">
+					{/* Card Container */}
+					<div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
+						{/* Header Section with Gradient */}
+						<div className="bg-linear-to-br from-neutral-700 to-neutral-900 dark:from-neutral-900 dark:to-black p-8 text-center">
+							<div className="flex justify-center mb-4">
+								<div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+									<LockClosedIcon className="w-8 h-8 text-white" />
+								</div>
+							</div>
+							<Logo
+								size="lg"
+								className="bg-white! dark:bg-white! mb-2"
+							/>
+							<p className="text-neutral-300 text-sm">Enter your password to continue</p>
+						</div>
+
+						{/* Form Section */}
+						<form
+							onSubmit={onSubmit}
+							className="p-8 space-y-6">
+							{!isEmpty(errorMessage) && (
+								<div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm font-medium">
+									{errorMessage}
+								</div>
+							)}
+
+							<Input
+								label="Password"
+								type="password"
+								onChange={onChangePassword}
+								placeholder="Enter your password"
+								disabled={sending}
+								value={password}
+								autoFocus={true}
+							/>
+
+							<Button
+								type="submit"
+								isLoading={sending}
+								className="w-full">
+								Sign In
+							</Button>
+						</form>
+					</div>
+
+					{/* Footer Text */}
+					<p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">Secured access to Voltage Dashboard</p>
+				</div>
+				{sending && <ScreenLoading />}
 			</main>
 		</div>
 	);

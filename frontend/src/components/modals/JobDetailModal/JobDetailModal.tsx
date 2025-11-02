@@ -1,46 +1,75 @@
 import { useEffect, useState } from "react";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useNavigate, useParams, NavLink, Outlet } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { createPortal } from "react-dom";
+import { XMarkIcon, BriefcaseIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentTextIcon, BellIcon } from "@heroicons/react/24/outline";
+import { useAuth } from "@/hooks/useAuth";
 import type { Job } from "@/interfaces/job";
 
-interface JobDetailModalProps {
-	isOpen: boolean;
-	onClose: () => void;
-	job: Job | null;
-}
-
-const JobDetailModal: React.FC<JobDetailModalProps> = ({ isOpen, onClose, job }) => {
+const JobDetailModal: React.FC = () => {
+	const { jobKey } = useParams<{ jobKey: string }>();
+	const navigate = useNavigate();
+	const { authToken } = useAuth();
 	const [isAnimating, setIsAnimating] = useState(false);
-	const [shouldRender, setShouldRender] = useState(false);
+
+	// Fetch job details
+	const { data: job, isLoading } = useQuery<Job>({
+		queryKey: ["job", jobKey],
+		queryFn: async () => {
+			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/${jobKey}?token=${authToken}`);
+			if (!response.ok) {
+				throw new Error("Failed to fetch job");
+			}
+			const data = await response.json();
+			return data?.data;
+		},
+		enabled: !!jobKey && !!authToken
+	});
 
 	useEffect(() => {
-		if (isOpen) {
-			setShouldRender(true);
-			document.body.style.overflow = "hidden";
-			// Trigger animation after render
-			setTimeout(() => setIsAnimating(true), 10);
-		} else {
-			setIsAnimating(false);
-			document.body.style.overflow = "unset";
-			// Wait for animation to finish before unmounting
-			const timer = setTimeout(() => setShouldRender(false), 300);
-			return () => clearTimeout(timer);
-		}
+		// Get scrollbar width before hiding
+		const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+		document.body.style.overflow = "hidden";
+		document.body.style.paddingRight = `${scrollbarWidth}px`;
+		// Trigger animation after render
+		setTimeout(() => setIsAnimating(true), 10);
 
 		return () => {
 			document.body.style.overflow = "unset";
+			document.body.style.paddingRight = "";
 		};
-	}, [isOpen]);
+	}, []);
+
+	useEffect(() => {
+		const handleEscape = (e: KeyboardEvent) => {
+			if (e.key === "Escape") {
+				handleClose();
+			}
+		};
+
+		window.addEventListener("keydown", handleEscape);
+
+		return () => {
+			window.removeEventListener("keydown", handleEscape);
+		};
+	}, []);
 
 	const handleClose = () => {
 		setIsAnimating(false);
 		setTimeout(() => {
-			onClose();
+			navigate("/jobs");
 		}, 300);
 	};
 
-	if (!shouldRender || !job) return null;
+	const tabs = [
+		{ path: "job", label: "Job", icon: BriefcaseIcon },
+		{ path: "input", label: "Input", icon: ArrowDownTrayIcon },
+		{ path: "outputs", label: "Outputs", icon: ArrowUpTrayIcon },
+		{ path: "logs", label: "Logs", icon: DocumentTextIcon },
+		{ path: "notifications", label: "Notifications", icon: BellIcon }
+	];
 
-	return (
+	const ModalContent = (
 		<div className="fixed inset-0 z-50 overflow-y-auto">
 			{/* Backdrop */}
 			<div
@@ -51,44 +80,87 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({ isOpen, onClose, job })
 			/>
 
 			{/* Modal Container */}
-			<div className="flex min-h-full items-end sm:items-center justify-center p-4">
+			<div className="flex min-h-full items-center justify-center p-4">
 				{/* Modal Panel */}
 				<div
-					className={`relative w-full max-w-4xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 z-10 transition-all duration-300 ${
+					className={`relative overflow-hidden w-full max-w-5xl h-[85vh] flex flex-col bg-white dark:bg-neutral-800 rounded-2xl shadow-xl z-10 transition-all duration-300 ${
 						isAnimating ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-					}`}>
-					<div className="flex items-center justify-between mb-4">
-						<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Job Details</h3>
+					}`}
+					onClick={(e) => e.stopPropagation()}>
+					{/* Header */}
+					<div className="shrink-0 flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
+						<div className="flex items-center gap-4">
+							{/* Preview Image */}
+							{job && (
+								<div className="w-24 h-16 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden">
+									<img
+										src={`${import.meta.env.VITE_API_BASE_URL}/jobs/${job.key}/preview?token=${authToken}`}
+										alt="Preview"
+										className="w-full h-full object-cover"
+										onError={(e) => {
+											const target = e.target as HTMLImageElement;
+											target.style.display = "none";
+										}}
+									/>
+								</div>
+							)}
+							<div>
+								{job && (
+									<>
+										<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+											{job.input?.file_name || job.input?.url?.split("/").pop() || "Untitled Job"}
+										</h3>
+										<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">{job.key}</p>
+									</>
+								)}
+								{!job && <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
+							</div>
+						</div>
 						<button
 							type="button"
 							onClick={handleClose}
-							className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+							className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors">
 							<XMarkIcon className="h-6 w-6" />
 						</button>
 					</div>
 
-					{/* Modal içeriği buraya gelecek */}
-					<div className="mt-4">
-						<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-							<p className="text-sm text-gray-600 dark:text-gray-400 font-mono">Job Key: {job.key}</p>
-							<p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-								Status: <span className="font-semibold">{job.status}</span>
-							</p>
-						</div>
+					{/* Tabs */}
+					<div className="shrink-0 border-b border-gray-200 dark:border-neutral-700">
+						<nav className="flex px-6 gap-8">
+							{tabs.map((tab) => (
+								<NavLink
+									key={tab.path}
+									to={tab.path}
+									className={({ isActive }) =>
+										`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
+											isActive
+												? "border-neutral-700 text-gray-900 dark:border-neutral-400 dark:text-white"
+												: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+										}`
+									}>
+									<tab.icon className="h-4 w-4" />
+									{tab.label}
+								</NavLink>
+							))}
+						</nav>
 					</div>
 
-					<div className="mt-6 flex justify-end gap-3">
-						<button
-							type="button"
-							onClick={handleClose}
-							className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-							Close
-						</button>
+					{/* Tab Content */}
+					<div className="flex-1 overflow-y-auto p-6">
+						{isLoading ? (
+							<div className="flex justify-center items-center py-12">
+								<div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-500 dark:border-gray-400 border-t-transparent"></div>
+							</div>
+						) : (
+							<Outlet context={{ job }} />
+						)}
 					</div>
 				</div>
 			</div>
 		</div>
 	);
+
+	return createPortal(ModalContent, document.body);
 };
 
 export default JobDetailModal;

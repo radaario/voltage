@@ -18,16 +18,61 @@
 	button:not(:disabled) {
 		cursor: pointer;
 	}
+
+	/* Scrollbar styling for light mode */
+	::-webkit-scrollbar {
+		width: 12px;
+		height: 12px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: #f1f1f1;
+		border-radius: 10px;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: #c1c1c1;
+		border-radius: 10px;
+		border: 2px solid #f1f1f1;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: #a8a8a8;
+	}
+
+	/* Scrollbar styling for dark mode */
+	.dark ::-webkit-scrollbar-track {
+		background: #2a2a2a;
+	}
+
+	.dark ::-webkit-scrollbar-thumb {
+		background: #4a4a4a;
+		border: 2px solid #2a2a2a;
+	}
+
+	.dark ::-webkit-scrollbar-thumb:hover {
+		background: #5a5a5a;
+	}
+
+	/* Firefox scrollbar */
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: #c1c1c1 #f1f1f1;
+	}
+
+	.dark * {
+		scrollbar-color: #4a4a4a #2a2a2a;
+	}
 }
 
 .light {
 	--color-background: var(--color-white);
-	--color-header: var(--color-gray-100);
-	--color-footer: var(--color-gray-100);
-	--color-table: var(--color-gray-200);
-	--color-thead: var(--color-gray-300);
-	--color-tbody: var(--color-gray-100);
-	--color-tr-border: var(--color-gray-100);
+	--color-header: var(--color-neutral-100);
+	--color-footer: var(--color-neutral-100);
+	--color-table: var(--color-neutral-200);
+	--color-thead: var(--color-neutral-300);
+	--color-tbody: var(--color-neutral-100);
+	--color-tr-border: var(--color-neutral-100);
 }
 
 .dark {
@@ -91,5 +136,56 @@
 
 	.table-advanced tr {
 		border-color: var(--color-tr-border);
+	}
+
+	/* New job animation - slide in from top with highlight */
+	@keyframes slideInHighlight {
+		0% {
+			transform: translateY(-20px);
+			opacity: 0;
+		}
+		50% {
+			transform: translateY(0);
+			opacity: 1;
+		}
+		100% {
+			transform: translateY(0);
+			opacity: 1;
+		}
+	}
+
+	@keyframes highlightPulse {
+		0% {
+			background-color: rgb(59 130 246 / 0.15);
+		}
+		50% {
+			background-color: rgb(59 130 246 / 0.25);
+		}
+		100% {
+			background-color: transparent;
+		}
+	}
+
+	.animate-slide-in-highlight {
+		animation:
+			slideInHighlight 0.5s ease-out,
+			highlightPulse 2s ease-out;
+	}
+
+	.dark .animate-slide-in-highlight {
+		@keyframes highlightPulseDark {
+			0% {
+				background-color: rgb(59 130 246 / 0.2);
+			}
+			50% {
+				background-color: rgb(59 130 246 / 0.3);
+			}
+			100% {
+				background-color: transparent;
+			}
+		}
+		animation:
+			slideInHighlight 0.5s ease-out,
+			highlightPulseDark 2s ease-out;
 	}
 }

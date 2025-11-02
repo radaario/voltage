@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, Outlet } from "react-router-dom";
 import type { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
 import JobsTable from "./JobsTable";
-import JobDetailModal from "@/components/modals/JobDetailModal/JobDetailModal";
 import DeleteConfirmModal from "@/components/modals/DeleteConfirmModal/DeleteConfirmModal";
+import Tooltip from "@/components/base/Tooltip/Tooltip";
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
@@ -33,18 +34,19 @@ interface JobsResponse {
 const Jobs: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
+	const navigate = useNavigate();
 
 	// states
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchInput, setSearchInput] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
-	const [currentLimit, setCurrentLimit] = useState(10);
-	const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [currentLimit, setCurrentLimit] = useState(6);
 	const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
+	const previousDataRef = useRef<Job[]>([]);
+	const [newJobKeys, setNewJobKeys] = useState<Set<string>>(new Set());
 
 	// Fetch jobs with React Query
-	const { data, isLoading, error, refetch } = useQuery<JobsResponse>({
+	const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<JobsResponse>({
 		queryKey: ["jobs", currentPage, currentLimit, searchQuery, authToken],
 		queryFn: async () => {
 			const params = new URLSearchParams();
@@ -63,8 +65,44 @@ const Jobs: React.FC = () => {
 
 			return response.json();
 		},
-		enabled: !!authToken
+		enabled: !!authToken,
+		refetchInterval: 5000 // 5 saniyede bir otomatik refresh
 	});
+
+	// Detect new jobs when data updates
+	useEffect(() => {
+		if (!data?.data || currentPage !== 1) {
+			return;
+		}
+
+		const currentJobs = data.data;
+		const previousJobs = previousDataRef.current;
+
+		// Skip first load
+		if (previousJobs.length === 0) {
+			previousDataRef.current = currentJobs;
+			return;
+		}
+
+		// Find new jobs by comparing keys
+		const previousKeys = new Set(previousJobs.map((j) => j.key));
+		const newKeys = currentJobs.filter((job) => !previousKeys.has(job.key)).map((job) => job.key);
+
+		if (newKeys.length > 0) {
+			setNewJobKeys(new Set(newKeys));
+			// Clear animation after 2 seconds
+			const timer = setTimeout(() => {
+				setNewJobKeys(new Set());
+			}, 2000);
+
+			// Update ref
+			previousDataRef.current = currentJobs;
+
+			return () => clearTimeout(timer);
+		}
+
+		previousDataRef.current = currentJobs;
+	}, [dataUpdatedAt, data, currentPage]);
 
 	// Create job mutation
 	const createJobMutation = useMutation({
@@ -72,7 +110,8 @@ const Jobs: React.FC = () => {
 			const payload = {
 				input: {
 					service: "HTTPS",
-					url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4"
+					// url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4"
+					url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4"
 				},
 				outputs: [
 					{
@@ -103,6 +142,7 @@ const Jobs: React.FC = () => {
 			return resp.json();
 		},
 		onSuccess: () => {
+			setCurrentPage(1);
 			// Invalidate and refetch jobs
 			queryClient.invalidateQueries({ queryKey: ["jobs"] });
 		}
@@ -120,12 +160,17 @@ const Jobs: React.FC = () => {
 				throw new Error(errText || "Failed to delete job");
 			}
 
+			// 204 No Content doesn't have a body
+			if (resp.status === 204) {
+				return null;
+			}
+
 			return resp.json();
 		},
-		onSuccess: () => {
+		onSuccess: async () => {
 			// Invalidate and refetch jobs immediately
-			queryClient.invalidateQueries({ queryKey: ["jobs"] });
-			refetch();
+			await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+			await refetch();
 		}
 	});
 
@@ -160,8 +205,7 @@ const Jobs: React.FC = () => {
 	};
 
 	const handleViewJob = (job: Job) => {
-		setSelectedJob(job);
-		setIsModalOpen(true);
+		navigate(`/jobs/${job.key}/job`);
 	};
 
 	const handleDeleteJob = (job: Job) => {
@@ -181,16 +225,11 @@ const Jobs: React.FC = () => {
 		}
 	};
 
-	const handleCloseModal = () => {
-		setIsModalOpen(false);
-		setSelectedJob(null);
-	};
-
 	// Prepare pagination data
 	const pagination: PaginationInfo = {
 		total: data?.pagination?.total || 0,
 		page: data?.pagination?.page || 1,
-		limit: data?.pagination?.limit || 20,
+		limit: data?.pagination?.limit || 6,
 		totalPages: data?.pagination?.total_pages || 0,
 		has_more: data?.pagination?.has_more,
 		next_page: data?.pagination?.next_page,
@@ -201,7 +240,7 @@ const Jobs: React.FC = () => {
 	if (isLoading && !data) {
 		return (
 			<div className="flex justify-center items-center h-64">
-				<div className="animate-spin rounded-full h-10 w-10 border-2 border-b-white border-indigo-500"></div>
+				<div className="animate-spin rounded-full h-10 w-10 border-2 border-b-white border-gray-500 dark:border-gray-400"></div>
 			</div>
 		);
 	}
@@ -212,18 +251,19 @@ const Jobs: React.FC = () => {
 			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 				<div className="flex items-center gap-3">
 					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Latest jobs</h3>
-					<button
-						type="button"
-						onClick={handleRefresh}
-						title="Refresh"
-						disabled={isLoading}
-						className={`p-2 rounded-md transition-all ${
-							isLoading
-								? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
-								: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400"
-						}`}>
-						<ArrowPathIcon className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
-					</button>
+					<Tooltip content="Refresh jobs">
+						<button
+							type="button"
+							onClick={handleRefresh}
+							disabled={isLoading}
+							className={`p-2 -mb-1 rounded-md transition-all ${
+								isLoading
+									? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
+									: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 hover:text-gray-900 dark:hover:text-white"
+							}`}>
+							<ArrowPathIcon className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
+						</button>
+					</Tooltip>
 				</div>
 				<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
 					{/* Search Box */}
@@ -239,7 +279,7 @@ const Jobs: React.FC = () => {
 								value={searchInput}
 								onChange={(e) => setSearchInput(e.target.value)}
 								placeholder="Search jobs..."
-								className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+								className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-neutral-600 rounded-md leading-5 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
 							/>
 							{searchInput && (
 								<button
@@ -250,12 +290,13 @@ const Jobs: React.FC = () => {
 								</button>
 							)}
 						</div>
-						<button
-							type="submit"
-							title="Search"
-							className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-							<MagnifyingGlassIcon className="h-5 w-5" />
-						</button>
+						<Tooltip content="Search jobs">
+							<button
+								type="submit"
+								className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors">
+								<MagnifyingGlassIcon className="h-5 w-5" />
+							</button>
+						</Tooltip>
 					</form>
 
 					{/* Create Button */}
@@ -283,7 +324,7 @@ const Jobs: React.FC = () => {
 			)}
 
 			{/* Table */}
-			<div className="bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+			<div className="bg-gray-100 dark:bg-gray-900 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 				<JobsTable
 					data={data?.data || []}
 					loading={isLoading}
@@ -292,15 +333,9 @@ const Jobs: React.FC = () => {
 					onLimitChange={handleLimitChange}
 					onViewJob={handleViewJob}
 					onDeleteJob={handleDeleteJob}
+					newJobKeys={newJobKeys}
 				/>
 			</div>
-
-			{/* Job Detail Modal */}
-			<JobDetailModal
-				isOpen={isModalOpen}
-				onClose={handleCloseModal}
-				job={selectedJob}
-			/>
 
 			{/* Delete Confirmation Modal */}
 			{jobToDelete && (
@@ -327,6 +362,9 @@ const Jobs: React.FC = () => {
 					isDeleting={deleteJobMutation.isPending}
 				/>
 			)}
+
+			{/* Route-based Job Detail Modal */}
+			<Outlet />
 		</div>
 	);
 };
