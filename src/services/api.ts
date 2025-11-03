@@ -1,7 +1,7 @@
 import { config } from '../config/index.js';
-import { CreateJobRequest, JobNotificationRow, OutputSpec } from '../config/types.js';
+import { CreateJobRequest, OutputSpec } from '../config/types.js';
 
-import { sanitizeData, uuid, uukey, hash, getNow, addNow } from '../utils/index.js';
+import { sanitizeData, uuid, uukey, hash, getNow } from '../utils/index.js';
 import { logger } from '../utils/logger.js';
 import { storage } from '../utils/storage.js';
 import { database } from '../utils/database.js';
@@ -48,7 +48,7 @@ const authMiddleware = (options: { forceAuth?: boolean } = {}) => {
       (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.substring(7) : null);
 
     if (!token) {
-      return res.status(401).json({ metadata: {status: false, error: {code: 'AUTH_TOKEN_REQUIRED', message: 'Authentication token required!'}} });
+      return res.status(401).json({ metadata: {status: 'ERROR', error: {code: 'AUTH_TOKEN_REQUIRED', message: 'Authentication token required!'}} });
     }
 
     // Expected tokens
@@ -57,7 +57,7 @@ const authMiddleware = (options: { forceAuth?: boolean } = {}) => {
 
     // Check if token matches either dashboard token or API key
     if (token !== dashboardToken && token !== apiToken) {
-      return res.status(401).json({ metadata: { status: false, error: {code: 'AUTH_TOKEN_INVALID', message: 'Invalid authentication token!'}} });
+      return res.status(401).json({ metadata: { status: 'ERROR', error: {code: 'AUTH_TOKEN_INVALID', message: 'Invalid authentication token!'}} });
     }
 
     next();
@@ -67,36 +67,63 @@ const authMiddleware = (options: { forceAuth?: boolean } = {}) => {
 // API: ROUTEs
 // Support both /health and /status for health checks (some load balancers
 // or orchestration systems expect one or the other).
-app.get(['/status', '/health'], (_req, res) => res.json({ metadata: {status: true} }));
+app.get(['/status', '/health'], (req, res) => res.json({ metadata: {status: 'SUCCESSFUL'} }));
 
-app.get('/config', async (_req, res) => {
-  return res.json({ metadata: {status: true}, data: sanitizeData(config) });
+app.get('/config', async (req, res) => {
+  return res.json({ metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(config) });
 });
 
-app.post('/dashboard/sign/in', async (req, res) => {
+app.post('/auth', async (req, res) => {
   // Accept password from body, query string, or POST data
-  const inputPassword = req.query.password || req.body.password || '';
+  const inputPassword = (req.query.password || req.body.password || '').trim();
 
   if (config.dashboard.is_authentication_required) {
     if (!inputPassword) {
-      return res.status(400).json({ metadata: {status: false, error: {code: 'PASSWORD_REQUIRED', message: 'Password required!'}} });
+      return res.status(400).json({ metadata: {status: 'ERROR', error: {code: 'PASSWORD_REQUIRED', message: 'Password required!'}} });
     }
 
     if (inputPassword === config.dashboard.password) {
       const token = hash(inputPassword);
-      return res.json({ metadata: {status: true}, data: {token} });
+      return res.json({ metadata: {status: 'SUCCESSFUL'}, data: {token} });
     } else {
-      return res.status(401).json({ metadata: {status: false, error: {code: 'PASSWORD_INVALID', message: 'Invalid password!'}} });
+      return res.status(401).json({ metadata: {status: 'ERROR', error: {code: 'PASSWORD_INVALID', message: 'Invalid password!'}} });
     }
   } else {
-    return res.json({ metadata: {status: true} });
+    return res.json({ metadata: {status: 'SUCCESSFUL'} });
   }
 });
 
 // Instance status endpoint - list all instances
-app.get('/instances', authMiddleware(), async (_req, res) => {
+app.get('/instances', authMiddleware(), async (req, res) => {
   try {
-  const [instances] = await database.query(`SELECT * FROM ${database.getTablePrefix()}instances ORDER BY created_at DESC`);
+    const instanceKey = (req.query.instance_key || req.body.instance_key || '').trim();
+
+    // If instance_key provided, fetch only that instance and return as object (not array)
+    if (instanceKey) {
+      const [rows] = await database.query(
+        `SELECT * FROM ${database.getTablePrefix()}instances WHERE \`key\` = :key LIMIT 1`,
+        { key: instanceKey }
+      );
+
+      if ((rows as any[]).length === 0) {
+        return res.status(404).json({ metadata: {status: 'ERROR', error: {code: 'NOT_FOUND', message: 'Instance not found!'}} });
+      }
+
+      const instance = (rows as any[])[0];
+
+      const [workersRows] = await database.query(
+        `SELECT * FROM ${database.getTablePrefix()}workers WHERE instance_key = :key ORDER BY created_at DESC`,
+        { key: instance_key }
+      );
+
+      const workers = workersRows as any[];
+
+      const result = { ...instance, specs: instance.specs ? JSON.parse(instance.specs) : null, workers };
+
+      return res.json({ metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(result) });
+    }
+
+    const [instances] = await database.query(`SELECT * FROM ${database.getTablePrefix()}instances ORDER BY created_at DESC`);
     
     // If no instances, return empty array immediately
     if (instances.length === 0) {
@@ -124,107 +151,165 @@ app.get('/instances', authMiddleware(), async (_req, res) => {
     const result = instances.map(instance => {
       return {
         ...instance,
-        system: instance.system ? JSON.parse(instance.system) : null,
+        specs: instance.specs ? JSON.parse(instance.specs) : null,
         workers: workersByInstance[instance.key] || []
       };
     });
 
-    return res.json( {metadata: {status: true}, data: result} );
+    return res.json( {metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(result)} );
   } catch (err: Error | any) {
     logger.error({ err }, 'Failed to fetch instances!');
-    res.status(500).json({ metadata: {status: false, error: {code: 'INTERNAL_ERROR', message: 'Failed to list instances!'}} });
+    res.status(500).json({ metadata: {status: 'ERROR', error: { code: 'INTERNAL_ERROR', message: err.message || 'Unknown error occurred!' }} });
   }
 });
 
 // Worker status endpoint - read persisted worker metadata and enrich with in-memory process state
-app.get('/workers', authMiddleware(), async (_req, res) => {
+app.get('/workers', authMiddleware(), async (req, res) => {
   try {
-  const [workers] = await database.query(`SELECT * FROM ${database.getTablePrefix()}workers ORDER BY created_at DESC`);
-    return res.json( {metadata: {status: true}, data: workers} );
+    const workerKey = (req.query.worker_key || req.body.worker_key || '').trim();
+
+    // If worker_key provided, fetch only that worker and return as object (not array)
+    if (workerKey) {
+      const [rows] = await database.query(
+        `SELECT * FROM ${database.getTablePrefix()}workers WHERE \`key\` = :key LIMIT 1`,
+        { key: workerKey }
+      );
+
+      if ((rows as any[]).length === 0) {
+        return res.status(404).json({ metadata: {status: 'ERROR', error: {code: 'NOT_FOUND', message: 'Worker not found!'}} });
+      }
+
+      const worker = (rows as any[])[0];
+
+      return res.json({ metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(worker) });
+    }
+
+    const instanceKey = (req.query.instance_key || req.body.instance_key || '').trim();
+
+    const [workers] = instanceKey
+      ? await database.query(
+        `SELECT * FROM ${database.getTablePrefix()}workers WHERE instance_key = :instance_key ORDER BY created_at DESC`,
+        { instance_key: instanceKey }
+      )
+      : await database.query(
+        `SELECT * FROM ${database.getTablePrefix()}workers ORDER BY created_at DESC`
+      );
+    
+    return res.json( {metadata: {status: 'SUCCESSFUL'}, data: workers} );
   } catch (err: Error | any) {
     logger.error({ err }, 'Failed to fetch workers!');
-    return res.status(500).json({ metadata: {status: false, error: {code: 'INTERNAL_ERROR', message: 'Failed to list workers!'}} });
+    return res.status(500).json({ metadata: {status: 'ERROR', error: {code: 'INTERNAL_ERROR', message: err.message || 'Unknown error occurred!'}} });
   }
 });
 
 app.get('/jobs', authMiddleware(), async (req, res) => {
-  const defaultLimit = 25;
-  const rawLimit = req.query.limit;
-  const rawPage = req.query.page;
-  const searchQuery = req.query.q ? String(req.query.q).trim() : '';
+  try {
+    const jobKey = (req.query.job_key || req.body.job_key || '').trim();
 
-  let limit = rawLimit !== undefined ? parseInt(String(rawLimit), 10) : defaultLimit;
-  if (isNaN(limit) || limit < 1) limit = defaultLimit;
+    // If job_key provided, fetch only that job and return as object (not array)
+    if (jobKey) {
+      const [rows] = await database.query(
+        `SELECT * FROM ${database.getTablePrefix()}jobs WHERE \`key\` = :key LIMIT 1`,
+        { key: jobKey }
+      );
 
-  let page = rawPage !== undefined ? parseInt(String(rawPage), 10) : 1;
-  if (isNaN(page) || page < 1) page = 1;
+      if ((rows as any[]).length === 0) {
+        return res.status(404).json({ metadata: {status: 'ERROR', error: {code: 'NOT_FOUND', message: 'Job not found!'}} });
+      }
 
-  const offset = (page - 1) * limit;
+      const job = (rows as any[])[0];
 
-  // Build WHERE clause for search
-  let whereClause = '';
-  const params: any = { limit, offset };
-  
-  if (searchQuery) {
-    const searchPattern = `%${searchQuery}%`;
-    whereClause = ` WHERE (\`key\` LIKE :search OR input LIKE :search OR destination LIKE :search OR notification LIKE :search OR metadata LIKE :search)`;
-    params.search = searchPattern;
-  }
-
-  // Get total count for pagination metadata
-  const [[{ total }]] = await database.query(
-    `SELECT COUNT(*) as total FROM ${database.getTablePrefix()}jobs${whereClause}`,
-    searchQuery ? { search: params.search } : {}
-  ) as any;
-
-  // Get paginated data
-  const [rawRows] = await database.query(
-    `SELECT * FROM ${database.getTablePrefix()}jobs${whereClause} ORDER BY created_at DESC LIMIT :limit OFFSET :offset`,
-    params
-  );
-
-  // Parse JSON fields and sanitize sensitive information
-  const data = sanitizeData(rawRows);
-
-  // Calculate pagination metadata
-  const totalPages = Math.ceil(total / limit);
-  const hasMore = page < totalPages;
-  const nextPage = hasMore ? page + 1 : null;
-  const prevPage = page > 1 ? page - 1 : null;
-
-  return res.json({
-    metadata: {status: true},
-    data,
-    pagination: {
-      limit,
-      page,
-      total,
-      total_pages: totalPages,
-      has_more: hasMore,
-      next_page: nextPage,
-      prev_page: prevPage
+      return res.json({ metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(job) });
     }
-  });
-});
 
-app.get('/jobs/:key', authMiddleware(), async (req, res) => {
-  const [rawRows] = await database.query(`SELECT * FROM ${database.getTablePrefix()}jobs WHERE \`key\` = :key`, { key: req.params.key });
-  
-  if ((rawRows as any[]).length === 0) {
-    return res.status(404).json({ metadata: {status: false, error: {code: 'NOT_FOUND', message: 'Not found!'}} });
+    const defaultLimit = 25;
+    const rawLimit = req.query.limit;
+    const rawPage = req.query.page;
+    const instanceKey = (req.query.instance_key || req.body.instance_key || '').trim();
+    const workerKey = (req.query.worker_key || req.body.worker_key || '').trim();
+    const status = (req.query.status || req.body.status || '').trim();
+    const searchQuery = req.query.q ? String(req.query.q).trim() : '';
+
+    let limit = rawLimit !== undefined ? parseInt(String(rawLimit), 10) : defaultLimit;
+    if (isNaN(limit) || limit < 1) limit = defaultLimit;
+
+    let page = rawPage !== undefined ? parseInt(String(rawPage), 10) : 1;
+    if (isNaN(page) || page < 1) page = 1;
+
+    const offset = (page - 1) * limit;
+
+    // Build WHERE clause for search
+    let whereClause = '';
+    const params: any = { limit, offset };
+
+    if (instanceKey) {
+      whereClause += (whereClause ? ' AND ' : '') + 'instance_key = :instanceKey';
+      params.instanceKey = instanceKey;
+    }
+
+    if (workerKey) {
+      whereClause += (whereClause ? ' AND ' : '') + 'worker_key = :workerKey';
+      params.workerKey = workerKey;
+    }
+
+    if (status) {
+      whereClause += (whereClause ? ' AND ' : '') + 'status = :status';
+      params.status = status;
+    }
+
+    if (searchQuery) {
+      const searchPattern = `%${searchQuery}%`;
+      whereClause += (whereClause ? ' AND ' : '') + `(\`key\` LIKE :search OR input LIKE :search OR destination LIKE :search OR notification LIKE :search OR metadata LIKE :search)`;
+      params.search = searchPattern;
+    }
+
+    if(whereClause) whereClause = ' WHERE ' + whereClause;
+
+    // Get total count for pagination metadata
+    const [[{ total }]] = await database.query(
+      `SELECT COUNT(*) as total FROM ${database.getTablePrefix()}jobs${whereClause}`,
+      searchQuery ? { search: params.search } : {}
+    ) as any;
+
+    // Get paginated data
+    const [rawRows] = await database.query(
+      `SELECT * FROM ${database.getTablePrefix()}jobs${whereClause} ORDER BY created_at DESC LIMIT :limit OFFSET :offset`,
+      params
+    );
+
+    // Parse JSON fields and sanitize sensitive information
+    const data = sanitizeData(rawRows);
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(total / limit);
+    const hasMore = page < totalPages;
+    const nextPage = hasMore ? page + 1 : null;
+    const prevPage = page > 1 ? page - 1 : null;
+
+    return res.json({
+      metadata: {status: 'SUCCESSFUL'},
+      data,
+      pagination: {
+        limit,
+        page,
+        total,
+        total_pages: totalPages,
+        has_more: hasMore,
+        next_page: nextPage,
+        prev_page: prevPage
+      }
+    });
+  } catch (err: Error | any) {
+    logger.error({ err }, 'Failed to fetch workers!');
+    return res.status(500).json({ metadata: {status: 'ERROR', error: {code: 'INTERNAL_ERROR', message: err.message || 'Unknown error occurred!'}} });
   }
-  
-  const rawData = (rawRows as any[])[0];
-  const data = sanitizeData(rawData);
-  
-  res.json({ metadata: { status: true }, data });
 });
 
-app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Request, res: Response) => {
+app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Request, res: Response) => {
   const body = req.body as CreateJobRequest;
 
   if (!body || !body.input || !Array.isArray(body.outputs) || body.outputs.length === 0) {
-    return res.status(400).json({ metadata: {status: false, error: {code: 'REQUEST_INVALID', message: 'Require input and outputs[]!'}} });
+    return res.status(400).json({ metadata: { status: 'ERROR', error: {code: 'REQUEST_INVALID', message: 'Require input and outputs[]!'} } });
   }
 
   const databaseConn = await database.getConnection();
@@ -240,6 +325,16 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
     for (let index = 0; index < body.outputs.length; index++) {
       const output: OutputSpec = body.outputs[index];
       outputs.push({ key: uukey(), job_key: jobKey, index, specs: output, status: 'PENDING', updated_at: now, created_at: now, result: null, error: null });
+    }
+
+    if (body.notification){
+      if (body.notification.events && Array.isArray(body.notification.events)) {
+        const allowedEvents = config.notifications.events_allowed.split(",").map(e => e.trim());
+
+        body.notification.events = body.notification.events.filter((event:string) =>
+          allowedEvents.includes(event)
+        );
+      }
     }
 
     await databaseConn.execute(
@@ -270,74 +365,37 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
     );
 
     const job = {key: jobKey, priority, status: 'QUEUED', ...body, outputs};
-    const sanitizedJob = sanitizeData(job);
     
     if (job.notification) {
-      const { notify } = await import('./worker/notifier.js');
-      const notificationOutcome = await notify(job.notification, sanitizedJob);
-      
-      let notification: JobNotificationRow = {
-        key: uukey(),
-        instance_key: instanceKeyGlobal,
-        job_key: jobKey,
-        priority,
-        type: job.status,
-        payload: sanitizedJob,
-        status: notificationOutcome.status || 'FAILED',
-        retry_max: 0,
-        retry_count: 0,
-        retry_at: null,
-        updated_at: getNow(),
-        created_at: getNow(),
-        outcome: notificationOutcome
-      };
-
-      if (notification.status === 'FAILED') {
-        notification.retry_max = config.notifications.retry_max > 0 ? config.notifications.retry_max : 0;
-        if (job.notification.retry && job.notification.retry > 0 && job.notification.retry < notification.retry_max) notification.retry_max = job.notification.retry;
-        
-        let retry_in = config.notifications.retry_in > 0 ? config.notifications.retry_in : (60 * 1000); // default 60s
-        if (job.notification.retry_in && job.notification.retry_in > 0) retry_in = job.notification.retry_in;
-
-        if (notification.retry_max > 0) {
-          notification.status = 'PENDING';
-          notification.retry_at = addNow(retry_in, 'milliseconds');
-        }
-      }
-
-      await database.execute(
-        `INSERT INTO ${database.getTablePrefix()}jobs_notifications (\`key\`, instance_key, job_key, priority, type, payload, status, retry_max, retry_count, retry_at, updated_at, created_at, outcome) VALUES (:key, :instance_key, :job_key, :priority, :type, :payload, :status, :retry_max, :retry_count, :retry_at, :updated_at, :created_at, :outcome)`,
-        { 
-          ...notification,
-          payload: notification.payload ? JSON.stringify(notification.payload) : null,
-          outcome: notification.outcome ? JSON.stringify(notification.outcome) : null
-        }
-      );
+      const { createJobNotification } = await import('./worker/notifier.js');
+      await createJobNotification('QUEUED', job);
     }
 
-    return res.status(202).json({ metadata: {status: true}, data: sanitizedJob });
+    return res.status(202).json({ metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(job) });
   } catch (err: Error | any) {
     if (databaseConn.rollback) await databaseConn.rollback();
     logger.error({ err }, 'Create job failed!');
-    return res.status(500).json({ metadata: {status: false, error: {code: 'INTERNAL_ERROR', message: 'Failed to create job!'}} });
+    return res.status(500).json({ metadata: {status: 'ERROR', error: {code: 'INTERNAL_ERROR', message: err.message || 'Unknown error occurred!'}} });
   } finally {
     if (databaseConn.release) databaseConn.release();
   }
 });
 
-app.delete('/jobs/:key', authMiddleware({ forceAuth: !!config.api.key }), async (req: Request, res: Response) => {
-  const jobKey = req.params.key ?? req.params.job_key;
+app.delete('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Request, res: Response) => {
+  const jobKey = (req.query.job_key || req.body.job_key || '').trim();
   
-  await database.execute(
-    `UPDATE ${database.getTablePrefix()}jobs SET status = 'DELETED' WHERE \`key\` = :key`,
-    { key: jobKey }
-  );
+  if(jobKey) {
+    await database.execute(
+      `UPDATE ${database.getTablePrefix()}jobs SET status = 'DELETED' WHERE \`key\` = :key`,
+      { key: jobKey }
+    );
+  }
   
-  return res.status(204).json({ metadata: {status: true} });
+  return res.status(204).json({ metadata: {status: 'SUCCESSFUL'} });
 });
 
-app.get('/jobs/:key/preview', authMiddleware(), async (req: Request, res: Response) => {
-  const jobKey = req.params.key ?? req.params.job_key;
+app.get('/jobs/preview', authMiddleware(), async (req: Request, res: Response) => {
+  const jobKey = (req.query.job_key || req.body.job_key || '').trim();
 
   const fallbackImagePath = path.join('.', 'public', 'assets', 'images', 'no-preview.webp');
   
@@ -348,28 +406,146 @@ app.get('/jobs/:key/preview', authMiddleware(), async (req: Request, res: Respon
   };
   
   try {
-    // Check if job exists
-  const [rows] = await database.query(`SELECT * FROM ${database.getTablePrefix()}jobs WHERE \`key\` = :key`, { key: jobKey });
-    
-    if ((rows as any[]).length === 0) {
-      return res.status(404).json({ metadata: {status: false, error: {code: 'NOT_FOUND', message: 'Job not found!'}} });
+    if(jobKey){
+      // Check if job exists
+      const [rows] = await database.query(`SELECT * FROM ${database.getTablePrefix()}jobs WHERE \`key\` = :key`, { key: jobKey });
+      
+      if ((rows as any[]).length === 0) {
+        return res.status(404).json({ metadata: {status: 'ERROR', error: {code: 'NOT_FOUND', message: 'Job not found!'}} });
+      }
+
+      try {
+        // Try to read via storage facade; if missing, fall back to placeholder
+        const exists = await storage.exists(`/jobs/${jobKey}/preview.${config.jobs.preview.format.toLowerCase()}`);
+        if (!exists) return serveFallbackImage();
+        const buffer = await storage.read(`/jobs/${jobKey}/preview.${config.jobs.preview.format.toLowerCase()}`);
+        res.setHeader('Content-Type', 'image/webp');
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        return res.send(buffer);
+      } catch (err: Error | any) {
+        
+      }
     }
 
-    try {
-      // Try to read via storage facade; if missing, fall back to placeholder
-      const exists = await storage.exists(`/jobs/${jobKey}/preview.${config.jobs.preview.format.toLowerCase()}`);
-      if (!exists) return serveFallbackImage();
-      const buffer = await storage.read(`/jobs/${jobKey}/preview.${config.jobs.preview.format.toLowerCase()}`);
-      res.setHeader('Content-Type', 'image/webp');
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-      return res.send(buffer);
-    } catch (err: Error | any) {
-      // logger.info({ err, jobKey, key }, 'Failed to read preview from storage, serving fallback image');
-      return serveFallbackImage();
-    }
+    return serveFallbackImage();
   } catch (err: Error | any) {
     // logger.error({ err, jobKey }, 'Error serving preview');
-    return res.status(500).json({ metadata: {status: false, error: {code: 'INTERNAL_ERROR', message: 'Failed to serve preview!'}} });
+    return res.status(500).json({ metadata: {status: 'ERROR', error: {code: 'INTERNAL_ERROR', message: err.message || 'Unknown error occurred!'}} });
+  }
+});
+
+app.get('/jobs/notifications', authMiddleware(), async (req, res) => {
+  try {
+    const notificationKey = (req.query.notification_key || req.body.notification_key || '').trim();
+
+    // If notification_key provided, fetch only that notification and return as object (not array)
+    if (notificationKey) {
+      const [rows] = await database.query(
+        `SELECT * FROM ${database.getTablePrefix()}jobs_notifications WHERE \`key\` = :key LIMIT 1`,
+        { key: notificationKey }
+      );
+
+      if ((rows as any[]).length === 0) {
+        return res.status(404).json({ metadata: {status: 'ERROR', error: {code: 'NOT_FOUND', message: 'Notification not found!'}} });
+      }
+
+      const notification = (rows as any[])[0];
+
+      return res.json({ metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(notification) });
+    }
+
+    const defaultLimit = 25;
+    const rawLimit = req.query.limit;
+    const rawPage = req.query.page;
+    const instanceKey = (req.query.instance_key || req.body.instance_key || '').trim();
+    const workerKey = (req.query.worker_key || req.body.worker_key || '').trim();
+    const jobKey = (req.query.job_key || req.body.job_key || '').trim();
+    const event = (req.query.event || req.body.event || '').trim();
+    const status = (req.query.status || req.body.status || '').trim();
+    const searchQuery = req.query.q ? String(req.query.q).trim() : '';
+
+    let limit = rawLimit !== undefined ? parseInt(String(rawLimit), 10) : defaultLimit;
+    if (isNaN(limit) || limit < 1) limit = defaultLimit;
+
+    let page = rawPage !== undefined ? parseInt(String(rawPage), 10) : 1;
+    if (isNaN(page) || page < 1) page = 1;
+
+    const offset = (page - 1) * limit;
+
+    // Build WHERE clause for search
+    let whereClause = '';
+    const params: any = { limit, offset };
+
+    if (instanceKey) {
+      whereClause += (whereClause ? ' AND ' : '') + 'instance_key = :instanceKey';
+      params.instanceKey = instanceKey;
+    }
+
+    if (workerKey) {
+      whereClause += (whereClause ? ' AND ' : '') + 'worker_key = :workerKey';
+      params.workerKey = workerKey;
+    }
+
+    if (jobKey) {
+      whereClause += (whereClause ? ' AND ' : '') + 'job_key = :jobKey';
+      params.jobKey = jobKey;
+    }
+
+    if (event) {
+      whereClause += (whereClause ? ' AND ' : '') + 'event = :event';
+      params.event = event;
+    }
+
+    if (status) {
+      whereClause += (whereClause ? ' AND ' : '') + 'status = :status';
+      params.status = status;
+    }
+
+    if (searchQuery) {
+      const searchPattern = `%${searchQuery}%`;
+      whereClause += (whereClause ? ' AND ' : '') + `(\`key\` LIKE :search OR payload LIKE :search OR outcome LIKE :search)`;
+      params.search = searchPattern;
+    }
+
+    if(whereClause) whereClause = ' WHERE ' + whereClause;
+
+    // Get total count for pagination metadata
+    const [[{ total }]] = await database.query(
+      `SELECT COUNT(*) as total FROM ${database.getTablePrefix()}jobs_notifications${whereClause}`,
+      searchQuery ? { search: params.search } : {}
+    ) as any;
+
+    // Get paginated data
+    const [rawRows] = await database.query(
+      `SELECT * FROM ${database.getTablePrefix()}jobs_notifications${whereClause} ORDER BY created_at DESC LIMIT :limit OFFSET :offset`,
+      params
+    );
+
+    // Parse JSON fields and sanitize sensitive information
+    const data = sanitizeData(rawRows);
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(total / limit);
+    const hasMore = page < totalPages;
+    const nextPage = hasMore ? page + 1 : null;
+    const prevPage = page > 1 ? page - 1 : null;
+
+    return res.json({
+      metadata: {status: 'SUCCESSFUL'},
+      data,
+      pagination: {
+        limit,
+        page,
+        total,
+        total_pages: totalPages,
+        has_more: hasMore,
+        next_page: nextPage,
+        prev_page: prevPage
+      }
+    });
+  } catch (err: Error | any) {
+    logger.error({ err }, 'Failed to fetch job notifications!');
+    return res.status(500).json({ metadata: {status: 'ERROR', error: {code: 'INTERNAL_ERROR', message: err.message || 'Unknown error occurred!'}} });
   }
 });
 
@@ -377,17 +553,13 @@ const clientPath = path.join(dirname(fileURLToPath(import.meta.url)), "../../cli
 app.use(express.static(clientPath));
 app.get("/*", (req: Request, res: Response) => res.sendFile(path.join(clientPath, "index.html")));
 
-app.use((err: any, _req: any, res: any, _next: any) => {
+app.use((err: any, req: any, res: any, _next: any) => {
   logger.error({ err }, 'Unhandled error occurred on API service!');
-  return res.status(500).json({ metadata: {status: false, error: {code: 'INTERNAL_ERROR', message: 'Internal error!'}} });
+  return res.status(500).json({ metadata: {status: 'ERROR', error: {code: 'INTERNAL_ERROR', message: 'Internal error!'}} });
 });
-
-let instanceKeyGlobal: string;
 
 export async function startApiService(instanceKey: string) {
   logger.info('Starting API service...');
-
-  instanceKeyGlobal = instanceKey;
 
   if (!instanceKey) {
     logger.error('Instance key required!');
@@ -395,6 +567,8 @@ export async function startApiService(instanceKey: string) {
   }
 
   await storage.config(config.storage);
+  
+  database.config(config.database);
   await database.verifySchemaExists();
 
   // SERVER: START

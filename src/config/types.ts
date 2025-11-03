@@ -72,6 +72,7 @@ export type OutputSpec = {
 
 export type NotificationSpec =
   | {
+      events?: any;
       type: 'HTTP' | 'HTTPS';
       method?: 'GET' | 'POST' | 'PUT';
       headers?: Record<string, string>;
@@ -81,6 +82,7 @@ export type NotificationSpec =
       retry_in?: number; // in milliseconds
     }
   | {
+      events?: any;
       type: 'AWS_SNS';
       access_key: string; // Access Key ID
       access_secret: string; // Access Key Secret
@@ -102,15 +104,15 @@ export type CreateJobRequest = {
 
 export type JobRow = {
   key: string;
-  instance_key?: string;
-  worker_key?: string;
+  instance_key?: string | null;
+  worker_key?: string | null;
   priority?: number | 1000;
   input?: any | null;
   outputs?: any | null;
   destination?: any | null;
   notification?: any | null;
   metadata?: any | null;
-  status: 'QUEUED' | 'PENDING' | 'DOWNLOADING' | 'ANALYZING' | 'ENCODING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED';
+  status?: 'QUEUED' | 'PENDING' | 'DOWNLOADING' | 'ANALYZING' | 'ENCODING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED';
   progress: number | 0.00; // PENDING = 0; DOWNLOADING = 20; ANALYZING = 40; ENCODING = 60; UPLOADING = 80; COMPLETED = 100;
   started_at?: string | null;
   completed_at?: string | null;
@@ -121,15 +123,16 @@ export type JobRow = {
 
 export type JobNotificationRow = {
   key: string;
-  instance_key?: string;
-  worker_key?: string;
+  instance_key?: string | null;
+  worker_key?: string | null;
   job_key?: string;
-  type?: string;
+  event?: string;
   priority?: number | 1000;
   payload?: any | null;
   status?: 'PENDING' | 'SUCCESSFUL' | 'SKIPPED' | 'FAILED';
   retry_max?: number | 0;
   retry_count?: number | 0;
+  retry_in?: number | 0;
   retry_at?: string | null;
   updated_at?: string;
   created_at?: string;

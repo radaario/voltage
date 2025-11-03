@@ -44,6 +44,6 @@ export async function generateInputPreview(job: any, options: any): Promise<stri
     return jobTempInputPreviewFilePath;
   } catch (err: Error | any) {
     logger.error({ jobKey: job.key, err }, 'Failed to generate preview from job input!');
-    throw new Error(`Preview generation failed: ${err.message || 'Unknown error'}`);
+    throw new Error(`Preview generation failed: ${err.message || 'Unknown error occurred!'}`);
   }
 }

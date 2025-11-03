@@ -34,7 +34,7 @@ export async function analyzeInputMetadata(job: any): Promise<any[]> {
     return metadata;
   } catch (err: Error | any) {
     logger.error({ jobKey: job.key, err }, 'Failed to extract metadata from job input!');
-    throw new Error(`Metadata extraction failed: ${err.message || 'Unknown error'}`);
+    throw new Error(`Metadata extraction failed: ${err.message || 'Unknown error occurred!'}`);
   }
 }
 

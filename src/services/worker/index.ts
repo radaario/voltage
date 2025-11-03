@@ -11,6 +11,7 @@ import { analyzeInputMetadata } from './analyzer.js';
 import { generateInputPreview } from './thumbnailer.js';
 import { encodeOutput } from './encoder.js';
 import { uploadOutput } from './uploader.js';
+import { createJobNotification } from './notifier.js';
 
 import path from 'path';
 import fs from 'fs/promises';
@@ -27,9 +28,9 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
   const jobProgressForEachStep = 20.00; // Each step contributes 20% to the total progress
 
   let job: JobRow = {
-    key: jobKey,
-    instance_key: instanceKey,
-    worker_key: workerKey,
+    key: jobKey as string,
+    instance_key: instanceKey as string,
+    worker_key: workerKey as string,
     status: 'PENDING',
     progress: 0.00
   };
@@ -48,8 +49,10 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
     if (!job.key) throw new Error('Job couldn\'t be found!');
 
     /* JOB: UPDATE */
-    job.instance_key = instanceKey;
-    job.worker_key = workerKey;
+    job.instance_key = instanceKey as string;
+    job.worker_key = workerKey as string;
+
+    await createJobNotification('STARTED', job);
 
     /* JOB: PARSE */
     job.input = job.input ? JSON.parse(job.input as string) : null;
@@ -75,6 +78,8 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
     
     const jobTempInputFilePath = await downloadInput(job);
     if (!jobTempInputFilePath) throw new Error('Input couldn\'t be downloaded!');
+
+    await createJobNotification('DOWNLOADED', job);
     
     /* JOB: INPUT: ANALYZING */
     job.status = 'ANALYZING';
@@ -85,8 +90,10 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
     
     const jobInputMetadata = await analyzeInputMetadata(job);
     if (!jobInputMetadata) throw new Error('Input metadata couldn\'t be extracted!');
-    
+
     job.input = { ...job.input, ...jobInputMetadata };
+
+    await createJobNotification('ANALYZED', job);
 
     /* JOB: INPUT: PREVIEW */
     const jobTempInputPreviewFilePath = await generateInputPreview(job, config.jobs.preview);
@@ -117,6 +124,8 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
       await updateWorker(workerKey, 'RUNNING');
     }
 
+    await createJobNotification('ENCODED', job);
+
     /* JOB: OUTPUTs: UPLOADING */
     logger.info({ jobKey }, 'Uploading job outputs...');
     job.status = 'UPLOADING';
@@ -143,6 +152,8 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
       await updateWorker(workerKey, 'RUNNING');
     }
 
+    await createJobNotification('UPLOADED', job);
+
     for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
       if (job.outputs[index].status === 'FAILED') {
         throw new Error('Some outputs failed!');
@@ -162,18 +173,15 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
   await updateJob(job);
   await updateWorker(workerKey, 'EXITED');
 
-  if (job.notification) {
-    const { notify } = await import('./notifier.js');
-    const notificationOutcome = await notify(job.notification, sanitizeData(job));
-  }
-
   await fs.rm(jobTempFolder, { recursive: true }).catch(() => {});
 
   if (job.status === 'COMPLETED') {
     logger.info({ instanceKey,  workerKey, jobKey }, 'Job successfully completed!');
+    await createJobNotification('COMPLETED', job);
     process.exit(0);
   } else {
     logger.info({ instanceKey,  workerKey, jobKey }, 'Job failed!');
+    await createJobNotification('FAILED', job);
     process.exit(1);
   }
 }

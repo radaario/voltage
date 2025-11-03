@@ -1,5 +1,6 @@
 
 import { logger } from './logger.js';
+
 import DatabaseDriver from 'better-sqlite3';
 import mysql from 'mysql2/promise';
 import pg from 'pg';
@@ -110,12 +111,13 @@ class Database {
         instance_key CHAR(40) NULL,
         worker_key CHAR(40) NULL,
         job_key CHAR(40) NOT NULL,
+        event VARCHAR(255) NOT NULL,
         priority INT NOT NULL DEFAULT 1000,
-        type VARCHAR(255) NOT NULL,
         payload JSON NOT NULL,
         status ENUM('PENDING','SUCCESSFUL','SKIPPED','FAILED') NOT NULL DEFAULT 'PENDING',
         retry_max INT NOT NULL DEFAULT 0,
         retry_count INT NOT NULL DEFAULT 0,
+        retry_in INT NULL,
         retry_at TIMESTAMP NULL,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

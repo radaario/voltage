@@ -1,4 +1,5 @@
 import { config } from '../config/index.js';
+import { JobNotificationRow } from '../config/types.js';
 
 import { getInstanceSpecs, uukey, getNow, subtractNow } from '../utils';
 import { logger } from '../utils/logger.js';
@@ -7,6 +8,7 @@ import { database } from '../utils/database.js';
 
 import path from 'path';
 import { spawn, ChildProcess } from 'child_process';
+import { retryJobNotification } from './worker/notifier.js';
 
 const intervals = new Map<string, NodeJS.Timeout>();
 
@@ -186,7 +188,7 @@ export async function startSupervisorService(instanceKey: string) {
             // Check for available jobs in the queue that are still PENDING
             // Order by priority (lower = higher priority), then by created_at
             const [rows] = await database.query(
-              `SELECT qj.key, qj.job_key FROM ${database.getTablePrefix()}jobs_queue qj JOIN ${database.getTablePrefix()}jobs j ON qj.job_key = j.key WHERE qj.available_at <= :now AND qj.visibility_timeout <= :now AND j.status = 'PENDING' ORDER BY qj.priority ASC, qj.created_at ASC LIMIT 1`,
+              `SELECT qj.key, qj.job_key FROM ${database.getTablePrefix()}jobs_queue qj JOIN ${database.getTablePrefix()}jobs j ON qj.job_key = j.key WHERE qj.available_at <= :now AND qj.visibility_timeout <= :now AND j.status = 'PENDING' ORDER BY qj.priority ASC, qj.created_at ASC LIMIT ${config.jobs.poll_limit || 1}`,
               { now: getNow() }
             );
             
@@ -209,6 +211,23 @@ export async function startSupervisorService(instanceKey: string) {
         }
     }
 
+    async function retryJobsNotifications(): Promise<void> {
+        logger.info('Polling job notifications...');
+        try {
+            // Check for failed notifications that need to be retried
+            const [queryNotifications] = await database.query(
+              `SELECT * FROM ${database.getTablePrefix()}jobs_notifications WHERE status = 'PENDING' AND retry_at <= :now LIMIT ${config.notifications.poll_limit || 10 }`,
+              { now: getNow() }
+            );
+
+            for (const notification of queryNotifications as Array<JobNotificationRow>) {
+                retryJobNotification(notification);
+            }
+        } catch (err: Error | any) {
+            logger.error({ err }, 'Failed to poll job notifications!');
+        }
+    }
+
     // Keep in-memory ChildProcess handles only. Worker metadata is persisted in Database.
     // Keys in workersProcessMap are workerKey (uuid per worker), not job keys.
     const workersProcessMap = new Map<string, ChildProcess>();
@@ -217,7 +236,7 @@ export async function startSupervisorService(instanceKey: string) {
     async function createWorkerForJob(jobKey: string): Promise<void> {
       try {
         // If there's already a RUNNING worker for this job in the DB, skip
-  const [existing] = await database.query(`SELECT * FROM ${database.getTablePrefix()}workers WHERE job_key = :job_key AND status = 'RUNNING'`, { job_key: jobKey });
+        const [existing] = await database.query(`SELECT * FROM ${database.getTablePrefix()}workers WHERE job_key = :job_key AND status = 'RUNNING'`, { job_key: jobKey });
         
         if ((existing as any[]).length > 0) {
           logger.warn({ jobKey }, 'Worker already running for job!');
@@ -225,8 +244,9 @@ export async function startSupervisorService(instanceKey: string) {
         }
 
         // Respect global max workers by counting RUNNING rows in DB
-  const [countRows] = await database.query(`SELECT COUNT(*) as cnt FROM ${database.getTablePrefix()}workers WHERE status = 'RUNNING'`);
+        const [countRows] = await database.query(`SELECT COUNT(*) as cnt FROM ${database.getTablePrefix()}workers WHERE status = 'RUNNING'`);
         const runningCount = (countRows as any[])[0]?.cnt ?? 0;
+        
         if (runningCount >= config.workers.max) {
           logger.warn({ jobKey, activeCount: runningCount, max: config.workers.max }, 'Max workers reached, cannot spawn new worker!');
           return;
@@ -277,6 +297,16 @@ export async function startSupervisorService(instanceKey: string) {
         logger.error({ err, instanceKey, workerKey, jobKey }, 'Failed to update instance!');
       }
 
+      /* JOB: NOTIFICATIONs: UPDATE */
+      try {
+        await database.execute(
+          `UPDATE ${database.getTablePrefix()}jobs_notifications SET instance_key = :instance_key, worker_key = :worker_key WHERE job_key = :job_key AND instance_key IS NULL AND worker_key IS NULL`,
+          { instance_key: instanceKey, worker_key: workerKey, job_key: jobKey }
+        );
+      } catch (err: Error | any) {
+        logger.error({ err, instanceKey, workerKey, jobKey }, 'Failed to update job notifications!');
+      }
+
       child.on('exit', async (code, signal) => {
         logger.info({ instanceKey, jobKey, workerKey, code, signal }, 'Worker process exited!');
         workersProcessMap.delete(workerKey);
@@ -310,7 +340,7 @@ export async function startSupervisorService(instanceKey: string) {
         try {
           await database.execute(
             `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :worker_key`,
-            { worker_key: workerKey, outcome: JSON.stringify({ message: err.message || 'Unknown error!', exit_signal: 'ERROR' }), now: getNow() }
+            { worker_key: workerKey, outcome: JSON.stringify({ message: err.message || 'Unknown error occurred!', exit_signal: 'ERROR' }), now: getNow() }
           );
         } catch (err: Error | any) {
           logger.error({ instanceKey, workerKey, jobKey, err }, 'Failed to update worker!');
@@ -367,6 +397,9 @@ export async function startSupervisorService(instanceKey: string) {
 
         await pollJobs();
         intervals.set('pollJobs', setInterval(() => pollJobs(), config.jobs.poll_interval));
+
+        await retryJobsNotifications();
+        intervals.set('retryJobsNotifications', setInterval(() => retryJobsNotifications(), config.notifications.poll_interval));
 
         /* INSTANCE: SELECT: MASTER */
         const masterInstance = await getMasterInstance();
