@@ -1,6 +1,6 @@
 import { config } from '../../config/index.js';
 
-import { getContentTypeFromFileExtension } from '../../utils/index.js';
+import { guessContentType } from '../../utils/index.js';
 import { logger } from '../../utils/logger.js';
 import { storage } from '../../utils/storage.js';
 
@@ -43,9 +43,9 @@ export async function uploadOutput(job: any, output: any): Promise<Record<string
 
   // Initialize storage based on destination
   const key = String(output.specs.path).replace(/^\/+/, '');
-  const contentType = getContentTypeFromFileExtension(key);
+  const contentType = guessContentType(key);
   
-  await storage.init(destination);
+  await storage.config(destination);
   await storage.upload(jobTempOutputFilePath, key, contentType);
 
   // Build a result similar to previous S3 uploader

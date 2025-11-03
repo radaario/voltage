@@ -41,7 +41,7 @@ export async function downloadInput(job: any): Promise<string> {
     }
 
     if (!['BASE64', 'HTTP', 'HTTPS'].includes(job.input.type)) {
-      await storage.init(job.input);
+      await storage.config(job.input);
       await storage.download(job.input.path, jobTempInputFilePath);
       
       logger.info({ jobKey: job.key }, 'Job input file successfully downloaded!');

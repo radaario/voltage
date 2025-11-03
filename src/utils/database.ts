@@ -467,11 +467,10 @@ export async function initDb(): Promise<void> {
       await conn.execute(`CREATE TABLE IF NOT EXISTS ${dbTablePrefix()}instances (
       \`key\` VARCHAR(255) PRIMARY KEY,
       type ENUM('MASTER','SLAVE') NOT NULL DEFAULT 'SLAVE',
-      system JSON NOT NULL,
-      workers_per_cpu_core INT NOT NULL DEFAULT 0,
-      workers_max INT NOT NULL DEFAULT 0,
-      workers_running_count INT NOT NULL DEFAULT 0,
+      specs JSON NOT NULL,
       status ENUM('RUNNING','EXITED') NOT NULL DEFAULT 'RUNNING',
+      restart_count INT NOT NULL DEFAULT 0,
+      workers_running_count INT NOT NULL DEFAULT 0,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       outcome JSON NULL

@@ -1,3 +1,4 @@
+import { guessContentType } from './index.js';
 import { logger } from './logger.js';
 
 import fs from 'fs/promises';
@@ -11,7 +12,7 @@ import SFTPClient from 'ssh2-sftp-client';
 
 export type StorageType = 'LOCAL' | 'OTHER_S3' | 'AWS_S3' | 'GOOGLE_CLOUD_STORAGE' | 'DO_SPACES' | 'LINODE' | 'WASABI' | 'BACKBLAZE' | 'RACKSPACE' | 'MICROSOFT_AZURE' | 'FTP' | 'SFTP';
 
-export interface StorageInitOptions {
+export interface StorageConfigOptions {
 	type?: StorageType;
 	// Common
     endpoint?: string; // custom S3-compatible endpoint
@@ -39,7 +40,7 @@ export interface ObjectMetadata {
 }
 
 export interface StorageDriver {
-	init(options?: StorageInitOptions): Promise<void>;
+	config(options?: StorageConfigOptions): Promise<void>;
 	list(prefix?: string): Promise<string[]>; // returns object keys relative to root/base
 	exists(key: string): Promise<boolean>;
 	read(key: string): Promise<Buffer>;
@@ -63,48 +64,13 @@ function normalizePath(key: string): string {
     return key.replace(/^\/+/, '');
 }
 
-function guessContentType(filename: string): string {
-	const ext = path.extname(filename).toLowerCase().replace('.', '');
-	const map: Record<string, string> = {
-		mp4: 'video/mp4',
-		mkv: 'video/x-matroska',
-		mov: 'video/quicktime',
-		webm: 'video/webm',
-		ts: 'video/mp2t',
-		avi: 'video/x-msvideo',
-		wmv: 'video/x-ms-wmv',
-		flv: 'video/x-flv',
-		m4v: 'video/x-m4v',
-		'3gp': 'video/3gpp',
-		'3g2': 'video/3gpp2',
-		ogg: 'video/ogg',
-		ogv: 'video/ogg',
-		jpg: 'image/jpeg',
-		jpeg: 'image/jpeg',
-		png: 'image/png',
-		gif: 'image/gif',
-		svg: 'image/svg+xml',
-		webp: 'image/webp',
-		mp3: 'audio/mpeg',
-		wav: 'audio/wav',
-		m3u8: 'application/vnd.apple.mpegurl',
-		mpd: 'application/dash+xml',
-		json: 'application/json',
-		txt: 'text/plain',
-		html: 'text/html',
-		css: 'text/css',
-		js: 'application/javascript',
-	};
-	return map[ext] || 'application/octet-stream';
-}
-
 class LocalStorageDriver implements StorageDriver {
 	private basePath!: string;
 
-	async init(options?: StorageInitOptions): Promise<void> {
+	async config(options?: StorageConfigOptions): Promise<void> {
 		this.basePath = options?.base_path ? normalizePath(options?.base_path) : path.resolve('./storage');
 		await ensureDir(this.basePath);
-		logger.info({ basePath: this.basePath }, 'Local storage initialized');
+		logger.info({ basePath: this.basePath }, 'Local storage initialized!');
 	}
 
 	// Prefix provided key with configured basePath (if any)
@@ -234,7 +200,7 @@ class S3StorageDriver implements StorageDriver {
 	private forcePathStyle?: boolean;
 	private publicUrlBase?: string;
 
-	async init(options?: StorageInitOptions): Promise<void> {
+	async config(options?: StorageConfigOptions): Promise<void> {
 		this.type = ((options?.type) as S3LikeType);
 		this.endpoint = options?.endpoint;
         this.region = options?.region;
@@ -294,7 +260,7 @@ class S3StorageDriver implements StorageDriver {
 		}
 
 		this.client = new S3Client(clientConfig);
-		logger.info({ type: this.type, bucket: this.bucket, region: this.region, endpoint: this.endpoint }, 'S3-like storage initialized');
+		logger.info({ type: this.type, bucket: this.bucket, region: this.region, endpoint: this.endpoint }, 'S3-like storage initialized!');
 	}
 
 	// Prefix provided key with configured basePath (if any)
@@ -466,7 +432,7 @@ class FTPStorageDriver implements StorageDriver {
     private ftpClient?: FTPClient;
 	private sftpClient?: SFTPClient;
 
-	async init(options?: StorageInitOptions): Promise<void> {
+	async config(options?: StorageConfigOptions): Promise<void> {
 		this.type = options?.type as FTPLikeType;
 		this.host = options?.host;
 		this.username = options?.username || 'anonymous';
@@ -484,7 +450,7 @@ class FTPStorageDriver implements StorageDriver {
 			this.sftpClient = new SFTPClient();
 		}
 
-		logger.info({ type: this.type, host: this.host, port: this.port, secure: this.secure }, 'FTP/SFTP storage initialized');
+		logger.info({ type: this.type, host: this.host, port: this.port, secure: this.secure }, 'FTP/SFTP storage initialized!');
 	}
 
 	private async connect(): Promise<void> {
@@ -784,7 +750,7 @@ class FTPStorageDriver implements StorageDriver {
 				};
 			}
 
-			throw new Error('FTP client not initialized');
+			throw new Error('FTP client not initialized!');
 		} finally {
 			await this.disconnect();
 		}
@@ -796,7 +762,7 @@ class StorageFacade implements StorageDriver {
 	private driver: StorageDriver | null = null;
 	private type: StorageType | null = null;
 
-	async init(options?: StorageInitOptions): Promise<void> {
+	async config(options?: StorageConfigOptions): Promise<void> {
 		this.type = (options?.type) as StorageType;
 		
         if (this.type === 'LOCAL') {
@@ -807,7 +773,7 @@ class StorageFacade implements StorageDriver {
 			this.driver = new S3StorageDriver();
 		}
 
-		await this.driver.init({
+		await this.driver.config({
 			type: this.type,
             endpoint: options?.endpoint,
             access_key: options?.access_key,
@@ -826,7 +792,7 @@ class StorageFacade implements StorageDriver {
 	}
 
 	private assertReady() {
-		if (!this.driver) throw new Error('Storage is not initialized. Call storage.init() first.');
+		if (!this.driver) throw new Error('Storage is not initialized. Call storage.config() first.');
 	}
 
 	list(prefix?: string): Promise<string[]> { this.assertReady(); return this.driver!.list(prefix); }

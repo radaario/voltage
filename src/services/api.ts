@@ -347,7 +347,7 @@ export async function startApiService(instanceKey: string) {
     throw new Error('Instance key required!');
   }
 
-  await storage.init(config.storage);
+  await storage.config(config.storage);
   await initDb();
 
   // SERVER: START

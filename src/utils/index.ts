@@ -1,6 +1,7 @@
 import { config } from '../config/index.js';
 
 import os from 'os';
+import path from 'path';
 import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import moment from 'moment-timezone';
@@ -18,7 +19,7 @@ export function createInstanceKey(): string {
   return uukey();
 }
 
-export function getInstanceSystemInfo(): any{
+export function getInstanceSpecs(): any{
   return {
     hostname: os.hostname(),
     ip_address: getInstanceLocalIpAddress(),
@@ -31,6 +32,8 @@ export function getInstanceSystemInfo(): any{
     memory_total: os.totalmem(),
     memory_free: os.freemem(),
     memory_usage_percent: getInstanceMemoryUsagePercent(),
+    workers_per_cpu_core: config.workers.per_cpu_core,
+    workers_max: config.workers.max,
   };
 }
 
@@ -182,10 +185,10 @@ export function sanitizeData(data: any, sensitiveFields: string[] = []): any {
   return sanitized;
 }
 
-export function getContentTypeFromFileExtension(filename: string): string {
-  const ext = filename.toLowerCase().split('.').pop();
+export function guessContentType(filename: string): string {
+  const ext = path.extname(filename).toLowerCase().replace('.', '');
   
-  const contentTypes: Record<string, string> = {
+  const map: Record<string, string> = {
     'mp4': 'video/mp4',
     'mkv': 'video/x-matroska',
     'mov': 'video/quicktime',
@@ -198,8 +201,23 @@ export function getContentTypeFromFileExtension(filename: string): string {
     '3gp': 'video/3gpp',
     '3g2': 'video/3gpp2',
     'ogg': 'video/ogg',
-    'ogv': 'video/ogg'
+    'ogv': 'video/ogg',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif',
+    'svg': 'image/svg+xml',
+    'webp': 'image/webp',
+    'mp3': 'audio/mpeg',
+    'wav': 'audio/wav',
+    'm3u8': 'application/vnd.apple.mpegurl',
+    'mpd': 'application/dash+xml',
+    'json': 'application/json',
+    'txt': 'text/plain',
+    'html': 'text/html',
+    'css': 'text/css',
+    'js': 'application/javascript',
   };
   
-  return contentTypes[ext || ''] || 'application/octet-stream';
+  return map[ext] || 'application/octet-stream';
 }

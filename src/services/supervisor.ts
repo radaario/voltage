@@ -1,6 +1,6 @@
 import { config } from '../config/index.js';
 
-import { getInstanceSystemInfo, uukey, getNow, subtractNow } from '../utils';
+import { getInstanceSpecs, uukey, getNow, subtractNow } from '../utils';
 import { logger } from '../utils/logger.js';
 import { initDb, dbPool, dbTablePrefix } from '../utils/database.js';
 import { storage } from '../utils/storage.js';
@@ -18,7 +18,7 @@ export async function startSupervisorService(instanceKey: string) {
       throw new Error('Instance key required!');
     }
 
-    await storage.init(config.storage);
+    await storage.config(config.storage);
     await initDb();
 
     async function getMasterInstance(): Promise<any | null> {
@@ -72,7 +72,7 @@ export async function startSupervisorService(instanceKey: string) {
       logger.info('Initializing instance...');
       
       const now = getNow();
-      const system = JSON.stringify(getInstanceSystemInfo());
+      const specs = JSON.stringify(getInstanceSpecs());
       
       try {
         const [existingInstances] = await dbPool.query(
@@ -83,14 +83,8 @@ export async function startSupervisorService(instanceKey: string) {
         if ((existingInstances as any[]).length === 0) {
           // INSERT new instance
           await dbPool.execute(
-            `INSERT INTO ${dbTablePrefix()}instances (\`key\`, system, workers_per_cpu_core, workers_max, workers_running_count, status, updated_at, created_at, outcome) VALUES (:instance_key, :system, :workers_per_cpu_core, :workers_max, 0, 'RUNNING', :now, :now, :outcome)`,
-            { 
-              instance_key: instanceKey,
-              system,
-              workers_per_cpu_core: config.workers.per_cpu_core,
-              workers_max: config.workers.max,
-              now
-            }
+            `INSERT INTO ${dbTablePrefix()}instances (\`key\`, specs, status, updated_at, created_at) VALUES (:instance_key, :specs, 'RUNNING', :now, :now)`,
+            { instance_key: instanceKey, specs, now }
           );
 
           await dbPool.execute(
@@ -98,22 +92,17 @@ export async function startSupervisorService(instanceKey: string) {
             { instance_key: instanceKey, status: 'EXITED', outcome: JSON.stringify({ message: 'Worker exited!' }) }
           );
           
-          logger.info({ instanceKey }, 'Instance created in database!');
-        } else {
-          // UPDATE existing instance
-          await dbPool.execute(
-            `UPDATE ${dbTablePrefix()}instances SET system = :system, workers_per_cpu_core = :workers_per_cpu_core, workers_max = :workers_max, status = 'RUNNING', updated_at = :now WHERE \`key\` = :instance_key`,
-            { 
-              instance_key: instanceKey, 
-              system, 
-              workers_per_cpu_core: config.workers.per_cpu_core, 
-              workers_max: config.workers.max, 
-              now 
-            }
-          );
-
-          logger.info({ instanceKey }, 'Instance updated in database!');
+          logger.info({ instanceKey }, 'Instance created!');
+          return;
         }
+
+        // UPDATE existing instance
+        await dbPool.execute(
+          `UPDATE ${dbTablePrefix()}instances SET specs = :specs, status = 'RUNNING', restart_count = (restart_count + 1), updated_at = :now WHERE \`key\` = :instance_key`,
+          { instance_key: instanceKey, specs, now }
+        );
+
+        logger.info({ instanceKey }, 'Instance updated!');
       } catch (err: Error | any) {
         logger.error({ instanceKey, err }, 'Instance initialization failed!');
         throw err;
@@ -123,40 +112,10 @@ export async function startSupervisorService(instanceKey: string) {
     async function maintainInstance() {
         logger.info('Maintaining instance...');
 
-        // INSTANCE: UPDATE or INSERT (UPSERT)
-        const now = getNow();
-        const system = JSON.stringify(getInstanceSystemInfo());
-        let queryInstance: any = null;
-        
-        try {
-          // First, try to update existing instance
-          [queryInstance] = await dbPool.query(
-            `SELECT * FROM ${dbTablePrefix()}instances WHERE \`key\` = :instance_key LIMIT 1`,
-            { instance_key: instanceKey }
-          );
-        } catch (err: Error | any) {
-        }
-
-        if ((queryInstance as any[]).length === 0) {
-          try {
-            await dbPool.execute(
-              `INSERT INTO ${dbTablePrefix()}instances (\`key\`, system, workers_per_cpu_core, workers_max, workers_running_count, status, updated_at, created_at, outcome) VALUES (:instance_key, :system, :workers_per_cpu_core, :workers_max, 0, 'RUNNING', :now, :now, :outcome)`,
-              { instance_key: instanceKey, system, workers_per_cpu_core: config.workers.per_cpu_core, workers_max: config.workers.max, now, outcome: JSON.stringify({ message: 'Instance initialized!' }) }
-            );
-          } catch (err: Error | any) {
-            logger.error({ instanceKey, err }, 'Instance maintenance failed!');
-          }
-
-          // WORKERs: UPDATE: EXITED
-          
-          
-          return;
-        }
-
         try {
           await dbPool.execute(
-            `UPDATE ${dbTablePrefix()}instances SET system = :system, workers_per_cpu_core = :workers_per_cpu_core, workers_max = :workers_max, workers_running_count = 0, status = 'RUNNING', updated_at = :now WHERE \`key\` = :instance_key`,
-            { instance_key: instanceKey, system, workers_per_cpu_core: config.workers.per_cpu_core, workers_max: config.workers.max, now }
+            `UPDATE ${dbTablePrefix()}instances SET specs = :specs, status = 'RUNNING', updated_at = :now WHERE \`key\` = :instance_key`,
+            { instance_key: instanceKey, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
           );
         } catch (err: Error | any) {
           logger.error({ instanceKey, err }, 'Instance maintenance failed!');
@@ -309,8 +268,8 @@ export async function startSupervisorService(instanceKey: string) {
       /* INSTANCE: UPDATE */
       try {
         await dbPool.execute(
-          `UPDATE ${dbTablePrefix()}instances SET system = :system, workers_running_count = workers_running_count + 1, updated_at = :now WHERE \`key\` = :instance_key`,
-          { instance_key: instanceKey, system: JSON.stringify(getInstanceSystemInfo()), now: getNow() }
+          `UPDATE ${dbTablePrefix()}instances SET specs = :specs, workers_running_count = workers_running_count + 1, updated_at = :now WHERE \`key\` = :instance_key`,
+          { instance_key: instanceKey, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
         );
       } catch (err: Error | any) {
         logger.error({ err, instanceKey, workerKey, jobKey }, 'Failed to update instance!');
@@ -333,8 +292,8 @@ export async function startSupervisorService(instanceKey: string) {
         /* INSTANCE: UPDATE */
         try {
           await dbPool.execute(
-            `UPDATE ${dbTablePrefix()}instances SET system = :system, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
-            { instance_key: instanceKey, system: JSON.stringify(getInstanceSystemInfo()), now: getNow() }
+            `UPDATE ${dbTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
+            { instance_key: instanceKey, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
           );
         } catch (err: Error | any) {
           logger.error({ instanceKey, workerKey, jobKey, err }, 'Failed to update instance!');
@@ -358,8 +317,8 @@ export async function startSupervisorService(instanceKey: string) {
         /* INSTANCE: UPDATE */
         try {
           await dbPool.execute(
-            `UPDATE ${dbTablePrefix()}instances SET system = :system, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
-            { instance_key: instanceKey, system: JSON.stringify(getInstanceSystemInfo()), now: getNow() }
+            `UPDATE ${dbTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
+            { instance_key: instanceKey, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
           );
         } catch (err: Error | any) {
           logger.error({ instanceKey, workerKey, jobKey, err }, 'Failed to update instance!');
@@ -453,8 +412,8 @@ export async function shutdownSupervisorService(instanceKey: string, signal: str
   // DB: INSTANCE: UPDATE
   try {
     await dbPool.execute(
-      `UPDATE ${dbTablePrefix()}instances SET system = :system, status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :instance_key`,
-      { instance_key: instanceKey, system: JSON.stringify(getInstanceSystemInfo()), outcome: JSON.stringify({ message: 'Instance exited due to shutdown!', signal }), now: getNow() }
+      `UPDATE ${dbTablePrefix()}instances SET specs = :specs, status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :instance_key`,
+      { instance_key: instanceKey, specs: JSON.stringify(getInstanceSpecs()), outcome: JSON.stringify({ message: 'Instance exited due to shutdown!', signal }), now: getNow() }
     );
   } catch (err: Error | any) {
     logger.error({ instanceKey, err }, 'Failed to update instance during shutdown!');

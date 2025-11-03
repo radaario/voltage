@@ -37,7 +37,7 @@ export async function generateInputPreview(job: any, options: any): Promise<stri
       });
     });
 
-    storage.init(config.storage);
+    storage.config(config.storage);
     await storage.upload(jobTempInputPreviewFilePath, `/jobs/${job.key}/preview.${options.format || 'webp'}`);
 
     logger.info({ jobKey: job.key }, 'Preview generated from job input!');
