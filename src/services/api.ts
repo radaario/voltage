@@ -113,7 +113,7 @@ app.get('/instances', authMiddleware(), async (req, res) => {
 
       const [workersRows] = await database.query(
         `SELECT * FROM ${database.getTablePrefix()}workers WHERE instance_key = :key ORDER BY created_at DESC`,
-        { key: instance_key }
+        { key: instanceKey }
       );
 
       const workers = workersRows as any[];
