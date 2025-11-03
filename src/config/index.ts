@@ -78,9 +78,17 @@ export const config = {
     },
     poll_interval: Number(process.env.VOLTAGE_JOBS_POLL_INTERVAL ?? 1 * 1000), // in milliseconds, default 1 second
     visibility_timeout: Number(process.env.VOLTAGE_JOBS_VISIBILITY_TIMEOUT ?? 10 * 60 * 1000), // in milliseconds, default 10 minutes
-    max_attempts: Number(process.env.VOLTAGE_JOBS_MAX_ATTEMPTS ?? 3), // number of attempts, default 3
+    // max_attempts: Number(process.env.VOLTAGE_JOBS_MAX_ATTEMPTS ?? 3), // number of attempts, default 3
     cleanup_interval: Number(process.env.VOLTAGE_JOBS_CLEANUP_INTERVAL ?? 1 * 60 * 60 * 1000), // in milliseconds, default 1 hour
     retention: Number(process.env.VOLTAGE_JOBS_RETENTION ?? 1) // in hours, default 7 days = 24 * 7
+  },
+  notifications: {
+    timeout: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT ?? 10 * 1000), // in milliseconds, default 10 seconds
+    timeout_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX ?? 30 * 1000), // in milliseconds, default 30 seconds
+    retry_interval: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY_INTERVAL ?? 1 * 1000), // in milliseconds, default 1 second
+    retry_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY_MAX ?? 3), // default 0 (no retry)
+    retry_in: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN ?? 60 * 1000), // in milliseconds, default 60 seconds
+    retry: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY ?? 0), // default 0 (no retry)
   },
   logs: {
     cleanup_interval: Number(process.env.VOLTAGE_LOGS_CLEANUP_INTERVAL ?? 1 * 60 * 60 * 1000), // in milliseconds, default 1 hour

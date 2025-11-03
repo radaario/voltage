@@ -2,8 +2,8 @@ import { config } from '../config/index.js';
 
 import { getInstanceSpecs, uukey, getNow, subtractNow } from '../utils';
 import { logger } from '../utils/logger.js';
-import { initDb, dbPool, dbTablePrefix } from '../utils/database.js';
 import { storage } from '../utils/storage.js';
+import { database } from '../utils/database.js';
 
 import path from 'path';
 import { spawn, ChildProcess } from 'child_process';
@@ -18,12 +18,13 @@ export async function startSupervisorService(instanceKey: string) {
       throw new Error('Instance key required!');
     }
 
-    await storage.config(config.storage);
-    await initDb();
+  await storage.config(config.storage);
+  database.config(config.database);
+  await database.verifySchemaExists();
 
     async function getMasterInstance(): Promise<any | null> {
         try {
-            const [instances] = await dbPool.query(`SELECT * FROM ${dbTablePrefix()}instances ORDER BY created_at ASC`) as any[];
+            const [instances] = await database.query(`SELECT * FROM ${database.getTablePrefix()}instances ORDER BY created_at ASC`) as any[];
             
             if (!instances.length) {
                 logger.error('No instances found in database!');
@@ -36,10 +37,10 @@ export async function startSupervisorService(instanceKey: string) {
             if (masters.length > 1) {
                 const masterKey = master.key;
                 
-                await dbPool.execute(
-                    `UPDATE ${dbTablePrefix()}instances SET type = 'SLAVE' WHERE type = :type AND \`key\` != :key`,
-                    { key: masterKey, type: 'MASTER', now: getNow() }
-                );
+        await database.execute(
+          `UPDATE ${database.getTablePrefix()}instances SET type = 'SLAVE' WHERE type = :type AND \`key\` != :key`,
+          { key: masterKey, type: 'MASTER', now: getNow() }
+        );
 
                 // reflect changes locally
                 instances.forEach((instance: any) => {
@@ -52,10 +53,10 @@ export async function startSupervisorService(instanceKey: string) {
             if (!master) {
                 master = instances[0];
 
-                await dbPool.execute(
-                    `UPDATE ${dbTablePrefix()}instances SET type = :type WHERE \`key\` = :key`,
-                    { key: master.key, type: 'MASTER', now: getNow() }
-                );
+        await database.execute(
+          `UPDATE ${database.getTablePrefix()}instances SET type = :type WHERE \`key\` = :key`,
+          { key: master.key, type: 'MASTER', now: getNow() }
+        );
 
                 master.type = 'MASTER';
                 logger.info('No MASTER instance found; promoted first instance to MASTER!');
@@ -75,20 +76,20 @@ export async function startSupervisorService(instanceKey: string) {
       const specs = JSON.stringify(getInstanceSpecs());
       
       try {
-        const [existingInstances] = await dbPool.query(
-          `SELECT * FROM ${dbTablePrefix()}instances WHERE \`key\` = :instance_key LIMIT 1`,
+        const [existingInstances] = await database.query(
+          `SELECT * FROM ${database.getTablePrefix()}instances WHERE \`key\` = :instance_key LIMIT 1`,
           { instance_key: instanceKey }
         );
         
         if ((existingInstances as any[]).length === 0) {
           // INSERT new instance
-          await dbPool.execute(
-            `INSERT INTO ${dbTablePrefix()}instances (\`key\`, specs, status, updated_at, created_at) VALUES (:instance_key, :specs, 'RUNNING', :now, :now)`,
+          await database.execute(
+            `INSERT INTO ${database.getTablePrefix()}instances (\`key\`, specs, status, updated_at, created_at) VALUES (:instance_key, :specs, 'RUNNING', :now, :now)`,
             { instance_key: instanceKey, specs, now }
           );
 
-          await dbPool.execute(
-            `UPDATE ${dbTablePrefix()}workers SET status = :status, outcome = :outcome WHERE instance_key = :instance_key`,
+          await database.execute(
+            `UPDATE ${database.getTablePrefix()}workers SET status = :status, outcome = :outcome WHERE instance_key = :instance_key`,
             { instance_key: instanceKey, status: 'EXITED', outcome: JSON.stringify({ message: 'Worker exited!' }) }
           );
           
@@ -97,8 +98,8 @@ export async function startSupervisorService(instanceKey: string) {
         }
 
         // UPDATE existing instance
-        await dbPool.execute(
-          `UPDATE ${dbTablePrefix()}instances SET specs = :specs, status = 'RUNNING', restart_count = (restart_count + 1), updated_at = :now WHERE \`key\` = :instance_key`,
+        await database.execute(
+          `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, status = 'RUNNING', restart_count = (restart_count + 1), updated_at = :now WHERE \`key\` = :instance_key`,
           { instance_key: instanceKey, specs, now }
         );
 
@@ -113,8 +114,8 @@ export async function startSupervisorService(instanceKey: string) {
         logger.info('Maintaining instance...');
 
         try {
-          await dbPool.execute(
-            `UPDATE ${dbTablePrefix()}instances SET specs = :specs, status = 'RUNNING', updated_at = :now WHERE \`key\` = :instance_key`,
+          await database.execute(
+            `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, status = 'RUNNING', updated_at = :now WHERE \`key\` = :instance_key`,
             { instance_key: instanceKey, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
           );
         } catch (err: Error | any) {
@@ -131,20 +132,20 @@ export async function startSupervisorService(instanceKey: string) {
 
         try {
             /* INSTANCEs: UPDATE: RUNNING: TIMEOUT */
-            await dbPool.execute(
-                `UPDATE ${dbTablePrefix()}instances SET status = 'EXITED', outcome = :outcome WHERE status = 'RUNNING' AND updated_at < :cutoff`,
-                { outcome: JSON.stringify({ message: 'Instance exited due to timeout!' }), cutoff: subtractNow(runningTimeout, 'milliseconds') }
-            );
+      await database.execute(
+        `UPDATE ${database.getTablePrefix()}instances SET status = 'EXITED', outcome = :outcome WHERE status = 'RUNNING' AND updated_at < :cutoff`,
+        { outcome: JSON.stringify({ message: 'Instance exited due to timeout!' }), cutoff: subtractNow(runningTimeout, 'milliseconds') }
+      );
         } catch (err: Error | any) {
             logger.error({ err }, 'Instances maintenance failed!');
         }
 
         try {
             /* INSTANCEs: DELETE: EXITED: TIMEOUT */
-            await dbPool.execute(
-                `DELETE FROM ${dbTablePrefix()}instances WHERE status = :status AND updated_at < :cutoff`,
-                { cutoff: subtractNow(exitedTimeout, 'milliseconds')  }
-            );
+      await database.execute(
+        `DELETE FROM ${database.getTablePrefix()}instances WHERE status = :status AND updated_at < :cutoff`,
+        { cutoff: subtractNow(exitedTimeout, 'milliseconds')  }
+      );
         } catch (err: Error | any) {
             logger.error({ err }, 'Instances cleanup failed!');
         }
@@ -159,20 +160,20 @@ export async function startSupervisorService(instanceKey: string) {
 
         try {
             /* WORKERs: UPDATE: RUNNING: TIMEOUT */
-            await dbPool.execute(
-                `UPDATE ${dbTablePrefix()}workers SET status = 'EXITED', outcome = :outcome WHERE status = 'RUNNING' AND updated_at < :cutoff`,
-                { outcome: JSON.stringify({ message: 'Worker exited due to timeout!' }), cutoff: subtractNow(runningTimeout, 'milliseconds') }
-            );
+      await database.execute(
+        `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', outcome = :outcome WHERE status = 'RUNNING' AND updated_at < :cutoff`,
+        { outcome: JSON.stringify({ message: 'Worker exited due to timeout!' }), cutoff: subtractNow(runningTimeout, 'milliseconds') }
+      );
         } catch (err: Error | any) {
             logger.error({ instanceKey, err }, 'Workers maintenance failed!');
         }
 
         try {
             /* WORKERs: DELETE: EXITED: TIMEOUT */
-            await dbPool.execute(
-                `DELETE FROM ${dbTablePrefix()}workers WHERE status = 'EXITED' AND updated_at < :cutoff`,
-                { cutoff: subtractNow(exitedTimeout, 'milliseconds')  }
-            );
+      await database.execute(
+        `DELETE FROM ${database.getTablePrefix()}workers WHERE status = 'EXITED' AND updated_at < :cutoff`,
+        { cutoff: subtractNow(exitedTimeout, 'milliseconds')  }
+      );
         } catch (err: Error | any) {
             logger.error({ instanceKey, err }, 'Workers cleanup failed!');
         }
@@ -184,18 +185,19 @@ export async function startSupervisorService(instanceKey: string) {
         try {
             // Check for available jobs in the queue that are still PENDING
             // Order by priority (lower = higher priority), then by created_at
-            const [rows] = await dbPool.query(
-                `SELECT qj.key, qj.job_key FROM ${dbTablePrefix()}jobs_queue qj JOIN ${dbTablePrefix()}jobs j ON qj.job_key = j.key WHERE qj.available_at <= :now AND qj.visibility_timeout <= :now AND j.status = 'PENDING' ORDER BY qj.priority ASC, qj.created_at ASC LIMIT 1`,
-                { now: getNow() }
+            const [rows] = await database.query(
+              `SELECT qj.key, qj.job_key FROM ${database.getTablePrefix()}jobs_queue qj JOIN ${database.getTablePrefix()}jobs j ON qj.job_key = j.key WHERE qj.available_at <= :now AND qj.visibility_timeout <= :now AND j.status = 'PENDING' ORDER BY qj.priority ASC, qj.created_at ASC LIMIT 1`,
+              { now: getNow() }
             );
             
             const records = rows as Array<{ key: string; job_key: string }>;
             if (records.length > 0) {
                 const record = records[0];
+                
                 // Make sure no RUNNING worker exists in DB for that job before spawning
-                const [wk] = await dbPool.query(
-                    `SELECT * FROM ${dbTablePrefix()}workers WHERE job_key = :job_key AND status = 'RUNNING'`,
-                    { job_key: record.job_key }
+                const [wk] = await database.query(
+                  `SELECT * FROM ${database.getTablePrefix()}workers WHERE job_key = :job_key AND status = 'RUNNING'`,
+                  { job_key: record.job_key }
                 );
                 
                 if ((wk as any[]).length === 0) {
@@ -207,7 +209,7 @@ export async function startSupervisorService(instanceKey: string) {
         }
     }
 
-    // Keep in-memory ChildProcess handles only. Worker metadata is persisted in DB.
+    // Keep in-memory ChildProcess handles only. Worker metadata is persisted in Database.
     // Keys in workersProcessMap are workerKey (uuid per worker), not job keys.
     const workersProcessMap = new Map<string, ChildProcess>();
 
@@ -215,7 +217,7 @@ export async function startSupervisorService(instanceKey: string) {
     async function createWorkerForJob(jobKey: string): Promise<void> {
       try {
         // If there's already a RUNNING worker for this job in the DB, skip
-        const [existing] = await dbPool.query(`SELECT * FROM ${dbTablePrefix()}workers WHERE job_key = :job_key AND status = 'RUNNING'`, { job_key: jobKey });
+  const [existing] = await database.query(`SELECT * FROM ${database.getTablePrefix()}workers WHERE job_key = :job_key AND status = 'RUNNING'`, { job_key: jobKey });
         
         if ((existing as any[]).length > 0) {
           logger.warn({ jobKey }, 'Worker already running for job!');
@@ -223,7 +225,7 @@ export async function startSupervisorService(instanceKey: string) {
         }
 
         // Respect global max workers by counting RUNNING rows in DB
-        const [countRows] = await dbPool.query(`SELECT COUNT(*) as cnt FROM ${dbTablePrefix()}workers WHERE status = 'RUNNING'`);
+  const [countRows] = await database.query(`SELECT COUNT(*) as cnt FROM ${database.getTablePrefix()}workers WHERE status = 'RUNNING'`);
         const runningCount = (countRows as any[])[0]?.cnt ?? 0;
         if (runningCount >= config.workers.max) {
           logger.warn({ jobKey, activeCount: runningCount, max: config.workers.max }, 'Max workers reached, cannot spawn new worker!');
@@ -255,8 +257,8 @@ export async function startSupervisorService(instanceKey: string) {
 
       /* WORKER: INSERT */
       try {
-        await dbPool.execute(
-          `INSERT INTO ${dbTablePrefix()}workers (\`key\`, instance_key, pid, job_key, status, updated_at, created_at) VALUES (:worker_key, :instance_key, :pid, :job_key, 'RUNNING', :now, :now)`,
+        await database.execute(
+          `INSERT INTO ${database.getTablePrefix()}workers (\`key\`, instance_key, pid, job_key, status, updated_at, created_at) VALUES (:worker_key, :instance_key, :pid, :job_key, 'RUNNING', :now, :now)`,
           { worker_key: workerKey, instance_key: instanceKey, pid: child.pid, job_key: jobKey, now: getNow() }
         );
       } catch (err: Error | any) {
@@ -267,8 +269,8 @@ export async function startSupervisorService(instanceKey: string) {
 
       /* INSTANCE: UPDATE */
       try {
-        await dbPool.execute(
-          `UPDATE ${dbTablePrefix()}instances SET specs = :specs, workers_running_count = workers_running_count + 1, updated_at = :now WHERE \`key\` = :instance_key`,
+        await database.execute(
+          `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, workers_running_count = workers_running_count + 1, updated_at = :now WHERE \`key\` = :instance_key`,
           { instance_key: instanceKey, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
         );
       } catch (err: Error | any) {
@@ -281,8 +283,8 @@ export async function startSupervisorService(instanceKey: string) {
         
         /* WORKER: UPDATE */
         try {
-          await dbPool.execute(
-            `UPDATE ${dbTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :worker_key`,
+          await database.execute(
+            `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :worker_key`,
             { worker_key: workerKey, outcome: JSON.stringify({ message: 'Worker exited!', exit_code: code, exit_signal: signal }), now: getNow() }
           );
         } catch (err: Error | any) {
@@ -291,8 +293,8 @@ export async function startSupervisorService(instanceKey: string) {
 
         /* INSTANCE: UPDATE */
         try {
-          await dbPool.execute(
-            `UPDATE ${dbTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
+          await database.execute(
+            `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
             { instance_key: instanceKey, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
           );
         } catch (err: Error | any) {
@@ -306,8 +308,8 @@ export async function startSupervisorService(instanceKey: string) {
         
         /* WORKER: UPDATE */
         try {
-          await dbPool.execute(
-            `UPDATE ${dbTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :worker_key`,
+          await database.execute(
+            `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :worker_key`,
             { worker_key: workerKey, outcome: JSON.stringify({ message: err.message || 'Unknown error!', exit_signal: 'ERROR' }), now: getNow() }
           );
         } catch (err: Error | any) {
@@ -316,8 +318,8 @@ export async function startSupervisorService(instanceKey: string) {
         
         /* INSTANCE: UPDATE */
         try {
-          await dbPool.execute(
-            `UPDATE ${dbTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
+          await database.execute(
+            `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
             { instance_key: instanceKey, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
           );
         } catch (err: Error | any) {
@@ -329,8 +331,8 @@ export async function startSupervisorService(instanceKey: string) {
     }
 
     async function cleanupJobs() {
-      const [rows] = await dbPool.query(
-        `SELECT \`key\` FROM ${dbTablePrefix()}jobs WHERE status = 'COMPLETED' AND completed_at IS NOT NULL AND completed_at < :cutoff`,
+      const [rows] = await database.query(
+        `SELECT \`key\` FROM ${database.getTablePrefix()}jobs WHERE status = 'COMPLETED' AND completed_at IS NOT NULL AND completed_at < :cutoff`,
         { cutoff: subtractNow(config.jobs.retention, 'hours')  }
       );
       
@@ -352,8 +354,9 @@ export async function startSupervisorService(instanceKey: string) {
         }
       }
 
-      await dbPool.execute(`DELETE FROM ${dbTablePrefix()}jobs WHERE \`key\` IN (${keys.map(() => '?').join(',')})`, keys);
-      await dbPool.execute(`DELETE FROM ${dbTablePrefix()}jobs_queue WHERE job_key IN (${keys.map(() => '?').join(',')})`, keys);
+      await database.execute(`DELETE FROM ${database.getTablePrefix()}jobs WHERE \`key\` IN (${keys.map(() => '?').join(',')})`, keys);
+      // await database.execute(`DELETE FROM ${database.getTablePrefix()}jobs_notifications WHERE job_key IN (${keys.map(() => '?').join(',')})`, keys);
+      // await database.execute(`DELETE FROM ${database.getTablePrefix()}jobs_queue WHERE job_key IN (${keys.map(() => '?').join(',')})`, keys);
 
       logger.info({ count: keys.length }, 'Cleanup completed jobs!');
     }
@@ -401,8 +404,8 @@ export async function shutdownSupervisorService(instanceKey: string, signal: str
 
   // DB: WORKERs: UPDATE
   try {
-    await dbPool.execute(
-      `UPDATE ${dbTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE instance_key = :instance_key`,
+    await database.execute(
+      `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE instance_key = :instance_key`,
       { instance_key: instanceKey, outcome: JSON.stringify({ message: 'Worker exited due to instance shutdown!', signal }), now: getNow() }
     );
   } catch (err: Error | any) {
@@ -411,8 +414,8 @@ export async function shutdownSupervisorService(instanceKey: string, signal: str
   
   // DB: INSTANCE: UPDATE
   try {
-    await dbPool.execute(
-      `UPDATE ${dbTablePrefix()}instances SET specs = :specs, status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :instance_key`,
+    await database.execute(
+      `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :instance_key`,
       { instance_key: instanceKey, specs: JSON.stringify(getInstanceSpecs()), outcome: JSON.stringify({ message: 'Instance exited due to shutdown!', signal }), now: getNow() }
     );
   } catch (err: Error | any) {

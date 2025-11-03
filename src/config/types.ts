@@ -76,6 +76,9 @@ export type NotificationSpec =
       method?: 'GET' | 'POST' | 'PUT';
       headers?: Record<string, string>;
       url: string;
+      timeout?: number; // in milliseconds
+      retry?: number;
+      retry_in?: number; // in milliseconds
     }
   | {
       type: 'AWS_SNS';
@@ -83,6 +86,9 @@ export type NotificationSpec =
       access_secret: string; // Access Key Secret
       region: string;
       topic: string; // Topic ARN
+      timeout?: number; // in milliseconds
+      retry?: number;
+      retry_in?: number; // in milliseconds
     };
 
 export type CreateJobRequest = {
@@ -96,6 +102,8 @@ export type CreateJobRequest = {
 
 export type JobRow = {
   key: string;
+  instance_key?: string;
+  worker_key?: string;
   priority?: number | 1000;
   input?: any | null;
   outputs?: any | null;
@@ -106,6 +114,23 @@ export type JobRow = {
   progress: number | 0.00; // PENDING = 0; DOWNLOADING = 20; ANALYZING = 40; ENCODING = 60; UPLOADING = 80; COMPLETED = 100;
   started_at?: string | null;
   completed_at?: string | null;
+  updated_at?: string;
+  created_at?: string;
+  outcome?: any | null;
+};
+
+export type JobNotificationRow = {
+  key: string;
+  instance_key?: string;
+  worker_key?: string;
+  job_key?: string;
+  type?: string;
+  priority?: number | 1000;
+  payload?: any | null;
+  status?: 'PENDING' | 'SUCCESSFUL' | 'SKIPPED' | 'FAILED';
+  retry_max?: number | 0;
+  retry_count?: number | 0;
+  retry_at?: string | null;
   updated_at?: string;
   created_at?: string;
   outcome?: any | null;

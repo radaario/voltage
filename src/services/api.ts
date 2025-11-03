@@ -1,10 +1,10 @@
 import { config } from '../config/index.js';
-import { CreateJobRequest, OutputSpec } from '../config/types.js';
+import { CreateJobRequest, JobNotificationRow, OutputSpec } from '../config/types.js';
 
-import { sanitizeData, uuid, uukey, hash, getNow } from '../utils/index.js';
-import { storage } from '../utils/storage.js';
+import { sanitizeData, uuid, uukey, hash, getNow, addNow } from '../utils/index.js';
 import { logger } from '../utils/logger.js';
-import { initDb, dbPool, dbTablePrefix } from '../utils/database.js';
+import { storage } from '../utils/storage.js';
+import { database } from '../utils/database.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -96,7 +96,7 @@ app.post('/dashboard/sign/in', async (req, res) => {
 // Instance status endpoint - list all instances
 app.get('/instances', authMiddleware(), async (_req, res) => {
   try {
-  const [instances] = await dbPool.query(`SELECT * FROM ${dbTablePrefix()}instances ORDER BY created_at DESC`);
+  const [instances] = await database.query(`SELECT * FROM ${database.getTablePrefix()}instances ORDER BY created_at DESC`);
     
     // If no instances, return empty array immediately
     if (instances.length === 0) {
@@ -108,8 +108,8 @@ app.get('/instances', authMiddleware(), async (_req, res) => {
     const placeholders = instanceKeys.map((_, i) => `:k${i}`).join(',');
     const params: any = Object.fromEntries(instanceKeys.map((k, i) => [`k${i}`, k]));
 
-    const [workersRows] = await dbPool.query(
-      `SELECT * FROM ${dbTablePrefix()}workers WHERE instance_key IN (${placeholders}) ORDER BY created_at DESC`,
+    const [workersRows] = await database.query(
+      `SELECT * FROM ${database.getTablePrefix()}workers WHERE instance_key IN (${placeholders}) ORDER BY created_at DESC`,
       params
     );
 
@@ -139,7 +139,7 @@ app.get('/instances', authMiddleware(), async (_req, res) => {
 // Worker status endpoint - read persisted worker metadata and enrich with in-memory process state
 app.get('/workers', authMiddleware(), async (_req, res) => {
   try {
-  const [workers] = await dbPool.query(`SELECT * FROM ${dbTablePrefix()}workers ORDER BY created_at DESC`);
+  const [workers] = await database.query(`SELECT * FROM ${database.getTablePrefix()}workers ORDER BY created_at DESC`);
     return res.json( {metadata: {status: true}, data: workers} );
   } catch (err: Error | any) {
     logger.error({ err }, 'Failed to fetch workers!');
@@ -172,14 +172,14 @@ app.get('/jobs', authMiddleware(), async (req, res) => {
   }
 
   // Get total count for pagination metadata
-  const [[{ total }]] = await dbPool.query(
-    `SELECT COUNT(*) as total FROM ${dbTablePrefix()}jobs${whereClause}`,
+  const [[{ total }]] = await database.query(
+    `SELECT COUNT(*) as total FROM ${database.getTablePrefix()}jobs${whereClause}`,
     searchQuery ? { search: params.search } : {}
   ) as any;
 
   // Get paginated data
-  const [rawRows] = await dbPool.query(
-    `SELECT * FROM ${dbTablePrefix()}jobs${whereClause} ORDER BY created_at DESC LIMIT :limit OFFSET :offset`,
+  const [rawRows] = await database.query(
+    `SELECT * FROM ${database.getTablePrefix()}jobs${whereClause} ORDER BY created_at DESC LIMIT :limit OFFSET :offset`,
     params
   );
 
@@ -208,7 +208,7 @@ app.get('/jobs', authMiddleware(), async (req, res) => {
 });
 
 app.get('/jobs/:key', authMiddleware(), async (req, res) => {
-  const [rawRows] = await dbPool.query(`SELECT * FROM ${dbTablePrefix()}jobs WHERE \`key\` = :key`, { key: req.params.key });
+  const [rawRows] = await database.query(`SELECT * FROM ${database.getTablePrefix()}jobs WHERE \`key\` = :key`, { key: req.params.key });
   
   if ((rawRows as any[]).length === 0) {
     return res.status(404).json({ metadata: {status: false, error: {code: 'NOT_FOUND', message: 'Not found!'}} });
@@ -227,10 +227,10 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
     return res.status(400).json({ metadata: {status: false, error: {code: 'REQUEST_INVALID', message: 'Require input and outputs[]!'}} });
   }
 
-  const conn = await dbPool.getConnection();
+  const databaseConn = await database.getConnection();
 
   try {
-    if (conn.beginTransaction) await conn.beginTransaction();
+    if (databaseConn.beginTransaction) await databaseConn.beginTransaction();
 
     const jobKey = uukey();
     const priority = body.priority ?? 1000; // Default priority is 1000
@@ -242,8 +242,8 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
       outputs.push({ key: uukey(), job_key: jobKey, index, specs: output, status: 'PENDING', updated_at: now, created_at: now, result: null, error: null });
     }
 
-    await conn.execute(
-      `INSERT INTO ${dbTablePrefix()}jobs (\`key\`, priority, input, outputs, destination, notification, metadata, status, updated_at, created_at) VALUES (:key, :priority, :input, :outputs, :destination, :notification, :metadata, 'QUEUED', :now, :now)`,
+    await databaseConn.execute(
+      `INSERT INTO ${database.getTablePrefix()}jobs (\`key\`, priority, input, outputs, destination, notification, metadata, status, updated_at, created_at) VALUES (:key, :priority, :input, :outputs, :destination, :notification, :metadata, 'QUEUED', :now, :now)`,
       { 
         key: jobKey,
         priority: priority,
@@ -256,37 +256,80 @@ app.post('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: R
       }
     );
 
-    if (conn.commit) await conn.commit();
+    if (databaseConn.commit) await databaseConn.commit();
     
-    await dbPool.execute(
-      `INSERT INTO ${dbTablePrefix()}jobs_queue (\`key\`, job_key, priority, visibility_timeout, available_at, created_at) VALUES (:key, :jobKey, :priority, :now, :now, :now)`,
+    await database.execute(
+      `INSERT INTO ${database.getTablePrefix()}jobs_queue (\`key\`, job_key, priority, visibility_timeout, available_at, created_at) VALUES (:key, :jobKey, :priority, :now, :now, :now)`,
       { key: uukey(), jobKey, priority, now: getNow() }
     );
 
     // Immediately transition from QUEUED to PENDING
-    await dbPool.execute(
-      `UPDATE ${dbTablePrefix()}jobs SET status = 'PENDING' WHERE \`key\` = :key`,
+    await database.execute(
+      `UPDATE ${database.getTablePrefix()}jobs SET status = 'PENDING' WHERE \`key\` = :key`,
       { key: jobKey }
     );
-    
-    const { notifyJob } = await import('./worker/notifier.js');
-    const notificationPayload = await notifyJob({key: jobKey, priority, status: 'QUEUED', ...body, outputs});
 
-    return res.status(202).json({ metadata: {status: true}, data: notificationPayload });
+    const job = {key: jobKey, priority, status: 'QUEUED', ...body, outputs};
+    const sanitizedJob = sanitizeData(job);
+    
+    if (job.notification) {
+      const { notify } = await import('./worker/notifier.js');
+      const notificationOutcome = await notify(job.notification, sanitizedJob);
+      
+      let notification: JobNotificationRow = {
+        key: uukey(),
+        instance_key: instanceKeyGlobal,
+        job_key: jobKey,
+        priority,
+        type: job.status,
+        payload: sanitizedJob,
+        status: notificationOutcome.status || 'FAILED',
+        retry_max: 0,
+        retry_count: 0,
+        retry_at: null,
+        updated_at: getNow(),
+        created_at: getNow(),
+        outcome: notificationOutcome
+      };
+
+      if (notification.status === 'FAILED') {
+        notification.retry_max = config.notifications.retry_max > 0 ? config.notifications.retry_max : 0;
+        if (job.notification.retry && job.notification.retry > 0 && job.notification.retry < notification.retry_max) notification.retry_max = job.notification.retry;
+        
+        let retry_in = config.notifications.retry_in > 0 ? config.notifications.retry_in : (60 * 1000); // default 60s
+        if (job.notification.retry_in && job.notification.retry_in > 0) retry_in = job.notification.retry_in;
+
+        if (notification.retry_max > 0) {
+          notification.status = 'PENDING';
+          notification.retry_at = addNow(retry_in, 'milliseconds');
+        }
+      }
+
+      await database.execute(
+        `INSERT INTO ${database.getTablePrefix()}jobs_notifications (\`key\`, instance_key, job_key, priority, type, payload, status, retry_max, retry_count, retry_at, updated_at, created_at, outcome) VALUES (:key, :instance_key, :job_key, :priority, :type, :payload, :status, :retry_max, :retry_count, :retry_at, :updated_at, :created_at, :outcome)`,
+        { 
+          ...notification,
+          payload: notification.payload ? JSON.stringify(notification.payload) : null,
+          outcome: notification.outcome ? JSON.stringify(notification.outcome) : null
+        }
+      );
+    }
+
+    return res.status(202).json({ metadata: {status: true}, data: sanitizedJob });
   } catch (err: Error | any) {
-    if (conn.rollback) await conn.rollback();
+    if (databaseConn.rollback) await databaseConn.rollback();
     logger.error({ err }, 'Create job failed!');
     return res.status(500).json({ metadata: {status: false, error: {code: 'INTERNAL_ERROR', message: 'Failed to create job!'}} });
   } finally {
-    if (conn.release) conn.release();
+    if (databaseConn.release) databaseConn.release();
   }
 });
 
 app.delete('/jobs/:key', authMiddleware({ forceAuth: !!config.api.key }), async (req: Request, res: Response) => {
   const jobKey = req.params.key ?? req.params.job_key;
   
-  await dbPool.execute(
-    `UPDATE ${dbTablePrefix()}jobs SET status = 'DELETED' WHERE \`key\` = :key`,
+  await database.execute(
+    `UPDATE ${database.getTablePrefix()}jobs SET status = 'DELETED' WHERE \`key\` = :key`,
     { key: jobKey }
   );
   
@@ -306,7 +349,7 @@ app.get('/jobs/:key/preview', authMiddleware(), async (req: Request, res: Respon
   
   try {
     // Check if job exists
-  const [rows] = await dbPool.query(`SELECT * FROM ${dbTablePrefix()}jobs WHERE \`key\` = :key`, { key: jobKey });
+  const [rows] = await database.query(`SELECT * FROM ${database.getTablePrefix()}jobs WHERE \`key\` = :key`, { key: jobKey });
     
     if ((rows as any[]).length === 0) {
       return res.status(404).json({ metadata: {status: false, error: {code: 'NOT_FOUND', message: 'Job not found!'}} });
@@ -339,8 +382,12 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   return res.status(500).json({ metadata: {status: false, error: {code: 'INTERNAL_ERROR', message: 'Internal error!'}} });
 });
 
+let instanceKeyGlobal: string;
+
 export async function startApiService(instanceKey: string) {
   logger.info('Starting API service...');
+
+  instanceKeyGlobal = instanceKey;
 
   if (!instanceKey) {
     logger.error('Instance key required!');
@@ -348,7 +395,7 @@ export async function startApiService(instanceKey: string) {
   }
 
   await storage.config(config.storage);
-  await initDb();
+  await database.verifySchemaExists();
 
   // SERVER: START
   return new Promise((resolve, reject) => {

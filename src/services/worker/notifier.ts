@@ -1,62 +1,39 @@
 import { config } from '../../config/index.js';
 import { NotificationSpec } from '../../config/types.js';
 
-import { sanitizeData } from '../../utils/index.js';
 import { logger } from '../../utils/logger.js';
 
 import axios from 'axios';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 
-export async function notifyJob(job: any): Promise<any> {
-  const payload: any = { 
-    key: job.key,
-    priority: job.priority,
-    status: job.status,
-    progress: job.progress || 0.00,
+export async function notify(notification: NotificationSpec, payload: unknown): Promise<any> {
+  let outcome: any = {
+    status: 'FAILED',
   };
 
-  for (const key of ['error', 'metadata', 'input', 'outputs', 'destination', 'notification']) {
-    if (job[key]) {
-      if (typeof job[key] === 'string'){
-        try {
-          job[key] = JSON.parse(job[key]);
-        } catch (err: Error | any) {
-        }
-      }
-
-      payload[key] = sanitizeData(job[key]);
-    }
-  }
-
-  if (job.notification) {
-    await notify(job.notification, payload);
-  }
-
-  return payload;
-}
-
-export async function notify(notification: NotificationSpec, payload: unknown): Promise<void> {
   try {
     if ('type' in notification) {
       if (notification.type === 'HTTP' || notification.type === 'HTTPS') {
         // HTTP/HTTPS notification
-        await notifyHttp(notification, payload);
+        outcome = await notifyHttp(notification, payload);
       } else if (notification.type === 'AWS_SNS') {
         // AWS SNS notification
-        await notifySns(notification, payload);
+        outcome = await notifySns(notification, payload);
       } else {
-        logger.warn({ notification }, 'Unknown notification type');
+        throw new Error('Unknown notification type!');
       }
     } else {
-      logger.warn({ notification }, 'Invalid notification format');
+      throw new Error('Invalid notification format!');
     }
   } catch (err: Error | any) {
-    logger.error({ err, notification }, 'Notification failed');
-    // Best-effort notification; ignore failures
+    logger.error({ err, notification }, 'Notification failed!');
+    outcome.error = { message: err.message || 'Unknown error' };
   }
+
+  return outcome;
 }
 
-async function notifyHttp(notification: { type: 'HTTP' | 'HTTPS'; method?: 'GET' | 'POST' | 'PUT'; headers?: Record<string, string>; url: string }, payload: unknown): Promise<void> {
+async function notifyHttp(notification: any, payload: unknown): Promise<any> {
   const method = notification.method || 'POST';
   const headers = { 'Content-Type': 'application/json', 'User-Agent': `${config.name}/${config.version}`, ...(notification.headers || {}) };
   
@@ -66,7 +43,7 @@ async function notifyHttp(notification: { type: 'HTTP' | 'HTTPS'; method?: 'GET'
   const requestConfig: any = {
     method,
     headers,
-    timeout: 5000
+    timeout: (notification.timeout && parseInt(notification.timeout) > 0 && parseInt(notification.timeout) < config.notifications.timeout) ? parseInt(notification.timeout) : config.notifications.timeout || (10 * 1000),
   };
 
   if (method === 'GET') {
@@ -84,10 +61,21 @@ async function notifyHttp(notification: { type: 'HTTP' | 'HTTPS'; method?: 'GET'
     requestConfig.data = data;
   }
 
-  await axios.request(requestConfig);
+  const response = await axios.request(requestConfig);
+
+  let outcome: any = {
+    status: response.status === 200 ? 'SUCCESSFUL' : 'FAILED',
+    http_status_code: response.status,
+  };
+
+  if (response.status !== 200) outcome.error = { message: response.statusText || 'Unknown error' };
+  if (response.headers) outcome.header = response.headers;
+  if (response.data) outcome.body = response.data;
+
+  return outcome;
 }
 
-async function notifySns(notification: { type: 'AWS_SNS'; access_key: string; access_secret: string; region: string; topic: string }, payload: unknown): Promise<void> {
+async function notifySns(notification: { type: 'AWS_SNS'; access_key: string; access_secret: string; region: string; topic: string }, payload: unknown): Promise<any> {
   const snsClient = new SNSClient({
     region: notification.region,
     credentials: {
@@ -105,6 +93,16 @@ async function notifySns(notification: { type: 'AWS_SNS'; access_key: string; ac
     Subject: `Job ${(payload as any)?.status || 'update'}`,
   });
 
-  await snsClient.send(command);
+  const response = await snsClient.send(command);
+
+  let outcome: any = {
+    status: response.$metadata.httpStatusCode === 200 ? 'SUCCESSFUL' : 'FAILED',
+    http_status_code: response.$metadata.httpStatusCode,
+  };
+
+  if (response.$metadata.httpStatusCode !== 200) outcome.error = { message: 'Unknown error' }; // response.$metadata?.httpStatusText
+  if (response.MessageId) outcome.message_id = response.MessageId;
+  
+  return outcome;
 }
 

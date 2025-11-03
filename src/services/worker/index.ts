@@ -1,8 +1,8 @@
 import { config } from '../../config';
 
-import { getNow } from '../../utils';
+import { sanitizeData, getNow } from '../../utils';
 import { logger } from '../../utils/logger.js';
-import { initDb, dbPool, dbTablePrefix } from '../../utils/database.js';
+import { database } from '../../utils/database.js';
 
 import { JobRow } from '../../config/types.js';
 
@@ -11,12 +11,12 @@ import { analyzeInputMetadata } from './analyzer.js';
 import { generateInputPreview } from './thumbnailer.js';
 import { encodeOutput } from './encoder.js';
 import { uploadOutput } from './uploader.js';
-import { notifyJob } from './notifier.js';
 
 import path from 'path';
 import fs from 'fs/promises';
 
-await initDb();
+database.config(config.database);
+await database.verifySchemaExists();
 
 async function run(instanceKey: string, workerKey: string, jobKey: string): Promise<void> {
   logger.info({ instanceKey, workerKey, jobKey }, 'worker starts running...');
@@ -28,6 +28,8 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
 
   let job: JobRow = {
     key: jobKey,
+    instance_key: instanceKey,
+    worker_key: workerKey,
     status: 'PENDING',
     progress: 0.00
   };
@@ -36,7 +38,7 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
     await updateWorker(workerKey, 'RUNNING');
 
     /* JOB: SELECT */
-    const [queryJob] = await dbPool.query(`SELECT * FROM ${dbTablePrefix()}jobs WHERE \`key\` = :key`, { key: jobKey });
+    const [queryJob] = await database.query(`SELECT * FROM ${database.getTablePrefix()}jobs WHERE \`key\` = :key`, { key: jobKey });
     if ((queryJob as any[]).length === 0) {
       logger.warn({ jobKey }, 'Job not found!');
       process.exit(0);
@@ -44,6 +46,10 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
 
     job = (queryJob as any[])[0];
     if (!job.key) throw new Error('Job couldn\'t be found!');
+
+    /* JOB: UPDATE */
+    job.instance_key = instanceKey;
+    job.worker_key = workerKey;
 
     /* JOB: PARSE */
     job.input = job.input ? JSON.parse(job.input as string) : null;
@@ -157,7 +163,8 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
   await updateWorker(workerKey, 'EXITED');
 
   if (job.notification) {
-    await notifyJob({...job});
+    const { notify } = await import('./notifier.js');
+    const notificationOutcome = await notify(job.notification, sanitizeData(job));
   }
 
   await fs.rm(jobTempFolder, { recursive: true }).catch(() => {});
@@ -175,9 +182,16 @@ async function startJob(job: any): Promise<void> {
   if (!job.key) return;
 
   try {
-    await dbPool.execute(
-      `UPDATE ${dbTablePrefix()}jobs SET status = :status, progress = :progress, started_at = :now, updated_at = :now WHERE \`key\` = :key`,
-      { key: job.key, status: job.status, progress: job.progress, now: getNow() }
+    await database.execute(
+      `UPDATE ${database.getTablePrefix()}jobs SET instance_key = :instance_key, worker_key = :worker_key, status = :status, progress = :progress, started_at = :now, updated_at = :now WHERE \`key\` = :key`,
+      {
+        key: job.key,
+        instance_key: job.instance_key,
+        worker_key: job.worker_key,
+        status: job.status,
+        progress: job.progress,
+        now: getNow()
+      }
     );
   } catch (err: Error | any) {
   }
@@ -187,10 +201,12 @@ async function updateJob(job: any): Promise<void> {
   if (!job.key) return;
 
   try {
-    await dbPool.execute(
-      `UPDATE ${dbTablePrefix()}jobs SET input = :input, outputs = :outputs, status = :status, progress = :progress, updated_at = :now, outcome = :outcome WHERE \`key\` = :key`,
+    await database.execute(
+      `UPDATE ${database.getTablePrefix()}jobs SET input = :input, outputs = :outputs, status = :status, progress = :progress, updated_at = :now, outcome = :outcome WHERE \`key\` = :key`,
       {
         key: job.key,
+        instance_key: job.instance_key,
+        worker_key: job.worker_key,
         input: job.input ? JSON.stringify(job.input) : null,
         outputs: job.outputs ? JSON.stringify(job.outputs) : null,
         status: job.status,
@@ -207,8 +223,8 @@ async function updateWorker(workerKey: string, status: string): Promise<void> {
   if (!workerKey) return;
 
   try {
-    await dbPool.execute(
-      `UPDATE ${dbTablePrefix()}workers SET status = :status, updated_at = :now WHERE \`key\` = :key`,
+    await database.execute(
+      `UPDATE ${database.getTablePrefix()}workers SET status = :status, updated_at = :now WHERE \`key\` = :key`,
       { key: workerKey, status, now: getNow() }
     );
   } catch (err: Error | any) {
