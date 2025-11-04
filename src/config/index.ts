@@ -81,7 +81,7 @@ export const config = {
     visibility_timeout: Number(process.env.VOLTAGE_JOBS_VISIBILITY_TIMEOUT ?? 10 * 60 * 1000), // in milliseconds, default 10 minutes
     // max_attempts: Number(process.env.VOLTAGE_JOBS_MAX_ATTEMPTS ?? 3), // number of attempts, default 3
     cleanup_interval: Number(process.env.VOLTAGE_JOBS_CLEANUP_INTERVAL ?? 1 * 60 * 60 * 1000), // in milliseconds, default 1 hour
-    retention: Number(process.env.VOLTAGE_JOBS_RETENTION ?? 1) // in hours, default 7 days = 24 * 7
+    retention: Number(process.env.VOLTAGE_JOBS_RETENTION ?? 24) // in hours, default 24 hours || 7 days = 24 * 7
   },
   notifications: {
     poll_interval: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_POLL_INTERVAL ?? 1 * 1000), // in milliseconds, default 1 second
@@ -99,6 +99,7 @@ export const config = {
     retry_in: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN ?? 60 * 1000), // in milliseconds, default 60 seconds
   },
   logs: {
+    is_disabled: process.env.VOLTAGE_LOGS_IS_DISABLED === 'true',
     cleanup_interval: Number(process.env.VOLTAGE_LOGS_CLEANUP_INTERVAL ?? 1 * 60 * 60 * 1000), // in milliseconds, default 1 hour
     retention: Number(process.env.VOLTAGE_LOGS_RETENTION ?? 1) // in hours, default 7 days = 24 * 7
   }

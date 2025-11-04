@@ -128,6 +128,7 @@ export type JobNotificationRow = {
   job_key?: string;
   event?: string;
   priority?: number | 1000;
+  specs?: any | null;
   payload?: any | null;
   status?: 'PENDING' | 'SUCCESSFUL' | 'SKIPPED' | 'FAILED';
   retry_max?: number | 0;

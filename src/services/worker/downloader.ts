@@ -9,17 +9,19 @@ import axios from 'axios';
 
 export async function downloadInput(job: any): Promise<string> {
   try {
+    logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
+
     const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
     const jobTempInputFilePath = path.join(jobTempFolder, 'input');
 
-    logger.info({ jobKey: job.key }, 'Downloading job input file...');
+    logger.console('INFO', 'Downloading job input file...');
 
     if (job.input.type === 'BASE64') {
       const buffer = Buffer.from(job.input.content, 'base64');
       
       await fs.writeFile(jobTempInputFilePath, buffer);
-      
-      logger.info({ jobKey: job.key }, 'Job input file successfully downloaded!');
+
+      logger.console('INFO', 'Job input file successfully downloaded!');
       return jobTempInputFilePath;
     }
 
@@ -35,23 +37,23 @@ export async function downloadInput(job: any): Promise<string> {
       });
 
       await fs.writeFile(jobTempInputFilePath, Buffer.from(resp.data));
-      
-      logger.info({ jobKey: job.key }, 'Job input file successfully downloaded!');
+
+      logger.console('INFO', 'Job input file successfully downloaded!');
       return jobTempInputFilePath;
     }
 
     if (!['BASE64', 'HTTP', 'HTTPS'].includes(job.input.type)) {
       await storage.config(job.input);
       await storage.download(job.input.path, jobTempInputFilePath);
-      
-      logger.info({ jobKey: job.key }, 'Job input file successfully downloaded!');
+
+      logger.console('INFO', 'Job input file successfully downloaded!');
       return jobTempInputFilePath;
     }
 
     throw new Error(`Unsupported input type: ${job.input.type}!`);
-  } catch (err: Error | any) {
-    logger.error({ jobKey: job.key, err }, 'Job input file couldn\'t be downloaded!');
-    throw new Error(`Job input file download failed: ${err.message || 'Unknown error occurred!'}`);
+  } catch (error: Error | any) {
+    await logger.insert('ERROR', 'Job input file couldn\'t be downloaded!', { error });
+    throw new Error((`Job input file couldn\'t be downloaded! ${error.message || ''}`).trim());
   }
 }
 

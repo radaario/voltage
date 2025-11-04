@@ -6,11 +6,13 @@ import { spawn } from 'child_process';
 import path from 'path';
 
 export async function encodeOutput(job: any, output: any): Promise<any> {
+  logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
+
   const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
   const jobTempInputFilePath = path.join(jobTempFolder, 'input');
   const jobTempOutputFilePath = path.join(jobTempFolder, `output.${output.index}.${(output.format || 'mp4').toLowerCase()}`);
 
-  logger.info({ jobKey: job.key, outputKey: output.key, outputIndex: output.index }, 'Encoding job output...');
+  logger.console('INFO', 'Encoding job output...', { output_key: output.key, output_index: output.index});
 
   const args: string[] = ['-y', '-i', jobTempInputFilePath];
   if (output.specs.videoCodec) args.push('-c:v', output.specs.videoCodec);
@@ -31,10 +33,12 @@ export async function encodeOutput(job: any, output: any): Promise<any> {
       });
     });
 
-    logger.info({ jobKey: job.key, outputKey: output.key, outputIndex: output.index }, 'Job output encoded!');
+    logger.console('INFO', 'Job output encoded!', { output_key: output.key, output_index: output.index });
     
     return { file_path: jobTempOutputFilePath };
-  } catch (err: Error | any) {
-    return { ...err || { message: 'Unknown error!' }, args };
+  } catch (error: Error | any) {
+    await logger.insert('ERROR', 'Failed to encode job output!', { output_key: output.key, output_index: output.index,error });
+    throw new Error((`Failed to encode job output! ${error.message || ''}`).trim());
+    // return { ...error || { message: 'Failed to encode job output!' }, args };
   }
 }

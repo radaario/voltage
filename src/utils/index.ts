@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import moment from 'moment-timezone';
 
-moment.defaultFormat = 'YYYY-MM-DD HH:mm:ss';
+moment.defaultFormat = 'YYYY-MM-DD HH:mm:ss.SSS';
 
 const networkInterfaces = os.networkInterfaces();
 
@@ -57,7 +57,7 @@ export function getInstanceCpuFrequencyMHz(): number {
     if (cpus.length === 0) return 0;
     const totalSpeed = cpus.reduce((acc, cpu) => acc + cpu.speed, 0);
     return totalSpeed / cpus.length;
-  } catch (err: Error | any) {
+  } catch (error: Error | any) {
   }
   
   return 0;
@@ -70,7 +70,7 @@ export function getInstanceCpuUsagePercent(): number {
     const totalTick = cpus.reduce((acc, cpu) => acc + Object.values(cpu.times).reduce((a, b) => a + b, 0), 0);
     const idlePercentage = (totalIdle / totalTick) * 100;
     return parseFloat((100 - idlePercentage).toFixed(2)); // Return CPU usage percentage as a two decimal float
-  } catch (err: Error | any) {
+  } catch (error: Error | any) {
   }
   
   return 0;
@@ -82,7 +82,7 @@ export function getInstanceMemoryUsagePercent(): number {
     const freeMemory = os.freemem();
     const usedMemory = totalMemory - freeMemory;
     return parseFloat(((usedMemory / totalMemory) * 100).toFixed(2)); // Return memory usage percentage
-  } catch (err: Error | any) {
+  } catch (error: Error | any) {
   }
   
   return 0;
@@ -100,45 +100,45 @@ export function hash(data: string, algorithm: 'MD5' | 'SHA1' | 'SHA256' | 'SHA51
     return crypto.createHash(algorithm).update(data).digest('hex');
 }
 
-export function getNow(): string {
+export function getNow(format: string = 'YYYY-MM-DD HH:mm:ss.SSS'): string {
   let m = moment();
   
   if (config.timezone && config.timezone !== '') {
     try {
       m = m.tz(config.timezone);
-    } catch (err: Error | any) {
+    } catch (error: Error | any) {
       // invalid timezone — fall back to local moment
     }
   }
 
-  return m.format('YYYY-MM-DD HH:mm:ss');
+  return m.format(format);
 }
 
-export function addNow(amount: number, unit: moment.unitOfTime.DurationConstructor): string {
+export function addNow(amount: number, unit: moment.unitOfTime.DurationConstructor, format: string = 'YYYY-MM-DD HH:mm:ss.SSS'): string {
   let m = moment();
   if (config.timezone && config.timezone !== '') {
     try {
       m = m.tz(config.timezone);
-    } catch (err: Error | any) {
+    } catch (error: Error | any) {
       // invalid timezone — fall back to local moment
     }
   }
 
-  return m.add(amount, unit).format('YYYY-MM-DD HH:mm:ss');
+  return m.add(amount, unit).format(format);
 }
 
-export function subtractNow(amount: number, unit: moment.unitOfTime.DurationConstructor): string {
+export function subtractNow(amount: number, unit: moment.unitOfTime.DurationConstructor, format: string = 'YYYY-MM-DD HH:mm:ss.SSS'): string {
   let m = moment();
 
   if (config.timezone && config.timezone !== '') {
     try {
       m = m.tz(config.timezone);
-    } catch (err: Error | any) {
+    } catch (error: Error | any) {
       // invalid timezone — fall back to local moment
     }
   }
 
-  return m.subtract(amount, unit).format('YYYY-MM-DD HH:mm:ss');
+  return m.subtract(amount, unit).format(format);
 }
 
 // Sanitize sensitive fields from objects

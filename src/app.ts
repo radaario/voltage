@@ -1,29 +1,36 @@
+import { config } from './config/index.js';
+
 import { createInstanceKey } from './utils/index.js';
 import { logger } from './utils/logger.js';
+import { database } from './utils/database.js';
 
 import { startApiService } from './services/api.js';
 import { startSupervisorService, shutdownSupervisorService } from './services/supervisor.js';
 
 // INSTANCE: KEY
-const instanceKey = createInstanceKey();
+const instance_key = createInstanceKey();
+
+logger.setMetadata({ instance_key });
+database.config(config.database);
+await database.verifySchemaExists();
 
 // Initialize and start the Instance
 async function main() {
-  logger.info({ instanceKey }, 'Starting instance...');
+  await logger.insert('INFO', 'Starting instance...');
 
   try {
-    await startSupervisorService(instanceKey);
-    await startApiService(instanceKey);
+    await startSupervisorService(instance_key);
+    await startApiService(instance_key);
 
-    logger.info({ instanceKey }, 'Instance started successfully!');
-  } catch (err: Error | any) {
-    logger.error({ err }, 'Failed to start instance!');
+    await logger.insert('INFO', 'Instance started successfully!');
+  } catch (error: Error | any) {
+    await logger.insert('ERROR', 'Failed to start instance!', { error });
     process.exit(1);
   }
 }
 
-main().catch((err) => {
-  logger.error({ err }, 'Unhandled error in instance!');
+main().catch((error: Error | any) => {
+  logger.insert('ERROR', 'Unhandled error in instance!', { error });
   process.exit(1);
 });
 
@@ -32,12 +39,12 @@ process.on('SIGTERM', (signal) => gracefulShutdown(signal));
 process.on('SIGQUIT', (signal) => gracefulShutdown(signal));
 
 const gracefulShutdown = async (signal: string) => {
-  logger.info(`Instance received ${signal}, shutting down gracefully!`);
+  await logger.insert('INFO', `Instance received :signal, shutting down gracefully!`, { signal });
 
   try {
-    await shutdownSupervisorService(instanceKey, signal);
-  } catch (err: Error | any) {
-    logger.error({ err }, 'Error during graceful shutdown!');
+    await shutdownSupervisorService(instance_key, signal);
+  } catch (error: Error | any) {
+    logger.insert('ERROR', 'Error during graceful shutdown!', { error });
   }
   
   process.exit(0);
