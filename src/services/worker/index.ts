@@ -17,31 +17,32 @@ import path from 'path';
 import fs from 'fs/promises';
 
 database.config(config.database);
-await database.verifySchemaExists();
 
-async function run(instanceKey: string, workerKey: string, jobKey: string): Promise<void> {
-  logger.info({ instanceKey, workerKey, jobKey }, 'worker starts running...');
+async function run(instance_key: string, worker_key: string, job_key: string): Promise<void> {
+  logger.setMetadata({ instance_key, worker_key, job_key });
 
-  const jobTempFolder = path.join(config.temp_folder, 'jobs', jobKey);
+  await logger.insert('INFO', 'Worker starts running...');
+
+  const jobTempFolder = path.join(config.temp_folder, 'jobs', job_key);
   await fs.mkdir(jobTempFolder, { recursive: true }).catch(() => {});
   
   const jobProgressForEachStep = 20.00; // Each step contributes 20% to the total progress
 
   let job: JobRow = {
-    key: jobKey as string,
-    instance_key: instanceKey as string,
-    worker_key: workerKey as string,
+    key: job_key,
+    instance_key,
+    worker_key,
     status: 'PENDING',
     progress: 0.00
   };
 
   try {
-    await updateWorker(workerKey, 'RUNNING');
+    await updateWorker(worker_key, 'RUNNING');
 
     /* JOB: SELECT */
-    const [queryJob] = await database.query(`SELECT * FROM ${database.getTablePrefix()}jobs WHERE \`key\` = :key`, { key: jobKey });
+    const [queryJob] = await database.query(`SELECT * FROM ${database.getTablePrefix()}jobs WHERE \`key\` = :key`, { key: job_key });
     if ((queryJob as any[]).length === 0) {
-      logger.warn({ jobKey }, 'Job not found!');
+      await logger.insert('WARN', 'Job not found!');
       process.exit(0);
     }
 
@@ -49,8 +50,8 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
     if (!job.key) throw new Error('Job couldn\'t be found!');
 
     /* JOB: UPDATE */
-    job.instance_key = instanceKey as string;
-    job.worker_key = workerKey as string;
+    job.instance_key = instance_key;
+    job.worker_key = worker_key;
 
     await createJobNotification('STARTED', job);
 
@@ -73,8 +74,10 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
     /* JOB: INPUT: DOWNLOADING */
     job.status = 'DOWNLOADING';
 
+    await logger.insert('INFO', 'Downloading job input...');
+
     await startJob(job);
-    await updateWorker(workerKey, 'RUNNING');
+    await updateWorker(worker_key, 'RUNNING');
     
     const jobTempInputFilePath = await downloadInput(job);
     if (!jobTempInputFilePath) throw new Error('Input couldn\'t be downloaded!');
@@ -85,8 +88,10 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
     job.status = 'ANALYZING';
     job.progress += jobProgressForEachStep;
 
+    await logger.insert('INFO', 'Analyzing job input...');
+
     await updateJob(job);
-    await updateWorker(workerKey, 'RUNNING');
+    await updateWorker(worker_key, 'RUNNING');
     
     const jobInputMetadata = await analyzeInputMetadata(job);
     if (!jobInputMetadata) throw new Error('Input metadata couldn\'t be extracted!');
@@ -96,60 +101,68 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
     await createJobNotification('ANALYZED', job);
 
     /* JOB: INPUT: PREVIEW */
+    await logger.insert('INFO', 'Generating job input preview...');
+    
     const jobTempInputPreviewFilePath = await generateInputPreview(job, config.jobs.preview);
     // if (!jobTempInputPreviewFilePath) throw new Error('Input preview couldn\'t be generated!');    
     
     /* JOB: OUTPUTs: ENCODING */
-    logger.info({ jobKey }, 'Encoding job outputs...');
     job.status = 'ENCODING';
 
+    await logger.insert('INFO', 'Encoding job outputs...');
+
     await updateJob(job);
-    await updateWorker(workerKey, 'RUNNING');
+    await updateWorker(worker_key, 'RUNNING');
 
     for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
-      if (job.outputs[index].status === 'FAILED') continue;
+      if (['COMPLETED', 'FAILED'].includes(job.outputs[index].status)) continue;
       
       job.outputs[index].status = 'ENCODING';
 
       try{
         job.outputs[index].outcome = await encodeOutput(job, job.outputs[index]);
-      } catch (err: Error | any){
+      } catch (error: Error | any){
         job.outputs[index].status = 'FAILED';
-        job.outputs[index].outcome = err || { message: 'Couldn\'t be encoded!' };
+        job.outputs[index].outcome = error || { message: 'Couldn\'t be encoded!' };
       }
 
       job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
 
+      await logger.insert('INFO', 'Job output encoded!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
+
       await updateJob(job);
-      await updateWorker(workerKey, 'RUNNING');
+      await updateWorker(worker_key, 'RUNNING');
     }
 
     await createJobNotification('ENCODED', job);
 
     /* JOB: OUTPUTs: UPLOADING */
-    logger.info({ jobKey }, 'Uploading job outputs...');
     job.status = 'UPLOADING';
 
+    await logger.insert('INFO', 'Uploading job outputs...');
+
     await updateJob(job);
-    await updateWorker(workerKey, 'RUNNING');
+    await updateWorker(worker_key, 'RUNNING');
 
     for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
-      if (job.outputs[index].status === 'FAILED') continue;
+      if (['COMPLETED', 'FAILED'].includes(job.outputs[index].status)) continue;
       
       job.outputs[index].status = 'UPLOADING';
 
       try {
         job.outputs[index].outcome = await uploadOutput(job, job.outputs[index]);
         job.outputs[index].status = 'COMPLETED';
-      } catch (err: Error | any) {
+      } catch (error: Error | any) {
         job.outputs[index].status = 'FAILED';
-        job.outputs[index].outcome = err || { message: 'Couldn\'t be uploaded!' };
+        job.outputs[index].outcome = error || { message: 'Couldn\'t be uploaded!' };
       }
 
       job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
 
+      await logger.insert('INFO', 'Job output uploaded!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
+
       await updateJob(job);
-      await updateWorker(workerKey, 'RUNNING');
+      await updateWorker(worker_key, 'RUNNING');
     }
 
     await createJobNotification('UPLOADED', job);
@@ -163,24 +176,24 @@ async function run(instanceKey: string, workerKey: string, jobKey: string): Prom
 
     job.status = 'COMPLETED';
     job.outcome = { message: 'Successfully completed!' };
-  } catch (err: Error | any) {
+  } catch (error: Error | any) {
     job.status = 'FAILED';
-    job.outcome = err || { message: 'Unknown error' };
+    job.outcome = error || { message: 'Unknown error' };
   }
 
   job.progress = 100.00;
 
   await updateJob(job);
-  await updateWorker(workerKey, 'EXITED');
+  await updateWorker(worker_key, 'EXITED');
 
   await fs.rm(jobTempFolder, { recursive: true }).catch(() => {});
 
   if (job.status === 'COMPLETED') {
-    logger.info({ instanceKey,  workerKey, jobKey }, 'Job successfully completed!');
+    await logger.insert('INFO', 'Job completed successfully!');
     await createJobNotification('COMPLETED', job);
     process.exit(0);
   } else {
-    logger.info({ instanceKey,  workerKey, jobKey }, 'Job failed!');
+    await logger.insert('ERROR', 'Job failed!', { error: job.outcome });
     await createJobNotification('FAILED', job);
     process.exit(1);
   }
@@ -201,7 +214,7 @@ async function startJob(job: any): Promise<void> {
         now: getNow()
       }
     );
-  } catch (err: Error | any) {
+  } catch (error: Error | any) {
   }
 }
 
@@ -223,42 +236,47 @@ async function updateJob(job: any): Promise<void> {
         now: getNow(),
       }
     );
-  } catch (err: Error | any) {
+  } catch (error: Error | any) {
   }
 }
 
-async function updateWorker(workerKey: string, status: string): Promise<void> {
-  if (!workerKey) return;
+async function updateWorker(worker_key: string, status: string): Promise<void> {
+  if (!worker_key) return;
 
   try {
     await database.execute(
       `UPDATE ${database.getTablePrefix()}workers SET status = :status, updated_at = :now WHERE \`key\` = :key`,
-      { key: workerKey, status, now: getNow() }
+      { key: worker_key, status, now: getNow() }
     );
-  } catch (err: Error | any) {
-    logger.error({ workerKey, err }, 'Failed to update worker!');
+  } catch (error: Error | any) {
+    await logger.insert('ERROR', 'Failed to update worker!', { error });
   }
 }
 
 // Get job key and instance key from command line arguments
-const instanceKey = process.argv[2];
-const workerKey = process.argv[3];
-const jobKey = process.argv[4];
+const instance_key = process.argv[2];
+const worker_key = process.argv[3];
+const job_key = process.argv[4];
 
-if (!instanceKey) {
-  logger.error('Instance key required!');
+if (!instance_key) {
+  await logger.insert('ERROR', 'Instance key required!');
   process.exit(1);
 }
 
-if (!workerKey) {
-  logger.error('Worker key required!');
+logger.setMetadata({ instance_key });
+
+if (!worker_key) {
+  await logger.insert('ERROR', 'Worker key required!');
   process.exit(1);
 }
 
-if (!jobKey) {
-  logger.error('Job key required!');
+logger.setMetadata({ instance_key, worker_key });
+
+if (!job_key) {
+  await logger.insert('ERROR', 'Job key required!');
   process.exit(1);
 }
 
-logger.info({ instanceKey, workerKey, jobKey }, 'Starting worker for job!');
-run(instanceKey, workerKey, jobKey);
+logger.setMetadata({ instance_key, worker_key, job_key });
+
+run(instance_key, worker_key, job_key);

@@ -56,7 +56,7 @@ class Database {
   }
 
   async verifySchemaExists() {
-    logger.info({ dbType: this._config.type?.toUpperCase() }, 'Ensuring database schema exists...');
+    logger.console('INFO', 'Ensuring database schema exists...', { type: this._config.type?.toUpperCase() });
     const conn = await this.dbPool.getConnection();
     
     try {
@@ -87,6 +87,19 @@ class Database {
 
       // FOREIGN KEY (job_key) REFERENCES ${this.getTablePrefix()}jobs(\`key\`) ON DELETE CASCADE
 
+      await conn.execute(`CREATE TABLE IF NOT EXISTS ${this.getTablePrefix()}logs (
+        \`key\` CHAR(40) PRIMARY KEY,
+        type VARCHAR(255) NOT NULL,
+        instance_key CHAR(40) NULL,
+        worker_key CHAR(40) NULL,
+        job_key CHAR(40) NULL,
+        output_key CHAR(40) NULL,
+        notification_key CHAR(40) NULL,
+        message VARCHAR(1024) NOT NULL,
+        metadata JSON NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
       await conn.execute(`CREATE TABLE IF NOT EXISTS ${this.getTablePrefix()}jobs (
         \`key\` CHAR(40) PRIMARY KEY,
         instance_key CHAR(40) NULL,
@@ -113,6 +126,7 @@ class Database {
         job_key CHAR(40) NOT NULL,
         event VARCHAR(255) NOT NULL,
         priority INT NOT NULL DEFAULT 1000,
+        specs JSON NOT NULL,
         payload JSON NOT NULL,
         status ENUM('PENDING','SUCCESSFUL','SKIPPED','FAILED') NOT NULL DEFAULT 'PENDING',
         retry_max INT NOT NULL DEFAULT 0,
@@ -164,9 +178,9 @@ class Database {
       }
 
       if (conn.commit) await conn.commit();
-    } catch (err: Error | any) {
+    } catch (error: Error | any) {
       if (conn.rollback) await conn.rollback();
-      throw err;
+      throw error;
     } finally {
       if (conn.release) conn.release();
     }
@@ -233,9 +247,9 @@ class Database {
           const stmt = db.prepare(finalSql);
           const rows = stmt.all(...paramArray);
           return [rows, null];
-        } catch (err: Error | any) {
-          logger.error({ err, sql: finalSql, params: paramArray }, 'SQLite query error');
-          throw err;
+        } catch (error: Error | any) {
+          logger.console('ERROR', 'SQLite query error', { sql: finalSql, params: paramArray, error });
+          throw error;
         }
       },
       async execute(sql: string, params?: Record<string, any>): Promise<any> {
@@ -245,9 +259,9 @@ class Database {
           const stmt = db.prepare(finalSql);
           const result = stmt.run(...paramArray);
           return result;
-        } catch (err: Error | any) {
-          logger.error({ err, sql: finalSql, params: paramArray }, 'SQLite execute error');
-          throw err;
+        } catch (error: Error | any) {
+          logger.console('ERROR', 'SQLite execute error', { sql: finalSql, params: paramArray, error });
+          throw error;
         }
       },
       async getConnection(): Promise<DbConnection> {
@@ -316,12 +330,12 @@ class Database {
       try {
         // @ts-ignore
         pgPool.on('connect', (client: any) => {
-          client.query(`SET TIME ZONE '${this._config.timezone}'`).catch((err: any) => {
-            logger.error({ err, timezone: this._config.timezone }, 'Failed to set Postgres session timezone');
+          client.query(`SET TIME ZONE '${this._config.timezone}'`).catch((error: any) => {
+            logger.console('ERROR', 'Failed to set Postgres session timezone', { timezone: this._config.timezone, error });
           });
         });
-      } catch (err: Error | any) {
-        logger.error({ err, timezone: this._config.timezone }, 'Failed to register Postgres connect handler for timezone');
+      } catch (error: Error | any) {
+        logger.console('ERROR', 'Failed to register Postgres connect handler for timezone', { timezone: this._config.timezone, error });
       }
     }
     const convertSQLForPostgreSQL = (sql: string): string => {
@@ -355,9 +369,9 @@ class Database {
         try {
           const result = await pgPool.query(finalSql, paramArray);
           return [result.rows, result];
-        } catch (err: Error | any) {
-          logger.error({ err, sql: finalSql, params: paramArray }, 'PostgreSQL query error');
-          throw err;
+        } catch (error: Error | any) {
+          logger.console('ERROR', 'PostgreSQL query error', { sql: finalSql, params: paramArray, error });
+          throw error;
         }
       },
       async execute(sql: string, params?: Record<string, any>): Promise<any> {
@@ -366,9 +380,9 @@ class Database {
         try {
           const result = await pgPool.query(finalSql, paramArray);
           return result;
-        } catch (err: Error | any) {
-          logger.error({ err, sql: finalSql, params: paramArray }, 'PostgreSQL execute error');
-          throw err;
+        } catch (error: Error | any) {
+          logger.console('ERROR', 'PostgreSQL execute error', { sql: finalSql, params: paramArray, error });
+          throw error;
         }
       },
       async getConnection(): Promise<DbConnection> {
@@ -376,8 +390,8 @@ class Database {
         if (outerConfig.timezone) {
           try {
             await client.query(`SET TIME ZONE '${outerConfig.timezone}'`);
-          } catch (err: Error | any) {
-            logger.error({ err, timezone: outerConfig.timezone }, 'Failed to set timezone on Postgres connection');
+          } catch (error: Error | any) {
+            logger.console('ERROR', 'Failed to set timezone on Postgres connection', { timezone: outerConfig.timezone, error });
           }
         }
         return {
@@ -429,11 +443,11 @@ class Database {
       }
     };
     const mssqlPool = new mssql.ConnectionPool(poolConfig);
-    mssqlPool.connect().catch((err: any) => {
-      logger.error({ err }, 'MSSQL connection failed');
+    mssqlPool.connect().catch((error: any) => {
+      logger.console('ERROR', 'MSSQL connection failed', { error });
     });
     if (this._config.timezone) {
-      logger.warn({ timezone: this._config.timezone }, 'MSSQL does not support setting a session timezone; config.timezone will be ignored for MSSQL connections');
+      logger.console('WARN', 'MSSQL does not support setting a session timezone; config.timezone will be ignored for MSSQL connections', { timezone: this._config.timezone });
     }
     const convertSQLForMSSQL = (sql: string): string => {
       return sql
@@ -465,9 +479,9 @@ class Database {
           }
           const result = await request.query(finalSql);
           return [result.recordset || [], result];
-        } catch (err: Error | any) {
-          logger.error({ err, sql: finalSql, params: finalParams }, 'MSSQL query error');
-          throw err;
+        } catch (error: Error | any) {
+          logger.console('ERROR', 'MSSQL query error', { sql: finalSql, params: finalParams, error });
+          throw error;
         }
       },
       async execute(sql: string, params?: Record<string, any>): Promise<any> {
@@ -482,9 +496,9 @@ class Database {
           }
           const result = await request.query(finalSql);
           return result;
-        } catch (err: Error | any) {
-          logger.error({ err, sql: finalSql, params: finalParams }, 'MSSQL execute error');
-          throw err;
+        } catch (error: Error | any) {
+          logger.console('ERROR', 'MSSQL execute error', { sql: finalSql, params: finalParams, error });
+          throw error;
         }
       },
       async getConnection(): Promise<DbConnection> {

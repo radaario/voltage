@@ -8,20 +8,27 @@ import axios from 'axios';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 
 export async function createJobNotification(event: string, job: any): Promise<any> {
+    logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
+
     let outcome: any = {
       status: 'FAILED',
     };
 
-    if (job.notification.events && !job.notification.events.includes(event)) {
+    let jobNotificationEvents = config.notifications.events_default ? config.notifications.events_default.split(',') : [];
+    if (job.notification && job.notification.events && Array.isArray(job.notification.events)) {
+      jobNotificationEvents = job.notification.events;
+    }
+
+    if (jobNotificationEvents && !jobNotificationEvents.includes(event)) {
       return { status: 'SKIPPED' };
     }
 
     const { database } = await import('../../utils/database.js');
 
     database.config(config.database);
-    await database.verifySchemaExists();
 
     const sanitizedJob = sanitizeData(job);
+    const now = getNow();
 
     const notificationOutcome = await notify(event, job.notification, sanitizedJob);
 
@@ -32,15 +39,16 @@ export async function createJobNotification(event: string, job: any): Promise<an
       worker_key: job.worker_key,
       job_key: job.key,
       priority: job.priority ?? 1000,
-      payload: sanitizedJob,
+      specs: job.notification || null,
+      payload: sanitizedJob || null,
       status: notificationOutcome.status || 'FAILED',
       retry_max: 0,
       retry_count: 1,
       retry_in: 0,
       retry_at: null,
-      updated_at: getNow(),
-      created_at: getNow(),
-      outcome: notificationOutcome
+      updated_at: now,
+      created_at: now,
+      outcome: notificationOutcome || null,
     };
   
     if (notification.status === 'FAILED') {
@@ -60,33 +68,37 @@ export async function createJobNotification(event: string, job: any): Promise<an
 
     if(notification.status === 'SUCCESSFUL') {
       try {
-        await database.execute(`UPDATE ${database.getTablePrefix()}jobs_notifications SET status = 'SKIPPED' WHERE job_key = :jobKey AND status = 'PENDING'`, // , updated_at = :now
-          { jobKey: notification.job_key, now: getNow() }
+        await database.execute(`UPDATE ${database.getTablePrefix()}jobs_notifications SET status = 'SKIPPED' WHERE job_key = :job_key AND status = 'PENDING'`, // , updated_at = :now
+          { job_key: notification.job_key, now: getNow() }
         );
-      } catch (err: Error | any) {
+      } catch (error: Error | any) {
       }
     }
 
     try {
       await database.execute(
-        `INSERT INTO ${database.getTablePrefix()}jobs_notifications (\`key\`, instance_key, worker_key, job_key, event, priority, payload, status, retry_max, retry_count, retry_in, retry_at, updated_at, created_at, outcome) VALUES (:key, :instance_key, :worker_key, :job_key, :event, :priority, :payload, :status, :retry_max, :retry_count, :retry_in, :retry_at, :updated_at, :created_at, :outcome)`,
+        `INSERT INTO ${database.getTablePrefix()}jobs_notifications (\`key\`, instance_key, worker_key, job_key, event, priority, specs, payload, status, retry_max, retry_count, retry_in, retry_at, updated_at, created_at, outcome) VALUES (:key, :instance_key, :worker_key, :job_key, :event, :priority, :specs, :payload, :status, :retry_max, :retry_count, :retry_in, :retry_at, :updated_at, :created_at, :outcome)`,
         { 
           ...notification,
+          specs: notification.specs ? JSON.stringify(notification.specs) : null,
           payload: notification.payload ? JSON.stringify(notification.payload) : null,
           outcome: notification.outcome ? JSON.stringify(notification.outcome) : null
         }
       );
 
       return notificationOutcome;
-    } catch (err: Error | any) {
-      logger.error({ err, notification }, 'Failed to create job notification record!');
-      outcome = { status: 'FAILED', error: { message: err.message || 'Unknown error occurred!' } }; // , outcome: notificationOutcome
+    } catch (error: Error | any) {
+      logger.console('ERROR', 'Failed to create job notification record!', { notification_key: notification.key, notification_event: notification.event, error });
+      outcome = { status: 'FAILED', error: { message: error.message || 'Unknown error occurred!' } }; // , outcome: notificationOutcome
     }
 
     return outcome;
 }
 
 export async function retryJobNotification(notification: any): Promise<any> {
+  logger.setMetadata({ instance_key: notification.instance_key, worker_key: notification.worker_key, job_key: notification.job_key });
+  logger.console('INFO', 'Retrying job notification...', { notification_key: notification.key, notification_event: notification.event });
+
   let outcome: any = {
     status: 'FAILED',
   };
@@ -94,10 +106,9 @@ export async function retryJobNotification(notification: any): Promise<any> {
   const { database } = await import('../../utils/database.js');
 
   database.config(config.database);
-  await database.verifySchemaExists();
 
   try {
-    const notificationOutcome = await notify(notification.event, notification, JSON.parse(notification.payload));
+    const notificationOutcome = await notify(notification.event, JSON.parse(notification.specs), JSON.parse(notification.payload));
 
     notification.status = notificationOutcome.status || 'FAILED';
     notification.retry_count = (notification.retry_count || 0) + 1;
@@ -115,15 +126,15 @@ export async function retryJobNotification(notification: any): Promise<any> {
 
     if(notification.status === 'SUCCESSFUL') {
       try {
-        await database.execute(`UPDATE ${database.getTablePrefix()}jobs_notifications SET status = 'SKIPPED' WHERE job_key = :jobKey AND status = 'PENDING'`, // , updated_at = :now
-          { jobKey: notification.job_key }
+        await database.execute(`UPDATE ${database.getTablePrefix()}jobs_notifications SET status = 'SKIPPED' WHERE job_key = :job_key AND status = 'PENDING'`, // , updated_at = :now
+          { job_key: notification.job_key }
         );
-      } catch (err: Error | any) {
+      } catch (error: Error | any) {
       }
     }
 
     await database.execute(
-      `UPDATE ${database.getTablePrefix()}jobs_notifications SET status = :status, retry_count = :retry_count, :retry_at = :retry_at, updated_at = :updated_at, outcome = :outcome WHERE \`key\` = :key`,
+      `UPDATE ${database.getTablePrefix()}jobs_notifications SET status = :status, retry_count = :retry_count, retry_at = :retry_at, updated_at = :updated_at, outcome = :outcome WHERE \`key\` = :key`,
       { ...notification }
     );
 
@@ -132,9 +143,9 @@ export async function retryJobNotification(notification: any): Promise<any> {
     } else {
       outcome.error = { message: notificationOutcome.error?.message || 'Unknown error occurred!' };
     }
-  } catch (err: Error | any) {
-    logger.error({ err }, 'Failed to retry job notification!');
-    outcome.error = { message: err.message || 'Unknown error occurred!' };
+  } catch (error: Error | any) {
+    logger.console('ERROR', 'Failed to retry job notification!', { notification_key: notification.key, notification_event: notification.event, error });
+    outcome.error = { message: error.message || 'Unknown error occurred!' };
   }
 
   return outcome;
@@ -155,9 +166,9 @@ export async function notify(event: string, specs: NotificationSpec, payload: un
     } else {
       throw new Error('Unknown notification type!');
     }
-  } catch (err: Error | any) {
-    logger.error({ err, specs }, 'Notification failed!');
-    outcome.error = { message: err.message || 'Unknown error occurred!' };
+  } catch (error: Error | any) {
+    logger.console('ERROR', 'Notification failed!', { error: { code: error.code, name: error.name, message: error.message || 'Unknown error occurred!' } });
+    outcome.error = { message: error.message || 'Unknown error occurred!' };
   }
 
   return outcome;

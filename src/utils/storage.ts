@@ -70,7 +70,7 @@ class LocalStorageDriver implements StorageDriver {
 	async config(options?: StorageConfigOptions): Promise<void> {
 		this.basePath = options?.base_path ? normalizePath(options?.base_path) : path.resolve('./storage');
 		await ensureDir(this.basePath);
-		logger.info({ basePath: this.basePath }, 'Local storage initialized!');
+		logger.console('INFO', 'Local storage initialized!', { basePath: this.basePath });
 	}
 
 	// Prefix provided key with configured basePath (if any)
@@ -260,7 +260,7 @@ class S3StorageDriver implements StorageDriver {
 		}
 
 		this.client = new S3Client(clientConfig);
-		logger.info({ type: this.type, bucket: this.bucket, region: this.region, endpoint: this.endpoint }, 'S3-like storage initialized!');
+		logger.console('INFO', 'S3-like storage initialized!', { type: this.type, bucket: this.bucket, region: this.region, endpoint: this.endpoint });
 	}
 
 	// Prefix provided key with configured basePath (if any)
@@ -450,7 +450,7 @@ class FTPStorageDriver implements StorageDriver {
 			this.sftpClient = new SFTPClient();
 		}
 
-		logger.info({ type: this.type, host: this.host, port: this.port, secure: this.secure }, 'FTP/SFTP storage initialized!');
+		logger.console('INFO', 'FTP/SFTP storage initialized!', { type: this.type, host: this.host, port: this.port, secure: this.secure });
 	}
 
 	private async connect(): Promise<void> {
@@ -518,7 +518,7 @@ class FTPStorageDriver implements StorageDriver {
 								results.push(this.stripBasePath(itemPath));
 							}
 						}
-					} catch (err: Error | any) {
+					} catch (error: Error | any) {
 						// Directory doesn't exist or is not accessible
 					}
 				};
@@ -535,7 +535,7 @@ class FTPStorageDriver implements StorageDriver {
 								results.push(this.stripBasePath(itemPath));
 							}
 						}
-					} catch (err: Error | any) {
+					} catch (error: Error | any) {
 						// Directory doesn't exist or is not accessible
 					}
 				};

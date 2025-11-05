@@ -1,5 +1,6 @@
 import { config } from '../../config/index.js';
 
+import { guessContentType } from '../../utils/index.js';
 import { logger } from '../../utils/logger.js';
 
 import { spawn } from 'child_process';
@@ -8,16 +9,18 @@ import path from 'path';
 
 export async function analyzeInputMetadata(job: any): Promise<any[]> {
   try {
+    logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
+    
     const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
     const jobTempInputFilePath = path.join(jobTempFolder, 'input');
 
-    logger.info({ jobKey: job.key }, 'Extracting metadata from job input...');
+    logger.console('INFO', 'Extracting metadata from job input...');
 
     /* FILE: INFO: EXTRACT */
-    const fileName = path.basename(jobTempInputFilePath);
+    const fileName = path.basename(job.input?.url || job.input?.path || 'unknown');
     const fileExtension = path.extname(fileName).toLowerCase().replace(/^\./, '');
     const fileStats = await fs.stat(jobTempInputFilePath);
-    const fileMimeType = getMimeType(fileExtension);
+    const fileMimeType = guessContentType(fileName);
     
     /* FFPROBE: RUN */
     const ffprobeData = await runFfprobe(jobTempInputFilePath);
@@ -29,38 +32,13 @@ export async function analyzeInputMetadata(job: any): Promise<any[]> {
       file_mime_type: fileMimeType,
       file_size: fileStats.size
     });
-    
-    logger.info({ jobKey: job.key }, 'Metadata successfully extracted from job input!');
-    return metadata;
-  } catch (err: Error | any) {
-    logger.error({ jobKey: job.key, err }, 'Failed to extract metadata from job input!');
-    throw new Error(`Metadata extraction failed: ${err.message || 'Unknown error occurred!'}`);
-  }
-}
 
-function getMimeType(extension: string): string {
-  const mimeTypes: Record<string, string> = {
-    'mp4': 'video/mp4',
-    'mkv': 'video/x-matroska',
-    'mov': 'video/quicktime',
-    'webm': 'video/webm',
-    'ts': 'video/mp2t',
-    'avi': 'video/x-msvideo',
-    'wmv': 'video/x-ms-wmv',
-    'flv': 'video/x-flv',
-    'm4v': 'video/x-m4v',
-    '3gp': 'video/3gpp',
-    '3g2': 'video/3gpp2',
-    'ogv': 'video/ogg',
-    'mp3': 'audio/mpeg',
-    'wav': 'audio/wav',
-    'aac': 'audio/aac',
-    'flac': 'audio/flac',
-    'ogg': 'audio/ogg',
-    'wma': 'audio/x-ms-wma'
-  };
-  
-  return mimeTypes[extension] || 'application/octet-stream';
+    logger.console('INFO', 'Metadata successfully extracted from job input!');
+    return metadata;
+  } catch (error: Error | any) {
+    await logger.insert('ERROR', 'Failed to extract metadata from job input!', { error });
+    throw new Error((`Failed to extract metadata from job input! ${error.message || ''}`).trim());
+  }
 }
 
 async function runFfprobe(filePath: string): Promise<any[]> {
@@ -89,16 +67,16 @@ async function runFfprobe(filePath: string): Promise<any[]> {
         try {
           const result = JSON.parse(stdout);
           resolve(result);
-        } catch (err: Error | any) {
-          reject(new Error(`Failed to parse ffprobe output: ${err.message}`));
+        } catch (error: Error | any) {
+          reject(new Error(`Failed to parse ffprobe output: ${error.message}`));
         }
       } else {
         reject(new Error(`ffprobe failed with code ${code}: ${stderr}`));
       }
     });
 
-    ffprobe.on('error', (err: Error | any) => {
-      reject(new Error(`Failed to start ffprobe: ${err.message}`));
+    ffprobe.on('error', (error: Error | any) => {
+      reject(new Error(`Failed to start ffprobe: ${error.message}`));
     });
   });
 }

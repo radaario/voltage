@@ -10,6 +10,8 @@ import fs from 'fs/promises';
 import axios from 'axios';
 
 export async function uploadOutput(job: any, output: any): Promise<Record<string, unknown>> {
+  logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
+  
   const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
   const jobTempOutputFilePath = path.join(jobTempFolder, `output.${output.index}.${(output.format || 'mp4').toLowerCase()}`);
 
@@ -45,15 +47,21 @@ export async function uploadOutput(job: any, output: any): Promise<Record<string
   const key = String(output.specs.path).replace(/^\/+/, '');
   const contentType = guessContentType(key);
   
-  await storage.config(destination);
-  await storage.upload(jobTempOutputFilePath, key, contentType);
+  try {
+    await storage.config(destination);
+    await storage.upload(jobTempOutputFilePath, key, contentType);
 
-  // Build a result similar to previous S3 uploader
-  const location = (destination as any).bucket ? `s3://${(destination as any).bucket}/${key}` : key;
-  const url = storage.getPublicUrl(key) || null;
+    // Build a result similar to previous S3 uploader
+    const location = (destination as any).bucket ? `s3://${(destination as any).bucket}/${key}` : key;
+    const url = storage.getPublicUrl(key) || null;
 
-  logger.info({ destinationType: destination.type, bucket: (destination as any).bucket, path: key, url }, 'Job output uploaded!');
+    logger.console('INFO', 'Job output uploaded!', { output_key: output.key, output_index: output.index, destinationType: destination.type, bucket: (destination as any).bucket, path: key, url });
 
-  return { path: key, location, url };
+    return { path: key, location, url };
+  } catch (error: Error | any) {
+    await logger.insert('ERROR', 'Failed to upload job output!', { output_key: output.key, output_index: output.index, error });
+    throw new Error((`Failed to upload job output! ${error.message || ''}`).trim());
+    // return { ...error || { message: 'Failed to upload job output!' } };
+  }
 }
 
