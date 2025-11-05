@@ -16,7 +16,7 @@ export async function downloadInput(job: any): Promise<string> {
 
     logger.console('INFO', 'Downloading job input file...');
 
-    if (job.input.type === 'BASE64') {
+    if (['BASE64'].includes(job.input.type)) {
       const buffer = Buffer.from(job.input.content, 'base64');
       
       await fs.writeFile(jobTempInputFilePath, buffer);
@@ -25,11 +25,13 @@ export async function downloadInput(job: any): Promise<string> {
       return jobTempInputFilePath;
     }
 
-    if (job.input.type === 'HTTP' || job.input.type === 'HTTPS') {
+    if (['HTTP', 'HTTPS'].includes(job.input.type)) {
       const auth = (job.input.username && job.input.password) ? {
         username: job.input.username,
         password: job.input.password
       } : undefined;
+
+      console.log("TEST", job.input.url);
       
       const resp = await axios.get<ArrayBuffer>(job.input.url, { 
         responseType: 'arraybuffer',

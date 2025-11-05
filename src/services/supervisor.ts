@@ -8,7 +8,7 @@ import { database } from '../utils/database.js';
 
 import path from 'path';
 import { spawn, ChildProcess } from 'child_process';
-import { retryJobNotification } from './worker/notifier.js';
+import { createJobNotification, retryJobNotification } from './worker/notifier.js';
 
 const intervals = new Map<string, NodeJS.Timeout>();
 
@@ -26,6 +26,8 @@ export async function startSupervisorService(instance_key: string) {
 
     async function getMasterInstance(): Promise<any | null> {
         try {
+            const cutoff = subtractNow(config.instances.running_timeout || (1 * 60 * 1000), 'milliseconds');
+
             const [instances] = await database.query(`SELECT * FROM ${database.getTablePrefix()}instances ORDER BY created_at ASC`) as any[];
             
             if (!instances.length) {
@@ -33,16 +35,16 @@ export async function startSupervisorService(instance_key: string) {
                 return null;
             }
 
-            const masters = instances.filter((instance: any) => instance.type === 'MASTER');
+            const masters = instances.filter((instance: any) => instance.type === 'MASTER' && instance.updated_at >= cutoff);
             let master = masters.length ? masters[0] : null;
 
             if (masters.length > 1) {
                 const masterKey = master.key;
                 
-        await database.execute(
-          `UPDATE ${database.getTablePrefix()}instances SET type = 'SLAVE' WHERE type = :type AND \`key\` != :key`,
-          { key: masterKey, type: 'MASTER', now: getNow() }
-        );
+                await database.execute(
+                  `UPDATE ${database.getTablePrefix()}instances SET type = 'SLAVE' WHERE type = :type AND \`key\` != :key`,
+                  { key: masterKey, type: 'MASTER', now: getNow() }
+                );
 
                 // reflect changes locally
                 instances.forEach((instance: any) => {
@@ -53,7 +55,8 @@ export async function startSupervisorService(instance_key: string) {
             }
 
             if (!master) {
-                master = instances[0];
+                const activeInstances = instances.filter((instance: any) => instance.updated_at >= cutoff);
+                master = activeInstances[0];
 
                 await database.execute(
                   `UPDATE ${database.getTablePrefix()}instances SET type = :type WHERE \`key\` = :key`,
@@ -75,7 +78,7 @@ export async function startSupervisorService(instance_key: string) {
       await logger.insert('INFO', 'Initializing instance...');
       
       const now = getNow();
-      const specs = JSON.stringify(getInstanceSpecs());
+      const specs = getInstanceSpecs();
       
       try {
         const [existingInstances] = await database.query(
@@ -84,25 +87,25 @@ export async function startSupervisorService(instance_key: string) {
         );
         
         if ((existingInstances as any[]).length === 0) {
-          // INSERT new instance
+          // INSTANCE: INSERT
           await database.execute(
             `INSERT INTO ${database.getTablePrefix()}instances (\`key\`, specs, status, updated_at, created_at) VALUES (:instance_key, :specs, 'RUNNING', :now, :now)`,
-            { instance_key, specs, now }
-          );
-
-          await database.execute(
-            `UPDATE ${database.getTablePrefix()}workers SET status = :status, outcome = :outcome WHERE instance_key = :instance_key`,
-            { instance_key, status: 'EXITED', outcome: JSON.stringify({ message: 'Worker exited!' }) }
+            { instance_key, specs: JSON.stringify(specs), now }
           );
 
           await logger.insert('INFO', 'Instance created!');
           return;
         }
 
-        // UPDATE existing instance
+        // INSTANCE: UPDATE
         await database.execute(
           `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, status = 'RUNNING', restart_count = (restart_count + 1), updated_at = :now WHERE \`key\` = :instance_key`,
-          { instance_key, specs, now }
+          { instance_key, specs: JSON.stringify(specs), now }
+        );
+
+        await database.execute(
+          `UPDATE ${database.getTablePrefix()}workers SET status = :status, outcome = :outcome WHERE instance_key = :instance_key`,
+          { instance_key, status: 'EXITED', outcome: JSON.stringify({ message: 'Worker exited!' }) }
         );
 
         await logger.insert('INFO', 'Instance restarted!');
@@ -132,8 +135,8 @@ export async function startSupervisorService(instance_key: string) {
         const runningTimeout = config.instances.running_timeout || 60000;
         const exitedTimeout = runningTimeout + (config.instances.exited_timeout || 60000);
 
+        /* INSTANCEs: UPDATE: RUNNING: TIMEOUT */
         try {
-            /* INSTANCEs: UPDATE: RUNNING: TIMEOUT */
           await database.execute(
             `UPDATE ${database.getTablePrefix()}instances SET status = 'EXITED', outcome = :outcome WHERE status = 'RUNNING' AND updated_at < :cutoff`,
             { outcome: JSON.stringify({ message: 'Instance exited due to timeout!' }), cutoff: subtractNow(runningTimeout, 'milliseconds') }
@@ -142,8 +145,8 @@ export async function startSupervisorService(instance_key: string) {
             await logger.insert('ERROR', 'Instances maintenance failed!', { error });
         }
 
+        /* INSTANCEs: DELETE: EXITED: TIMEOUT */
         try {
-            /* INSTANCEs: DELETE: EXITED: TIMEOUT */
           await database.execute(
             `DELETE FROM ${database.getTablePrefix()}instances WHERE status = :status AND updated_at < :cutoff`,
             { cutoff: subtractNow(exitedTimeout, 'milliseconds')  }
@@ -160,8 +163,8 @@ export async function startSupervisorService(instance_key: string) {
         const runningTimeout = config.workers.running_timeout || 60000;
         const exitedTimeout = runningTimeout + (config.workers.exited_timeout || 60000);
 
+        /* WORKERs: UPDATE: RUNNING: TIMEOUT */
         try {
-          /* WORKERs: UPDATE: RUNNING: TIMEOUT */
           await database.execute(
             `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', outcome = :outcome WHERE status = 'RUNNING' AND updated_at < :cutoff`,
             { outcome: JSON.stringify({ message: 'Worker exited due to timeout!' }), cutoff: subtractNow(runningTimeout, 'milliseconds') }
@@ -170,8 +173,8 @@ export async function startSupervisorService(instance_key: string) {
             await logger.insert('ERROR', 'Workers maintenance failed!', { error });
         }
 
+        /* WORKERs: DELETE: EXITED: TIMEOUT */
         try {
-          /* WORKERs: DELETE: EXITED: TIMEOUT */
           await database.execute(
             `DELETE FROM ${database.getTablePrefix()}workers WHERE status = 'EXITED' AND updated_at < :cutoff`,
             { cutoff: subtractNow(exitedTimeout, 'milliseconds')  }
@@ -190,37 +193,74 @@ export async function startSupervisorService(instance_key: string) {
       logger.console('INFO', 'Cleanup completed logs!');
     }
 
-    async function pollJobs(): Promise<void> {
-        logger.console('INFO', 'Polling jobs...');
+    async function maintainJobs(): Promise<void> {
+        logger.console('INFO', 'Maintaining jobs...');
 
+        /* JOBs: PENDINGs */
         try {
-            // Check for available jobs in the queue that are still PENDING
-            // Order by priority (lower = higher priority), then by created_at
-            const [rows] = await database.query(
-              `SELECT qj.key, qj.job_key FROM ${database.getTablePrefix()}jobs_queue qj JOIN ${database.getTablePrefix()}jobs j ON qj.job_key = j.key WHERE qj.available_at <= :now AND qj.visibility_timeout <= :now AND j.status = 'PENDING' ORDER BY qj.priority ASC, qj.created_at ASC LIMIT ${config.jobs.poll_limit || 1}`,
-              { now: getNow() }
-            );
+          const [pendingJobs] = await database.query(
+            `SELECT * FROM ${database.getTablePrefix()}jobs WHERE status = 'PENDING'`,
+            { now: getNow() }
+          );
+
+          const databaseConn = await database.getConnection();
+
+          for (const pendingJob of pendingJobs) {
+            try{
+              if (databaseConn.beginTransaction) await databaseConn.beginTransaction();
+
+              await database.execute(
+                `UPDATE ${database.getTablePrefix()}jobs SET status = 'QUEUED' WHERE \`key\` = :key`,
+                { ...pendingJob }
+              );
             
-            const records = rows as Array<{ key: string; job_key: string }>;
-            if (records.length > 0) {
-                const record = records[0];
-                
-                // Make sure no RUNNING worker exists in DB for that job before spawning
-                const [wk] = await database.query(
-                  `SELECT * FROM ${database.getTablePrefix()}workers WHERE job_key = :job_key AND status = 'RUNNING'`,
-                  { job_key: record.job_key }
-                );
-                
-                if ((wk as any[]).length === 0) {
-                    createWorkerForJob(record.job_key);
-                }
+              await database.execute(
+                `INSERT INTO ${database.getTablePrefix()}jobs_queue (\`key\`, priority, created_at) VALUES (:key, :priority, :created_at)`,
+                { ...pendingJob }
+              );
+
+              if (databaseConn.commit) await databaseConn.commit();
+
+              if (pendingJob.notification) await createJobNotification('QUEUED', pendingJob);
+
+              await logger.insert('INFO', 'Job successfully queued!', { job_key: pendingJob.key });
+            } catch (error: Error | any) {
+              if (databaseConn.rollback) await databaseConn.rollback();
+              await logger.insert('ERROR', 'Create job queue failed!', { job_key: pendingJob.key, error });
+            } finally {
+              if (databaseConn.release) databaseConn.release();
             }
+          }
         } catch (error: Error | any) {
-            await logger.insert('ERROR', 'Failed to poll jobs!', { error });
+            await logger.insert('ERROR', 'Failed to maintain pending jobs!', { error });
+        }
+
+        /* INSTANCE: SELECT */
+        const [runingWorkers] = await database.query(
+          `SELECT * FROM ${database.getTablePrefix()}workers WHERE instance_key = :instance_key AND status = 'RUNNING'`,
+          { instance_key }
+        ) as any[];
+
+        const runningWorkersCount = runingWorkers.length;
+
+        /* JOBs: QUEUEDs */
+        if (runningWorkersCount < config.workers.max) {
+          try {
+              const [queuedJobs] = await database.query(
+                `SELECT * FROM ${database.getTablePrefix()}jobs_queue ORDER BY priority ASC, created_at ASC LIMIT ${config.workers.max - runningWorkersCount || 1}`,
+                { now: getNow() }
+              ) as any[];
+
+              for (const queuedJob of queuedJobs) {
+                createWorkerForJob(queuedJob.key);
+              }
+          } catch (error: Error | any) {
+              await logger.insert('ERROR', 'Failed to poll jobs!', { error });
+          }
         }
     }
 
-    async function retryJobsNotifications(): Promise<void> {
+    async function maintainJobsNotifications(): Promise<void> {
         logger.console('INFO', 'Polling job notifications...');
 
         try {
@@ -242,132 +282,120 @@ export async function startSupervisorService(instance_key: string) {
     // Keys in workersProcessMap are worker_key (uuid per worker), not job keys.
     const workersProcessMap = new Map<string, ChildProcess>();
 
-    // Function to spawn a worker child process for a specific job
     async function createWorkerForJob(job_key: string): Promise<void> {
+      const worker = {
+        key: uukey(),
+      };
+
+      const databaseConn = await database.getConnection();
+      
       try {
-        // If there's already a RUNNING worker for this job in the DB, skip
-        const [existing] = await database.query(`SELECT * FROM ${database.getTablePrefix()}workers WHERE job_key = :job_key AND status = 'RUNNING'`, { job_key });
-        
-        if ((existing as any[]).length > 0) {
-          logger.console('WARN', 'Worker already running for job!', { worker_key: existing[0].key, job_key });
-          return;
-        }
+        if (databaseConn.beginTransaction) await databaseConn.beginTransaction();
 
-        // Respect global max workers by counting RUNNING rows in DB
-        const [countRows] = await database.query(`SELECT COUNT(*) as cnt FROM ${database.getTablePrefix()}workers WHERE status = 'RUNNING'`);
-        const runningCount = (countRows as any[])[0]?.cnt ?? 0;
-        
-        if (runningCount >= config.workers.max) {
-          logger.console('WARN', 'Max workers reached, cannot spawn new worker!', { job_key, activeCount: runningCount, max: config.workers.max });
-          return;
-        }
-      } catch (error: Error | any) {
-        await logger.insert('ERROR', 'Failed to check existing workers!', { job_key, error });
-        return;
-      }
-
-      const worker_key = uukey();
-      let child: ChildProcess;
-
-      /* WORKER: RUN */
-      if (config.env === 'prod') {
-        const workerScriptPath = path.join(process.cwd(), 'dist', 'services', 'worker', 'index.js');
-        child = spawn('node', [workerScriptPath, instance_key, worker_key, job_key], {
-          stdio: ['inherit', 'inherit', 'inherit'],
-          cwd: process.cwd()
-        });
-      } else {
-        const workerScriptPath = path.join(process.cwd(), 'src', 'services', 'worker', 'index.ts');
-        child = spawn('npx', ['tsx', workerScriptPath, instance_key, worker_key, job_key], {
-          stdio: ['inherit', 'inherit', 'inherit'],
-          cwd: process.cwd(),
-          shell: true
-        });
-      }
-
-      /* WORKER: INSERT */
-      try {
+        /* JOB: QUEUE: DELETE */
         await database.execute(
-          `INSERT INTO ${database.getTablePrefix()}workers (\`key\`, instance_key, pid, job_key, status, updated_at, created_at) VALUES (:worker_key, :instance_key, :pid, :job_key, 'RUNNING', :now, :now)`,
-          { instance_key, worker_key, pid: child.pid, job_key, now: getNow() }
+          `DELETE FROM ${database.getTablePrefix()}jobs_queue WHERE \`key\` = :job_key`,
+          { job_key }
         );
-      } catch (error: Error | any) {
-        await logger.insert('ERROR', 'Failed to insert worker!', { job_key, error });
-      }
 
-      workersProcessMap.set(worker_key, child);
+        /* WORKER: INSERT */
+        await database.execute(
+          `INSERT INTO ${database.getTablePrefix()}workers (\`key\`, instance_key, job_key, status, updated_at, created_at) VALUES (:worker_key, :instance_key, :job_key, 'RUNNING', :now, :now)`,
+          { instance_key, worker_key: worker.key, job_key, now: getNow() }
+        );
 
-      /* INSTANCE: UPDATE */
-      try {
+        /* INSTANCE: UPDATE */
         await database.execute(
           `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, workers_running_count = workers_running_count + 1, updated_at = :now WHERE \`key\` = :instance_key`,
           { instance_key, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
         );
-      } catch (error: Error | any) {
-        await logger.insert('ERROR', 'Failed to update instance!', { worker_key, job_key, error });
-      }
 
-      /* JOB: NOTIFICATIONs: UPDATE */
-      try {
-        const test = await database.execute(
+        /* JOB: NOTIFICATIONs: UPDATE */
+        await database.execute(
           `UPDATE ${database.getTablePrefix()}jobs_notifications SET instance_key = :instance_key, worker_key = :worker_key WHERE job_key = :job_key`,
-          { instance_key, worker_key, job_key }
+          { instance_key, worker_key: worker.key, job_key }
         );
+
+        /* WORKER: CREATE */
+        let child: ChildProcess;
+
+        if (config.env === 'prod') {
+          const workerScriptPath = path.join(process.cwd(), 'dist', 'services', 'worker', 'index.js');
+          child = spawn('node', [workerScriptPath, instance_key, worker.key, job_key], {
+            stdio: ['inherit', 'inherit', 'inherit'],
+            cwd: process.cwd()
+          });
+        } else {
+          const workerScriptPath = path.join(process.cwd(), 'src', 'services', 'worker', 'index.ts');
+          child = spawn('npx', ['tsx', workerScriptPath, instance_key, worker.key, job_key], {
+            stdio: ['inherit', 'inherit', 'inherit'],
+            cwd: process.cwd(),
+            shell: true
+          });
+        }
+
+        /* WORKER: EVENTs */
+        child.on('exit', async (code, signal) => {
+          logger.console('INFO', 'Worker process exited!', { worker_key: worker.key, job_key, code, signal });
+          workersProcessMap.delete(worker.key);
+          
+          /* WORKER: UPDATE */
+          try {
+            await database.execute(
+              `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :worker_key`,
+              { worker_key: worker.key, outcome: JSON.stringify({ message: 'Worker exited!', exit_code: code, exit_signal: signal }), now: getNow() }
+            );
+          } catch (error: Error | any) {
+            await logger.insert('ERROR', 'Failed to update worker!', { worker_key: worker.key, job_key, error });
+          }
+
+          /* INSTANCE: UPDATE */
+          try {
+            await database.execute(
+              `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
+              { instance_key, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
+            );
+          } catch (error: Error | any) {
+            await logger.insert('ERROR', 'Failed to update instance!', { worker_key: worker.key, job_key, error });
+          }
+        });
+
+        child.on('error', async (error) => {
+          await logger.insert('ERROR', 'Worker process error!', { worker_key: worker.key, job_key, error });
+          workersProcessMap.delete(worker.key);
+          
+          /* WORKER: UPDATE */
+          try {
+            await database.execute(
+              `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :worker_key`,
+              { worker_key: worker.key, outcome: JSON.stringify({ message: error.message || 'Unknown error occurred!', exit_signal: 'ERROR' }), now: getNow() }
+            );
+          } catch (error: Error | any) {
+            await logger.insert('ERROR', 'Failed to update worker!', { worker_key: worker.key, job_key, error });
+          }
+          
+          /* INSTANCE: UPDATE */
+          try {
+            await database.execute(
+              `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
+              { instance_key, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
+            );
+          } catch (error: Error | any) {
+            await logger.insert('ERROR', 'Failed to update instance!', { worker_key: worker.key, job_key, error });
+          }
+        });
+
+        workersProcessMap.set(worker.key, child);
+
+        if (databaseConn.commit) await databaseConn.commit();
+
+        logger.console('INFO', 'Worker succesfully created for job!', { worker_key: worker.key, job_key });
       } catch (error: Error | any) {
-        await logger.insert('ERROR', 'Failed to update job notifications!', { worker_key, job_key, error });
+        if (databaseConn.rollback) await databaseConn.rollback();
+        await logger.insert('ERROR', 'Failed to create worker for job!', { job_key, error });
+      } finally {
+        if (databaseConn.release) databaseConn.release();
       }
-
-      child.on('exit', async (code, signal) => {
-        logger.console('INFO', 'Worker process exited!', { worker_key, job_key, code, signal });
-        workersProcessMap.delete(worker_key);
-        
-        /* WORKER: UPDATE */
-        try {
-          await database.execute(
-            `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :worker_key`,
-            { worker_key, outcome: JSON.stringify({ message: 'Worker exited!', exit_code: code, exit_signal: signal }), now: getNow() }
-          );
-        } catch (error: Error | any) {
-          await logger.insert('ERROR', 'Failed to update worker!', { worker_key, job_key, error });
-        }
-
-        /* INSTANCE: UPDATE */
-        try {
-          await database.execute(
-            `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
-            { instance_key, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
-          );
-        } catch (error: Error | any) {
-          await logger.insert('ERROR', 'Failed to update instance!', { worker_key, job_key, error });
-        }
-      });
-
-      child.on('error', async (error) => {
-        await logger.insert('ERROR', 'Worker process error!', { worker_key, job_key, error });
-        workersProcessMap.delete(worker_key);
-        
-        /* WORKER: UPDATE */
-        try {
-          await database.execute(
-            `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :worker_key`,
-            { worker_key, outcome: JSON.stringify({ message: error.message || 'Unknown error occurred!', exit_signal: 'ERROR' }), now: getNow() }
-          );
-        } catch (error: Error | any) {
-          await logger.insert('ERROR', 'Failed to update worker!', { worker_key, job_key, error });
-        }
-        
-        /* INSTANCE: UPDATE */
-        try {
-          await database.execute(
-            `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
-            { instance_key, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
-          );
-        } catch (error: Error | any) {
-          await logger.insert('ERROR', 'Failed to update instance!', { worker_key, job_key, error });
-        }
-      });
-
-      logger.console('INFO', 'Spawned worker process!', { worker_key, job_key });
     }
 
     async function cleanupJobs() {
@@ -404,11 +432,11 @@ export async function startSupervisorService(instance_key: string) {
         await initInstance();
         intervals.set('maintainInstance', setInterval(() => maintainInstance(), config.instances.maintain_interval || 60000));
 
-        await pollJobs();
-        intervals.set('pollJobs', setInterval(() => pollJobs(), config.jobs.poll_interval || 10000));
+        await maintainJobs();
+        intervals.set('maintainJobs', setInterval(() => maintainJobs(), config.jobs.maintain_interval || 10000));
 
-        await retryJobsNotifications();
-        intervals.set('retryJobsNotifications', setInterval(() => retryJobsNotifications(), config.notifications.poll_interval || 60000));
+        await maintainJobsNotifications();
+        intervals.set('maintainJobsNotifications', setInterval(() => maintainJobsNotifications(), config.notifications.maintain_interval || 60000));
 
         /* INSTANCE: SELECT: MASTER */
         const masterInstance = await getMasterInstance();

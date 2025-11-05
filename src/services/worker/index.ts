@@ -32,7 +32,7 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
     key: job_key,
     instance_key,
     worker_key,
-    status: 'PENDING',
+    status: 'STARTED',
     progress: 0.00
   };
 

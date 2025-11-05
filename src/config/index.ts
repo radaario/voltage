@@ -72,22 +72,21 @@ export const config = {
     exited_timeout: Number(process.env.VOLTAGE_WORKERS_EXITED_TIMEOUT ?? 1 * 60 * 1000), // in milliseconds, default 1 minute
   },
   jobs: {
+    maintain_interval: Number(process.env.VOLTAGE_JOBS_MAINTAIN_INTERVAL ?? 1 * 1000), // in milliseconds, default 1 second
+    visibility_timeout: Number(process.env.VOLTAGE_JOBS_VISIBILITY_TIMEOUT ?? 10 * 60 * 1000), // in milliseconds, default 10 minutes
+    // max_attempts: Number(process.env.VOLTAGE_JOBS_MAX_ATTEMPTS ?? 3), // number of attempts, default 3
+    cleanup_interval: Number(process.env.VOLTAGE_JOBS_CLEANUP_INTERVAL ?? 1 * 60 * 60 * 1000), // in milliseconds, default 1 hour
+    retention: Number(process.env.VOLTAGE_JOBS_RETENTION ?? 24), // in hours, default 24 hours || 7 days = 24 * 7
     preview: {
       format: (process.env.VOLTAGE_JOBS_PREVIEW_FORMAT ?? 'webp'), // format of the generated preview thumbnail
       quality: (process.env.VOLTAGE_JOBS_PREVIEW_QUALITY ?? 75),
     },
-    poll_interval: Number(process.env.VOLTAGE_JOBS_POLL_INTERVAL ?? 1 * 1000), // in milliseconds, default 1 second
-    poll_limit: 1, // default 1 poll // process.env.VOLTAGE_JOBS_POLL_LIMIT
-    visibility_timeout: Number(process.env.VOLTAGE_JOBS_VISIBILITY_TIMEOUT ?? 10 * 60 * 1000), // in milliseconds, default 10 minutes
-    // max_attempts: Number(process.env.VOLTAGE_JOBS_MAX_ATTEMPTS ?? 3), // number of attempts, default 3
-    cleanup_interval: Number(process.env.VOLTAGE_JOBS_CLEANUP_INTERVAL ?? 1 * 60 * 60 * 1000), // in milliseconds, default 1 hour
-    retention: Number(process.env.VOLTAGE_JOBS_RETENTION ?? 24) // in hours, default 24 hours || 7 days = 24 * 7
   },
   notifications: {
-    poll_interval: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_POLL_INTERVAL ?? 1 * 1000), // in milliseconds, default 1 second
+    maintain_interval: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_MAINTAIN_INTERVAL ?? 1 * 1000), // in milliseconds, default 1 second
     poll_limit: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_POLL_LIMIT ?? 10), // default 10 poll
-    events_allowed: (process.env.VOLTAGE_JOB_NOTIFICATIONS_EVENTS_ALLOWED ?? 'QUEUED,STARTED,DOWNLOADED,ANALYZED,ENCODED,UPLOADED,COMPLETED,CANCELLED,DELETED,FAILED'),
-    events_default: (process.env.VOLTAGE_JOB_NOTIFICATIONS_EVENTS_DEFAULT ?? 'QUEUED,COMPLETED,FAILED'),
+    events_allowed: (process.env.VOLTAGE_JOB_NOTIFICATIONS_EVENTS_ALLOWED ?? 'RECEIVED,QUEUED,STARTED,DOWNLOADED,ANALYZED,ENCODED,UPLOADED,COMPLETED,CANCELLED,DELETED,FAILED'),
+    events_default: (process.env.VOLTAGE_JOB_NOTIFICATIONS_EVENTS_DEFAULT ?? 'RECEIVED,COMPLETED,FAILED'),
     timeout_min: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MIN ?? 0), // in milliseconds, default 0 seconds
     timeout_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX ?? 30 * 1000), // in milliseconds, default 30 seconds
     timeout: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT ?? 10 * 1000), // in milliseconds, default 10 seconds

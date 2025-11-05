@@ -12,7 +12,7 @@ import { dirname } from 'path';
 import 'express-async-errors';
 import express, { Request, Response } from "express";
 import cors from "cors";
-// Storage operations are abstracted via utils/storage
+import { createJobNotification } from './worker/notifier.js';
 
 const app = express();
 
@@ -286,13 +286,13 @@ app.get('/logs', authMiddleware(), async (req, res) => {
     // Get total count for pagination metadata
     const [[{ total }]] = await database.query(
       `SELECT COUNT(*) as total FROM ${database.getTablePrefix()}logs${whereClause}`,
-      q ? { search: params.search } : {}
+      { ...params }
     ) as any;
 
     // Get paginated data
     const [rawRows] = await database.query(
       `SELECT * FROM ${database.getTablePrefix()}logs${whereClause} ORDER BY created_at DESC LIMIT :limit OFFSET :offset`,
-      params
+      { ...params }
     );
 
     // Parse JSON fields and sanitize sensitive information
@@ -399,13 +399,13 @@ app.get('/jobs', authMiddleware(), async (req, res) => {
     // Get total count for pagination metadata
     const [[{ total }]] = await database.query(
       `SELECT COUNT(*) as total FROM ${database.getTablePrefix()}jobs${whereClause}`,
-      q ? { search: params.search } : {}
+      { ...params }
     ) as any;
 
     // Get paginated data
     const [rawRows] = await database.query(
       `SELECT * FROM ${database.getTablePrefix()}jobs${whereClause} ORDER BY created_at DESC LIMIT :limit OFFSET :offset`,
-      params
+      { ...params }
     );
 
     // Parse JSON fields and sanitize sensitive information
@@ -443,11 +443,7 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
     return res.status(400).json({ metadata: { status: 'ERROR', error: {code: 'REQUEST_INVALID', message: 'Require input and outputs[]!'} } });
   }
 
-  const databaseConn = await database.getConnection();
-
   try {
-    if (databaseConn.beginTransaction) await databaseConn.beginTransaction();
-
     const job_key = uukey();
     const priority = body.priority ?? 1000; // Default priority is 1000
     const now = getNow();
@@ -455,7 +451,11 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
     const outputs = [];
     for (let index = 0; index < body.outputs.length; index++) {
       const output: OutputSpec = body.outputs[index];
-      outputs.push({ key: uukey(), job_key, index, specs: output, status: 'PENDING', updated_at: now, created_at: now, result: null, error: null });
+      outputs.push({ key: uukey(), job_key, index, specs: output, status: 'PENDING', updated_at: now, created_at: now, outcome: null });
+    }
+
+    if (outputs.length === 0) {
+      return res.status(400).json({ metadata: { status: 'ERROR', error: {code: 'REQUEST_INVALID', message: 'At least one output specification is required!'} } });
     }
 
     if (body.notification){
@@ -476,52 +476,64 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
       destination: body.destination ? body.destination : null,
       notification: body.notification ? body.notification : null,
       metadata: body.metadata ? body.metadata : null,
-      status: 'QUEUED',
+      status: 'RECEIVED',
       updated_at: now,
       created_at: now,
     };
 
-    await logger.insert('INFO', 'Job request received!', { job_key: job.key });
+    await logger.insert('INFO', 'Job request received!', { job_key });
 
-    await databaseConn.execute(
-      `INSERT INTO ${database.getTablePrefix()}jobs (\`key\`, priority, input, outputs, destination, notification, metadata, status, updated_at, created_at) VALUES (:key, :priority, :input, :outputs, :destination, :notification, :metadata, 'QUEUED', :updated_at, :created_at)`,
+    await database.execute(
+      `INSERT INTO ${database.getTablePrefix()}jobs (\`key\`, priority, input, outputs, destination, notification, metadata, status, updated_at, created_at) VALUES (:key, :priority, :input, :outputs, :destination, :notification, :metadata, :status, :updated_at, :created_at)`,
       {
         ...job,
         input: job.input ? JSON.stringify(job.input) : null,
         outputs: job.outputs ? JSON.stringify(job.outputs) : null,
         destination: job.destination ? JSON.stringify(job.destination) : null,
         notification: job.notification ? JSON.stringify(job.notification) : null,
-        metadata: job.metadata ? JSON.stringify(job.metadata) : null
+        metadata: job.metadata ? JSON.stringify(job.metadata) : null,
+        status: 'PENDING'
       }
     );
 
-    if (databaseConn.commit) await databaseConn.commit();
+    if (job.notification) await createJobNotification('RECEIVED', job);
 
-    if (job.notification) {
-      const { createJobNotification } = await import('./worker/notifier.js');
-      await createJobNotification('QUEUED', job);
+    await logger.insert('INFO', 'Job successfully created!', { job_key });
+
+    /* JOB: QUEUED: INSERT */
+    const databaseConn = await database.getConnection();
+
+    try {
+      if (databaseConn.beginTransaction) await databaseConn.beginTransaction();
+
+      await database.execute(
+        `INSERT INTO ${database.getTablePrefix()}jobs_queue (\`key\`, priority, created_at) VALUES (:key, :priority, :created_at)`,
+        { ...job }
+      );
+
+      await database.execute(
+        `UPDATE ${database.getTablePrefix()}jobs SET status = :status WHERE \`key\` = :key`,
+        { ...job, status: 'QUEUED' }
+      );
+
+      job.status = 'QUEUED';
+
+      if (databaseConn.commit) await databaseConn.commit();
+
+      if (job.notification) await createJobNotification('QUEUED', job);
+
+      await logger.insert('INFO', 'Job successfully queued!', { job_key });
+    } catch (error: Error | any) {
+      if (databaseConn.rollback) await databaseConn.rollback();
+      await logger.insert('ERROR', 'Create job queue failed!', { job_key, error });
+    } finally {
+      if (databaseConn.release) databaseConn.release();
     }
-    
-    await database.execute(
-      `INSERT INTO ${database.getTablePrefix()}jobs_queue (\`key\`, job_key, priority, visibility_timeout, available_at, created_at) VALUES (:key, :job_key, :priority, :now, :now, :now)`,
-      { key: uukey(), job_key, priority, now: getNow() }
-    );
-
-    // Immediately transition from QUEUED to PENDING
-    await database.execute(
-      `UPDATE ${database.getTablePrefix()}jobs SET status = 'PENDING' WHERE \`key\` = :key`,
-      { key: job_key }
-    );
-
-    await logger.insert('INFO', 'Job queued successfully!', { job_key });
 
     return res.status(202).json({ metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(job) });
   } catch (error: Error | any) {
-    if (databaseConn.rollback) await databaseConn.rollback();
     await logger.insert('ERROR', 'Create job failed!', { error });
     return res.status(500).json({ metadata: {status: 'ERROR', error: {code: 'INTERNAL_ERROR', message: error.message || 'Unknown error occurred!'}} });
-  } finally {
-    if (databaseConn.release) databaseConn.release();
   }
 });
 
@@ -656,13 +668,13 @@ app.get('/jobs/notifications', authMiddleware(), async (req, res) => {
     // Get total count for pagination metadata
     const [[{ total }]] = await database.query(
       `SELECT COUNT(*) as total FROM ${database.getTablePrefix()}jobs_notifications${whereClause}`,
-      q ? { search: params.search } : {}
+      { ...params }
     ) as any;
 
     // Get paginated data
     const [rawRows] = await database.query(
       `SELECT * FROM ${database.getTablePrefix()}jobs_notifications${whereClause} ORDER BY created_at DESC LIMIT :limit OFFSET :offset`,
-      params
+      { ...params }
     );
 
     // Parse JSON fields and sanitize sensitive information

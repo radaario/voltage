@@ -78,7 +78,6 @@ class Database {
         \`key\` CHAR(40) PRIMARY KEY,
         instance_key CHAR(40) NOT NULL,
         job_key CHAR(40) NOT NULL,
-        pid INT NULL,
         status ENUM('RUNNING','EXITED') NOT NULL DEFAULT 'RUNNING',
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -110,7 +109,7 @@ class Database {
         destination JSON NULL,
         notification JSON NULL,
         metadata JSON NULL,
-        status ENUM('QUEUED','PENDING','DOWNLOADING','ANALYZING','ENCODING','UPLOADING','COMPLETED','CANCELLED','FAILED') NOT NULL DEFAULT 'QUEUED',
+        status ENUM('RECEIVED','QUEUED','PENDING','DOWNLOADING','ANALYZING','ENCODING','UPLOADING','COMPLETED','CANCELLED','FAILED') NOT NULL DEFAULT 'RECEIVED',
         progress DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         started_at TIMESTAMP NULL,
         completed_at TIMESTAMP NULL,
@@ -156,25 +155,15 @@ class Database {
 
       await conn.execute(`CREATE TABLE IF NOT EXISTS ${this.getTablePrefix()}jobs_queue (
         \`key\` CHAR(40) PRIMARY KEY,
-        job_key CHAR(40) NOT NULL,
         priority INT NOT NULL DEFAULT 1000,
-        visibility_timeout TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        locked_by VARCHAR(255) NULL,
-        locked_at TIMESTAMP NULL,
-        attempts INT NOT NULL DEFAULT 0,
-        available_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX (priority),
-        INDEX (available_at),
-        INDEX (visibility_timeout),
-        FOREIGN KEY (job_key) REFERENCES ${this.getTablePrefix()}jobs(\`key\`) ON DELETE CASCADE
+        FOREIGN KEY (\`key\`) REFERENCES ${this.getTablePrefix()}jobs(\`key\`) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
 
       if (this._config.type?.toUpperCase() === 'SQLITE') {
         // await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${this.getTablePrefix()}workers_job_key ON ${this.getTablePrefix()}workers(job_key);`);
         await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${this.getTablePrefix()}jobs_queue_priority ON ${this.getTablePrefix()}jobs_queue(priority);`);
-        await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${this.getTablePrefix()}jobs_queue_available_at ON ${this.getTablePrefix()}jobs_queue(available_at);`);
-        await conn.execute(`CREATE INDEX IF NOT EXISTS idx_${this.getTablePrefix()}jobs_queue_visibility_timeout ON ${this.getTablePrefix()}jobs_queue(visibility_timeout);`);
       }
 
       if (conn.commit) await conn.commit();

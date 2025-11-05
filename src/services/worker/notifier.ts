@@ -135,7 +135,7 @@ export async function retryJobNotification(notification: any): Promise<any> {
 
     await database.execute(
       `UPDATE ${database.getTablePrefix()}jobs_notifications SET status = :status, retry_count = :retry_count, retry_at = :retry_at, updated_at = :updated_at, outcome = :outcome WHERE \`key\` = :key`,
-      { ...notification }
+      { ...notification, outcome: JSON.stringify(notification.outcome) }
     );
 
     if (notificationOutcome.status === 'SUCCESSFUL') {

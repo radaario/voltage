@@ -112,8 +112,8 @@ export type JobRow = {
   destination?: any | null;
   notification?: any | null;
   metadata?: any | null;
-  status?: 'QUEUED' | 'PENDING' | 'DOWNLOADING' | 'ANALYZING' | 'ENCODING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED';
-  progress: number | 0.00; // PENDING = 0; DOWNLOADING = 20; ANALYZING = 40; ENCODING = 60; UPLOADING = 80; COMPLETED = 100;
+  status?: 'RECEIVED' | 'QUEUED' | 'STARTED' | 'DOWNLOADING' | 'ANALYZING' | 'ENCODING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED';
+  progress: number | 0.00; // STARTED = 0; DOWNLOADING = 20; ANALYZING = 40; ENCODING = 60; UPLOADING = 80; COMPLETED = 100;
   started_at?: string | null;
   completed_at?: string | null;
   updated_at?: string;
@@ -138,17 +138,5 @@ export type JobNotificationRow = {
   updated_at?: string;
   created_at?: string;
   outcome?: any | null;
-};
-
-export type JobOutputRow = {
-  key: string;
-  job_key: string;
-  index: number;
-  specs: unknown;
-  result: unknown | null;
-  status: 'PENDING' | 'ENCODING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
-  updated_at: string;
-  created_at: string;
-  error: unknown | null;
 };
 
