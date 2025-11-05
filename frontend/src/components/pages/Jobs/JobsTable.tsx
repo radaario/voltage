@@ -10,7 +10,8 @@ import {
 	ChevronRightIcon,
 	ChevronDoubleRightIcon,
 	EyeIcon,
-	TrashIcon
+	TrashIcon,
+	ArrowPathIcon
 } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
@@ -31,6 +32,7 @@ interface JobsTableProps {
 	onLimitChange: (limit: number) => void;
 	onViewJob: (job: Job) => void;
 	onDeleteJob: (job: Job) => void;
+	onRetryJob: (job: Job) => void;
 	newJobKeys: Set<string>;
 }
 
@@ -43,7 +45,7 @@ const JobPreviewImage = memo(
 			<div className="w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 group-hover:bg-gray-200 dark:group-hover:bg-neutral-700 rounded overflow-hidden transition-colors">
 				<img
 					key={jobKey}
-					src={`${import.meta.env.VITE_API_BASE_URL}/jobs/${jobKey}/preview?token=${authToken}`}
+					src={`${import.meta.env.VITE_API_BASE_URL}/jobs/preview?job_key=${jobKey}&token=${authToken}`}
 					alt="Preview"
 					className="w-full h-full object-cover"
 					onError={(e) => {
@@ -93,7 +95,17 @@ const TableRow = memo(
 
 TableRow.displayName = "TableRow";
 
-const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onViewJob, onDeleteJob, newJobKeys }: JobsTableProps) => {
+const JobsTable = ({
+	data,
+	loading,
+	pagination,
+	onPageChange,
+	onLimitChange,
+	onViewJob,
+	onDeleteJob,
+	onRetryJob,
+	newJobKeys
+}: JobsTableProps) => {
 	const { authToken } = useAuth();
 
 	// Generate page numbers to display
@@ -296,6 +308,17 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 									<EyeIcon className="h-5 w-5" />
 								</button>
 							</Tooltip>
+							<Tooltip content="Retry Job">
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation();
+										onRetryJob(job);
+									}}
+									className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+									<ArrowPathIcon className="h-5 w-5" />
+								</button>
+							</Tooltip>
 							<Tooltip content="Delete Job">
 								<button
 									type="button"
@@ -312,7 +335,7 @@ const JobsTable = ({ data, loading, pagination, onPageChange, onLimitChange, onV
 				}
 			})
 		],
-		[authToken, onViewJob, onDeleteJob]
+		[authToken, onViewJob, onDeleteJob, onRetryJob]
 	);
 
 	const table = useReactTable({

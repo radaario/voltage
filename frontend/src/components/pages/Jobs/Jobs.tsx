@@ -110,7 +110,6 @@ const Jobs: React.FC = () => {
 			const payload = {
 				input: {
 					service: "HTTPS",
-					// url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4"
 					url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4"
 				},
 				outputs: [
@@ -118,18 +117,103 @@ const Jobs: React.FC = () => {
 						container: "mp4",
 						videoCodec: "libx264",
 						audioCodec: "aac",
+						videoBitrate: "2000k",
+						audioBitrate: "128k",
+						resolution: "1280x720",
 						destination: {
 							service: "HTTPS",
 							method: "POST",
-							url: "https://httpbin.org/post"
+							url: "https://httpbin.org/post",
+							headers: {
+								"X-Output-Type": "720p"
+							}
+						}
+					},
+					{
+						container: "mp4",
+						videoCodec: "libx264",
+						audioCodec: "aac",
+						videoBitrate: "1000k",
+						audioBitrate: "96k",
+						resolution: "854x480",
+						destination: {
+							service: "HTTPS",
+							method: "POST",
+							url: "https://httpbin.org/post",
+							headers: {
+								"X-Output-Type": "480p"
+							}
+						}
+					},
+					{
+						container: "webm",
+						videoCodec: "libvpx-vp9",
+						audioCodec: "libopus",
+						videoBitrate: "1500k",
+						audioBitrate: "128k",
+						resolution: "1280x720",
+						destination: {
+							service: "HTTPS",
+							method: "POST",
+							url: "https://httpbin.org/post",
+							headers: {
+								"X-Output-Type": "720p-webm"
+							}
 						}
 					}
 				],
-				metadata: [{ from: "dashboard", example: true }]
+				notifications: [
+					{
+						event: "JOB_STARTED",
+						destination: {
+							service: "HTTPS",
+							method: "POST",
+							url: "https://httpbin.org/post",
+							headers: {
+								"X-Event-Type": "job-started"
+							}
+						},
+						retry: {
+							max: 3,
+							delay: 5000
+						}
+					},
+					{
+						event: "JOB_COMPLETED",
+						destination: {
+							service: "HTTPS",
+							method: "POST",
+							url: "https://httpbin.org/post",
+							headers: {
+								"X-Event-Type": "job-completed"
+							}
+						},
+						retry: {
+							max: 5,
+							delay: 10000
+						}
+					},
+					{
+						event: "JOB_FAILED",
+						destination: {
+							service: "HTTPS",
+							method: "POST",
+							url: "https://httpbin.org/post",
+							headers: {
+								"X-Event-Type": "job-failed"
+							}
+						},
+						retry: {
+							max: 3,
+							delay: 5000
+						}
+					}
+				],
+				metadata: { from: "dashboard", example: true, timestamp: new Date().toISOString() }
 			};
 
 			const resp = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs?token=${authToken}`, {
-				method: "POST",
+				method: "PUT",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(payload)
 			});
@@ -163,6 +247,31 @@ const Jobs: React.FC = () => {
 			// 204 No Content doesn't have a body
 			if (resp.status === 204) {
 				return null;
+			}
+
+			return resp.json();
+		},
+		onSuccess: async () => {
+			// Invalidate and refetch jobs immediately
+			await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+			await refetch();
+		}
+	});
+
+	// Retry job mutation
+	const retryJobMutation = useMutation({
+		mutationFn: async (jobKey: string) => {
+			const params = new URLSearchParams();
+			params.append("token", authToken || "");
+			params.append("job_key", jobKey);
+
+			const resp = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/retry?${params}`, {
+				method: "POST"
+			});
+
+			if (!resp.ok) {
+				const errText = await resp.text();
+				throw new Error(errText || "Failed to retry job");
 			}
 
 			return resp.json();
@@ -210,6 +319,12 @@ const Jobs: React.FC = () => {
 
 	const handleDeleteJob = (job: Job) => {
 		setJobToDelete(job);
+	};
+
+	const handleRetryJob = (job: Job) => {
+		if (window.confirm(`Are you sure you want to retry this job?`)) {
+			retryJobMutation.mutate(job.key);
+		}
 	};
 
 	const handleConfirmDelete = () => {
@@ -311,14 +426,16 @@ const Jobs: React.FC = () => {
 			</div>
 
 			{/* Error Message */}
-			{(error || createJobMutation.error) && (
+			{(error || createJobMutation.error || retryJobMutation.error) && (
 				<div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4 border border-red-200 dark:border-red-800">
 					<p className="text-sm text-red-800 dark:text-red-200">
 						{error instanceof Error
 							? error.message
 							: createJobMutation.error instanceof Error
 								? createJobMutation.error.message
-								: "An error occurred"}
+								: retryJobMutation.error instanceof Error
+									? retryJobMutation.error.message
+									: "An error occurred"}
 					</p>
 				</div>
 			)}
@@ -333,6 +450,7 @@ const Jobs: React.FC = () => {
 					onLimitChange={handleLimitChange}
 					onViewJob={handleViewJob}
 					onDeleteJob={handleDeleteJob}
+					onRetryJob={handleRetryJob}
 					newJobKeys={newJobKeys}
 				/>
 			</div>

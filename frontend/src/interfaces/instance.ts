@@ -9,14 +9,20 @@ export interface Worker {
 	updated_at: string;
 }
 
-export interface SystemInfo {
-	platform?: string;
-	arch?: string;
-	cpus?: number;
-	totalMemory?: number;
-	freeMemory?: number;
-	hostname?: string;
-	[key: string]: any;
+export interface InstanceSpecs {
+	hostname: string;
+	ip_address: string | null;
+	port: number;
+	os_platform: string;
+	os_release: string;
+	cpu_core_count: number;
+	cpu_frequency_mhz: number;
+	cpu_usage_percent: number;
+	memory_total: number;
+	memory_free: number;
+	memory_usage_percent: number;
+	workers_per_cpu_core: number;
+	workers_max: number;
 }
 
 export interface Instance {
@@ -24,7 +30,7 @@ export interface Instance {
 	key: string;
 	type: "MASTER" | "SLAVE";
 	status: string;
-	system: SystemInfo | null;
+	specs: InstanceSpecs | null;
 	workers: Worker[];
 	created_at: string;
 	updated_at: string;

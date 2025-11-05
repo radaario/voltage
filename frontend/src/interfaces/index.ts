@@ -12,3 +12,5 @@ export * from "./auth";
 export * from "./job";
 export * from "./routes";
 export * from "./instance";
+export * from "./log";
+export * from "./notification";

@@ -102,7 +102,7 @@ const InstanceDetailModal: React.FC = () => {
 					}`}
 					onClick={(e) => e.stopPropagation()}>
 					{/* Header */}
-					<div className="shrink-0 flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+					<div className="shrink-0 flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
 						<div>
 							<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Instance Details</h3>
 							{instance && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">{instance.key}</p>}

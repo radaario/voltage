@@ -1,9 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AuthState } from "@/interfaces/auth";
 import { useNavigate } from "react-router-dom";
+import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 
 export const useAuth = () => {
 	const navigate = useNavigate();
+	const { config, configLoading } = useGlobalStateContext();
 
 	// states
 	const [authState, setAuthState] = useState<AuthState>({
@@ -11,10 +13,20 @@ export const useAuth = () => {
 		isAuthenticated: !!localStorage.getItem("authToken")
 	});
 
+	// Authentication gerekli değilse otomatik olarak authenticated olarak işaretle
+	useEffect(() => {
+		if (!configLoading && config?.dashboard?.is_authentication_required === false) {
+			setAuthState({
+				authToken: "no-auth-required",
+				isAuthenticated: true
+			});
+		}
+	}, [config, configLoading]);
+
 	// actions
 	const login = useCallback(async (password: string) => {
 		try {
-			const response = await fetch("http://localhost:8080/dashboard/sign/in", {
+			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ password })

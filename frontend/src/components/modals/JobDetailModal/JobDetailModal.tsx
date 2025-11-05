@@ -16,7 +16,11 @@ const JobDetailModal: React.FC = () => {
 	const { data: job, isLoading } = useQuery<Job>({
 		queryKey: ["job", jobKey],
 		queryFn: async () => {
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/${jobKey}?token=${authToken}`);
+			const params = new URLSearchParams();
+			params.append("token", authToken || "");
+			params.append("job_key", jobKey || "");
+
+			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs?${params}`);
 			if (!response.ok) {
 				throw new Error("Failed to fetch job");
 			}
@@ -88,13 +92,13 @@ const JobDetailModal: React.FC = () => {
 					}`}
 					onClick={(e) => e.stopPropagation()}>
 					{/* Header */}
-					<div className="shrink-0 flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
+					<div className="shrink-0 flex items-start justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 						<div className="flex items-center gap-4">
 							{/* Preview Image */}
 							{job && (
 								<div className="w-24 h-16 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden">
 									<img
-										src={`${import.meta.env.VITE_API_BASE_URL}/jobs/${job.key}/preview?token=${authToken}`}
+										src={`${import.meta.env.VITE_API_BASE_URL}/jobs/preview?job_key=${job.key}&token=${authToken}`}
 										alt="Preview"
 										className="w-full h-full object-cover"
 										onError={(e) => {

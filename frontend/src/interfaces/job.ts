@@ -68,11 +68,24 @@ interface InputMetadata {
 	};
 }
 
+export interface JobOutput {
+	key: string;
+	job_key: string;
+	index: number;
+	specs: any;
+	result: any | null;
+	status: "PENDING" | "ENCODING" | "UPLOADING" | "COMPLETED" | "CANCELLED" | "FAILED";
+	updated_at: string;
+	created_at: string;
+	error: any | null;
+}
+
 export interface Job {
 	key: string;
 	metadata: any | null;
 	input: ServiceConfig;
 	input_metadata: InputMetadata | null;
+	outputs?: JobOutput[];
 	destination: ServiceConfig | null;
 	notification: ServiceConfig | null;
 	status:

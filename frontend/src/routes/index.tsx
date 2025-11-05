@@ -4,6 +4,7 @@ import Login from "@/components/pages/Login/Login";
 import Jobs from "@/components/pages/Jobs/Jobs";
 import Instances from "@/components/pages/Instances/Instances";
 import Logs from "@/components/pages/Logs/Logs";
+import Notifications from "@/components/pages/Notifications/Notifications";
 import JobDetailModal from "@/components/modals/JobDetailModal/JobDetailModal";
 import InstanceDetailModal from "@/components/modals/InstanceDetailModal/InstanceDetailModal";
 import JobTab from "@/components/modals/JobDetailModal/tabs/JobTab";
@@ -12,10 +13,24 @@ import OutputsTab from "@/components/modals/JobDetailModal/tabs/OutputsTab";
 import LogsTab from "@/components/modals/JobDetailModal/tabs/LogsTab";
 import NotificationsTab from "@/components/modals/JobDetailModal/tabs/NotificationsTab";
 import { useAuth } from "@/hooks/useAuth";
+import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
+import ScreenLoading from "@/components/composite/ScreenLoading/ScreenLoading";
 
 const AuthSafeRoute = () => {
 	const { isAuthenticated } = useAuth();
+	const { config, configLoading } = useGlobalStateContext();
 
+	// Config yüklenene kadar bekle
+	if (configLoading) {
+		return <ScreenLoading />;
+	}
+
+	// Authentication gerekli değilse direkt içeri al
+	if (!config?.dashboard?.is_authentication_required) {
+		return <Outlet />;
+	}
+
+	// Authentication gerekli ve kullanıcı giriş yapmamışsa login'e yönlendir
 	if (!isAuthenticated) {
 		return (
 			<Navigate
@@ -30,6 +45,24 @@ const AuthSafeRoute = () => {
 
 const AuthRedirect = () => {
 	const { isAuthenticated } = useAuth();
+	const { config, configLoading } = useGlobalStateContext();
+
+	// Config yüklenene kadar bekle
+	if (configLoading) {
+		return <ScreenLoading />;
+	}
+
+	// Authentication gerekli değilse direkt dashboard'a yönlendir
+	if (!config?.dashboard?.is_authentication_required) {
+		return (
+			<Navigate
+				to="/"
+				replace
+			/>
+		);
+	}
+
+	// Authentication gerekli ve kullanıcı giriş yapmışsa dashboard'a yönlendir
 	if (isAuthenticated) {
 		return (
 			<Navigate
@@ -97,7 +130,8 @@ export const router = createBrowserRouter([
 							}
 						]
 					},
-					{ path: "logs", element: <Logs /> }
+					{ path: "logs", element: <Logs /> },
+					{ path: "notifications", element: <Notifications /> }
 				]
 			}
 		]

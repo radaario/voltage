@@ -42,7 +42,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 			let hasNewData = false;
 
 			for (const instance of data) {
-				const ip = instance.system?.ip_address;
+				const ip = instance.specs?.ip_address;
 				if (ip && !countryCache[ip]) {
 					const countryData = await getCountryFromIP(ip);
 					newCache[ip] = countryData;
@@ -67,7 +67,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 				cell: (info) => {
 					const instance = info.row.original;
 					const hasWorkers = instance.workers && instance.workers.length > 0;
-					const ip = instance.system?.ip_address;
+					const ip = instance.specs?.ip_address;
 					const countryData = ip ? countryCache[ip] : null;
 
 					return (
@@ -124,16 +124,16 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 											<span className="font-mono text-gray-700 dark:text-gray-300">{ip}</span>
 										</div>
 									)}
-									{instance.system?.hostname && (
+									{instance.specs?.hostname && (
 										<div className="flex items-center gap-1">
 											<span className="font-medium">Host:</span>
-											<span>{instance.system.hostname}</span>
+											<span>{instance.specs.hostname}</span>
 										</div>
 									)}
-									{instance.system?.os_platform && (
+									{instance.specs?.os_platform && (
 										<div className="flex items-center gap-1">
 											<span className="font-medium">OS:</span>
-											<span>{instance.system.os_platform}</span>
+											<span>{instance.specs.os_platform}</span>
 										</div>
 									)}
 								</div>
@@ -142,16 +142,16 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 					);
 				}
 			}),
-			columnHelper.accessor("system", {
+			columnHelper.accessor("specs", {
 				header: "CPU",
 				cell: (info) => {
-					const system = info.getValue();
-					if (!system?.cpu_core_count || system.cpu_usage_percent === undefined) {
+					const specs = info.getValue();
+					if (!specs?.cpu_core_count || specs.cpu_usage_percent === undefined) {
 						return <span className="text-gray-400 text-sm">N/A</span>;
 					}
 
-					const usage = system.cpu_usage_percent;
-					const cores = system.cpu_core_count;
+					const usage = specs.cpu_usage_percent;
+					const cores = specs.cpu_core_count;
 
 					return (
 						<div className="space-y-1">
@@ -171,18 +171,18 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 					);
 				}
 			}),
-			columnHelper.accessor("system", {
+			columnHelper.accessor("specs", {
 				id: "memory",
 				header: "Memory",
 				cell: (info) => {
-					const system = info.getValue();
-					if (!system?.memory_total || system.memory_usage_percent === undefined) {
+					const specs = info.getValue();
+					if (!specs?.memory_total || specs.memory_usage_percent === undefined) {
 						return <span className="text-gray-400 text-sm">N/A</span>;
 					}
 
-					const totalGB = system.memory_total / 1024 ** 3;
-					const usedGB = (system.memory_total - system.memory_free) / 1024 ** 3;
-					const usagePercent = system.memory_usage_percent;
+					const totalGB = specs.memory_total / 1024 ** 3;
+					const usedGB = (specs.memory_total - specs.memory_free) / 1024 ** 3;
+					const usagePercent = specs.memory_usage_percent;
 
 					return (
 						<div className="space-y-1">

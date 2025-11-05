@@ -141,7 +141,7 @@ const InputTab: React.FC = () => {
 						<div className="flex items-center gap-3">
 							<div className="w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 rounded overflow-hidden">
 								<img
-									src={`${import.meta.env.VITE_API_BASE_URL}/jobs/${job.key}/preview?token=${authToken}`}
+									src={`${import.meta.env.VITE_API_BASE_URL}/jobs/preview?job_key=${job.key}&token=${authToken}`}
 									alt="Preview"
 									className="w-full h-full object-cover"
 									onError={(e) => {
