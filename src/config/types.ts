@@ -93,13 +93,15 @@ export type NotificationSpec =
       retry_in?: number; // in milliseconds
     };
 
-export type CreateJobRequest = {
+export type JobRequest = {
   priority?: number; // priority value (lower = higher priority, default: 1000)
   input: InputSpec;
   outputs: OutputSpec[];
   destination?: DestinationSpec; // optional global destination for outputs that don't have their own
   notification?: NotificationSpec;
   metadata?: Record<string, any>[]; // custom metadata to be sent back with notifications
+  try_max?: number | 1;
+  retry_in?: number | 0;
 };
 
 export type JobRow = {
@@ -112,13 +114,17 @@ export type JobRow = {
   destination?: any | null;
   notification?: any | null;
   metadata?: any | null;
-  status?: 'RECEIVED' | 'QUEUED' | 'STARTED' | 'DOWNLOADING' | 'ANALYZING' | 'ENCODING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED';
-  progress: number | 0.00; // STARTED = 0; DOWNLOADING = 20; ANALYZING = 40; ENCODING = 60; UPLOADING = 80; COMPLETED = 100;
+  status?: 'RECEIVED' | 'PENDING' | 'RETRYING' | 'QUEUED' | 'STARTED' | 'DOWNLOADING' | 'ANALYZING' | 'ENCODING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED';
+  progress?: number | 0.00; // STARTED = 0; DOWNLOADING = 20; ANALYZING = 40; ENCODING = 60; UPLOADING = 80; COMPLETED = 100;
   started_at?: string | null;
   completed_at?: string | null;
   updated_at?: string;
   created_at?: string;
   outcome?: any | null;
+  try_max?: number | 1;
+  try_count?: number | 0;
+  retry_in?: number | 0;
+  retry_at?: string | null;
 };
 
 export type JobNotificationRow = {

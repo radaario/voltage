@@ -109,14 +109,29 @@ class Database {
         destination JSON NULL,
         notification JSON NULL,
         metadata JSON NULL,
-        status ENUM('RECEIVED','QUEUED','PENDING','DOWNLOADING','ANALYZING','ENCODING','UPLOADING','COMPLETED','CANCELLED','FAILED') NOT NULL DEFAULT 'RECEIVED',
+        status ENUM('RECEIVED','PENDING', 'RETRYING','QUEUED','DOWNLOADING','ANALYZING','ENCODING','UPLOADING','COMPLETED','CANCELLED','FAILED') NOT NULL DEFAULT 'RECEIVED',
         progress DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         started_at TIMESTAMP NULL,
         completed_at TIMESTAMP NULL,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        outcome JSON NULL
+        outcome JSON NULL,
+        try_max INT NOT NULL DEFAULT 0,
+        try_count INT NOT NULL DEFAULT 0,
+        retry_in INT NULL,
+        retry_at TIMESTAMP NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+      await conn.execute(`CREATE TABLE IF NOT EXISTS ${this.getTablePrefix()}jobs_queue (
+        \`key\` CHAR(40) PRIMARY KEY,
+        priority INT NOT NULL DEFAULT 1000,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX (priority),
+        FOREIGN KEY (\`key\`) REFERENCES ${this.getTablePrefix()}jobs(\`key\`) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+      // instance_key CHAR(40) NULL,
+      // worker_key CHAR(40) NULL,
 
       await conn.execute(`CREATE TABLE IF NOT EXISTS ${this.getTablePrefix()}jobs_notifications (
         \`key\` CHAR(40) PRIMARY KEY,
@@ -128,37 +143,14 @@ class Database {
         specs JSON NOT NULL,
         payload JSON NOT NULL,
         status ENUM('PENDING','SUCCESSFUL','SKIPPED','FAILED') NOT NULL DEFAULT 'PENDING',
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        outcome JSON NULL,
         retry_max INT NOT NULL DEFAULT 0,
         retry_count INT NOT NULL DEFAULT 0,
         retry_in INT NULL,
         retry_at TIMESTAMP NULL,
-        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        outcome JSON NULL,
         FOREIGN KEY (job_key) REFERENCES ${this.getTablePrefix()}jobs(\`key\`) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
-
-      /*
-      await conn.execute(`CREATE TABLE IF NOT EXISTS ${this.getTablePrefix()}job_outputs (
-        \`key\` CHAR(40) PRIMARY KEY,
-        job_key CHAR(40) NOT NULL,
-        \`index\` INT NOT NULL,
-        specs JSON NOT NULL,
-        status ENUM('PENDING','ENCODING','UPLOADING','COMPLETED','CANCELLED','FAILED') NOT NULL DEFAULT 'PENDING',
-        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        result JSON NULL,
-        error JSON NULL,
-        FOREIGN KEY (job_key) REFERENCES ${this.getTablePrefix()}jobs(\`key\`) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
-      */
-
-      await conn.execute(`CREATE TABLE IF NOT EXISTS ${this.getTablePrefix()}jobs_queue (
-        \`key\` CHAR(40) PRIMARY KEY,
-        priority INT NOT NULL DEFAULT 1000,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        INDEX (priority),
-        FOREIGN KEY (\`key\`) REFERENCES ${this.getTablePrefix()}jobs(\`key\`) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
 
       if (this._config.type?.toUpperCase() === 'SQLITE') {

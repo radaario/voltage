@@ -1,6 +1,6 @@
 import { config } from '../../config';
 
-import { sanitizeData, getNow } from '../../utils';
+import { sanitizeData, getNow, addNow } from '../../utils';
 import { logger } from '../../utils/logger.js';
 import { database } from '../../utils/database.js';
 
@@ -28,32 +28,27 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
   
   const jobProgressForEachStep = 20.00; // Each step contributes 20% to the total progress
 
-  let job: JobRow = {
+  let job: any = {
     key: job_key,
     instance_key,
     worker_key,
     status: 'STARTED',
-    progress: 0.00
+    progress: 0.00,
+    try_max: 1,
+    try_count: 0
   };
 
   try {
     await updateWorker(worker_key, 'RUNNING');
 
     /* JOB: SELECT */
-    const [queryJob] = await database.query(`SELECT * FROM ${database.getTablePrefix()}jobs WHERE \`key\` = :key`, { key: job_key });
-    if ((queryJob as any[]).length === 0) {
-      await logger.insert('WARN', 'Job not found!');
-      process.exit(0);
-    }
-
-    job = (queryJob as any[])[0];
-    if (!job.key) throw new Error('Job couldn\'t be found!');
+    [[job]] = await database.query(`SELECT * FROM ${database.getTablePrefix()}jobs WHERE \`key\` = :key LIMIT 1`, { key: job_key });
+    if (!job) throw new Error('Job couldn\'t be found!');
 
     /* JOB: UPDATE */
     job.instance_key = instance_key;
     job.worker_key = worker_key;
-
-    await createJobNotification('STARTED', job);
+    job.status = 'STARTED';
 
     /* JOB: PARSE */
     job.input = job.input ? JSON.parse(job.input as string) : null;
@@ -61,9 +56,14 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
     job.destination = job.destination ? JSON.parse(job.destination as string) : null;
     job.notification = job.notification ? JSON.parse(job.notification as string) : null;
     job.metadata = job.metadata ? JSON.parse(job.metadata as string) : null;
+    job.started_at = getNow();
+    job.completed_at = null;
     job.outcome = job.outcome ? JSON.parse(job.outcome as string) : null;
+    job.try_count = parseInt(job.try_count as string) + 1;
+    job.retry_at = null;
 
-    if (!job.outputs) throw new Error('Job outputs are missing!');
+    await updateJob(job);
+    await createJobNotification('STARTED', job);
 
     /* JOB: OUTPUTs: PARSE */
     for (let index = 0; index < job.outputs.length; index++) {
@@ -76,7 +76,7 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
 
     await logger.insert('INFO', 'Downloading job input...');
 
-    await startJob(job);
+    await updateJob(job);
     await updateWorker(worker_key, 'RUNNING');
     
     const jobTempInputFilePath = await downloadInput(job);
@@ -179,9 +179,15 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
   } catch (error: Error | any) {
     job.status = 'FAILED';
     job.outcome = error || { message: 'Unknown error' };
+
+    if (job.try_count < job.try_max) {
+      job.status = 'RETRYING';
+      job.retry_at = addNow(job.retry_in || 0, 'milliseconds');
+    }
   }
 
   job.progress = 100.00;
+  job.completed_at = getNow();
 
   await updateJob(job);
   await updateWorker(worker_key, 'EXITED');
@@ -199,41 +205,18 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
   }
 }
 
-async function startJob(job: any): Promise<void> {
-  if (!job.key) return;
-
-  try {
-    await database.execute(
-      `UPDATE ${database.getTablePrefix()}jobs SET instance_key = :instance_key, worker_key = :worker_key, status = :status, progress = :progress, started_at = :now, updated_at = :now WHERE \`key\` = :key`,
-      {
-        key: job.key,
-        instance_key: job.instance_key,
-        worker_key: job.worker_key,
-        status: job.status,
-        progress: job.progress,
-        now: getNow()
-      }
-    );
-  } catch (error: Error | any) {
-  }
-}
-
 async function updateJob(job: any): Promise<void> {
   if (!job.key) return;
 
   try {
     await database.execute(
-      `UPDATE ${database.getTablePrefix()}jobs SET input = :input, outputs = :outputs, status = :status, progress = :progress, updated_at = :now, outcome = :outcome WHERE \`key\` = :key`,
+      `UPDATE ${database.getTablePrefix()}jobs SET instance_key = :instance_key, worker_key = :worker_key, input = :input, outputs = :outputs, status = :status, progress = :progress, started_at = :now, completed_at = :completed_at, updated_at = :updated_at, outcome = :outcome, try_count = :try_count, retry_at = :retry_at WHERE \`key\` = :key`,
       {
-        key: job.key,
-        instance_key: job.instance_key,
-        worker_key: job.worker_key,
+        ...job,
         input: job.input ? JSON.stringify(job.input) : null,
         outputs: job.outputs ? JSON.stringify(job.outputs) : null,
-        status: job.status,
-        progress: job.progress,
         outcome: job.outcome ? JSON.stringify(job.outcome) : null,
-        now: getNow(),
+        updated_at: getNow(),
       }
     );
   } catch (error: Error | any) {

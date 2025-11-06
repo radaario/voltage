@@ -1,5 +1,5 @@
 import { config } from '../config/index.js';
-import { CreateJobRequest, OutputSpec } from '../config/types.js';
+import { JobRequest, JobRow, OutputSpec } from '../config/types.js';
 
 import { sanitizeData, uuid, uukey, hash, getNow } from '../utils/index.js';
 import { logger } from '../utils/logger.js';
@@ -170,16 +170,14 @@ app.get('/workers', authMiddleware(), async (req, res) => {
 
     // If worker_key provided, fetch only that worker and return as object (not array)
     if (worker_key) {
-      const [rows] = await database.query(
+      const [[worker]] = await database.query(
         `SELECT * FROM ${database.getTablePrefix()}workers WHERE \`key\` = :key LIMIT 1`,
         { key: worker_key }
       );
 
-      if ((rows as any[]).length === 0) {
+      if (!worker) {
         return res.status(404).json({ metadata: {status: 'ERROR', error: {code: 'NOT_FOUND', message: 'Worker not found!'}} });
       }
-
-      const worker = (rows as any[])[0];
 
       return res.json({ metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(worker) });
     }
@@ -195,7 +193,7 @@ app.get('/workers', authMiddleware(), async (req, res) => {
         `SELECT * FROM ${database.getTablePrefix()}workers ORDER BY created_at DESC`
       );
     
-    return res.json( {metadata: {status: 'SUCCESSFUL'}, data: workers} );
+    return res.json( {metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(workers)} );
   } catch (error: Error | any) {
     await logger.insert('ERROR', 'Failed to fetch workers!', { error });
     return res.status(500).json({ metadata: {status: 'ERROR', error: {code: 'INTERNAL_ERROR', message: error.message || 'Failed to fetch workers!'}} });
@@ -208,16 +206,14 @@ app.get('/logs', authMiddleware(), async (req, res) => {
 
     // If log_key provided, fetch only that log and return as object (not array)
     if (log_key) {
-      const [rows] = await database.query(
+      const [[log]] = await database.query(
         `SELECT * FROM ${database.getTablePrefix()}logs WHERE \`key\` = :key LIMIT 1`,
         { key: log_key }
       );
 
-      if ((rows as any[]).length === 0) {
+      if (!log) {
         return res.status(404).json({ metadata: {status: 'ERROR', error: {code: 'NOT_FOUND', message: 'Log not found!'}} });
       }
-
-      const log = (rows as any[])[0];
 
       return res.json({ metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(log) });
     }
@@ -437,7 +433,7 @@ app.get('/jobs', authMiddleware(), async (req, res) => {
 });
 
 app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Request, res: Response) => {
-  const body = req.body as CreateJobRequest;
+  const body = req.body as JobRequest;
 
   if (!body || !body.input || !Array.isArray(body.outputs) || body.outputs.length === 0) {
     return res.status(400).json({ metadata: { status: 'ERROR', error: {code: 'REQUEST_INVALID', message: 'Require input and outputs[]!'} } });
@@ -468,7 +464,7 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
       }
     }
 
-    const job = { 
+    const job: JobRow = { 
       key: job_key,
       priority: priority,
       input: body.input ? body.input : null,
@@ -479,12 +475,22 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
       status: 'RECEIVED',
       updated_at: now,
       created_at: now,
+      try_max: body.try_max ? body.try_max : (config.jobs.try_count || 3),
+      try_count: 0,
+      retry_in: body.retry_in ? body.retry_in : (config.jobs.retry_in || (60 * 1000)),
+      retry_at: null,
     };
+
+    if ((job.try_max || 0) < config.jobs.try_min) job.try_max = config.jobs.try_min;
+    if ((job.try_max || 0) > config.jobs.try_max) job.try_max = config.jobs.try_max;
+
+    if ((job.retry_in || 0) < config.jobs.retry_in_min) job.retry_in = config.jobs.retry_in_min;
+    if ((job.retry_in || 0) > config.jobs.retry_in_max) job.retry_in = config.jobs.retry_in_max;
 
     await logger.insert('INFO', 'Job request received!', { job_key });
 
     await database.execute(
-      `INSERT INTO ${database.getTablePrefix()}jobs (\`key\`, priority, input, outputs, destination, notification, metadata, status, updated_at, created_at) VALUES (:key, :priority, :input, :outputs, :destination, :notification, :metadata, :status, :updated_at, :created_at)`,
+      `INSERT INTO ${database.getTablePrefix()}jobs (\`key\`, priority, input, outputs, destination, notification, metadata, status, updated_at, created_at, try_max, retry_in) VALUES (:key, :priority, :input, :outputs, :destination, :notification, :metadata, :status, :updated_at, :created_at, :try_max, :retry_in)`,
       {
         ...job,
         input: job.input ? JSON.stringify(job.input) : null,
@@ -501,25 +507,25 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
     await logger.insert('INFO', 'Job successfully created!', { job_key });
 
     /* JOB: QUEUED: INSERT */
+    /*
     const databaseConn = await database.getConnection();
 
     try {
       if (databaseConn.beginTransaction) await databaseConn.beginTransaction();
 
-      await database.execute(
-        `INSERT INTO ${database.getTablePrefix()}jobs_queue (\`key\`, priority, created_at) VALUES (:key, :priority, :created_at)`,
-        { ...job }
-      );
-
-      await database.execute(
+      await databaseConn.execute(
         `UPDATE ${database.getTablePrefix()}jobs SET status = :status WHERE \`key\` = :key`,
         { ...job, status: 'QUEUED' }
       );
 
-      job.status = 'QUEUED';
+      await databaseConn.execute(
+        `INSERT INTO ${database.getTablePrefix()}jobs_queue (\`key\`, priority, created_at) VALUES (:key, :priority, :created_at)`,
+        { ...job }
+      );
 
       if (databaseConn.commit) await databaseConn.commit();
 
+      job.status = 'QUEUED';
       if (job.notification) await createJobNotification('QUEUED', job);
 
       await logger.insert('INFO', 'Job successfully queued!', { job_key });
@@ -529,6 +535,7 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
     } finally {
       if (databaseConn.release) databaseConn.release();
     }
+    */
 
     return res.status(202).json({ metadata: {status: 'SUCCESSFUL'}, data: sanitizeData(job) });
   } catch (error: Error | any) {
@@ -733,6 +740,11 @@ app.post('/jobs/notifications/retry', authMiddleware(), async (req, res) => {
     await logger.insert('ERROR', 'Failed to fetch job notifications!', { error });
     return res.status(500).json({ metadata: {status: 'ERROR', error: {code: 'INTERNAL_ERROR', message: error.message || 'Failed to fetch job notifications!'}} });
   }
+});
+
+app.get('/test', async (req, res) => {
+  const [rows] = await database.query(`SELECT * FROM ${database.getTablePrefix()}jobs_queue`);
+  return res.json({ ...rows });
 });
 
 const clientPath = path.join(dirname(fileURLToPath(import.meta.url)), "../../client-build");

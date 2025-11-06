@@ -1,7 +1,7 @@
 import { config } from '../config/index.js';
 import { JobNotificationRow } from '../config/types.js';
 
-import { getInstanceSpecs, uukey, getNow, subtractNow } from '../utils';
+import { getInstanceSpecs, uukey, getNow, addNow, subtractNow } from '../utils';
 import { logger } from '../utils/logger.js';
 import { storage } from '../utils/storage.js';
 import { database } from '../utils/database.js';
@@ -199,7 +199,7 @@ export async function startSupervisorService(instance_key: string) {
         /* JOBs: PENDINGs */
         try {
           const [pendingJobs] = await database.query(
-            `SELECT * FROM ${database.getTablePrefix()}jobs WHERE status = 'PENDING'`,
+            `SELECT * FROM ${database.getTablePrefix()}jobs WHERE status = 'PENDING' OR (status = 'RETRYING' AND retry_at <= :now)`,
             { now: getNow() }
           );
 
@@ -209,12 +209,12 @@ export async function startSupervisorService(instance_key: string) {
             try{
               if (databaseConn.beginTransaction) await databaseConn.beginTransaction();
 
-              await database.execute(
-                `UPDATE ${database.getTablePrefix()}jobs SET status = 'QUEUED' WHERE \`key\` = :key`,
-                { ...pendingJob }
+              await databaseConn.execute(
+                `UPDATE ${database.getTablePrefix()}jobs SET status = :status, retry_at = :retry_at WHERE \`key\` = :key`,
+                { ...pendingJob, status: 'QUEUED', retry_at: null }
               );
             
-              await database.execute(
+              await databaseConn.execute(
                 `INSERT INTO ${database.getTablePrefix()}jobs_queue (\`key\`, priority, created_at) VALUES (:key, :priority, :created_at)`,
                 { ...pendingJob }
               );
@@ -223,7 +223,7 @@ export async function startSupervisorService(instance_key: string) {
 
               if (pendingJob.notification) await createJobNotification('QUEUED', pendingJob);
 
-              await logger.insert('INFO', 'Job successfully queued!', { job_key: pendingJob.key });
+              await logger.insert('INFO', 'Job successfully queued! - X', { job_key: pendingJob.key });
             } catch (error: Error | any) {
               if (databaseConn.rollback) await databaseConn.rollback();
               await logger.insert('ERROR', 'Create job queue failed!', { job_key: pendingJob.key, error });
@@ -235,13 +235,13 @@ export async function startSupervisorService(instance_key: string) {
             await logger.insert('ERROR', 'Failed to maintain pending jobs!', { error });
         }
 
-        /* INSTANCE: SELECT */
-        const [runingWorkers] = await database.query(
+        /* INSTANCE: WORKERs: SELECT */
+        const [runningWorkers] = await database.query(
           `SELECT * FROM ${database.getTablePrefix()}workers WHERE instance_key = :instance_key AND status = 'RUNNING'`,
           { instance_key }
         ) as any[];
 
-        const runningWorkersCount = runingWorkers.length;
+        const runningWorkersCount = runningWorkers.length;
 
         /* JOBs: QUEUEDs */
         if (runningWorkersCount < config.workers.max) {
@@ -252,7 +252,7 @@ export async function startSupervisorService(instance_key: string) {
               ) as any[];
 
               for (const queuedJob of queuedJobs) {
-                createWorkerForJob(queuedJob.key);
+                await createWorkerForJob(queuedJob.key);
               }
           } catch (error: Error | any) {
               await logger.insert('ERROR', 'Failed to poll jobs!', { error });
@@ -282,7 +282,7 @@ export async function startSupervisorService(instance_key: string) {
     // Keys in workersProcessMap are worker_key (uuid per worker), not job keys.
     const workersProcessMap = new Map<string, ChildProcess>();
 
-    async function createWorkerForJob(job_key: string): Promise<void> {
+    async function createWorkerForJob(job_key: string): Promise<any> {
       const worker = {
         key: uukey(),
       };
@@ -390,9 +390,12 @@ export async function startSupervisorService(instance_key: string) {
         if (databaseConn.commit) await databaseConn.commit();
 
         logger.console('INFO', 'Worker succesfully created for job!', { worker_key: worker.key, job_key });
+
+        return worker;
       } catch (error: Error | any) {
         if (databaseConn.rollback) await databaseConn.rollback();
         await logger.insert('ERROR', 'Failed to create worker for job!', { job_key, error });
+        return null;
       } finally {
         if (databaseConn.release) databaseConn.release();
       }

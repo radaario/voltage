@@ -73,10 +73,14 @@ export const config = {
   },
   jobs: {
     maintain_interval: Number(process.env.VOLTAGE_JOBS_MAINTAIN_INTERVAL ?? 1 * 1000), // in milliseconds, default 1 second
-    visibility_timeout: Number(process.env.VOLTAGE_JOBS_VISIBILITY_TIMEOUT ?? 10 * 60 * 1000), // in milliseconds, default 10 minutes
-    // max_attempts: Number(process.env.VOLTAGE_JOBS_MAX_ATTEMPTS ?? 3), // number of attempts, default 3
     cleanup_interval: Number(process.env.VOLTAGE_JOBS_CLEANUP_INTERVAL ?? 1 * 60 * 60 * 1000), // in milliseconds, default 1 hour
     retention: Number(process.env.VOLTAGE_JOBS_RETENTION ?? 24), // in hours, default 24 hours || 7 days = 24 * 7
+    try_min: Number(process.env.VOLTAGE_JOBS_TRY_MIN ?? 1), // default 0
+    try_max: Number(process.env.VOLTAGE_JOBS_TRY_MAX ?? 3), // default 3
+    try_count: Number(process.env.VOLTAGE_JOBS_TRY_COUNT ?? 3), // default 0 (no retry)
+    retry_in_min: Number(process.env.VOLTAGE_JOBS_RETRY_IN_MIN ?? 60 * 1000), // in milliseconds, default 60 seconds
+    retry_in_max: Number(process.env.VOLTAGE_JOBS_RETRY_IN_MAX ?? 60 * 60 * 1000), // in milliseconds, default 60 minutes
+    retry_in: Number(process.env.VOLTAGE_JOBS_RETRY_IN ?? 60 * 1000), // in milliseconds, default 60 seconds
     preview: {
       format: (process.env.VOLTAGE_JOBS_PREVIEW_FORMAT ?? 'webp'), // format of the generated preview thumbnail
       quality: (process.env.VOLTAGE_JOBS_PREVIEW_QUALITY ?? 75),
