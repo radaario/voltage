@@ -88,6 +88,7 @@ export interface Job {
 	outputs?: JobOutput[];
 	destination: ServiceConfig | null;
 	notification: ServiceConfig | null;
+	outcome: any | null;
 	status:
 		| "PENDING"
 		| "QUEUED"

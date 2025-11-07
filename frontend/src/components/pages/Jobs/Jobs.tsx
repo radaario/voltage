@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import JobsTable from "./JobsTable";
 import DeleteConfirmModal from "@/components/modals/DeleteConfirmModal/DeleteConfirmModal";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
+import Alert from "@/components/base/Alert/Alert";
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
@@ -109,7 +110,7 @@ const Jobs: React.FC = () => {
 		mutationFn: async () => {
 			const payload = {
 				input: {
-					service: "HTTPS",
+					type: "HTTP",
 					url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4"
 				},
 				outputs: [
@@ -119,15 +120,7 @@ const Jobs: React.FC = () => {
 						audioCodec: "aac",
 						videoBitrate: "2000k",
 						audioBitrate: "128k",
-						resolution: "1280x720",
-						destination: {
-							service: "HTTPS",
-							method: "POST",
-							url: "https://httpbin.org/post",
-							headers: {
-								"X-Output-Type": "720p"
-							}
-						}
+						resolution: "1280x720"
 					},
 					{
 						container: "mp4",
@@ -135,15 +128,7 @@ const Jobs: React.FC = () => {
 						audioCodec: "aac",
 						videoBitrate: "1000k",
 						audioBitrate: "96k",
-						resolution: "854x480",
-						destination: {
-							service: "HTTPS",
-							method: "POST",
-							url: "https://httpbin.org/post",
-							headers: {
-								"X-Output-Type": "480p"
-							}
-						}
+						resolution: "854x480"
 					},
 					{
 						container: "webm",
@@ -151,64 +136,21 @@ const Jobs: React.FC = () => {
 						audioCodec: "libopus",
 						videoBitrate: "1500k",
 						audioBitrate: "128k",
-						resolution: "1280x720",
-						destination: {
-							service: "HTTPS",
-							method: "POST",
-							url: "https://httpbin.org/post",
-							headers: {
-								"X-Output-Type": "720p-webm"
-							}
-						}
+						resolution: "1280x720"
 					}
 				],
-				notifications: [
-					{
-						event: "JOB_STARTED",
-						destination: {
-							service: "HTTPS",
-							method: "POST",
-							url: "https://httpbin.org/post",
-							headers: {
-								"X-Event-Type": "job-started"
-							}
-						},
-						retry: {
-							max: 3,
-							delay: 5000
-						}
-					},
-					{
-						event: "JOB_COMPLETED",
-						destination: {
-							service: "HTTPS",
-							method: "POST",
-							url: "https://httpbin.org/post",
-							headers: {
-								"X-Event-Type": "job-completed"
-							}
-						},
-						retry: {
-							max: 5,
-							delay: 10000
-						}
-					},
-					{
-						event: "JOB_FAILED",
-						destination: {
-							service: "HTTPS",
-							method: "POST",
-							url: "https://httpbin.org/post",
-							headers: {
-								"X-Event-Type": "job-failed"
-							}
-						},
-						retry: {
-							max: 3,
-							delay: 5000
-						}
+				destination: {
+					service: "HTTPS",
+					method: "POST",
+					url: "https://httpbin.org/post",
+					headers: {
+						"X-Output-Type": "720p-webm"
 					}
-				],
+				},
+				notification: {
+					type: "HTTP",
+					url: "https://httpbin.org/post"
+				},
 				metadata: { from: "dashboard", example: true, timestamp: new Date().toISOString() }
 			};
 
@@ -419,7 +361,7 @@ const Jobs: React.FC = () => {
 						type="button"
 						onClick={handleCreateExampleJob}
 						disabled={createJobMutation.isPending}
-						className={`px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white whitespace-nowrap ${createJobMutation.isPending ? "bg-indigo-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors`}>
+						className={`px-4 py-2 border border-gray-300 dark:border-neutral-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 whitespace-nowrap ${createJobMutation.isPending ? "bg-gray-100 dark:bg-neutral-800 cursor-not-allowed opacity-50" : "bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700"} transition-colors`}>
 						{createJobMutation.isPending ? "Creating…" : "+ Create Test Job"}
 					</button>
 				</div>
@@ -427,17 +369,15 @@ const Jobs: React.FC = () => {
 
 			{/* Error Message */}
 			{(error || createJobMutation.error || retryJobMutation.error) && (
-				<div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4 border border-red-200 dark:border-red-800">
-					<p className="text-sm text-red-800 dark:text-red-200">
-						{error instanceof Error
-							? error.message
-							: createJobMutation.error instanceof Error
-								? createJobMutation.error.message
-								: retryJobMutation.error instanceof Error
-									? retryJobMutation.error.message
-									: "An error occurred"}
-					</p>
-				</div>
+				<Alert variant="error">
+					{error instanceof Error
+						? error.message
+						: createJobMutation.error instanceof Error
+							? createJobMutation.error.message
+							: retryJobMutation.error instanceof Error
+								? retryJobMutation.error.message
+								: "An error occurred"}
+				</Alert>
 			)}
 
 			{/* Table */}

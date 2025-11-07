@@ -5,6 +5,7 @@ export interface Worker {
 	job_key?: string;
 	pid: number | null;
 	status: string;
+	outcome?: any;
 	created_at: string;
 	updated_at: string;
 }
@@ -32,6 +33,7 @@ export interface Instance {
 	status: string;
 	specs: InstanceSpecs | null;
 	workers: Worker[];
+	restart_count?: number;
 	created_at: string;
 	updated_at: string;
 }

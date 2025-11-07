@@ -1,7 +1,8 @@
 import { useMemo, memo } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Job } from "@/interfaces/job";
-import TimeAgo from "timeago-react";
+import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
+import Label from "@/components/base/Label/Label";
 import { useAuth } from "@/hooks/useAuth";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
 import {
@@ -176,34 +177,41 @@ const JobsTable = ({
 				cell: (info) => {
 					const status = info.getValue();
 					const job = info.row.original;
-					let colorClass =
-						"bg-gray-100 text-gray-800 border-gray-300 dark:bg-neutral-800 dark:text-gray-300 dark:border-neutral-700";
-
-					if (status === "COMPLETED") {
-						colorClass =
-							"bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
-					} else if (status === "FAILED") {
-						colorClass = "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
-					} else if (status === "RUNNING" || status === "ENCODING" || status === "DOWNLOADING" || status === "UPLOADING") {
-						colorClass = "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800";
-					} else if (status === "PENDING" || status === "QUEUED") {
-						colorClass =
-							"bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800";
-					}
-
 					const progress = job.progress || 0;
 
+					// Progress bar color based on status
+					const getProgressBarColor = (status: string) => {
+						switch (status) {
+							case "COMPLETED":
+								return "bg-green-700 dark:bg-green-500";
+							case "FAILED":
+								return "bg-red-700 dark:bg-red-500";
+							case "CANCELLED":
+								return "bg-gray-700 dark:bg-gray-500";
+							case "PENDING":
+								return "bg-yellow-700 dark:bg-yellow-500";
+							case "PROCESSING":
+								return "bg-blue-700 dark:bg-blue-500";
+							default:
+								return "bg-blue-700 dark:bg-blue-500";
+						}
+					};
+
 					return (
-						<span
-							className={`relative inline-flex items-center px-3 py-1 rounded border text-sm font-medium overflow-hidden ${colorClass}`}>
+						<div className="relative inline-flex rounded overflow-hidden">
+							<Label
+								status={status}
+								size="md">
+								{status}
+							</Label>
 							{/* Progress Bar Overlay */}
-							<span
-								className="absolute inset-0 bg-current opacity-10 transition-all duration-300"
-								style={{ width: `${progress}%` }}
-							/>
-							{/* Text */}
-							<span className="relative z-10">{status}</span>
-						</span>
+							{progress > 0 && progress < 100 && (
+								<span
+									className={`absolute bottom-0 left-0 h-full opacity-50 transition-all duration-300 ${getProgressBarColor(status)}`}
+									style={{ width: `${progress}%` }}
+								/>
+							)}
+						</div>
 					);
 				}
 			}),
@@ -280,14 +288,58 @@ const JobsTable = ({
 				cell: (info) => {
 					const job = info.row.original;
 
+					// Job henüz başlamadıysa
 					if (!job.started_at) return <span className="text-gray-400">-</span>;
-					if (!job.completed_at) return <span className="text-blue-600">In progress</span>;
 
-					const start = new Date(job.started_at).getTime();
-					const end = new Date(job.completed_at).getTime();
-					const duration = Math.round((end - start) / 1000);
+					// Job devam ediyorsa
+					if (!job.completed_at) {
+						if (job.status === "COMPLETED" || job.status === "FAILED" || job.status === "CANCELLED") {
+							// Status tamamlanmış ama completed_at yok, bu bir veri tutarsızlığı
+							return <span className="text-gray-400">-</span>;
+						}
+						return <span className="text-blue-600 dark:text-blue-400">In progress</span>;
+					}
 
-					return <span>{duration}s</span>;
+					// Her iki tarih de varsa süreyi hesapla
+					try {
+						const start = new Date(job.started_at).getTime();
+						const end = new Date(job.completed_at).getTime();
+
+						// Geçersiz tarih kontrolü
+						if (isNaN(start) || isNaN(end)) {
+							return <span className="text-gray-400">-</span>;
+						}
+
+						// Negatif veya çok büyük değer kontrolü
+						const duration = (end - start) / 1000; // saniye cinsinden
+						if (duration < 0 || duration > 86400) {
+							// 24 saatten fazla ise
+							return <span className="text-gray-400">Invalid</span>;
+						}
+
+						// Süreyi formatla
+						if (duration < 60) {
+							return <span>{Math.round(duration)}s</span>;
+						} else if (duration < 3600) {
+							const minutes = Math.floor(duration / 60);
+							const seconds = Math.round(duration % 60);
+							return (
+								<span>
+									{minutes}m {seconds}s
+								</span>
+							);
+						} else {
+							const hours = Math.floor(duration / 3600);
+							const minutes = Math.floor((duration % 3600) / 60);
+							return (
+								<span>
+									{hours}h {minutes}m
+								</span>
+							);
+						}
+					} catch (error) {
+						return <span className="text-gray-400">-</span>;
+					}
 				}
 			}),
 			columnHelper.display({

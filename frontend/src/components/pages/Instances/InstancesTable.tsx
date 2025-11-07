@@ -2,8 +2,11 @@ import { useMemo, useState, useEffect, Fragment } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, getExpandedRowModel } from "@tanstack/react-table";
 import { useNavigate } from "react-router-dom";
 import { Instance } from "@/interfaces/instance";
-import TimeAgo from "timeago-react";
-import { ChevronDownIcon, ChevronRightIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
+import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
+import Tooltip from "@/components/base/Tooltip/Tooltip";
+import { ChevronDownIcon, ChevronRightIcon, EyeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
+import { getInstanceName, getWorkerName } from "@/utils/naming";
+import { JobCard } from "@/components";
 
 interface InstancesTableProps {
 	data: Instance[];
@@ -75,7 +78,8 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 							{/* Expand/Collapse Button */}
 							{hasWorkers && (
 								<button
-									onClick={() => {
+									onClick={(e) => {
+										e.stopPropagation();
 										const rowId = info.row.id;
 										setCollapsed((prev) => ({
 											...prev,
@@ -93,9 +97,11 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 
 							{/* Instance Info Card */}
 							<div className="flex-1 space-y-2">
-								{/* Instance Key & Type */}
+								{/* Instance Name & Type Badge */}
 								<div className="flex items-center gap-2">
-									<span className="font-mono text-sm text-gray-900 dark:text-white font-medium">{instance.key}</span>
+									<span className="text-sm font-bold text-gray-900 dark:text-white">
+										{getInstanceName(data, instance)}
+									</span>
 									{instance.type && (
 										<span
 											className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -106,6 +112,11 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 											{instance.type}
 										</span>
 									)}
+								</div>
+
+								{/* Instance Key */}
+								<div className="flex items-center gap-1.5">
+									<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{instance.key}</span>
 								</div>
 
 								{/* System Info Row */}
@@ -228,6 +239,13 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 					);
 				}
 			}),
+			columnHelper.accessor("restart_count", {
+				header: "Restarts",
+				cell: (info) => {
+					const count = info.getValue();
+					return <span className="text-sm text-gray-700 dark:text-gray-300">{count !== undefined ? count : 0}</span>;
+				}
+			}),
 			columnHelper.accessor("updated_at", {
 				header: "Updated",
 				cell: (info) => {
@@ -249,6 +267,28 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 							datetime={date}
 							className="text-sm text-gray-500 dark:text-gray-400"
 						/>
+					);
+				}
+			}),
+			columnHelper.display({
+				id: "actions",
+				header: "Actions",
+				cell: (info) => {
+					const instance = info.row.original;
+					return (
+						<div className="flex items-center gap-2">
+							<Tooltip content="View Instance">
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation();
+										navigate(`/instances/${instance.key}`);
+									}}
+									className="p-2 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400">
+									<EyeIcon className="h-5 w-5" />
+								</button>
+							</Tooltip>
+						</div>
 					);
 				}
 			})
@@ -299,7 +339,9 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 					{table.getRowModel().rows.map((row) => (
 						<Fragment key={row.id}>
 							{/* Main Instance Row */}
-							<tr className="group hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors">
+							<tr
+								onClick={() => navigate(`/instances/${row.original.key}`)}
+								className="group hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer">
 								{row.getVisibleCells().map((cell) => (
 									<td
 										key={cell.id}
@@ -313,44 +355,72 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 							{!collapsed[row.id] && row.original.workers && row.original.workers.length > 0 && (
 								<tr key={`${row.id}-workers`}>
 									<td
-										colSpan={6}
+										colSpan={8}
 										className="px-6 py-0 bg-gray-50 dark:bg-neutral-900/50">
 										<div className="py-3 pl-12">
 											<div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
 												Workers
 											</div>
 											<div className="space-y-1">
-												{row.original.workers.map((worker, idx) => (
+												{row.original.workers.map((worker) => (
 													<div
 														key={worker.key}
-														className="flex items-center gap-4 py-2 px-3 bg-white dark:bg-neutral-800 rounded border border-gray-200 dark:border-neutral-700">
-														<span className="text-xs text-gray-700 dark:text-gray-300 font-semibold -mr-2">
-															{idx + 1}.
-														</span>
-														<span className="font-mono text-xs text-gray-600 dark:text-gray-400 flex-1">
-															{worker.key}
-														</span>
-														<span
-															className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-																worker.status === "RUNNING"
-																	? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-																	: "bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
-															}`}>
-															{worker.status}
-														</span>
-														{worker.pid && (
-															<span className="text-xs text-gray-500 dark:text-gray-400">
-																PID: {worker.pid}
+														className="flex items-center justify-between gap-3 py-2 px-3 bg-white dark:bg-neutral-800 rounded border border-gray-200 dark:border-neutral-700">
+														{/* Worker Name & Key with Icon */}
+														<div className="flex items-start gap-2 min-w-[120px] shrink-0">
+															<CpuChipIcon className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0 mt-0.5" />
+															<div>
+																<div className="text-sm text-gray-900 dark:text-white font-bold">
+																	{getWorkerName(row.original.workers, worker)}
+																</div>
+																<div className="font-mono text-xs text-gray-500 dark:text-gray-400 truncate">
+																	{worker.key}
+																</div>
+															</div>
+														</div>
+
+														{/* Job Card - centered with flex-1 */}
+														<div className="flex-1 flex justify-center">
+															{worker.job_key ? (
+																<div className="max-w-[300px]">
+																	<JobCard jobKey={worker.job_key} />
+																</div>
+															) : (
+																<span className="text-xs text-gray-400">No Job</span>
+															)}
+														</div>
+
+														{/* Right side items */}
+														<div className="flex items-center gap-3 shrink-0">
+															{/* PID */}
+															{worker.pid && (
+																<span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+																	PID: {worker.pid}
+																</span>
+															)}
+
+															{/* Status */}
+															<span
+																className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${
+																	worker.status === "RUNNING"
+																		? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+																		: "bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
+																}`}>
+																{worker.status}
 															</span>
-														)}
-														{worker.job_key && (
-															<button
-																onClick={() => navigate(`/jobs/${worker.job_key}/job`)}
-																className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 border border-gray-300 dark:border-neutral-600 rounded transition-colors">
-																<span>Job'a Git</span>
-																<ArrowRightIcon className="h-3 w-3" />
-															</button>
-														)}
+
+															{/* View Worker Button */}
+															<Tooltip content="View Worker">
+																<button
+																	onClick={(e) => {
+																		e.stopPropagation();
+																		navigate(`/instances/workers/${worker.key}`);
+																	}}
+																	className="p-1.5 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400">
+																	<EyeIcon className="h-4 w-4" />
+																</button>
+															</Tooltip>
+														</div>
 													</div>
 												))}
 											</div>

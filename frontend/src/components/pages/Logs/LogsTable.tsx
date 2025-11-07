@@ -1,20 +1,12 @@
-import { useMemo, memo, useState } from "react";
-import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, memo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Notification } from "@/interfaces/notification";
-import { useAuth } from "@/hooks/useAuth";
-import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
-import {
-	ChevronDoubleLeftIcon,
-	ChevronLeftIcon,
-	ChevronRightIcon,
-	ChevronDoubleRightIcon,
-	ArrowPathIcon,
-	EyeIcon
-} from "@heroicons/react/24/outline";
-import { JobCard } from "@/components";
+import { EyeIcon } from "@heroicons/react/24/outline";
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { Log } from "@/interfaces/log";
+import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
+import { ChevronDoubleLeftIcon, ChevronLeftIcon, ChevronRightIcon, ChevronDoubleRightIcon } from "@heroicons/react/24/outline";
+import { JobCard, InstanceCard, WorkerCard } from "@/components";
 
 interface PaginationInfo {
 	total: number;
@@ -26,23 +18,23 @@ interface PaginationInfo {
 	prev_page?: number | null;
 }
 
-interface NotificationsTableProps {
-	data: Notification[];
+interface LogsTableProps {
+	data: Log[];
 	loading: boolean;
 	pagination: PaginationInfo;
 	onPageChange: (page: number) => void;
 	onLimitChange: (limit: number) => void;
-	newNotificationKeys: Set<string>;
+	newLogKeys: Set<string>;
 }
 
-const columnHelper = createColumnHelper<Notification>();
+const columnHelper = createColumnHelper<Log>();
 
 // Memoized table row to prevent unnecessary re-renders
 const TableRow = memo(
-	({ row, isNew, onViewNotification }: { row: any; isNew: boolean; onViewNotification: (notification: Notification) => void }) => {
+	({ row, isNew, onViewLog }: { row: any; isNew: boolean; onViewLog: (log: Log) => void }) => {
 		return (
 			<tr
-				onClick={() => onViewNotification(row.original)}
+				onClick={() => onViewLog(row.original)}
 				className={`group hover:bg-gray-50 dark:hover:bg-neutral-800 transition-all cursor-pointer ${isNew ? "animate-slide-in-highlight" : ""}`}>
 				{row.getVisibleCells().map((cell: any) => (
 					<td
@@ -65,42 +57,8 @@ const TableRow = memo(
 
 TableRow.displayName = "TableRow";
 
-const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitChange, newNotificationKeys }: NotificationsTableProps) => {
-	const { authToken } = useAuth();
-	const queryClient = useQueryClient();
+const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, newLogKeys }: LogsTableProps) => {
 	const navigate = useNavigate();
-	const [retryingKey, setRetryingKey] = useState<string | null>(null);
-
-	// Retry notification mutation
-	const retryNotificationMutation = useMutation({
-		mutationFn: async (notificationKey: string) => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("notification_key", notificationKey);
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/notifications/retry?${params}`, {
-				method: "POST"
-			});
-			if (!response.ok) {
-				throw new Error("Failed to retry notification");
-			}
-			return await response.json();
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["notifications"] });
-			setRetryingKey(null);
-		},
-		onError: () => {
-			setRetryingKey(null);
-		}
-	});
-
-	const handleRetryNotification = (notificationKey: string) => {
-		if (window.confirm("Are you sure you want to retry this notification?")) {
-			setRetryingKey(notificationKey);
-			retryNotificationMutation.mutate(notificationKey);
-		}
-	};
 	// Generate page numbers to display
 	const getPageNumbers = () => {
 		const { page, totalPages } = pagination;
@@ -139,15 +97,57 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 
 	const columns = useMemo(
 		() => [
-			columnHelper.accessor("event", {
-				header: "Event",
+			columnHelper.accessor("type", {
+				header: "Type",
 				cell: (info) => {
-					const event = info.getValue();
+					const type = info.getValue();
+					let colorClass =
+						"bg-gray-100 text-gray-800 border-gray-300 dark:bg-neutral-800 dark:text-gray-300 dark:border-neutral-700";
+
+					if (type === "ERROR") {
+						colorClass = "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
+					} else if (type === "WARNING") {
+						colorClass =
+							"bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800";
+					} else if (type === "INFO") {
+						colorClass = "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800";
+					} else if (type === "DEBUG") {
+						colorClass =
+							"bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800";
+					}
+
 					return (
-						<div className="flex flex-col">
-							<span className="font-medium text-gray-900 dark:text-white">{event || "UNKNOWN"}</span>
+						<span className={`inline-flex items-center px-2.5 py-0.5 rounded border text-xs font-medium ${colorClass}`}>
+							{type}
+						</span>
+					);
+				}
+			}),
+			columnHelper.accessor("message", {
+				header: "Message",
+				cell: (info) => {
+					const message = info.getValue();
+					return (
+						<div className="max-w-md">
+							<span className="text-gray-900 dark:text-white line-clamp-2">{message || "-"}</span>
 						</div>
 					);
+				}
+			}),
+			columnHelper.accessor("instance_key", {
+				header: "Instance",
+				cell: (info) => {
+					const instanceKey = info.getValue();
+					if (!instanceKey) return <span className="text-gray-400">-</span>;
+					return <InstanceCard instanceKey={instanceKey} />;
+				}
+			}),
+			columnHelper.accessor("worker_key", {
+				header: "Worker",
+				cell: (info) => {
+					const workerKey = info.getValue();
+					if (!workerKey) return <span className="text-gray-400">-</span>;
+					return <WorkerCard workerKey={workerKey} />;
 				}
 			}),
 			columnHelper.accessor("job_key", {
@@ -156,60 +156,6 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 					const jobKey = info.getValue();
 					if (!jobKey) return <span className="text-gray-400">-</span>;
 					return <JobCard jobKey={jobKey} />;
-				}
-			}),
-			columnHelper.accessor("status", {
-				header: "Status",
-				cell: (info) => {
-					const status = info.getValue();
-					let colorClass =
-						"bg-gray-100 text-gray-800 border-gray-300 dark:bg-neutral-800 dark:text-gray-300 dark:border-neutral-700";
-
-					if (status === "SUCCESSFUL") {
-						colorClass =
-							"bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
-					} else if (status === "FAILED") {
-						colorClass = "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
-					} else if (status === "PENDING") {
-						colorClass =
-							"bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800";
-					} else if (status === "SKIPPED") {
-						colorClass =
-							"bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-700";
-					}
-
-					return (
-						<span className={`inline-flex items-center px-2.5 py-0.5 rounded border text-xs font-medium ${colorClass}`}>
-							{status || "PENDING"}
-						</span>
-					);
-				}
-			}),
-			columnHelper.display({
-				id: "retry",
-				header: "Retry",
-				cell: (info) => {
-					const notification = info.row.original;
-					const retryCount = notification.retry_count || 0;
-					const retryMax = notification.retry_max;
-
-					// If retry_max is not set or is 0, just show the count
-					if (!retryMax || retryMax === 0) {
-						return <span className="text-gray-600 dark:text-gray-400">{retryCount}</span>;
-					}
-
-					return (
-						<span className="text-gray-600 dark:text-gray-400">
-							{retryCount} / {retryMax}
-						</span>
-					);
-				}
-			}),
-			columnHelper.accessor("priority", {
-				header: "Priority",
-				cell: (info) => {
-					const priority = info.getValue();
-					return <span className="font-mono text-gray-700 dark:text-gray-300">{priority || 1000}</span>;
 				}
 			}),
 			columnHelper.accessor("created_at", {
@@ -225,36 +171,13 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 				id: "actions",
 				header: "Actions",
 				cell: (info) => {
-					const notification = info.row.original;
-
+					const log = info.row.original;
 					return (
 						<div className="flex items-center gap-2">
-							{/* Retry Button (left) */}
-							<Tooltip content="Retry Notification">
+							<Tooltip content="View Log">
 								<button
 									type="button"
-									onClick={(e) => {
-										e.stopPropagation();
-										handleRetryNotification(notification.key);
-									}}
-									disabled={retryingKey === notification.key}
-									className={`p-2 rounded-md transition-colors ${
-										retryingKey === notification.key
-											? "bg-gray-100 dark:bg-neutral-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-											: "bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400"
-									}`}>
-									<ArrowPathIcon className={`h-5 w-5 ${retryingKey === notification.key ? "animate-spin" : ""}`} />
-								</button>
-							</Tooltip>
-
-							{/* View Button (right) */}
-							<Tooltip content="View Notification">
-								<button
-									type="button"
-									onClick={(e) => {
-										e.stopPropagation();
-										navigate(`/notifications/${notification.key}`);
-									}}
+									onClick={() => navigate(`/logs/${log.key}`)}
 									className="p-2 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400">
 									<EyeIcon className="h-5 w-5" />
 								</button>
@@ -264,7 +187,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 				}
 			})
 		],
-		[handleRetryNotification, retryingKey]
+		[]
 	);
 
 	const table = useReactTable({
@@ -306,19 +229,19 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 								<td
 									colSpan={columns.length}
 									className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-									No notifications found
+									No logs found
 								</td>
 							</tr>
 						) : (
 							table.getRowModel().rows.map((row) => {
-								const notification = row.original;
-								const isNew = newNotificationKeys.has(notification.key);
+								const log = row.original;
+								const isNew = newLogKeys.has(log.key);
 								return (
 									<TableRow
 										key={row.id}
 										row={row}
 										isNew={isNew}
-										onViewNotification={(notification) => navigate(`/notifications/${notification.key}`)}
+										onViewLog={(log) => navigate(`/logs/${log.key}`)}
 									/>
 								);
 							})
@@ -397,7 +320,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 
 				<div className="flex items-center gap-4">
 					<span className="text-sm text-gray-700 dark:text-gray-300">
-						<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total notifications
+						<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total logs
 					</span>
 
 					<select
@@ -418,4 +341,4 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 	);
 };
 
-export default NotificationsTable;
+export default LogsTable;
