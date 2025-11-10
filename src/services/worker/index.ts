@@ -188,7 +188,7 @@ async function run() {
   job.progress = 100.00;
   job.completed_at = getNow();
 
-  await fs.rm(jobTempFolder, { recursive: true }).catch(() => {});
+  // await fs.rm(jobTempFolder, { recursive: true }).catch(() => {});
 
   await updateJob(job);
   // await updateWorkerStatus('IDLE');

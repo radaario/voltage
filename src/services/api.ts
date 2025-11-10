@@ -1,5 +1,5 @@
 import { config } from '../config/index.js';
-import { JobRequest, JobRow, OutputSpec } from '../config/types.js';
+import { JobRequest, JobRow, OutputSpecs } from '../config/types.js';
 
 import { sanitizeData, uuid, uukey, hash, getNow } from '../utils/index.js';
 import { logger } from '../utils/logger.js';
@@ -370,7 +370,7 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
     // OUTPUTs: VALIDATE
     const outputs = [];
     for (let index = 0; index < body.outputs.length; index++) {
-      const output: OutputSpec = body.outputs[index];
+      const output: OutputSpecs = body.outputs[index];
       outputs.push({ key: uukey(), job_key, index, specs: output, status: 'PENDING', updated_at: now, created_at: now, outcome: null });
     }
 

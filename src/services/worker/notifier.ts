@@ -1,5 +1,5 @@
 import { config } from '../../config/index.js';
-import { NotificationSpec } from '../../config/types.js';
+import { NotificationSpecs } from '../../config/types.js';
 
 import { uukey, getNow, addNow, sanitizeData } from '../../utils/index.js';
 import { logger } from '../../utils/logger.js';
@@ -168,7 +168,7 @@ export async function retryJobNotification(notification: any): Promise<any> {
   return outcome;
 }
 
-export async function notify(specs: NotificationSpec, payload: any): Promise<any> {
+export async function notify(specs: NotificationSpecs, payload: any): Promise<any> {
   let outcome: any = {
     status: 'FAILED',
   };

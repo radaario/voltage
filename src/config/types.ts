@@ -1,6 +1,6 @@
 export type AWS_S3_ACL = 'PUBLIC_READ' | 'PUBLIC_READ_WRITE' |  'AUTHENTICATED_READ' | 'AWS_EXEC_READ' | 'BUCKET_OWNER_READ' | 'BUCKET_OWNER_FULL_CONTROL' | 'PRIVATE';
 
-export type InputSpec =
+export type InputSpecs =
   | { 
       type: 'BASE64'; 
       content: string;
@@ -27,7 +27,7 @@ export type InputSpec =
       path: string;
     };
 
-export type DestinationSpec =
+export type DestinationSpecs =
   | {
       type: 'HTTP' | 'HTTPS';
       method?: 'POST' | 'PUT';
@@ -54,23 +54,64 @@ export type DestinationSpec =
       secure?: boolean; // for FTP (FTPS with explicit TLS)
     };
 
-export type OutputSpec = {
-  container: 'mp4' | 'mkv' | 'mov' | 'webm' | 'ts' | string;
-  videoCodec?: string;
-  videoBitrate?: string; // e.g. '2500k'
-  audioCodec?: string;
-  audioBitrate?: string; // e.g. '128k'
-  width?: number;
-  height?: number;
-  extraArgs?: string[]; // advanced ffmpeg args
-  path?: string; // required if destination is AWS_S3 or FTP
-  acl?: AWS_S3_ACL;
-  expires?: number;
-  cache_control?: string;
-  destination?: DestinationSpec; // optional - if not provided, will use global destination
+type OutputSpecsCommon = {
+  path?: string; // required if destination is S3 or FTP
+  acl?: AWS_S3_ACL; // optional if destination is S3, default: PUBLIC
+  expires?: number; // optional if destination is S3, in seconds
+  cache_control?: string; // optional if destination is S3
+  destination?: DestinationSpecs; // optional - if not provided, will use global destination
 };
 
-export type NotificationSpec =
+type OutputSpecsCut = {
+  offset?: number; // in seconds
+  duration?: number; // in seconds
+};
+
+type OutputSpecsImage = {
+  width?: number;
+  height?: number;
+  quality?: number; // 1-100
+  fit?: 'PAD' | 'STRETCH' | 'CROP' | 'MAX';
+  rotate?: 90 | -90 | 180 | -180;
+  flip?: 'HORIZONTAL' | 'VERTICAL' | 'BOTH';
+};
+
+type OutputSpecsAudio = {
+  audio_codec?: string;
+  audio_bitrate?: string; // e.g. '128k'
+  audio_sample_rate?: number; // in Hz
+  audio_channels?: number; // e.g. 2
+};
+
+export type OutputSpecs =
+  | ({
+      type: 'VIDEO',
+      format: 'MP4' | 'WEBM' | 'OGV' | 'MOV' | 'AVI' | 'WMV' | 'ASF' | 'FLV' | 'MKV' | 'TS' | 'M2TS' | 'MPG' | 'MPEG' | 'GIF' | 'RAW' | string;
+      video_codec?: string;
+      video_bitrate?: string; // e.g. '2500k'
+      video_pix_fmt?: string; // e.g. 'yuv420p'
+      video_fps?: number;
+      video_vprofile?: string; // e.g. 'high', 'main', 'baseline'
+      video_level?: string; // e.g. '4.0', '4.1', '5.0'
+      video_deinterlace?: boolean;
+    } & OutputSpecsAudio & OutputSpecsCut & OutputSpecsImage & OutputSpecsCommon)
+  | ({
+      type: 'AUDIO',
+      format: 'MP3' | 'AAC' | 'WAV' | 'FLAC' | 'OGG' | 'OPUS' | 'ALAC' | 'WMA' | 'AIFF' | 'AMR-NB' | 'AMR-WB' | string;
+    } & OutputSpecsAudio & OutputSpecsCut & OutputSpecsCommon)
+  | ({
+      type: 'THUMBNAIL',
+      format: 'JPG' | 'PNG' | 'WEBP' | 'BMP' | string;
+      offset?: number; // in seconds
+    } & OutputSpecsImage & OutputSpecsCommon)
+  | ({
+      type: 'SUBTITLE'
+      format: 'SRT' | 'VTT' | 'JSON' | 'CSV' | 'TXT' | string;
+      language?: string;
+      model?: 'BASE' | 'BASE_EN' | 'TINY' | 'TINY_EN' | 'SMALL' | 'SMALL_EN' | 'MEDIUM' | 'MEDIUM_EN' | 'LARGE_V1' | 'LARGE_V3_TURBO' | string;
+    } & OutputSpecsCommon);
+
+export type NotificationSpecs =
   | {
       type: 'HTTP' | 'HTTPS';
       method?: 'GET' | 'POST' | 'PUT';
@@ -95,10 +136,10 @@ export type NotificationSpec =
 
 export type JobRequest = {
   priority?: number; // priority value (lower = higher priority, default: 1000)
-  input: InputSpec;
-  outputs: OutputSpec[];
-  destination?: DestinationSpec; // optional global destination for outputs that don't have their own
-  notification?: NotificationSpec;
+  input: InputSpecs;
+  outputs: OutputSpecs[];
+  destination?: DestinationSpecs; // optional global destination for outputs that don't have their own
+  notification?: NotificationSpecs;
   metadata?: Record<string, any>[]; // custom metadata to be sent back with notifications
   try_max?: number | 1;
   retry_in?: number | 0;

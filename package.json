@@ -40,6 +40,7 @@
     "moment-timezone": "^0.6.0",
     "mssql": "^11.0.1",
     "mysql2": "^3.11.0",
+    "nodejs-whisper": "^0.2.9",
     "pg": "^8.13.1",
     "pino": "^9.3.2",
     "pino-pretty": "^11.2.2",

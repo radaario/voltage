@@ -84,7 +84,7 @@ export const config = {
     retry_in_max: Number(process.env.VOLTAGE_JOBS_RETRY_IN_MAX ?? (60 * 60 * 1000)), // in milliseconds, default 60 minutes
     retry_in: Number(process.env.VOLTAGE_JOBS_RETRY_IN ?? (1 * 60 * 1000)), // in milliseconds, default 60 seconds
     preview: {
-      format: (process.env.VOLTAGE_JOBS_PREVIEW_FORMAT ?? 'webp'), // format of the generated preview thumbnail
+      format: (process.env.VOLTAGE_JOBS_PREVIEW_FORMAT ?? 'WEBP'), // format of the generated preview thumbnail
       quality: (process.env.VOLTAGE_JOBS_PREVIEW_QUALITY ?? 75),
     },
     notifications: {

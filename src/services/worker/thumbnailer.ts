@@ -17,12 +17,14 @@ export async function generateInputPreview(job: any, options: any): Promise<stri
     logger.console('INFO', 'Generating preview from job input...');
 
     // Calculate the middle timestamp of the video
-    const middleTimestamp = (job.input.duration || 0) / 2;
+    let offset = (job.input.duration || 0) / 2;
+    if (options.offset !== undefined) offset = options.offset;
+    if (job.input.duration && offset > job.input.duration) offset = job.input.duration;
     
     // Use ffmpeg to extract a frame at the middle timestamp and convert to webp
     const args = [
       '-y', // overwrite output file if exists
-      '-ss', middleTimestamp.toString(),
+      '-ss', offset.toString(),
       '-i', jobTempInputFilePath,
       '-vframes', '1',
       // '-vf', 'scale=640:-1', // width 640, height auto to maintain aspect ratio
