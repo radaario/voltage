@@ -15,14 +15,14 @@ export async function processOutput(job: any, output: any): Promise<any> {
   logger.console('INFO', 'Processing job output...', { output_key: output.key, output_index: output.index});
 
   if (output.specs.type === 'SUBTITLE') {
-    const jobTempWavFilePath = path.join(jobTempFolder, 'audio.wav');
+    const jobInputAudioFilePath = path.join(jobTempFolder, 'audio.wav');
     
     // Convert input to WAV
-    const convertArgs = ['-y', '-i', jobTempInputFilePath, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', jobTempWavFilePath];
+    const wavArgs = ['-y', '-i', jobTempInputFilePath, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', jobInputAudioFilePath];
     
     try {
       await new Promise<void>((resolve, reject) => {
-        const proc = spawn(config.utils.ffmpeg.path, convertArgs, { stdio: 'ignore' });
+        const proc = spawn(config.utils.ffmpeg.path, wavArgs, { stdio: 'ignore' });
         proc.on('error', reject);
         proc.on('exit', (code) => {
           if (code === 0) resolve();
@@ -36,7 +36,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
       const outputFormat = (output.specs.format || 'srt').toLowerCase();
       const modelName = (output.specs.model || 'base').toLowerCase().replace('_en', '.en').replace('_', '-');
       
-      await nodewhisper(jobTempWavFilePath, {
+      await nodewhisper(path.resolve(jobInputAudioFilePath), {
         modelName: modelName,
         autoDownloadModelName: modelName,
         whisperOptions: {
@@ -58,7 +58,8 @@ export async function processOutput(job: any, output: any): Promise<any> {
       return { file_path: jobTempOutputFilePath };
     } catch (error: Error | any) {
       await logger.insert('ERROR', 'Failed to generate subtitle!', { output_key: output.key, output_index: output.index, error });
-      throw new Error((`Failed to generate subtitle! ${error.message || ''}`).trim());
+      throw new Error((`Failed to generate subtitle! ${error.message || 'Unknown error occurred!'}`).trim());
+      return { message: error.message || 'Failed to process job output!', args };
     }
   }
 
@@ -99,6 +100,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
   // Image/video scaling, rotation, and effects
   if (output.specs.type === 'THUMBNAIL') {
     args.push('-quality', String(output.specs.quality || 75));
+    args.push('-vframes', '1');
   } else {
     if (output.specs.quality !== undefined) {
       args.push('-q:v', String(output.specs.quality)); 
@@ -161,9 +163,11 @@ export async function processOutput(job: any, output: any): Promise<any> {
   
   args.push(jobTempOutputFilePath);
 
+  console.log('FFMPEG ARGS:', output.key, args);
+
   try {
     await new Promise<void>((resolve, reject) => {
-      const proc = spawn(config.utils.ffmpeg.path, args, { stdio: 'ignore' }); // inherit
+      const proc = spawn(config.utils.ffmpeg.path, args, { stdio: 'inherit' }); // inherit
       proc.on('error', reject);
       proc.on('exit', (code) => {
         if (code === 0) resolve();
@@ -177,6 +181,6 @@ export async function processOutput(job: any, output: any): Promise<any> {
   } catch (error: Error | any) {
     await logger.insert('ERROR', 'Failed to process job output!', { output_key: output.key, output_index: output.index,error });
     throw new Error((`Failed to process job output! ${error.message || ''}`).trim());
-    // return { ...error || { message: 'Failed to process job output!' }, args };
+    return { message: error.message || 'Failed to process job output!', args };
   }
 }

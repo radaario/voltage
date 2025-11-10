@@ -13,7 +13,7 @@ export async function uploadOutput(job: any, output: any): Promise<Record<string
   logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
   
   const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
-  const jobTempOutputFilePath = path.join(jobTempFolder, `output.${output.index}.${(output.format || 'mp4').toLowerCase()}`);
+  const jobTempOutputFilePath = path.join(jobTempFolder, `output.${output.index}.${(output.specs.format || 'mp4').toLowerCase()}`);
 
   // Use output's destination if available, otherwise fall back to global destination
   const destination = output?.specs?.destination || job?.destination;

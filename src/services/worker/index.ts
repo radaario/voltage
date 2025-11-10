@@ -77,7 +77,7 @@ async function run() {
     
     const jobTempInputFilePath = await downloadInput(job);
     if (!jobTempInputFilePath) throw new Error('Input couldn\'t be downloaded!');
-
+    
     await createJobNotification(job, 'DOWNLOADED');
     
     /* JOB: INPUT: ANALYZING */
@@ -116,8 +116,8 @@ async function run() {
       job.outputs[index].status = 'PROCESSING';
 
       try{
-        job.outputs[index].status = 'PROCESSED';
         job.outputs[index].outcome = await processOutput(job, job.outputs[index]);
+        job.outputs[index].status = 'PROCESSED';
       } catch (error: Error | any){
         job.outputs[index].status = 'FAILED';
         job.outputs[index].outcome = { message: error.message || 'Couldn\'t be processed!' };
@@ -174,10 +174,8 @@ async function run() {
     job.status = 'COMPLETED';
     job.outcome = { message: 'Successfully completed!' };
   } catch (error: Error | any) {
-    console.log(error.message);
-
     job.status = 'FAILED';
-    job.outcome = { message: error.message || 'Unknown error' };
+    job.outcome = { message: error.message || 'Unknown error occurred!' };
 
     if (job.try_count < job.try_max) {
       job.status = 'RETRYING';
@@ -188,7 +186,7 @@ async function run() {
   job.progress = 100.00;
   job.completed_at = getNow();
 
-  // await fs.rm(jobTempFolder, { recursive: true }).catch(() => {});
+  await fs.rm(jobTempFolder, { recursive: true }).catch(() => {});
 
   await updateJob(job);
   // await updateWorkerStatus('IDLE');
@@ -221,7 +219,6 @@ async function updateJob(job: any): Promise<void> {
         updated_at: getNow(),
       });
   } catch (error: Error | any) {
-    console.log("ERROR", error);
   }
 }
 

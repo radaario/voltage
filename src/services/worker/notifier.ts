@@ -227,7 +227,7 @@ async function notifyHttp(specs: any, payload: any): Promise<any> {
     http_status_code: response.status,
   };
 
-  if (response.status !== 200) outcome.error = { message: response.statusText || 'Unknown error' };
+  if (response.status !== 200) outcome.error = { message: response.statusText || 'Unknown error occurred!' };
   if (response.headers) outcome.header = response.headers;
   if (response.data) outcome.body = response.data;
 
@@ -257,7 +257,7 @@ async function notifySns(specs: any, payload: any): Promise<any> {
     http_status_code: response.$metadata.httpStatusCode,
   };
 
-  if (response.$metadata.httpStatusCode !== 200) outcome.error = { message: 'Unknown error' }; // response.$metadata?.httpStatusText
+  if (response.$metadata.httpStatusCode !== 200) outcome.error = { message: 'Unknown error occurred!' }; // response.$metadata?.httpStatusText
   if (response.MessageId) outcome.message_id = response.MessageId;
   
   return outcome;
