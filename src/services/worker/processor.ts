@@ -25,7 +25,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
 
   try {
     await new Promise<void>((resolve, reject) => {
-      const proc = spawn(config.utils.ffmpeg.path, args, { stdio: 'inherit' });
+      const proc = spawn(config.utils.ffmpeg.path, args, { stdio: 'ignore' }); // inherit
       proc.on('error', reject);
       proc.on('exit', (code) => {
         if (code === 0) resolve();

@@ -1,5 +1,5 @@
 import { config } from '../../config/index.js';
-import { JobNotificationRow, NotificationSpec } from '../../config/types.js';
+import { NotificationSpec } from '../../config/types.js';
 
 import { uukey, getNow, addNow, sanitizeData } from '../../utils/index.js';
 import { logger } from '../../utils/logger.js';
@@ -9,21 +9,25 @@ import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 
 let database: any = null;
 
-export async function createJobNotification(event: string, job: any): Promise<any> {
+export async function createJobNotification(job: any, jobStatus: string): Promise<any> {
+    if (!job.notification || !job.notification.type) {
+      return { status: 'SKIPPED' };
+    }
+
+    let jobNotificationNotifyOn = config.jobs.notifications.notify_on ? config.jobs.notifications.notify_on.split(',') : [];
+    if (job.notification && job.notification.notify_on && Array.isArray(job.notification.notify_on)) {
+      jobNotificationNotifyOn = job.notification.notify_on;
+    }
+
+    if (jobNotificationNotifyOn && !jobNotificationNotifyOn.includes(jobStatus)) {
+      return { status: 'SKIPPED' };
+    }
+
     logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
     let outcome: any = {
       status: 'FAILED',
     };
-
-    let jobNotificationEvents = config.jobs.notifications.events_default ? config.jobs.notifications.events_default.split(',') : [];
-    if (job.notification && job.notification.events && Array.isArray(job.notification.events)) {
-      jobNotificationEvents = job.notification.events;
-    }
-
-    if (jobNotificationEvents && !jobNotificationEvents.includes(event)) {
-      return { status: 'SKIPPED' };
-    }
 
     if (!database) {
       const _database = await import('../../utils/database.js');
@@ -31,14 +35,13 @@ export async function createJobNotification(event: string, job: any): Promise<an
       database.config(config.database);
     }
 
-    const sanitizedJob = sanitizeData({ ...job, status: event });
+    const sanitizedJob = sanitizeData({ ...job, status: jobStatus });
     const now = getNow();
 
-    const notificationOutcome = await notify(event, job.notification, sanitizedJob);
+    const notificationOutcome = await notify(job.notification, sanitizedJob);
 
     let notification: any = {
       key: uukey(),
-      event: event,
       instance_key: job.instance_key,
       worker_key: job.worker_key,
       job_key: job.key,
@@ -91,7 +94,7 @@ export async function createJobNotification(event: string, job: any): Promise<an
       
       return notificationOutcome;
     } catch (error: Error | any) {
-      logger.console('ERROR', 'Failed to create job notification record!', { notification_key: notification.key, notification_event: notification.event, error });
+      logger.console('ERROR', 'Failed to create job notification record!', { notification_key: notification.key, error });
       outcome = { status: 'FAILED', error: { message: error.message || 'Unknown error occurred!' } }; // , outcome: notificationOutcome
     }
 
@@ -100,7 +103,7 @@ export async function createJobNotification(event: string, job: any): Promise<an
 
 export async function retryJobNotification(notification: any): Promise<any> {
   logger.setMetadata({ instance_key: notification.instance_key, worker_key: notification.worker_key, job_key: notification.job_key });
-  logger.console('INFO', 'Retrying job notification...', { notification_key: notification.key, notification_event: notification.event });
+  logger.console('INFO', 'Retrying job notification...', { notification_key: notification.key });
 
   let outcome: any = {
     status: 'FAILED',
@@ -113,7 +116,7 @@ export async function retryJobNotification(notification: any): Promise<any> {
   }
 
   try {
-    const notificationOutcome = await notify(notification.event, JSON.parse(notification.specs), JSON.parse(notification.payload));
+    const notificationOutcome = await notify(JSON.parse(notification.specs), JSON.parse(notification.payload));
 
     notification.status = notificationOutcome.status || 'FAILED';
     notification.try_count = (notification.try_count || 1) + 1;
@@ -158,14 +161,14 @@ export async function retryJobNotification(notification: any): Promise<any> {
       outcome.error = { message: notificationOutcome.error?.message || 'Unknown error occurred!' };
     }
   } catch (error: Error | any) {
-    logger.console('ERROR', 'Failed to retry job notification!', { notification_key: notification.key, notification_event: notification.event, error });
+    logger.console('ERROR', 'Failed to retry job notification!', { notification_key: notification.key, error });
     outcome.error = { message: error.message || 'Unknown error occurred!' };
   }
 
   return outcome;
 }
 
-export async function notify(event: string, specs: NotificationSpec, payload: unknown): Promise<any> {
+export async function notify(specs: NotificationSpec, payload: any): Promise<any> {
   let outcome: any = {
     status: 'FAILED',
   };
@@ -173,10 +176,10 @@ export async function notify(event: string, specs: NotificationSpec, payload: un
   try {
     if (specs.type === 'HTTP' || specs.type === 'HTTPS') {
       // HTTP/HTTPS notification
-      outcome = await notifyHttp(event, specs, payload);
+      outcome = await notifyHttp(specs, payload);
     } else if (specs.type === 'AWS_SNS') {
       // AWS SNS notification
-      outcome = await notifySns(event, specs, payload);
+      outcome = await notifySns(specs, payload);
     } else {
       throw new Error('Unknown notification type!');
     }
@@ -188,13 +191,10 @@ export async function notify(event: string, specs: NotificationSpec, payload: un
   return outcome;
 }
 
-async function notifyHttp(event: string, specs: any, payload: any): Promise<any> {
+async function notifyHttp(specs: any, payload: any): Promise<any> {
   const method = specs.method || 'POST';
   const headers = { 'Content-Type': 'application/json', 'User-Agent': `${config.name}/${config.version}`, ...(specs.headers || {}) };
   
-  // Always include full payload with metadata
-  const data = {event, ...payload};
-
   let timeout = specs.timeout || config.jobs.notifications.timeout;
   if (timeout < 1) timeout = 1;
   if (timeout > config.jobs.notifications.timeout_max) timeout = config.jobs.notifications.timeout_max;
@@ -208,7 +208,7 @@ async function notifyHttp(event: string, specs: any, payload: any): Promise<any>
   if (method === 'GET') {
     // For GET requests, append payload as query parameters
     const params = new URLSearchParams();
-    Object.entries(data as any).forEach(([key, value]) => {
+    Object.entries(payload as any).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         params.append(key, String(value));
       }
@@ -217,7 +217,7 @@ async function notifyHttp(event: string, specs: any, payload: any): Promise<any>
   } else {
     // For POST/PUT requests, send as JSON body
     requestConfig.url = specs.url;
-    requestConfig.data = data;
+    requestConfig.data = payload;
   }
 
   const response = await axios.request(requestConfig);
@@ -234,7 +234,7 @@ async function notifyHttp(event: string, specs: any, payload: any): Promise<any>
   return outcome;
 }
 
-async function notifySns(event: string, specs: any, payload: any): Promise<any> {
+async function notifySns(specs: any, payload: any): Promise<any> {
   const snsClient = new SNSClient({
     region: specs.region,
     credentials: {
@@ -244,11 +244,9 @@ async function notifySns(event: string, specs: any, payload: any): Promise<any> 
   });
 
   // Always include full payload with metadata
-  const messageData = {event, ...payload};
-  
   const command = new PublishCommand({
     TopicArn: specs.topic,
-    Message: JSON.stringify(messageData),
+    Message: JSON.stringify(payload),
     Subject: `Job ${(payload as any)?.status || 'update'}`,
   });
 

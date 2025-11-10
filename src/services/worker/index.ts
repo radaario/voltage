@@ -16,9 +16,7 @@ import fs from 'fs/promises';
 
 database.config(config.database);
 
-async function run(instance_key: string, worker_key: string, job_key: string): Promise<void> {
-  logger.setMetadata({ instance_key, worker_key, job_key });
-
+async function run() {
   await logger.insert('INFO', 'Worker starts running...');
 
   const jobTempFolder = path.join(config.temp_folder, 'jobs', job_key);
@@ -37,7 +35,7 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
   };
 
   try {
-    await updateWorkerStatus(worker_key, 'BUSY');
+    await updateWorkerStatus('BUSY');
 
     /* JOB: SELECT */
     job = await database.table('jobs').where('key', job_key).first();
@@ -61,7 +59,7 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
     job.retry_at = null;
 
     await updateJob(job);
-    await createJobNotification('STARTED', job);
+    await createJobNotification(job, 'STARTED');
 
     /* JOB: OUTPUTs: PARSE */
     for (let index = 0; index < job.outputs.length; index++) {
@@ -75,12 +73,12 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
     await logger.insert('INFO', 'Downloading job input...');
 
     await updateJob(job);
-    await updateWorkerStatus(worker_key, 'BUSY');
+    await updateWorkerStatus('BUSY');
     
     const jobTempInputFilePath = await downloadInput(job);
     if (!jobTempInputFilePath) throw new Error('Input couldn\'t be downloaded!');
 
-    await createJobNotification('DOWNLOADED', job);
+    await createJobNotification(job, 'DOWNLOADED');
     
     /* JOB: INPUT: ANALYZING */
     job.status = 'ANALYZING';
@@ -89,14 +87,14 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
     await logger.insert('INFO', 'Analyzing job input...');
 
     await updateJob(job);
-    await updateWorkerStatus(worker_key, 'BUSY');
+    await updateWorkerStatus('BUSY');
     
     const jobInputMetadata = await analyzeInputMetadata(job);
     if (!jobInputMetadata) throw new Error('Input metadata couldn\'t be extracted!');
 
     job.input = { ...job.input, ...jobInputMetadata };
 
-    await createJobNotification('ANALYZED', job);
+    await createJobNotification(job, 'ANALYZED');
 
     /* JOB: INPUT: PREVIEW */
     await logger.insert('INFO', 'Generating job input preview...');
@@ -110,7 +108,7 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
     await logger.insert('INFO', 'Processing job outputs...');
 
     await updateJob(job);
-    await updateWorkerStatus(worker_key, 'BUSY');
+    await updateWorkerStatus('BUSY');
 
     for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
       if (['COMPLETED', 'FAILED'].includes(job.outputs[index].status)) continue;
@@ -118,6 +116,7 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
       job.outputs[index].status = 'PROCESSING';
 
       try{
+        job.outputs[index].status = 'PROCESSED';
         job.outputs[index].outcome = await processOutput(job, job.outputs[index]);
       } catch (error: Error | any){
         job.outputs[index].status = 'FAILED';
@@ -129,10 +128,10 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
       await logger.insert('INFO', 'Job output processed!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
 
       await updateJob(job);
-      await updateWorkerStatus(worker_key, 'BUSY');
+      await updateWorkerStatus('BUSY');
     }
 
-    await createJobNotification('PROCESSED', job);
+    await createJobNotification(job, 'PROCESSED');
 
     /* JOB: OUTPUTs: UPLOADING */
     job.status = 'UPLOADING';
@@ -140,7 +139,7 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
     await logger.insert('INFO', 'Uploading job outputs...');
 
     await updateJob(job);
-    await updateWorkerStatus(worker_key, 'BUSY');
+    await updateWorkerStatus('BUSY');
 
     for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
       if (['COMPLETED', 'FAILED'].includes(job.outputs[index].status)) continue;
@@ -160,10 +159,10 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
       await logger.insert('INFO', 'Job output uploaded!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
 
       await updateJob(job);
-      await updateWorkerStatus(worker_key, 'BUSY');
+      await updateWorkerStatus('BUSY');
     }
 
-    await createJobNotification('UPLOADED', job);
+    await createJobNotification(job, 'UPLOADED');
 
     for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
       if (job.outputs[index].status === 'FAILED') {
@@ -192,15 +191,15 @@ async function run(instance_key: string, worker_key: string, job_key: string): P
   await fs.rm(jobTempFolder, { recursive: true }).catch(() => {});
 
   await updateJob(job);
-  // await updateWorkerStatus(worker_key, 'IDLE');
+  // await updateWorkerStatus('IDLE');
 
   if (job.status === 'COMPLETED') {
     await logger.insert('INFO', 'Job completed successfully!');
-    await createJobNotification('COMPLETED', job);
+    await createJobNotification(job, 'COMPLETED');
     process.exit(0);
   } else {
     await logger.insert('ERROR', 'Job failed!', { error: job.outcome });
-    await createJobNotification('FAILED', job);
+    await createJobNotification(job, 'FAILED');
     process.exit(1);
   }
 }
@@ -226,13 +225,14 @@ async function updateJob(job: any): Promise<void> {
   }
 }
 
-async function updateWorkerStatus(worker_key: string, status: string): Promise<void> {
+async function updateWorkerStatus(status: string): Promise<void> {
   if (!worker_key) return;
 
   try {
     await database.table('instances_workers')
       .where('key', worker_key)
       .update({
+        job_key,
         status,
         updated_at: getNow()
       });
@@ -267,4 +267,4 @@ if (!job_key) {
 
 logger.setMetadata({ instance_key, worker_key, job_key });
 
-run(instance_key, worker_key, job_key);
+await run();

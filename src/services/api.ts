@@ -367,6 +367,7 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
     const priority = body.priority ?? 1000; // Default priority is 1000
     const now = getNow();
 
+    // OUTPUTs: VALIDATE
     const outputs = [];
     for (let index = 0; index < body.outputs.length; index++) {
       const output: OutputSpec = body.outputs[index];
@@ -377,12 +378,13 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
       return res.status(400).json({ metadata: { status: 'ERROR', error: {code: 'REQUEST_INVALID', message: 'At least one output specification is required!'} } });
     }
 
+    // NOTIFICATION: VALIDATE
     if (body.notification){
-      if (body.notification.events && Array.isArray(body.notification.events)) {
-        const allowedEvents = config.jobs.notifications.events_allowed.split(",").map(e => e.trim());
+      if (body.notification.notify_on && Array.isArray(body.notification.notify_on)) {
+        const allowedNotifyOns = config.jobs.notifications.notify_on_alloweds.split(",").map(e => e.trim());
 
-        body.notification.events = body.notification.events.filter((event:string) =>
-          allowedEvents.includes(event)
+        body.notification.notify_on = body.notification.notify_on.filter((status:string) =>
+          allowedNotifyOns.includes(status)
         );
       }
     }
@@ -423,22 +425,22 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
         status: 'PENDING',
         locked_by: config.jobs.enqueue_on_receive ? currentInstanceKey : null,
       })
-      .then(result => {
+      .then(async result => {
         job.status = 'PENDING';
-        if (job.notification) createJobNotification('RECEIVED', job);
+        await createJobNotification(job, 'RECEIVED');
 
-        logger.insert('INFO', 'Job successfully created!', { job_key });
+        await logger.insert('INFO', 'Job successfully created!', { job_key });
 
         if (config.jobs.enqueue_on_receive) {
           // JOB: QUEUE: INSERT
-          database.table('jobs_queue')
+          await database.table('jobs_queue')
             .insert({ key: job.key, priority: job.priority, created_at: job.created_at })
             .then(async result => {
               // JOB: UPDATE: QUEUED
               job.status = 'QUEUED';
               await database.table('jobs').where('key', job_key).update({ status: job.status, updated_at: getNow(), locked_by: null });
               
-              if (job.notification) await createJobNotification('QUEUED', job);
+              await createJobNotification(job, 'QUEUED');
               
               await logger.insert('INFO', 'Job successfully queued!', { job_key });
             })
@@ -450,8 +452,8 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
             });
         }
       })
-      .catch(error => {
-        logger.insert('ERROR', 'Job creation failed!', { job_key, error });
+      .catch(async error => {
+        await logger.insert('ERROR', 'Job creation failed!', { job_key, error });
       });
 
     if (job.status === 'RECEIVED') {
@@ -536,7 +538,6 @@ app.get('/jobs/notifications', authMiddleware(), async (req, res) => {
     const instance_key = (req.query.instance_key || req.body.instance_key || '').trim();
     const worker_key = (req.query.worker_key || req.body.worker_key || '').trim();
     const job_key = (req.query.job_key || req.body.job_key || '').trim();
-    const event = (req.query.event || req.body.event || '').trim();
     const status = (req.query.status || req.body.status || '').trim();
     const q = req.query.q ? String(req.query.q).trim() : '';
 
@@ -554,7 +555,6 @@ app.get('/jobs/notifications', authMiddleware(), async (req, res) => {
     if (instance_key) query = query.where('instance_key', instance_key);
     if (worker_key) query = query.where('worker_key', worker_key);
     if (job_key) query = query.where('job_key', job_key);
-    if (event) query = query.where('event', event);
     if (status) query = query.where('status', status);
     
     if (q) {

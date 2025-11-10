@@ -72,24 +72,24 @@ export type OutputSpec = {
 
 export type NotificationSpec =
   | {
-      events?: any;
       type: 'HTTP' | 'HTTPS';
       method?: 'GET' | 'POST' | 'PUT';
       headers?: Record<string, string>;
       url: string;
+      notify_on?: any;
       timeout?: number; // in milliseconds
-      retry?: number;
+      try?: number;
       retry_in?: number; // in milliseconds
     }
   | {
-      events?: any;
       type: 'AWS_SNS';
       access_key: string; // Access Key ID
       access_secret: string; // Access Key Secret
       region: string;
       topic: string; // Topic ARN
+      notify_on?: any;
       timeout?: number; // in milliseconds
-      retry?: number;
+      try?: number;
       retry_in?: number; // in milliseconds
     };
 
@@ -132,7 +132,6 @@ export type JobNotificationRow = {
   instance_key?: string | null;
   worker_key?: string | null;
   job_key?: string;
-  event?: string;
   priority?: number | 1000;
   specs?: any | null;
   payload?: any | null;

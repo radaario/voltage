@@ -129,7 +129,6 @@ class Database {
             table.string('instance_key', 40).nullable();
             table.string('worker_key', 40).nullable();
             table.string('job_key', 40).notNullable();
-            table.string('event', 255).notNullable();
             table.integer('priority').notNullable().defaultTo(1000);
             table.text('specs').notNullable();
             table.text('payload').notNullable();
@@ -138,8 +137,8 @@ class Database {
             table.timestamp('updated_at').notNullable().defaultTo(this.knex.fn.now());
             table.timestamp('created_at').notNullable().defaultTo(this.knex.fn.now());
             table.string('locked_by', 40).nullable();
-            table.integer('try_max').notNullable().defaultTo(0);
-            table.integer('try_count').notNullable().defaultTo(0);
+            table.integer('try_max').notNullable().defaultTo(1);
+            table.integer('try_count').notNullable().defaultTo(1);
             table.integer('retry_in').nullable();
             table.timestamp('retry_at').nullable();
             table.foreign('job_key').references('key').inTable(`${prefix}jobs`).onDelete('CASCADE');

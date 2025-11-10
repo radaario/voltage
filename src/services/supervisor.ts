@@ -74,6 +74,7 @@ export async function startSupervisorService(instance_key: string) {
               key: hash(`${instance_key}:${existsWorkersCount + index}`),
               index: existsWorkersCount + index,
               instance_key,
+              job_key: null,
               status: 'IDLE',
               updated_at: now,
               created_at: now,
@@ -88,6 +89,7 @@ export async function startSupervisorService(instance_key: string) {
         await database.table('instances_workers')
           .where('instance_key', instance_key)
           .update({
+            job_key: null,
             status: database.knex.raw(`CASE WHEN \`index\` < ? THEN 'IDLE' ELSE 'TERMINATED' END`, [config.instances.workers.max]),
             updated_at: now,
           });
@@ -130,9 +132,11 @@ export async function startSupervisorService(instance_key: string) {
     }
 
     async function maintainInstancesAndWorkers() {
-        logger.console('INFO', 'Maintaining self...');
+        // MAINTAIN ITSELF
+        logger.console('INFO', 'Maintaining itself...');
 
         try {
+          // INSTACE: UPDATE
           await database.table('instances')
             .where('key', instance_key)
             .update({
@@ -140,6 +144,9 @@ export async function startSupervisorService(instance_key: string) {
               status: 'ONLINE',
               updated_at: getNow(),
             });
+
+          // WORKERS: UPDATE
+          await database.table('instances_workers').where('instance_key', instance_key).where('status', 'IDLE').update({ updated_at: getNow(), });
         } catch (error: Error | any) {
           await logger.insert('ERROR', 'Instance maintenance failed!', { error });
         }
@@ -166,6 +173,7 @@ export async function startSupervisorService(instance_key: string) {
               await database.table('instances_workers')
                 .whereIn('key', timeoutedWorkerKeys)
                 .update({
+                  job_key: null,
                   status: 'TIMEOUT',
                   updated_at: getNow(),
                   outcome: JSON.stringify({ message: 'Busy worker timed out!' }),
@@ -180,6 +188,7 @@ export async function startSupervisorService(instance_key: string) {
                 .where('status', 'TIMEOUT')
                 .where('updated_at', '<', subtractNow(idleAfter, 'milliseconds'))
                 .update({
+                  job_key: null,
                   status: 'IDLE',
                   updated_at: getNow(),
                   outcome: JSON.stringify({ message: 'Worker is idle again!' }),
@@ -205,6 +214,7 @@ export async function startSupervisorService(instance_key: string) {
                 await database.table('instances_workers')
                   .whereIn('instance_key', inactiveInstanceKeys)
                   .update({
+                    job_key: null,
                     status: 'TERMINATED',
                     updated_at: getNow(),
                     outcome: JSON.stringify({ message: 'The worker was terminated because the instance was offline!' })
@@ -264,7 +274,7 @@ export async function startSupervisorService(instance_key: string) {
             .limit(config.jobs.enqueue_limit || 10) // default 10
             .update({ updated_at: getNow(), locked_by: instance_key });
 
-          const pendingJobs = await database.table('jobs').where('locked_by', instance_key).select('key', 'priority', 'created_at', 'notification');
+          const pendingJobs = await database.table('jobs').where('locked_by', instance_key);
 
           for (const pendingJob of pendingJobs) {
             // JOB: QUEUE: INSERT
@@ -272,17 +282,13 @@ export async function startSupervisorService(instance_key: string) {
               .insert({ key: pendingJob.key, priority: pendingJob.priority, created_at: pendingJob.created_at })
               .then(async result => {
                 // JOB: UPDATE: QUEUED
-                pendingJob.status = 'QUEUED';
-                await database.table('jobs').where('key', pendingJob.key).update({status: pendingJob.status, updated_at: getNow(), locked_by: null });
-
-                if (pendingJob.notification) await createJobNotification('QUEUED', pendingJob);
-
+                await database.table('jobs').where('key', pendingJob.key).update({ status: 'QUEUED', updated_at: getNow(), locked_by: null });
+                await createJobNotification(pendingJob, 'QUEUED');
                 await logger.insert('INFO', 'Job successfully queued!', { job_key: pendingJob.key });
               })
               .catch(async error => {
                 // JOB: UPDATE: PENDING
-                pendingJob.status = 'PENDING';
-                await database.table('jobs').where('key', pendingJob.key).update({ status: pendingJob.status, updated_at: getNow(), locked_by: null });
+                await database.table('jobs').where('key', pendingJob.key).update({ status: 'PENDING', updated_at: getNow(), locked_by: null });
                 await logger.insert('ERROR', 'Enqueuing job failed!', { job_key: pendingJob.key, error });
               });
           }
@@ -358,7 +364,7 @@ export async function startSupervisorService(instance_key: string) {
               .where('locked_by', null)
               .orderBy('priority', 'asc')
               .orderBy('created_at', 'asc')
-              .limit(config.jobs.enqueue_limit || 10) // default 10
+              .limit(config.jobs.notifications.process_limit || 10) // default 10
               .update({ locked_by: instance_key }); // updated_at: getNow(),
 
             // JOBs: NOTIFICATIONs: QUEUE: SELECT LOCKEDs
@@ -380,6 +386,9 @@ export async function startSupervisorService(instance_key: string) {
     async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<any> {
       try {
         await logger.insert('INFO', 'Spawning worker for job...', { worker_key, job_key });
+
+        // WORKER: UPDATE: BUSY
+        await database.table('instances_workers').where('key', worker_key).update({ status: 'BUSY' });
 
         // JOB: QUEUE: DELETE
         await database.table('jobs_queue').where('key', job_key).delete();
@@ -414,6 +423,7 @@ export async function startSupervisorService(instance_key: string) {
           await database.table('instances_workers')
             .where('key', worker_key)
             .update({
+              job_key: null,
               status: 'IDLE',
               updated_at: getNow(),
               outcome: JSON.stringify({ message: 'Worker exited!', exit_code: code, exit_signal: signal })
@@ -431,6 +441,7 @@ export async function startSupervisorService(instance_key: string) {
           await database.table('instances_workers')
             .where('key', worker_key)
             .update({
+              job_key: null,
               status: 'IDLE',
               updated_at: getNow(),
               outcome: JSON.stringify({ message: error.message || 'Unknown error occurred!', exit_signal: 'ERROR' })
@@ -449,37 +460,38 @@ export async function startSupervisorService(instance_key: string) {
     }
 
     async function cleanup() {
-      /* JOBs: CLEANUP */
-      logger.console('INFO', 'Cleaning up completed jobs...');
+      if (config.jobs.retention > 0){
+        /* JOBs: CLEANUP */
+        logger.console('INFO', 'Cleaning up completed jobs...');
 
-      const jobs = await database.table('jobs')
-        .select('key')
-        .where('status', 'COMPLETED')
-        .whereNotNull('completed_at')
-        .where('completed_at', '<', subtractNow(config.jobs.retention || (24 * 60 * 60 * 1000), 'milliseconds')); // in milliseconds, default 24 hours
-      
-      const jobsKeys = jobs.map((r: any) => r.key);
-      
-      if (jobsKeys.length > 0) {
-        // Delete job folders/objects via unified storage facade
-        for (const job_key of jobsKeys) {
-          try {
-            await storage.delete(`/jobs/${job_key}/`);
-          } catch (error: Error | any) {
+        const jobs = await database.table('jobs')
+          .select('key')
+          .where('status', 'COMPLETED')
+          .whereNotNull('completed_at')
+          .where('completed_at', '<', subtractNow(config.jobs.retention || (24 * 60 * 60 * 1000), 'milliseconds')); // in milliseconds, default 24 hours
+        
+        const jobsKeys = jobs.map((r: any) => r.key);
+        
+        if (jobsKeys.length > 0) {
+          // Delete job folders/objects via unified storage facade
+          for (const job_key of jobsKeys) {
+            try {
+              await storage.delete(`/jobs/${job_key}/`);
+            } catch (error: Error | any) {
+            }
           }
+
+          await database.table('jobs').whereIn('key', jobsKeys).del();
+          // await database.table('jobs_queue').whereIn('key', jobsKeys).del();
+          // await database.table('jobs_notifications').whereIn('job_key', jobsKeys).del();
+
+          logger.console('INFO', 'Jobs cleaning completed!', { count: jobsKeys.length });
         }
-
-        await database.table('jobs').whereIn('key', jobsKeys).del();
-        // await database.table('jobs_queue').whereIn('key', jobsKeys).del();
-        // await database.table('jobs_notifications').whereIn('job_key', jobsKeys).del();
-
-        logger.console('INFO', 'Jobs cleaning completed!', { count: jobsKeys.length });
       }
 
       /* LOGS: CLEANUP */
-      logger.console('INFO', 'Cleaning logs...');
-
       if (!config.logs.is_disabled || (config.logs.retention || (60 * 60 * 1000)) > 0) { // in milliseconds, default 1 hour
+          logger.console('INFO', 'Cleaning logs...');
           await database.table('logs').where('created_at', '<', subtractNow(config.logs.retention || (60 * 60 * 1000), 'milliseconds')).del(); // in milliseconds, default 1 hour
           logger.console('INFO', 'Logs cleaning completed!');
       }
@@ -522,6 +534,7 @@ export async function shutdownSupervisorService(instance_key: string, signal: st
     await database.table('instances_workers')
       .where('instance_key', instance_key)
       .update({
+        job_key: null,
         status: 'TERMINATED',
         updated_at: getNow(),
         outcome: JSON.stringify({ message: 'The worker was terminated because the instance was shutdown!', signal })

@@ -90,14 +90,14 @@ export const config = {
     notifications: {
       process_interval: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_PROCESS_INTERVAL ?? 1 * 1000), // in milliseconds, default 1 second
       process_limit: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_PROCESS_LIMIT ?? 10), // default 10 poll
-      events_allowed: (process.env.VOLTAGE_JOB_NOTIFICATIONS_EVENTS_ALLOWED ?? 'RECEIVED,QUEUED,STARTED,DOWNLOADED,ANALYZED,PROCESSED,UPLOADED,COMPLETED,CANCELLED,DELETED,FAILED,TIMEOUT'),
-      events_default: (process.env.VOLTAGE_JOB_NOTIFICATIONS_EVENTS_DEFAULT ?? 'RECEIVED,COMPLETED,FAILED,TIMEOUT'),
-      timeout_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX ?? (1 * 30 * 1000)), // in milliseconds, default 30 seconds
+      notify_on: (process.env.VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON ?? 'RECEIVED,COMPLETED,FAILED,TIMEOUT'),
+      notify_on_alloweds: (process.env.VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON_ALLOWEDS ?? 'RECEIVED,QUEUED,STARTED,DOWNLOADED,ANALYZED,PROCESSED,UPLOADED,COMPLETED,CANCELLED,DELETED,FAILED,TIMEOUT'),
       timeout: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT ?? (1 * 10 * 1000)), // in milliseconds, default 10 seconds
-      try_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TRY_MAX ?? 3), // default 3
+      timeout_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX ?? (1 * 30 * 1000)), // in milliseconds, default 30 seconds
       try: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TRY ?? 3), // default 3
-      retry_in_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MAX ?? (60 * 60 * 1000)), // in milliseconds, default 60 minutes
+      try_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TRY_MAX ?? 3), // default 3
       retry_in: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN ?? (1 * 60 * 1000)), // in milliseconds, default 1 minute
+      retry_in_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MAX ?? (60 * 60 * 1000)), // in milliseconds, default 60 minutes
     },
   },
   logs: {
