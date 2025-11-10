@@ -59,7 +59,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
     } catch (error: Error | any) {
       await logger.insert('ERROR', 'Failed to generate subtitle!', { output_key: output.key, output_index: output.index, error });
       throw new Error((`Failed to generate subtitle! ${error.message || 'Unknown error occurred!'}`).trim());
-      return { message: error.message || 'Failed to process job output!', args };
+      return { message: error.message || 'Failed to process job output!' };
     }
   }
 
