@@ -30,8 +30,6 @@ export async function downloadInput(job: any): Promise<string> {
         username: job.input.username,
         password: job.input.password
       } : undefined;
-
-      console.log("TEST", job.input.url);
       
       const resp = await axios.get<ArrayBuffer>(job.input.url, { 
         responseType: 'arraybuffer',

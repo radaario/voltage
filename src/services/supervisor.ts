@@ -1,7 +1,7 @@
 import { config } from '../config/index.js';
 import { JobNotificationRow } from '../config/types.js';
 
-import { getInstanceSpecs, uukey, getNow, addNow, subtractNow } from '../utils';
+import { getInstanceSpecs, uukey, hash, getNow, addNow, subtractNow } from '../utils';
 import { logger } from '../utils/logger.js';
 import { storage } from '../utils/storage.js';
 import { database } from '../utils/database.js';
@@ -23,51 +23,33 @@ export async function startSupervisorService(instance_key: string) {
     logger.setMetadata({ instance_key });
     await storage.config(config.storage);
     database.config(config.database);
+    await database.verifySchemaExists();
 
     async function getMasterInstance(): Promise<any | null> {
         try {
-            const cutoff = subtractNow(config.instances.running_timeout || (1 * 60 * 1000), 'milliseconds');
-
-            const [instances] = await database.query(`SELECT * FROM ${database.getTablePrefix()}instances ORDER BY created_at ASC`) as any[];
+            const activeInstances = await database.table('instances').where('status', 'ONLINE').orderBy('created_at', 'asc');
             
-            if (!instances.length) {
-                logger.console('ERROR', 'No instances found in database!');
+            if (!activeInstances.length) {
+                logger.console('ERROR', 'No active instances found in database!');
                 return null;
             }
 
-            const masters = instances.filter((instance: any) => instance.type === 'MASTER' && instance.updated_at >= cutoff);
-            let master = masters.length ? masters[0] : null;
+            const masterInstances = activeInstances.filter((instance: any) => instance.type === 'MASTER');
+            let masterInstance = masterInstances.length ? masterInstances[0] : null;
 
-            if (masters.length > 1) {
-                const masterKey = master.key;
-                
-                await database.execute(
-                  `UPDATE ${database.getTablePrefix()}instances SET type = 'SLAVE' WHERE type = :type AND \`key\` != :key`,
-                  { key: masterKey, type: 'MASTER', now: getNow() }
-                );
-
-                // reflect changes locally
-                instances.forEach((instance: any) => {
-                    if (instance.type === 'MASTER' && instance.key !== masterKey) instance.type = 'SLAVE';
-                });
-
-                logger.console('INFO', 'Multiple MASTER instances found; demoted extras to SLAVE!');
-            }
-
-            if (!master) {
-                const activeInstances = instances.filter((instance: any) => instance.updated_at >= cutoff);
-                master = activeInstances[0];
-
-                await database.execute(
-                  `UPDATE ${database.getTablePrefix()}instances SET type = :type WHERE \`key\` = :key`,
-                  { key: master.key, type: 'MASTER', now: getNow() }
-                );
-
-                master.type = 'MASTER';
+            if (!masterInstance) {
+                masterInstance = activeInstances[0];
+                masterInstance.type = 'MASTER';
+                await database.table('instances').where('key', masterInstance.key).update({ type: 'MASTER' });
                 logger.console('INFO', 'No MASTER instance found; promoted first instance to MASTER!');
             }
 
-            return master;
+            if (masterInstances.length > 1) {
+                await database.table('instances').where('type', 'MASTER').whereNot('key', masterInstance.key).update({ type: 'SLAVE' });
+                logger.console('INFO', 'Multiple MASTER instances found; demoted extras to SLAVE!');
+            }
+
+            return masterInstance;
         } catch (error: Error | any) {
             await logger.insert('ERROR', 'Selecting MASTER instance failed!', { error });
             throw error;
@@ -79,34 +61,66 @@ export async function startSupervisorService(instance_key: string) {
       
       const now = getNow();
       const specs = getInstanceSpecs();
+
+      try {
+        /* WORKERS: COUNT */
+        const _existsWorkersCount = await database.table('instances_workers').where('instance_key', instance_key).count('* as count').first();
+        const existsWorkersCount = (_existsWorkersCount as any).count || 0;
+        const missingWorkersCount = config.instances.workers.max - existsWorkersCount;
+
+        /* WORKERs: INSERT */
+        if (missingWorkersCount > 0) {
+            const newWorkers = Array.from({ length: missingWorkersCount }, (_, index) => ({
+              key: hash(`${instance_key}:${existsWorkersCount + index}`),
+              index: existsWorkersCount + index,
+              instance_key,
+              status: 'IDLE',
+              updated_at: now,
+              created_at: now,
+            }));
+
+          await database.table('instances_workers').insert(newWorkers);
+
+          logger.console('INFO', `${missingWorkersCount} new workers initialized for instance!`);
+        }
+
+        /* WORKERs: UPDATE */
+        await database.table('instances_workers')
+          .where('instance_key', instance_key)
+          .update({
+            status: database.knex.raw(`CASE WHEN \`index\` < ? THEN 'IDLE' ELSE 'TERMINATED' END`, [config.instances.workers.max]),
+            updated_at: now,
+          });
+      } catch (error: Error | any) {
+      }
       
       try {
-        const [existingInstances] = await database.query(
-          `SELECT * FROM ${database.getTablePrefix()}instances WHERE \`key\` = :instance_key LIMIT 1`,
-          { instance_key }
-        );
+        /* INSTANCEs: SELECT */
+        const instance = await database.table('instances').select('key').where('key', instance_key).first();
         
-        if ((existingInstances as any[]).length === 0) {
+        if (!instance) {
           // INSTANCE: INSERT
-          await database.execute(
-            `INSERT INTO ${database.getTablePrefix()}instances (\`key\`, specs, status, updated_at, created_at) VALUES (:instance_key, :specs, 'RUNNING', :now, :now)`,
-            { instance_key, specs: JSON.stringify(specs), now }
-          );
+          await database.table('instances').insert({
+            key: instance_key,
+            specs: JSON.stringify(specs),
+            status: 'ONLINE',
+            updated_at: now,
+            created_at: now
+          });
 
           await logger.insert('INFO', 'Instance created!');
           return;
         }
 
         // INSTANCE: UPDATE
-        await database.execute(
-          `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, status = 'RUNNING', restart_count = (restart_count + 1), updated_at = :now WHERE \`key\` = :instance_key`,
-          { instance_key, specs: JSON.stringify(specs), now }
-        );
-
-        await database.execute(
-          `UPDATE ${database.getTablePrefix()}workers SET status = :status, outcome = :outcome WHERE instance_key = :instance_key`,
-          { instance_key, status: 'EXITED', outcome: JSON.stringify({ message: 'Worker exited!' }) }
-        );
+        await database.table('instances')
+          .where('key', instance_key)
+          .update({
+            specs: JSON.stringify(specs),
+            status: 'ONLINE',
+            restart_count: database.knex.raw('restart_count + 1'),
+            updated_at: now
+          });
 
         await logger.insert('INFO', 'Instance restarted!');
       } catch (error: Error | any) {
@@ -115,219 +129,276 @@ export async function startSupervisorService(instance_key: string) {
       }
     }
 
-    async function maintainInstance() {
-        logger.console('INFO', 'Maintaining instance...');
+    async function maintainInstancesAndWorkers() {
+        logger.console('INFO', 'Maintaining self...');
 
         try {
-          await database.execute(
-            `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, status = 'RUNNING', updated_at = :now WHERE \`key\` = :instance_key`,
-            { instance_key, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
-          );
+          await database.table('instances')
+            .where('key', instance_key)
+            .update({
+              specs: JSON.stringify(getInstanceSpecs()),
+              status: 'ONLINE',
+              updated_at: getNow(),
+            });
         } catch (error: Error | any) {
           await logger.insert('ERROR', 'Instance maintenance failed!', { error });
         }
+
+        /* INSTANCE: SELECT: MASTER */
+        const masterInstance = await getMasterInstance();
+
+        /* INSTANCEs & WORKERs: MAINTAINING */
+        if (!masterInstance || masterInstance.key !== instance_key) {
+            logger.console('INFO', 'Maintaining workers...');
+
+            /* WORKERs: UPDATE: TIMEOUT */
+            const busyTimeout = config.instances.workers.busy_timeout || (5 * 60 * 1000); // in milliseconds, default 5 minutes
+
+            const timeoutedWorkers = await database.table('instances_workers').where('status', 'BUSY').where('updated_at', '<', subtractNow(busyTimeout, 'milliseconds'))
+
+            if (timeoutedWorkers.length > 0) {
+              const timeoutedWorkerKeys = timeoutedWorkers.map((r: any) => r.key).filter(Boolean);
+
+              for (const timeoutedWorkerKey of timeoutedWorkerKeys) {
+                workersProcessMap.delete(timeoutedWorkerKey);
+              }
+
+              await database.table('instances_workers')
+                .whereIn('key', timeoutedWorkerKeys)
+                .update({
+                  status: 'TIMEOUT',
+                  updated_at: getNow(),
+                  outcome: JSON.stringify({ message: 'Busy worker timed out!' }),
+                });
+            }
+
+            /* WORKERs: UPDATE: IDLE */
+            const idleAfter = config.instances.workers.idle_after || (1 * 10 * 1000); // in milliseconds, default 10 seconds
+
+            try {
+              await database.table('instances_workers')
+                .where('status', 'TIMEOUT')
+                .where('updated_at', '<', subtractNow(idleAfter, 'milliseconds'))
+                .update({
+                  status: 'IDLE',
+                  updated_at: getNow(),
+                  outcome: JSON.stringify({ message: 'Worker is idle again!' }),
+                });
+            } catch (error: Error | any) {
+                await logger.insert('ERROR', 'The worker timed out and could not be updated!', { error });
+            }
+
+            logger.console('INFO', 'Maintaining instances...');
+
+            /* INSTANCEs: UPDATE: OFFLINE */
+            const offlineTimeout = config.instances.online_timeout || (1 * 60 * 1000); // in milliseconds, default 1 minute
+
+            try {
+              const inactiveInstances = await database.table('instances')
+                .where('status', 'ONLINE')
+                .where('updated_at', '<', subtractNow(offlineTimeout, 'milliseconds'))
+                .select('key');
+
+              const inactiveInstanceKeys = inactiveInstances.map((r: any) => r.key).filter(Boolean);
+
+              if (inactiveInstanceKeys.length > 0) {
+                await database.table('instances_workers')
+                  .whereIn('instance_key', inactiveInstanceKeys)
+                  .update({
+                    status: 'TERMINATED',
+                    updated_at: getNow(),
+                    outcome: JSON.stringify({ message: 'The worker was terminated because the instance was offline!' })
+                  });
+
+                await database.table('instances')
+                  .whereIn('key', inactiveInstanceKeys)
+                  .update({
+                    status: 'OFFLINE',
+                    updated_at: getNow(),
+                    outcome: JSON.stringify({ message: 'The instance has gone offline because it has not been updated for a long time!' })
+                  });
+              }
+            } catch (error: Error | any) {
+                await logger.insert('ERROR', 'Unable to take offline instances that were not updated!', { error });
+            }
+
+            /* INSTANCEs: DELETE: PURGE */
+            const purgeAfter = config.instances.purge_after || (1 * 60 * 1000); // in milliseconds, default 1 minute
+
+            try {
+              const offlineInstances = await database.table('instances')
+                .where('status', 'OFFLINE')
+                .where('updated_at', '<', subtractNow(purgeAfter, 'milliseconds'))
+                .select('key');
+
+              const offlineInstanceKeys = offlineInstances.map((r: any) => r.key).filter(Boolean);
+
+              if (offlineInstanceKeys.length > 0) {
+                await database.table('instances_workers').whereIn('instance_key', offlineInstanceKeys).delete();
+                await database.table('instances').whereIn('key', offlineInstanceKeys).delete();
+              }
+            } catch (error: Error | any) {
+                await logger.insert('ERROR', 'Purging offline instances failed!', { error });
+            }
+        }
     }
 
-    async function maintainInstances() {
-        logger.console('INFO', 'Maintaining instances...');
+    async function processJobs(): Promise<void> {
+        // JOBs: PENDINGs
+        logger.console('INFO', 'Enqueuing pending jobs...');
 
-        /* INSTANCEs: UPDATE */
-        const runningTimeout = config.instances.running_timeout || 60000;
-        const exitedTimeout = runningTimeout + (config.instances.exited_timeout || 60000);
-
-        /* INSTANCEs: UPDATE: RUNNING: TIMEOUT */
         try {
-          await database.execute(
-            `UPDATE ${database.getTablePrefix()}instances SET status = 'EXITED', outcome = :outcome WHERE status = 'RUNNING' AND updated_at < :cutoff`,
-            { outcome: JSON.stringify({ message: 'Instance exited due to timeout!' }), cutoff: subtractNow(runningTimeout, 'milliseconds') }
-          );
-        } catch (error: Error | any) {
-            await logger.insert('ERROR', 'Instances maintenance failed!', { error });
-        }
+          // JOBs: PENDINGs: LOCK
+          await database.table('jobs')
+            // .where('try_count', '<', 'try_max')
+            .where(function() {
+              this.where('status', 'PENDING')
+                .orWhere(function() {
+                  this.where('status', 'RETRYING')
+                    .where('retry_at', '<=', getNow());
+                });
+            })
+            .where('locked_by', null)
+            .orderBy('priority', 'asc')
+            .orderBy('created_at', 'asc')
+            .limit(config.jobs.enqueue_limit || 10) // default 10
+            .update({ updated_at: getNow(), locked_by: instance_key });
 
-        /* INSTANCEs: DELETE: EXITED: TIMEOUT */
-        try {
-          await database.execute(
-            `DELETE FROM ${database.getTablePrefix()}instances WHERE status = :status AND updated_at < :cutoff`,
-            { cutoff: subtractNow(exitedTimeout, 'milliseconds')  }
-          );
-        } catch (error: Error | any) {
-            await logger.insert('ERROR', 'Instances cleanup failed!', { error });
-        }
-    }
-
-    async function maintainWorkers() {
-        logger.console('INFO', 'Maintaining workers...');
-
-        /* WORKERs: UPDATE */
-        const runningTimeout = config.workers.running_timeout || 60000;
-        const exitedTimeout = runningTimeout + (config.workers.exited_timeout || 60000);
-
-        /* WORKERs: UPDATE: RUNNING: TIMEOUT */
-        try {
-          await database.execute(
-            `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', outcome = :outcome WHERE status = 'RUNNING' AND updated_at < :cutoff`,
-            { outcome: JSON.stringify({ message: 'Worker exited due to timeout!' }), cutoff: subtractNow(runningTimeout, 'milliseconds') }
-          );
-        } catch (error: Error | any) {
-            await logger.insert('ERROR', 'Workers maintenance failed!', { error });
-        }
-
-        /* WORKERs: DELETE: EXITED: TIMEOUT */
-        try {
-          await database.execute(
-            `DELETE FROM ${database.getTablePrefix()}workers WHERE status = 'EXITED' AND updated_at < :cutoff`,
-            { cutoff: subtractNow(exitedTimeout, 'milliseconds')  }
-          );
-        } catch (error: Error | any) {
-            await logger.insert('ERROR', 'Workers cleanup failed!', { error });
-        }
-    }
-
-    async function cleanupLogs() {
-      await database.execute(
-        `DELETE FROM ${database.getTablePrefix()}logs WHERE created_at < :cutoff`,
-        { cutoff: subtractNow(config.logs.retention || 1, 'hours') }
-      );
-
-      logger.console('INFO', 'Cleanup completed logs!');
-    }
-
-    async function maintainJobs(): Promise<void> {
-        logger.console('INFO', 'Maintaining jobs...');
-
-        /* JOBs: PENDINGs */
-        try {
-          const [pendingJobs] = await database.query(
-            `SELECT * FROM ${database.getTablePrefix()}jobs WHERE status = 'PENDING' OR (status = 'RETRYING' AND retry_at <= :now)`,
-            { now: getNow() }
-          );
-
-          const databaseConn = await database.getConnection();
+          const pendingJobs = await database.table('jobs').where('locked_by', instance_key).select('key', 'priority', 'created_at', 'notification');
 
           for (const pendingJob of pendingJobs) {
-            try{
-              if (databaseConn.beginTransaction) await databaseConn.beginTransaction();
+            // JOB: QUEUE: INSERT
+            await database.table('jobs_queue')
+              .insert({ key: pendingJob.key, priority: pendingJob.priority, created_at: pendingJob.created_at })
+              .then(async result => {
+                // JOB: UPDATE: QUEUED
+                pendingJob.status = 'QUEUED';
+                await database.table('jobs').where('key', pendingJob.key).update({status: pendingJob.status, updated_at: getNow(), locked_by: null });
 
-              await databaseConn.execute(
-                `UPDATE ${database.getTablePrefix()}jobs SET status = :status, retry_at = :retry_at WHERE \`key\` = :key`,
-                { ...pendingJob, status: 'QUEUED', retry_at: null }
-              );
-            
-              await databaseConn.execute(
-                `INSERT INTO ${database.getTablePrefix()}jobs_queue (\`key\`, priority, created_at) VALUES (:key, :priority, :created_at)`,
-                { ...pendingJob }
-              );
+                if (pendingJob.notification) await createJobNotification('QUEUED', pendingJob);
 
-              if (databaseConn.commit) await databaseConn.commit();
-
-              if (pendingJob.notification) await createJobNotification('QUEUED', pendingJob);
-
-              await logger.insert('INFO', 'Job successfully queued! - X', { job_key: pendingJob.key });
-            } catch (error: Error | any) {
-              if (databaseConn.rollback) await databaseConn.rollback();
-              await logger.insert('ERROR', 'Create job queue failed!', { job_key: pendingJob.key, error });
-            } finally {
-              if (databaseConn.release) databaseConn.release();
-            }
+                await logger.insert('INFO', 'Job successfully queued!', { job_key: pendingJob.key });
+              })
+              .catch(async error => {
+                // JOB: UPDATE: PENDING
+                pendingJob.status = 'PENDING';
+                await database.table('jobs').where('key', pendingJob.key).update({ status: pendingJob.status, updated_at: getNow(), locked_by: null });
+                await logger.insert('ERROR', 'Enqueuing job failed!', { job_key: pendingJob.key, error });
+              });
           }
+
+          // JOBs: PENDINGs: RELEASE
+          await database.table('jobs').where('locked_by', instance_key).update({updated_at: getNow(), locked_by: null });
         } catch (error: Error | any) {
             await logger.insert('ERROR', 'Failed to maintain pending jobs!', { error });
         }
 
-        /* INSTANCE: WORKERs: SELECT */
-        const [runningWorkers] = await database.query(
-          `SELECT * FROM ${database.getTablePrefix()}workers WHERE instance_key = :instance_key AND status = 'RUNNING'`,
-          { instance_key }
-        ) as any[];
+        // JOBs: QUEUEDs: PROCESSING
+        logger.console('INFO', 'Processing jobs queue...');
+        
+        const idleWorkers = await database.table('instances_workers').where('instance_key', instance_key).where('status', 'IDLE');
 
-        const runningWorkersCount = runningWorkers.length;
-
-        /* JOBs: QUEUEDs */
-        if (runningWorkersCount < config.workers.max) {
+        if (idleWorkers.length > 0) {
           try {
-              const [queuedJobs] = await database.query(
-                `SELECT * FROM ${database.getTablePrefix()}jobs_queue ORDER BY priority ASC, created_at ASC LIMIT ${config.workers.max - runningWorkersCount || 1}`,
-                { now: getNow() }
-              ) as any[];
+              // JOBs: QUEUEDs: LOCK
+              await database.table('jobs_queue')
+                .where('locked_by', null)
+                .update({ locked_by: instance_key })
+                .orderBy('priority', 'asc')
+                .orderBy('created_at', 'asc')
+                .limit(idleWorkers.length);
 
-              for (const queuedJob of queuedJobs) {
-                await createWorkerForJob(queuedJob.key);
+              // JOBs: QUEUEDs: LOCKEDs
+              const queuedJobs = await database.table('jobs_queue').where('locked_by', instance_key);
+
+              for (let index = 0; index < queuedJobs.length; index++) {
+                const idleWorker = idleWorkers[index];
+                const queuedJob = queuedJobs[index];
+                await spawnWorkerForJob(idleWorker.key, queuedJob.key);
               }
+
+              // JOBs: QUEUEDs: RELEASE
+              await database.table('jobs_queue').where('locked_by', instance_key).update({ locked_by: null });
           } catch (error: Error | any) {
               await logger.insert('ERROR', 'Failed to poll jobs!', { error });
           }
         }
-    }
 
-    async function maintainJobsNotifications(): Promise<void> {
-        logger.console('INFO', 'Polling job notifications...');
-
-        try {
-            // Check for failed notifications that need to be retried
-            const [queryNotifications] = await database.query(
-              `SELECT * FROM ${database.getTablePrefix()}jobs_notifications WHERE status = 'PENDING' AND retry_at <= :now LIMIT ${config.notifications.poll_limit || 10 }`, //  ORDER BY priority
-              { now: getNow() }
-            );
-
-            for (const notification of queryNotifications as Array<JobNotificationRow>) {
-                retryJobNotification(notification);
-            }
-        } catch (error: Error | any) {
-            await logger.insert('ERROR', 'Failed to poll job notifications!', { error });
+        // JOBs: TIMEOUTs
+        if (config.jobs.process_timeout > 0){
+          logger.console('INFO', 'Jobs are timing out...');
+          
+          try {
+            await database.table('jobs')
+              .whereNotIn('status', ['COMPLETED', 'CANCELLED', 'FAILED', 'TIMEOUT'])
+              .where('updated_at', '<', subtractNow(config.jobs.process_timeout || (10 * 60 * 1000), 'milliseconds')) // in milliseconds, default 10 minutes
+              .where('try_count', '>', 0)
+              .update({ status: 'TIMEOUT' });
+          } catch (error: Error | any) {
+            await logger.insert('ERROR', 'Jobs could not be timed out!', { error });
+          }
         }
     }
 
-    // Keep in-memory ChildProcess handles only. Worker metadata is persisted in Database.
-    // Keys in workersProcessMap are worker_key (uuid per worker), not job keys.
+    async function processJobsNotifications(): Promise<void> {
+        // JOBs: NOTIFICATIONs: PROCESSING
+        logger.console('INFO', 'Processing jobs notifications queue...');  
+
+        try {
+            // JOBs: NOTIFICATIONs: QUEUE: LOCK
+            await database.table('jobs_notifications_queue')
+              // .where('try_count', '<', 'try_max')
+              .where(function() {
+                this.where('status', 'PENDING')
+                  .orWhere(function() {
+                    this.where('status', 'RETRYING')
+                      .where('retry_at', '<=', getNow());
+                  });
+              })
+              .where('locked_by', null)
+              .orderBy('priority', 'asc')
+              .orderBy('created_at', 'asc')
+              .limit(config.jobs.enqueue_limit || 10) // default 10
+              .update({ locked_by: instance_key }); // updated_at: getNow(),
+
+            // JOBs: NOTIFICATIONs: QUEUE: SELECT LOCKEDs
+            const pendingJobsNotifications = await database.table('jobs_notifications_queue').where('locked_by', instance_key);
+            
+            for (const pendingNotification of pendingJobsNotifications) {
+              await retryJobNotification(pendingNotification);
+            }
+
+            // JOBs: QUEUEDs: RELEASE
+            await database.table('jobs_notifications_queue').where('locked_by', instance_key).update({ locked_by: null });
+        } catch (error: Error | any) {
+            await logger.insert('ERROR', 'Failed to process jobs notifications queue!', { error });
+        }
+    }
+
     const workersProcessMap = new Map<string, ChildProcess>();
 
-    async function createWorkerForJob(job_key: string): Promise<any> {
-      const worker = {
-        key: uukey(),
-      };
-
-      const databaseConn = await database.getConnection();
-      
+    async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<any> {
       try {
-        if (databaseConn.beginTransaction) await databaseConn.beginTransaction();
+        await logger.insert('INFO', 'Spawning worker for job...', { worker_key, job_key });
 
-        /* JOB: QUEUE: DELETE */
-        await database.execute(
-          `DELETE FROM ${database.getTablePrefix()}jobs_queue WHERE \`key\` = :job_key`,
-          { job_key }
-        );
-
-        /* WORKER: INSERT */
-        await database.execute(
-          `INSERT INTO ${database.getTablePrefix()}workers (\`key\`, instance_key, job_key, status, updated_at, created_at) VALUES (:worker_key, :instance_key, :job_key, 'RUNNING', :now, :now)`,
-          { instance_key, worker_key: worker.key, job_key, now: getNow() }
-        );
-
-        /* INSTANCE: UPDATE */
-        await database.execute(
-          `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, workers_running_count = workers_running_count + 1, updated_at = :now WHERE \`key\` = :instance_key`,
-          { instance_key, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
-        );
-
+        // JOB: QUEUE: DELETE
+        await database.table('jobs_queue').where('key', job_key).delete();
+        
         /* JOB: NOTIFICATIONs: UPDATE */
-        await database.execute(
-          `UPDATE ${database.getTablePrefix()}jobs_notifications SET instance_key = :instance_key, worker_key = :worker_key WHERE job_key = :job_key`,
-          { instance_key, worker_key: worker.key, job_key }
-        );
+        // await database.table('jobs_notifications').where('job_key', job_key).update({ instance_key, worker_key: worker_key });
 
         /* WORKER: CREATE */
         let child: ChildProcess;
 
         if (config.env === 'prod') {
           const workerScriptPath = path.join(process.cwd(), 'dist', 'services', 'worker', 'index.js');
-          child = spawn('node', [workerScriptPath, instance_key, worker.key, job_key], {
+          child = spawn('node', [workerScriptPath, instance_key, worker_key, job_key], {
             stdio: ['inherit', 'inherit', 'inherit'],
             cwd: process.cwd()
           });
         } else {
           const workerScriptPath = path.join(process.cwd(), 'src', 'services', 'worker', 'index.ts');
-          child = spawn('npx', ['tsx', workerScriptPath, instance_key, worker.key, job_key], {
+          child = spawn('npx', ['tsx', workerScriptPath, instance_key, worker_key, job_key], {
             stdio: ['inherit', 'inherit', 'inherit'],
             cwd: process.cwd(),
             shell: true
@@ -336,131 +407,98 @@ export async function startSupervisorService(instance_key: string) {
 
         /* WORKER: EVENTs */
         child.on('exit', async (code, signal) => {
-          logger.console('INFO', 'Worker process exited!', { worker_key: worker.key, job_key, code, signal });
-          workersProcessMap.delete(worker.key);
+          logger.console('INFO', 'Worker exited!', { worker_key, job_key, code, signal });
+          workersProcessMap.delete(worker_key);
           
           /* WORKER: UPDATE */
-          try {
-            await database.execute(
-              `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :worker_key`,
-              { worker_key: worker.key, outcome: JSON.stringify({ message: 'Worker exited!', exit_code: code, exit_signal: signal }), now: getNow() }
-            );
-          } catch (error: Error | any) {
-            await logger.insert('ERROR', 'Failed to update worker!', { worker_key: worker.key, job_key, error });
-          }
-
-          /* INSTANCE: UPDATE */
-          try {
-            await database.execute(
-              `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
-              { instance_key, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
-            );
-          } catch (error: Error | any) {
-            await logger.insert('ERROR', 'Failed to update instance!', { worker_key: worker.key, job_key, error });
-          }
+          await database.table('instances_workers')
+            .where('key', worker_key)
+            .update({
+              status: 'IDLE',
+              updated_at: getNow(),
+              outcome: JSON.stringify({ message: 'Worker exited!', exit_code: code, exit_signal: signal })
+            })
+            .catch(error => {
+              logger.insert('ERROR', 'Failed to idle worker!', { worker_key, job_key, error });
+            });
         });
 
         child.on('error', async (error) => {
-          await logger.insert('ERROR', 'Worker process error!', { worker_key: worker.key, job_key, error });
-          workersProcessMap.delete(worker.key);
+          await logger.insert('ERROR', 'Worker exited due error!', { worker_key, job_key, error });
+          workersProcessMap.delete(worker_key);
           
           /* WORKER: UPDATE */
-          try {
-            await database.execute(
-              `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :worker_key`,
-              { worker_key: worker.key, outcome: JSON.stringify({ message: error.message || 'Unknown error occurred!', exit_signal: 'ERROR' }), now: getNow() }
-            );
-          } catch (error: Error | any) {
-            await logger.insert('ERROR', 'Failed to update worker!', { worker_key: worker.key, job_key, error });
-          }
-          
-          /* INSTANCE: UPDATE */
-          try {
-            await database.execute(
-              `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, workers_running_count = CASE WHEN workers_running_count > 0 THEN workers_running_count - 1 ELSE 0 END, updated_at = :now WHERE \`key\` = :instance_key`,
-              { instance_key, specs: JSON.stringify(getInstanceSpecs()), now: getNow() }
-            );
-          } catch (error: Error | any) {
-            await logger.insert('ERROR', 'Failed to update instance!', { worker_key: worker.key, job_key, error });
-          }
+          await database.table('instances_workers')
+            .where('key', worker_key)
+            .update({
+              status: 'IDLE',
+              updated_at: getNow(),
+              outcome: JSON.stringify({ message: error.message || 'Unknown error occurred!', exit_signal: 'ERROR' })
+            })
+            .catch(error => {
+              logger.insert('ERROR', 'Failed to idle worker!', { worker_key, job_key, error });
+            });
         });
 
-        workersProcessMap.set(worker.key, child);
+        workersProcessMap.set(worker_key, child);
 
-        if (databaseConn.commit) await databaseConn.commit();
-
-        logger.console('INFO', 'Worker succesfully created for job!', { worker_key: worker.key, job_key });
-
-        return worker;
+        logger.console('INFO', 'Worker successfully spawned for the job!', { worker_key, job_key });
       } catch (error: Error | any) {
-        if (databaseConn.rollback) await databaseConn.rollback();
-        await logger.insert('ERROR', 'Failed to create worker for job!', { job_key, error });
-        return null;
-      } finally {
-        if (databaseConn.release) databaseConn.release();
+        await logger.insert('ERROR', 'Failed to spawn worker for the job!', { job_key, error });
       }
     }
 
-    async function cleanupJobs() {
-      const [rows] = await database.query(
-        `SELECT \`key\` FROM ${database.getTablePrefix()}jobs WHERE status = 'COMPLETED' AND completed_at IS NOT NULL AND completed_at < :cutoff`,
-        { cutoff: subtractNow(config.jobs.retention || 24, 'hours')  }
-      );
+    async function cleanup() {
+      /* JOBs: CLEANUP */
+      logger.console('INFO', 'Cleaning up completed jobs...');
+
+      const jobs = await database.table('jobs')
+        .select('key')
+        .where('status', 'COMPLETED')
+        .whereNotNull('completed_at')
+        .where('completed_at', '<', subtractNow(config.jobs.retention || (24 * 60 * 60 * 1000), 'milliseconds')); // in milliseconds, default 24 hours
       
-      const keys = (rows as any[]).map((r) => r.key);
+      const jobsKeys = jobs.map((r: any) => r.key);
       
-      if (keys.length === 0) {
-        logger.console('INFO', 'No jobs to cleanup!');
-        return;
-      }
-      
-      // Delete job folders/objects via unified storage facade
-      for (const key of keys) {
-        const prefix = `/jobs/${key}/`;
-        
-        try {
-          await storage.delete(prefix);
-        } catch (error: Error | any) {
+      if (jobsKeys.length > 0) {
+        // Delete job folders/objects via unified storage facade
+        for (const job_key of jobsKeys) {
+          try {
+            await storage.delete(`/jobs/${job_key}/`);
+          } catch (error: Error | any) {
+          }
         }
+
+        await database.table('jobs').whereIn('key', jobsKeys).del();
+        // await database.table('jobs_queue').whereIn('key', jobsKeys).del();
+        // await database.table('jobs_notifications').whereIn('job_key', jobsKeys).del();
+
+        logger.console('INFO', 'Jobs cleaning completed!', { count: jobsKeys.length });
       }
 
-      await database.execute(`DELETE FROM ${database.getTablePrefix()}jobs WHERE \`key\` IN (${keys.map(() => '?').join(',')})`, keys);
-      // await database.execute(`DELETE FROM ${database.getTablePrefix()}jobs_notifications WHERE job_key IN (${keys.map(() => '?').join(',')})`, keys);
-      // await database.execute(`DELETE FROM ${database.getTablePrefix()}jobs_queue WHERE job_key IN (${keys.map(() => '?').join(',')})`, keys);
+      /* LOGS: CLEANUP */
+      logger.console('INFO', 'Cleaning logs...');
 
-      logger.console('INFO', 'Cleanup completed jobs!', { count: keys.length });
+      if (!config.logs.is_disabled || (config.logs.retention || (60 * 60 * 1000)) > 0) { // in milliseconds, default 1 hour
+          await database.table('logs').where('created_at', '<', subtractNow(config.logs.retention || (60 * 60 * 1000), 'milliseconds')).del(); // in milliseconds, default 1 hour
+          logger.console('INFO', 'Logs cleaning completed!');
+      }
     }
 
     try {
         await initInstance();
-        intervals.set('maintainInstance', setInterval(() => maintainInstance(), config.instances.maintain_interval || 60000));
 
-        await maintainJobs();
-        intervals.set('maintainJobs', setInterval(() => maintainJobs(), config.jobs.maintain_interval || 10000));
-
-        await maintainJobsNotifications();
-        intervals.set('maintainJobsNotifications', setInterval(() => maintainJobsNotifications(), config.notifications.maintain_interval || 60000));
-
-        /* INSTANCE: SELECT: MASTER */
-        const masterInstance = await getMasterInstance();
+        await maintainInstancesAndWorkers();
+        intervals.set('maintainInstancesAndWorkers', setInterval(() => maintainInstancesAndWorkers(), config.instances.maintain_interval || 60000));
         
-        if(masterInstance.key == instance_key){
-            if((config.jobs.retention || 24) > 0){
-                await cleanupJobs();
-                intervals.set('cleanupJobs', setInterval(() => cleanupJobs(), config.jobs.cleanup_interval || 3600000));
-            }
+        await processJobs();
+        intervals.set('processJobs', setInterval(() => processJobs(), config.jobs.process_interval || 10000));
 
-            await maintainInstances();
-            intervals.set('maintainInstances', setInterval(() => maintainInstances(), config.instances.maintain_interval || 60000));
+        await processJobsNotifications();
+        intervals.set('processJobsNotifications', setInterval(() => processJobsNotifications(), config.jobs.notifications.process_interval || 60000));
 
-            await maintainWorkers();
-            intervals.set('maintainWorkers', setInterval(() => maintainWorkers(), config.workers.maintain_interval || 60000));
-
-            if(!config.logs.is_disabled || (config.logs.retention || 1) > 0){
-                await cleanupLogs();
-                intervals.set('cleanupLogs', setInterval(() => cleanupLogs(), config.logs.cleanup_interval || 3600000));
-            }
-        }
+        await cleanup();
+        intervals.set('cleanup', setInterval(() => cleanup(), config.database.cleanup_interval || (60 * 60 * 1000))); // in milliseconds, default 1 hour
     } catch (error: Error | any) {
         await logger.insert('ERROR', 'Failed to start supervisor service!', { error });
         throw error;
@@ -481,20 +519,27 @@ export async function shutdownSupervisorService(instance_key: string, signal: st
 
   // DB: WORKERs: UPDATE
   try {
-    await database.execute(
-      `UPDATE ${database.getTablePrefix()}workers SET status = 'EXITED', updated_at = :now, outcome = :outcome WHERE instance_key = :instance_key`,
-      { instance_key, outcome: JSON.stringify({ message: 'Worker exited due to instance shutdown!', signal }), now: getNow() }
-    );
+    await database.table('instances_workers')
+      .where('instance_key', instance_key)
+      .update({
+        status: 'TERMINATED',
+        updated_at: getNow(),
+        outcome: JSON.stringify({ message: 'The worker was terminated because the instance was shutdown!', signal })
+      });
   } catch (error: Error | any) {
     await logger.insert('ERROR', 'Failed to update workers for instance during shutdown!', { error });
   }
   
   // DB: INSTANCE: UPDATE
   try {
-    await database.execute(
-      `UPDATE ${database.getTablePrefix()}instances SET specs = :specs, status = 'EXITED', updated_at = :now, outcome = :outcome WHERE \`key\` = :instance_key`,
-      { instance_key, specs: JSON.stringify(getInstanceSpecs()), outcome: JSON.stringify({ message: 'Instance exited due to shutdown!', signal }), now: getNow() }
-    );
+    await database.table('instances')
+      .where('key', instance_key)
+      .update({
+        specs: JSON.stringify(getInstanceSpecs()),
+        status: 'OFFLINE',
+        updated_at: getNow(),
+        outcome: JSON.stringify({ message: 'The instance has gone offline due to shutdown!', signal })
+      });
   } catch (error: Error | any) {
     await logger.insert('ERROR', 'Failed to update instance during shutdown!', { error });
   }

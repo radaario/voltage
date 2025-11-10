@@ -114,8 +114,8 @@ export type JobRow = {
   destination?: any | null;
   notification?: any | null;
   metadata?: any | null;
-  status?: 'RECEIVED' | 'PENDING' | 'RETRYING' | 'QUEUED' | 'STARTED' | 'DOWNLOADING' | 'ANALYZING' | 'ENCODING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED';
-  progress?: number | 0.00; // STARTED = 0; DOWNLOADING = 20; ANALYZING = 40; ENCODING = 60; UPLOADING = 80; COMPLETED = 100;
+  status?: 'RECEIVED' | 'PENDING' | 'RETRYING' | 'QUEUED' | 'STARTED' | 'DOWNLOADING' | 'ANALYZING' | 'PROCESSING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED';
+  progress?: number | 0.00; // STARTED = 0; DOWNLOADING = 20; ANALYZING = 40; PROCESSING = 60; UPLOADING = 80; COMPLETED = 100;
   started_at?: string | null;
   completed_at?: string | null;
   updated_at?: string;
@@ -136,13 +136,13 @@ export type JobNotificationRow = {
   priority?: number | 1000;
   specs?: any | null;
   payload?: any | null;
-  status?: 'PENDING' | 'SUCCESSFUL' | 'SKIPPED' | 'FAILED';
-  retry_max?: number | 0;
-  retry_count?: number | 0;
-  retry_in?: number | 0;
-  retry_at?: string | null;
+  outcome?: any | null;
+  status?: 'PENDING' | 'RETRYING' | 'QUEUED' | 'SUCCESSFUL' | 'SKIPPED' | 'FAILED';
   updated_at?: string;
   created_at?: string;
-  outcome?: any | null;
+  try_max: number | 3; // default 3
+  try_count: number | 0;
+  retry_in: number | 60000; // in milliseconds, default 1 minute
+  retry_at?: string | null;
 };
 

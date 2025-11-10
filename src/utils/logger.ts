@@ -1,11 +1,7 @@
 import { config } from '../config/index.js';
-
 import { getNow, uukey } from './index.js';
-import { database } from './database.js';
 
 import {pino as _pino} from 'pino';
-
-database.config(config.database);
 
 const pino = _pino({
   level: process.env.LOG_LEVEL ?? 'info',
@@ -32,10 +28,9 @@ class Logger {
 
     if (!config.logs.is_disabled) {
       try {
-        await database.execute(
-          `INSERT INTO ${database.getTablePrefix()}logs (\`key\`, type, instance_key, worker_key, job_key, output_key, notification_key, message, metadata, created_at) VALUES (:key, :type, :instance_key, :worker_key, :job_key, :output_key, :notification_key, :message, :metadata, :created_at)`,
-          log
-        );
+        const { database } = await import('./database.js');
+        database.config(config.database);
+        await database.table('logs').insert(log);
       } catch (error: Error | any) {
         this.console('ERROR', 'Could not insert log into database!', { error });
       }

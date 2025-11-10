@@ -32,8 +32,8 @@ export function getInstanceSpecs(): any{
     memory_total: os.totalmem(),
     memory_free: os.freemem(),
     memory_usage_percent: getInstanceMemoryUsagePercent(),
-    workers_per_cpu_core: config.workers.per_cpu_core,
-    workers_max: config.workers.max,
+    workers_per_cpu_core: config.instances.workers.per_cpu_core,
+    workers_max: config.instances.workers.max,
   };
 }
 

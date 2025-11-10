@@ -7,6 +7,8 @@ import { logger } from '../../utils/logger.js';
 import axios from 'axios';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 
+let database: any = null;
+
 export async function createJobNotification(event: string, job: any): Promise<any> {
     logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
@@ -14,7 +16,7 @@ export async function createJobNotification(event: string, job: any): Promise<an
       status: 'FAILED',
     };
 
-    let jobNotificationEvents = config.notifications.events_default ? config.notifications.events_default.split(',') : [];
+    let jobNotificationEvents = config.jobs.notifications.events_default ? config.jobs.notifications.events_default.split(',') : [];
     if (job.notification && job.notification.events && Array.isArray(job.notification.events)) {
       jobNotificationEvents = job.notification.events;
     }
@@ -23,16 +25,18 @@ export async function createJobNotification(event: string, job: any): Promise<an
       return { status: 'SKIPPED' };
     }
 
-    const { database } = await import('../../utils/database.js');
+    if (!database) {
+      const _database = await import('../../utils/database.js');
+      database = _database.database;
+      database.config(config.database);
+    }
 
-    database.config(config.database);
-
-    const sanitizedJob = sanitizeData(job);
+    const sanitizedJob = sanitizeData({ ...job, status: event });
     const now = getNow();
 
     const notificationOutcome = await notify(event, job.notification, sanitizedJob);
 
-    let notification: JobNotificationRow = {
+    let notification: any = {
       key: uukey(),
       event: event,
       instance_key: job.instance_key,
@@ -41,51 +45,50 @@ export async function createJobNotification(event: string, job: any): Promise<an
       priority: job.priority ?? 1000,
       specs: job.notification || null,
       payload: sanitizedJob || null,
+      outcome: notificationOutcome || null,
       status: notificationOutcome.status || 'FAILED',
-      retry_max: 0,
-      retry_count: 1,
-      retry_in: 0,
-      retry_at: null,
       updated_at: now,
       created_at: now,
-      outcome: notificationOutcome || null,
+      try_max: config.jobs.notifications.try || 3, // default 3
+      try_count: 1,
+      retry_in: config.jobs.notifications.retry_in || (1 * 60 * 1000), // in milliseconds, default 1 minute
+      retry_at: null,
     };
-  
-    if (notification.status === 'FAILED') {
-      notification.retry_max = job.notification?.retry ? parseInt(job.notification.retry) : config.notifications.retry;
-      if (notification.retry_max < config.notifications.retry_min) notification.retry_max = config.notifications.retry_min;
-      if (notification.retry_max > config.notifications.retry_max) notification.retry_max = config.notifications.retry_max;
 
-      notification.retry_in = parseInt(job.notification?.retry_in) > 0 ? parseInt(job.notification.retry_in) : config.notifications.retry_in;
-      if (notification.retry_in < config.notifications.retry_in_min) notification.retry_in = config.notifications.retry_in_min;
-      if (notification.retry_in > config.notifications.retry_in_max) notification.retry_in = config.notifications.retry_in_max;
-      
-      if (notification.retry_in > 0 && (notification.retry_count || 1) < notification.retry_max) {
-        notification.status = 'PENDING';
-        notification.retry_at = addNow(notification.retry_in, 'milliseconds');
-      }
+    if (job?.notification?.try && parseInt(job.notification.try) > 0) notification.try_max = parseInt(job.notification.try);
+    if (notification.try_max < 1) notification.try_max = 1;
+    if (notification.try_max > config.jobs.notifications.try_max) notification.try_max = config.jobs.notifications.try_max;
+
+    if (job.notification?.retry_in && parseInt(job.notification.retry_in) > 0) notification.retry_in = parseInt(job.notification.retry_in);
+    if (notification.retry_in < (1 * 1000)) notification.retry_in = (1 * 1000);
+    if (notification.retry_in > config.jobs.notifications.retry_in_max) notification.retry_in = config.jobs.notifications.retry_in_max;
+  
+    if (notification.status === 'FAILED' && notification.try_count < notification.try_max) {
+      notification.status = 'RETRYING';
+      notification.retry_at = addNow(notification.retry_in, 'milliseconds');
+
+      // JOB: NOTIFICATION: QUEUE: INSERT
+      await database.table('jobs_notifications_queue').insert(notification); // .onConflict('key').merge();
     }
 
-    if(notification.status === 'SUCCESSFUL') {
+    if(['SUCCESSFUL', 'FAILED'].includes(notification.status)) {
       try {
-        await database.execute(`UPDATE ${database.getTablePrefix()}jobs_notifications SET status = 'SKIPPED' WHERE job_key = :job_key AND status = 'PENDING'`, // , updated_at = :now
-          { job_key: notification.job_key, now: getNow() }
-        );
+        // JOB: NOTIFICATION: QUEUE: DELETE
+        // await database.table('jobs_notifications_queue').where('key', notification.key).del();
+        // await database.table('jobs_notifications').where('job_key', notification.job_key).whereIn('status', ['PENDING', 'RETRYING']).update({status: 'SKIPPED'});
       } catch (error: Error | any) {
       }
     }
 
     try {
-      await database.execute(
-        `INSERT INTO ${database.getTablePrefix()}jobs_notifications (\`key\`, instance_key, worker_key, job_key, event, priority, specs, payload, status, retry_max, retry_count, retry_in, retry_at, updated_at, created_at, outcome) VALUES (:key, :instance_key, :worker_key, :job_key, :event, :priority, :specs, :payload, :status, :retry_max, :retry_count, :retry_in, :retry_at, :updated_at, :created_at, :outcome)`,
-        { 
-          ...notification,
-          specs: notification.specs ? JSON.stringify(notification.specs) : null,
-          payload: notification.payload ? JSON.stringify(notification.payload) : null,
-          outcome: notification.outcome ? JSON.stringify(notification.outcome) : null
-        }
-      );
-
+      // JOB: NOTIFICATION: INSERT
+      await database.table('jobs_notifications').insert({
+        ...notification,
+        specs: notification.specs ? JSON.stringify(notification.specs) : null,
+        payload: notification.payload ? JSON.stringify(notification.payload) : null,
+        outcome: notification.outcome ? JSON.stringify(notification.outcome) : null,
+      });
+      
       return notificationOutcome;
     } catch (error: Error | any) {
       logger.console('ERROR', 'Failed to create job notification record!', { notification_key: notification.key, notification_event: notification.event, error });
@@ -103,40 +106,51 @@ export async function retryJobNotification(notification: any): Promise<any> {
     status: 'FAILED',
   };
 
-  const { database } = await import('../../utils/database.js');
-
-  database.config(config.database);
+  if (!database) {
+    const _database = await import('../../utils/database.js');
+    database = _database.database;
+    database.config(config.database);
+  }
 
   try {
     const notificationOutcome = await notify(notification.event, JSON.parse(notification.specs), JSON.parse(notification.payload));
 
     notification.status = notificationOutcome.status || 'FAILED';
-    notification.retry_count = (notification.retry_count || 0) + 1;
+    notification.try_count = (notification.try_count || 1) + 1;
     notification.updated_at = getNow();
     notification.outcome = notificationOutcome;
+    notification.retry_at = null;
 
-    if (notification.status === 'FAILED') {
-      notification.retry_at = null;
+    if (notification.status === 'FAILED' && notification.try_count < notification.try_max) {
+      notification.status = 'RETRYING';
+      notification.retry_at = addNow(notification.retry_in, 'milliseconds');
 
-      if (notification.retry_in > 0 && notification.retry_count < notification.retry_max) {
-        notification.status = 'PENDING';
-        notification.retry_at = addNow(notification.retry_in, 'milliseconds');
+      // JOB: NOTIFICATION: QUEUE: UPDATE OR INSERT
+      try {
+        await database.table('jobs_notifications_queue').insert(notification).onConflict('key').merge();
+      } catch (error: Error | any) {
+        console.log("ERROR", error);
       }
     }
 
-    if(notification.status === 'SUCCESSFUL') {
+    if(['SUCCESSFUL', 'FAILED'].includes(notification.status)) {
       try {
-        await database.execute(`UPDATE ${database.getTablePrefix()}jobs_notifications SET status = 'SKIPPED' WHERE job_key = :job_key AND status = 'PENDING'`, // , updated_at = :now
-          { job_key: notification.job_key }
-        );
+        // JOB: NOTIFICATION: QUEUE: DELETE
+        await database.table('jobs_notifications_queue').where('key', notification.key).del();
+        // await database.table('jobs_notifications').where('job_key', notification.job_key).whereIn('status', ['PENDING', 'RETRYING']).update({ status: 'SKIPPED' });
       } catch (error: Error | any) {
       }
     }
 
-    await database.execute(
-      `UPDATE ${database.getTablePrefix()}jobs_notifications SET status = :status, retry_count = :retry_count, retry_at = :retry_at, updated_at = :updated_at, outcome = :outcome WHERE \`key\` = :key`,
-      { ...notification, outcome: JSON.stringify(notification.outcome) }
-    );
+    // JOB: NOTIFICATION: UPDATE
+    await database.table('jobs_notifications')
+      .where('key', notification.key)
+      .update({
+        ...notification,
+        specs: notification.specs ? JSON.stringify(notification.specs) : null,
+        payload: notification.payload ? JSON.stringify(notification.payload) : null,
+        outcome: notification.outcome ? JSON.stringify(notification.outcome) : null,
+      });
 
     if (notificationOutcome.status === 'SUCCESSFUL') {
       outcome = { status: 'SUCCESSFUL' };
@@ -167,7 +181,7 @@ export async function notify(event: string, specs: NotificationSpec, payload: un
       throw new Error('Unknown notification type!');
     }
   } catch (error: Error | any) {
-    logger.console('ERROR', 'Notification failed!', { error: { code: error.code, name: error.name, message: error.message || 'Unknown error occurred!' } });
+    logger.console('WARNING', 'Notification couldn\'t be sent!', { error: { code: error.code, name: error.name, message: error.message || 'Unknown error occurred!' } });
     outcome.error = { message: error.message || 'Unknown error occurred!' };
   }
 
@@ -180,11 +194,15 @@ async function notifyHttp(event: string, specs: any, payload: any): Promise<any>
   
   // Always include full payload with metadata
   const data = {event, ...payload};
-  
+
+  let timeout = specs.timeout || config.jobs.notifications.timeout;
+  if (timeout < 1) timeout = 1;
+  if (timeout > config.jobs.notifications.timeout_max) timeout = config.jobs.notifications.timeout_max;
+
   const requestConfig: any = {
     method,
     headers,
-    timeout: (specs.timeout && parseInt(specs.timeout) > 0 && parseInt(specs.timeout) < config.notifications.timeout) ? parseInt(specs.timeout) : config.notifications.timeout || (10 * 1000),
+    timeout,
   };
 
   if (method === 'GET') {

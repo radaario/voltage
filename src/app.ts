@@ -2,7 +2,6 @@ import { config } from './config/index.js';
 
 import { createInstanceKey } from './utils/index.js';
 import { logger } from './utils/logger.js';
-import { database } from './utils/database.js';
 
 import { startApiService } from './services/api.js';
 import { startSupervisorService, shutdownSupervisorService } from './services/supervisor.js';
@@ -11,8 +10,6 @@ import { startSupervisorService, shutdownSupervisorService } from './services/su
 const instance_key = createInstanceKey();
 
 logger.setMetadata({ instance_key });
-database.config(config.database);
-await database.verifySchemaExists();
 
 // Initialize and start the Instance
 async function main() {

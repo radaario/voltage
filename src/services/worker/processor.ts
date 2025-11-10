@@ -5,14 +5,14 @@ import { logger } from '../../utils/logger.js';
 import { spawn } from 'child_process';
 import path from 'path';
 
-export async function encodeOutput(job: any, output: any): Promise<any> {
+export async function processOutput(job: any, output: any): Promise<any> {
   logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
   const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
   const jobTempInputFilePath = path.join(jobTempFolder, 'input');
   const jobTempOutputFilePath = path.join(jobTempFolder, `output.${output.index}.${(output.format || 'mp4').toLowerCase()}`);
 
-  logger.console('INFO', 'Encoding job output...', { output_key: output.key, output_index: output.index});
+  logger.console('INFO', 'Processing job output...', { output_key: output.key, output_index: output.index});
 
   const args: string[] = ['-y', '-i', jobTempInputFilePath];
   if (output.specs.videoCodec) args.push('-c:v', output.specs.videoCodec);
@@ -29,16 +29,16 @@ export async function encodeOutput(job: any, output: any): Promise<any> {
       proc.on('error', reject);
       proc.on('exit', (code) => {
         if (code === 0) resolve();
-        else reject(new Error(`Ffmpeg encoding job output exited with code ${code}`));
+        else reject(new Error(`Ffmpeg processing job output exited with code ${code}`));
       });
     });
 
-    logger.console('INFO', 'Job output encoded!', { output_key: output.key, output_index: output.index });
+    logger.console('INFO', 'Job output processed!', { output_key: output.key, output_index: output.index });
     
     return { file_path: jobTempOutputFilePath };
   } catch (error: Error | any) {
-    await logger.insert('ERROR', 'Failed to encode job output!', { output_key: output.key, output_index: output.index,error });
-    throw new Error((`Failed to encode job output! ${error.message || ''}`).trim());
-    // return { ...error || { message: 'Failed to encode job output!' }, args };
+    await logger.insert('ERROR', 'Failed to process job output!', { output_key: output.key, output_index: output.index,error });
+    throw new Error((`Failed to process job output! ${error.message || ''}`).trim());
+    // return { ...error || { message: 'Failed to process job output!' }, args };
   }
 }
