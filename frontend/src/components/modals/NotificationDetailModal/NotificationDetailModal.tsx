@@ -1,40 +1,45 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, NavLink, Outlet } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
-import { XMarkIcon, ServerIcon, UsersIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, BellIcon, DocumentTextIcon, ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
-import type { Instance } from "@/interfaces/instance";
 import Label from "@/components/base/Label/Label";
-import { getInstanceName } from "@/utils/naming";
+import type { Notification } from "@/interfaces/notification";
 
-const InstanceDetailModal: React.FC = () => {
-	const { instanceKey } = useParams<{ instanceKey: string }>();
+const NotificationDetailModal: React.FC = () => {
+	const { notificationKey } = useParams<{ notificationKey: string }>();
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
 	const [isAnimating, setIsAnimating] = useState(false);
+	const queryClient = useQueryClient();
+	const [isRetrying, setIsRetrying] = useState(false);
 
-	// Fetch instances and find the specific one
-	const { data: instancesData, isLoading } = useQuery<{ data: Instance[] }>({
-		queryKey: ["instances", authToken],
+	// Fetch notification details
+	const { data: notificationResponse, isLoading } = useQuery<{ data: Notification; metadata?: any }>({
+		queryKey: ["notification", notificationKey],
 		queryFn: async () => {
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/instances?token=${authToken}`);
+			const params = new URLSearchParams();
+			params.append("token", authToken || "");
+			params.append("notification_key", notificationKey || "");
+
+			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/notifications?${params}`);
 			if (!response.ok) {
-				throw new Error("Failed to fetch instances");
+				throw new Error("Failed to fetch notification");
 			}
-			return response.json();
+			const data = await response.json();
+			console.log("Notification response:", data);
+			return data;
 		},
-		enabled: !!instanceKey && !!authToken
+		enabled: !!notificationKey && !!authToken
 	});
 
-	const instance = instancesData?.data?.find((inst) => inst.key === instanceKey);
+	const notification = notificationResponse?.data;
 
 	useEffect(() => {
-		// Get scrollbar width before hiding
 		const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
 		document.body.style.overflow = "hidden";
 		document.body.style.paddingRight = `${scrollbarWidth}px`;
-		// Trigger animation after render
 		setTimeout(() => setIsAnimating(true), 10);
 
 		return () => {
@@ -57,14 +62,45 @@ const InstanceDetailModal: React.FC = () => {
 	const handleClose = () => {
 		setIsAnimating(false);
 		setTimeout(() => {
-			navigate("/instances");
+			navigate("/notifications");
 		}, 300);
 	};
 
+	// Retry notification mutation
+	const retryNotificationMutation = useMutation({
+		mutationFn: async () => {
+			const params = new URLSearchParams();
+			params.append("token", authToken || "");
+			params.append("notification_key", notificationKey || "");
+
+			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/notifications/retry?${params}`, {
+				method: "POST"
+			});
+			if (!response.ok) {
+				throw new Error("Failed to retry notification");
+			}
+			return await response.json();
+		},
+		onMutate: () => setIsRetrying(true),
+		onSettled: () => setIsRetrying(false),
+		onSuccess: () => {
+			// Invalidate list queries and detail query
+			queryClient.invalidateQueries({ queryKey: ["notifications"] });
+			queryClient.invalidateQueries({ queryKey: ["notification", notificationKey] });
+		}
+	});
+
+	const handleRetry = () => {
+		if (!notificationKey) return;
+		if (window.confirm("Are you sure you want to retry this notification?")) {
+			retryNotificationMutation.mutate();
+		}
+	};
+
 	const tabs = [
-		{ path: "instance", label: "Instance", icon: ServerIcon },
-		{ path: "workers", label: "Workers", icon: UsersIcon },
-		{ path: "specs", label: "Specs", icon: DocumentChartBarIcon }
+		{ path: "notification", label: "Notification", icon: BellIcon },
+		{ path: "payload", label: "Payload", icon: DocumentTextIcon },
+		{ path: "outcome", label: "Outcome", icon: ClipboardDocumentCheckIcon }
 	];
 
 	const ModalContent = (
@@ -88,29 +124,42 @@ const InstanceDetailModal: React.FC = () => {
 					{/* Header */}
 					<div className="shrink-0 flex items-start justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 						<div className="flex items-start gap-3">
-							<ServerIcon className="h-7 w-7 text-gray-600 dark:text-gray-400 mt-0.5" />
+							<BellIcon className="h-7 w-7 text-gray-600 dark:text-gray-400 mt-0.5" />
 							<div>
-								{instance && instancesData?.data ? (
+								{notification && (
 									<>
-										<div className="flex items-center gap-3">
-											<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-												{getInstanceName(instancesData.data, instance)}
-											</h3>
-											<Label size="md">{instance.type || "UNKNOWN"}</Label>
-											<Label
-												size="md"
-												status={instance.status}>
-												{instance.status}
-											</Label>
-										</div>
-										<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">{instance.key}</p>
+										<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+											{notification.event || "Notification"}
+										</h3>
+										<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">{notification.key}</p>
 									</>
-								) : (
-									<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>
 								)}
+								{!notification && <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
 							</div>
 						</div>
 						<div className="flex items-center gap-3">
+							{/* Status Badge */}
+							{notification && (
+								<Label
+									status={notification.status || "PENDING"}
+									size="lg">
+									{notification.status || "PENDING"}
+								</Label>
+							)}
+
+							{/* Retry Button (only for FAILED) */}
+							{notification?.status === "FAILED" && (
+								<button
+									onClick={handleRetry}
+									disabled={isRetrying}
+									className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+										isRetrying
+											? "bg-gray-100 dark:bg-neutral-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+											: "bg-gray-100 dark:bg-neutral-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600"
+									}`}>
+									{isRetrying ? "Retrying..." : "Retry"}
+								</button>
+							)}
 							<button
 								type="button"
 								onClick={handleClose}
@@ -147,9 +196,9 @@ const InstanceDetailModal: React.FC = () => {
 							<div className="flex justify-center items-center py-12">
 								<div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-500 dark:border-gray-400 border-t-transparent"></div>
 							</div>
-						) : !instance ? (
+						) : !notification ? (
 							<div className="flex flex-col justify-center items-center py-12 gap-3">
-								<p className="text-sm text-gray-600 dark:text-gray-400">Instance not found.</p>
+								<p className="text-sm text-gray-600 dark:text-gray-400">Notification not found.</p>
 								<button
 									onClick={handleClose}
 									className="px-3 py-1.5 bg-gray-100 dark:bg-neutral-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors">
@@ -157,7 +206,7 @@ const InstanceDetailModal: React.FC = () => {
 								</button>
 							</div>
 						) : (
-							<Outlet context={{ instance }} />
+							<Outlet context={{ notification }} />
 						)}
 					</div>
 				</div>
@@ -168,4 +217,4 @@ const InstanceDetailModal: React.FC = () => {
 	return createPortal(ModalContent, document.body);
 };
 
-export default InstanceDetailModal;
+export default NotificationDetailModal;

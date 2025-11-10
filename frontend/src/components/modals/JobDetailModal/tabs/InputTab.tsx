@@ -239,7 +239,7 @@ const InputTab: React.FC = () => {
 
 	return (
 		<div>
-			<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Input Configuration</h4>
+			{/* <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Input Configuration</h4> */}
 
 			{/* Input Table */}
 			<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg">
@@ -249,12 +249,12 @@ const InputTab: React.FC = () => {
 							<th
 								scope="col"
 								className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-								Input Key
+								Key
 							</th>
 							<th
 								scope="col"
 								className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-								Input Value
+								Value
 							</th>
 						</tr>
 					</thead>
