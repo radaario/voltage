@@ -93,7 +93,7 @@ class Database {
           table.text('notification').nullable();
           table.text('metadata').nullable();
           table.text('outcome').nullable();
-          table.enum('status', ['RECEIVED', 'PENDING', 'RETRYING', 'QUEUED', 'STARTED', 'DOWNLOADING', 'ANALYZING', 'PROCESSING', 'UPLOADING', 'COMPLETED', 'CANCELLED', 'FAILED', 'TIMEOUT']).notNullable().defaultTo('RECEIVED');
+          table.enum('status', ['RECEIVED', 'PENDING', 'RETRYING', 'QUEUED', 'STARTED', 'DOWNLOADING', 'DOWNLOADED', 'ANALYZING', 'ANALYZED', 'PROCESSING', 'PROCESSED', 'UPLOADING', 'UPLOADED', 'COMPLETED', 'CANCELLED', 'DELETED', 'FAILED', 'TIMEOUT']).notNullable().defaultTo('RECEIVED');
           table.decimal('progress', 10, 2).notNullable().defaultTo(0.00);
           table.timestamp('started_at').nullable();
           table.timestamp('completed_at').nullable();

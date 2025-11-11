@@ -11,19 +11,19 @@ export async function analyzeInputMetadata(job: any): Promise<any[]> {
   try {
     logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
     
-    const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
-    const jobTempInputFilePath = path.join(jobTempFolder, 'input');
+    const tempJobFolder = path.join(config.temp_folder, 'jobs', job.key);
+    const tempJobInputFilePath = path.join(tempJobFolder, 'input');
 
     logger.console('INFO', 'Extracting metadata from job input...');
 
     /* FILE: INFO: EXTRACT */
     const fileName = path.basename(job.input?.url || job.input?.path || 'unknown');
     const fileExtension = path.extname(fileName).toLowerCase().replace(/^\./, '');
-    const fileStats = await fs.stat(jobTempInputFilePath);
+    const fileStats = await fs.stat(tempJobInputFilePath);
     const fileMimeType = guessContentType(fileName);
     
     /* FFPROBE: RUN */
-    const ffprobeData = await runFfprobe(jobTempInputFilePath);
+    const ffprobeData = await runFfprobe(tempJobInputFilePath);
     
     /* METADATA: EXTRACT */
     const metadata = parseFfprobeOutput(ffprobeData, {

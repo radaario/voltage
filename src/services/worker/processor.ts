@@ -8,17 +8,17 @@ import path from 'path';
 export async function processOutput(job: any, output: any): Promise<any> {
   logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
-  const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
-  const jobTempInputFilePath = path.join(jobTempFolder, 'input');
-  const jobTempOutputFilePath = path.join(jobTempFolder, `output.${output.index}.${(output.specs.format || 'mp4').toLowerCase()}`);
+  const tempJobFolder = path.join(config.temp_folder, 'jobs', job.key);
+  const tempJobInputFilePath = path.join(tempJobFolder, 'input');
+  const tempJobOutputFilePath = path.join(tempJobFolder, `output.${output.index}.${(output.specs.format || 'mp4').toLowerCase()}`);
 
   logger.console('INFO', 'Processing job output...', { output_key: output.key, output_index: output.index});
 
   if (output.specs.type === 'SUBTITLE') {
-    const jobInputAudioFilePath = path.join(jobTempFolder, 'audio.wav');
+    const jobInputAudioFilePath = path.join(tempJobFolder, 'audio.wav');
     
     // Convert input to WAV
-    const wavArgs = ['-y', '-i', jobTempInputFilePath, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', jobInputAudioFilePath];
+    const wavArgs = ['-y', '-i', tempJobInputFilePath, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', jobInputAudioFilePath];
     
     try {
       await new Promise<void>((resolve, reject) => {
@@ -52,10 +52,10 @@ export async function processOutput(job: any, output: any): Promise<any> {
           splitOnWord: true,
         }
       });
-      
+
       logger.console('INFO', 'Subtitle generated!', { output_key: output.key, output_index: output.index });
       
-      return { file_path: jobTempOutputFilePath };
+      return { file_path: tempJobOutputFilePath };
     } catch (error: Error | any) {
       await logger.insert('ERROR', 'Failed to generate subtitle!', { output_key: output.key, output_index: output.index, error });
       throw new Error((`Failed to generate subtitle! ${error.message || 'Unknown error occurred!'}`).trim());
@@ -63,7 +63,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
     }
   }
 
-  const args: string[] = ['-y', '-i', jobTempInputFilePath];
+  const args: string[] = ['-y', '-i', tempJobInputFilePath];
   
   // Handle cut/trim operations
   if (output.specs.offset !== undefined) {
@@ -161,9 +161,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
     args.push('-vf', videoFilters.join(','));
   }
   
-  args.push(jobTempOutputFilePath);
-
-  console.log('FFMPEG ARGS:', output.key, args);
+  args.push(tempJobOutputFilePath);
 
   try {
     await new Promise<void>((resolve, reject) => {
@@ -177,7 +175,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
 
     logger.console('INFO', 'Job output processed!', { output_key: output.key, output_index: output.index });
     
-    return { file_path: jobTempOutputFilePath };
+    return { file_path: tempJobOutputFilePath };
   } catch (error: Error | any) {
     await logger.insert('ERROR', 'Failed to process job output!', { output_key: output.key, output_index: output.index,error });
     throw new Error((`Failed to process job output! ${error.message || ''}`).trim());

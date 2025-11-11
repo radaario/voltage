@@ -91,7 +91,7 @@ export const config = {
       process_interval: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_PROCESS_INTERVAL ?? 1 * 1000), // in milliseconds, default 1 second
       process_limit: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_PROCESS_LIMIT ?? 10), // default 10 poll
       notify_on: (process.env.VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON ?? 'RECEIVED,COMPLETED,FAILED,TIMEOUT'),
-      notify_on_alloweds: (process.env.VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON_ALLOWEDS ?? 'RECEIVED,QUEUED,STARTED,DOWNLOADED,ANALYZED,PROCESSED,UPLOADED,COMPLETED,CANCELLED,DELETED,FAILED,TIMEOUT'),
+      notify_on_alloweds: (process.env.VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON_ALLOWEDS ?? 'RECEIVED,PENDING,RETRYING,QUEUED,STARTED,DOWNLOADING,DOWNLOADED,ANALYZING,ANALYZED,PROCESSING,PROCESSED,UPLOADING,UPLOADED,COMPLETED,CANCELLED,DELETED,FAILED,TIMEOUT'),
       timeout: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT ?? (1 * 10 * 1000)), // in milliseconds, default 10 seconds
       timeout_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX ?? (1 * 30 * 1000)), // in milliseconds, default 30 seconds
       try: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TRY ?? 3), // default 3
