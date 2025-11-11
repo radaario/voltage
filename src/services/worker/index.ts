@@ -70,6 +70,9 @@ async function run() {
       job.outputs[index].specs = job.outputs[index].specs ? JSON.parse(job.outputs[index].specs) : null;
     }
 
+    let jobOutputsProcessedCount = 0;
+    let jobOutputsUploadedCount = 0;
+
     // JOB: INPUT: DOWNLOADING
     await logger.insert('INFO', 'Downloading job input...');
 
@@ -123,7 +126,13 @@ async function run() {
     await logger.insert('INFO', 'Generating job input preview...');
     
     const jobTempInputPreviewFilePath = await generateInputPreview(job, config.jobs.preview);
-    // if (!jobTempInputPreviewFilePath) throw new Error('Input preview couldn\'t be generated!');    
+
+    try {
+			await fs.access(jobTempInputPreviewFilePath);
+      await logger.insert('INFO', 'Job input preview successfully generated!');
+		} catch {
+			// throw new Error('Input preview couldn\'t be generated!');
+		}
     
     // JOB: PROCESSING
     await logger.insert('INFO', 'Processing job outputs...');
@@ -144,6 +153,7 @@ async function run() {
       await updateJob(job);
 
       try{
+        jobOutputsProcessedCount++;
         job.outputs[index].outcome = await processOutput(job, job.outputs[index]);
         job.outputs[index].status = 'PROCESSED';
         await logger.insert('INFO', 'Job output successfully processed!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
@@ -159,72 +169,83 @@ async function run() {
       await updateWorkerStatus('BUSY');
     }
 
-    // JOB: PROCESSED
-    await logger.insert('INFO', 'Job outputs successfully processed!');
+    if (jobOutputsProcessedCount > 0) {
+      // JOB: PROCESSED
+      await logger.insert('INFO', 'Job outputs successfully processed!');
 
-    job.status = 'PROCESSED';
+      job.status = 'PROCESSED';
 
-    await updateJob(job);
-    await createJobNotification(job, job.status);
+      await updateJob(job);
+      await createJobNotification(job, job.status);
 
-    /* JOB: OUTPUTs: UPLOADING */
-    await logger.insert('INFO', 'Uploading job outputs...');
-    
-    job.status = 'UPLOADING';
+      /* JOB: OUTPUTs: UPLOADING */
+      await logger.insert('INFO', 'Uploading job outputs...');
+      
+      job.status = 'UPLOADING';
 
-    await updateJob(job);
-    await createJobNotification(job, job.status);
-    await updateWorkerStatus('BUSY');
+      await updateJob(job);
+      await createJobNotification(job, job.status);
+      await updateWorkerStatus('BUSY');
 
-    for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
-      if (job.outputs[index].status == 'PROCESSED') {
-        const tempJobOutputFilePath = path.join(tempJobFolder, `output.${job.outputs[index].index}.${(job.outputs[index].specs.format || 'mp4').toLowerCase()}`);
+      for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
+        if (job.outputs[index].status == 'PROCESSED') {
+          const tempJobOutputFilePath = path.join(tempJobFolder, `output.${job.outputs[index].index}.${(job.outputs[index].specs.format || 'mp4').toLowerCase()}`);
+
+          try {
+            await fs.access(tempJobOutputFilePath);
+          } catch {
+            job.outputs[index].status = 'FAILED';
+            job.outputs[index].outcome = { message: 'Output file is missing!' };
+          }
+        }
+
+        if (['COMPLETED', 'FAILED'].includes(job.outputs[index].status)) continue;
+
+        await logger.insert('INFO', 'Uploading job output...', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
+        
+        job.outputs[index].status = 'UPLOADING';
+        await updateJob(job);
 
         try {
-			    await fs.access(tempJobOutputFilePath);
-        } catch {
+          job.outputs[index].outcome = await uploadOutput(job, job.outputs[index]);
+          job.outputs[index].status = 'COMPLETED';
+          await logger.insert('INFO', 'Job output successfully uploaded!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
+          jobOutputsUploadedCount++;
+        } catch (error: Error | any) {
           job.outputs[index].status = 'FAILED';
-          job.outputs[index].outcome = { message: 'Output file is missing!' };
+          job.outputs[index].outcome = { message: error.message || 'Couldn\'t be uploaded!' };
+          await logger.insert('ERROR', 'Failed to upload job output!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index, error: error.message });
+        }
+
+        job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
+
+        await updateJob(job);
+        await updateWorkerStatus('BUSY');
+      }
+
+      if (jobOutputsUploadedCount > 0) {
+        // JOB: UPLOADED
+        await logger.insert('INFO', 'Job outputs successfully uploaded!');
+
+        job.status = 'UPLOADED';
+
+        await updateJob(job);
+        await createJobNotification(job, job.status);
+      }
+
+      /*
+      for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
+        if (job.outputs[index].status === 'FAILED') {
+          throw new Error('Some outputs failed!');
+          break;
         }
       }
-
-      if (['COMPLETED', 'FAILED'].includes(job.outputs[index].status)) continue;
-
-      await logger.insert('INFO', 'Uploading job output...', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
-      
-      job.outputs[index].status = 'UPLOADING';
-      await updateJob(job);
-
-      try {
-        job.outputs[index].outcome = await uploadOutput(job, job.outputs[index]);
-        job.outputs[index].status = 'COMPLETED';
-        await logger.insert('INFO', 'Job output successfully uploaded!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
-      } catch (error: Error | any) {
-        job.outputs[index].status = 'FAILED';
-        job.outputs[index].outcome = { message: error.message || 'Couldn\'t be uploaded!' };
-        await logger.insert('ERROR', 'Failed to upload job output!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index, error: error.message });
-      }
-
-      job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
-
-      await updateJob(job);
-      await updateWorkerStatus('BUSY');
+      */
     }
 
-    // JOB: UPLOADED
-    await logger.insert('INFO', 'Job outputs successfully uploaded!');
-
-    job.status = 'UPLOADED';
-
-    await updateJob(job);
-    await createJobNotification(job, job.status);
-
     // JOB: OUTPUTs: CHECK FAILED
-    for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
-      if (job.outputs[index].status === 'FAILED') {
-        throw new Error('Some outputs failed!');
-        break;
-      }
+    if (jobOutputsProcessedCount === job.outputs?.length || jobOutputsUploadedCount === job.outputs?.length) {
+      throw new Error('Some outputs failed!');
     }
 
     job.status = 'COMPLETED';
@@ -242,7 +263,7 @@ async function run() {
   job.progress = 100.00;
   job.completed_at = getNow();
 
-  // await fs.rm(tempJobFolder, { recursive: true }).catch(() => {});
+  await fs.rm(tempJobFolder, { recursive: true }).catch(() => {});
 
   await updateJob(job);
   // await updateWorkerStatus('IDLE');
