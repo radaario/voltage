@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
+import Button from "@/components/base/Button/Button";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import type { Job } from "@/interfaces/job";
@@ -230,11 +231,15 @@ const LogsTab: React.FC = () => {
 							</button>
 						)}
 					</div>
-					<button
-						type="submit"
-						className="px-4 py-2 bg-neutral-700 hover:bg-neutral-800 dark:bg-neutral-600 dark:hover:bg-neutral-700 text-white rounded-lg text-sm font-medium transition-colors">
-						Search
-					</button>
+					<Tooltip content="Search logs">
+						<Button
+							variant="soft"
+							size="md"
+							iconOnly
+							type="submit">
+							<MagnifyingGlassIcon className="w-5 h-5" />
+						</Button>
+					</Tooltip>
 				</form>
 			</div>
 

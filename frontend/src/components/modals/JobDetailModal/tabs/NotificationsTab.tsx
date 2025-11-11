@@ -6,8 +6,10 @@ import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { formatDate } from "@/utils";
 import type { Job } from "@/interfaces/job";
 import type { NotificationsResponse } from "@/interfaces/notification";
+import type { Notification } from "@/interfaces/notification";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
-import { ArrowPathIcon, EyeIcon } from "@heroicons/react/24/outline";
+import { ArrowUturnLeftIcon, EyeIcon } from "@heroicons/react/24/outline";
+import { ConfirmModal } from "@/components";
 
 interface OutletContext {
 	job: Job;
@@ -21,6 +23,7 @@ const NotificationsTab: React.FC = () => {
 	const queryClient = useQueryClient();
 	const [currentPage, setCurrentPage] = useState(1);
 	const [currentLimit] = useState(25);
+	const [notificationToRetry, setNotificationToRetry] = useState<Notification | null>(null);
 
 	// Fetch notifications
 	const { data, isLoading } = useQuery<NotificationsResponse>({
@@ -58,12 +61,23 @@ const NotificationsTab: React.FC = () => {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["notifications", job.key] });
+			setNotificationToRetry(null);
 		}
 	});
 
-	const handleRetryNotification = (notificationKey: string) => {
-		if (window.confirm("Are you sure you want to retry this notification?")) {
-			retryNotificationMutation.mutate(notificationKey);
+	const handleRetryNotification = (notification: Notification) => {
+		setNotificationToRetry(notification);
+	};
+
+	const handleConfirmRetry = () => {
+		if (notificationToRetry) {
+			retryNotificationMutation.mutate(notificationToRetry.key);
+		}
+	};
+
+	const handleCloseRetryModal = () => {
+		if (!retryNotificationMutation.isPending) {
+			setNotificationToRetry(null);
 		}
 	};
 
@@ -160,16 +174,10 @@ const NotificationsTab: React.FC = () => {
 											<div className="flex items-center gap-2">
 												<Tooltip content="Retry Notification">
 													<button
-														onClick={() => handleRetryNotification(notification.key)}
+														onClick={() => handleRetryNotification(notification)}
 														disabled={retryNotificationMutation.isPending}
-														className={`p-1.5 rounded-md transition-colors ${
-															retryNotificationMutation.isPending
-																? "bg-gray-100 dark:bg-neutral-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-																: "bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400"
-														}`}>
-														<ArrowPathIcon
-															className={`w-4 h-4 ${retryNotificationMutation.isPending ? "animate-spin" : ""}`}
-														/>
+														className="p-1.5 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed">
+														<ArrowUturnLeftIcon className="w-4 h-4" />
 													</button>
 												</Tooltip>
 												{/* View Button (right) */}
@@ -214,6 +222,26 @@ const NotificationsTab: React.FC = () => {
 						</div>
 					)}
 				</>
+			)}
+
+			{/* Retry Confirmation Modal */}
+			{notificationToRetry && (
+				<ConfirmModal
+					isOpen={!!notificationToRetry}
+					onClose={handleCloseRetryModal}
+					onConfirm={handleConfirmRetry}
+					title="Retry Notification"
+					message={
+						<>
+							Are you sure you want to retry notification <strong>{notificationToRetry.event}</strong>?
+							<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({notificationToRetry.key})</div>
+						</>
+					}
+					confirmText="Retry Notification"
+					variant="info"
+					isLoading={retryNotificationMutation.isPending}
+					loadingText="Retrying"
+				/>
 			)}
 		</div>
 	);

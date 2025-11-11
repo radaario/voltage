@@ -6,17 +6,20 @@ import {
 	RectangleStackIcon,
 	BellIcon,
 	ServerIcon,
-	DocumentTextIcon
+	DocumentTextIcon,
+	ExclamationTriangleIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { NavLink } from "react-router-dom";
 import Logo from "@/components/base/Logo/Logo";
+import Button from "@/components/base/Button/Button";
+import Tooltip from "@/components/base/Tooltip/Tooltip";
 
 function Header() {
 	const { theme, toggleTheme } = useTheme();
 	const { isAuthenticated, logout } = useAuth();
-	const { config } = useGlobalStateContext();
+	const { config, configError, refetchConfig } = useGlobalStateContext();
 
 	const showLogout = isAuthenticated && config?.dashboard?.is_authentication_required;
 
@@ -78,21 +81,43 @@ function Header() {
 				</nav>
 			)}
 			<div className="flex items-center space-x-2">
-				<button
-					className="p-2 rounded-lg bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700 transition-all duration-200 cursor-pointer"
-					onClick={toggleTheme}
-					title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}>
-					{theme === "light" ? <MoonIcon className="w-5 h-5" /> : <SunIcon className="w-5 h-5" />}
-				</button>
+				{/* Server Error Alert */}
+				{configError && (
+					<>
+						<Tooltip content="Server not responding. Click to retry.">
+							<Button
+								variant="outline-danger"
+								size="md"
+								iconOnly
+								onClick={refetchConfig}>
+								<ExclamationTriangleIcon className="w-5 h-5" />
+							</Button>
+						</Tooltip>
+						<div className="h-6 w-px bg-gray-200 dark:bg-gray-600 mx-2"></div>
+					</>
+				)}
+
+				<Tooltip content={`Switch to ${theme === "light" ? "dark" : "light"} mode`}>
+					<Button
+						variant="soft"
+						size="md"
+						iconOnly
+						onClick={toggleTheme}>
+						{theme === "light" ? <MoonIcon className="w-5 h-5" /> : <SunIcon className="w-5 h-5" />}
+					</Button>
+				</Tooltip>
 				{showLogout && (
 					<>
 						<div className="h-6 w-px bg-gray-200 dark:bg-gray-600 mx-2"></div>
-						<button
-							className="p-2 rounded-lg bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700 transition-all duration-200 cursor-pointer"
-							title="Sign Out"
-							onClick={logout}>
-							<ArrowRightStartOnRectangleIcon className="w-5 h-5" />
-						</button>
+						<Tooltip content="Sign Out">
+							<Button
+								variant="soft"
+								size="md"
+								iconOnly
+								onClick={logout}>
+								<ArrowRightStartOnRectangleIcon className="w-5 h-5" />
+							</Button>
+						</Tooltip>
 					</>
 				)}
 			</div>

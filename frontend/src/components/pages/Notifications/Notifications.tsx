@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import type { Notification, NotificationsResponse } from "@/interfaces/notification";
 import NotificationsTable from "./NotificationsTable.tsx";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
+import Button from "@/components/base/Button/Button";
 import Alert from "@/components/base/Alert/Alert";
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 
@@ -151,17 +152,14 @@ const Notifications: React.FC = () => {
 				<div className="flex items-center gap-3">
 					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h3>
 					<Tooltip content="Refresh notifications">
-						<button
-							type="button"
+						<Button
+							variant="ghost"
+							size="md"
+							iconOnly
 							onClick={handleRefresh}
-							disabled={isLoading}
-							className={`p-2 -mb-1 rounded-md transition-all ${
-								isLoading
-									? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
-									: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 hover:text-gray-900 dark:hover:text-white"
-							}`}>
+							disabled={isLoading}>
 							<ArrowPathIcon className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
-						</button>
+						</Button>
 					</Tooltip>
 				</div>
 				<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -169,7 +167,7 @@ const Notifications: React.FC = () => {
 					<select
 						value={statusFilter}
 						onChange={(e) => handleStatusFilterChange(e.target.value)}
-						className="px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm">
+						className="h-[38px] px-3 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm">
 						<option value="">All Status</option>
 						<option value="PENDING">PENDING</option>
 						<option value="SUCCESSFUL">SUCCESSFUL</option>
@@ -190,7 +188,7 @@ const Notifications: React.FC = () => {
 								value={searchInput}
 								onChange={(e) => setSearchInput(e.target.value)}
 								placeholder="Search notifications..."
-								className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-neutral-600 rounded-md leading-5 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
+								className="block w-full h-[38px] pl-10 pr-10 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
 							/>
 							{searchInput && (
 								<button
@@ -202,11 +200,13 @@ const Notifications: React.FC = () => {
 							)}
 						</div>
 						<Tooltip content="Search notifications">
-							<button
-								type="submit"
-								className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors">
+							<Button
+								variant="soft"
+								size="md"
+								iconOnly
+								type="submit">
 								<MagnifyingGlassIcon className="h-5 w-5" />
-							</button>
+							</Button>
 						</Tooltip>
 					</form>
 				</div>

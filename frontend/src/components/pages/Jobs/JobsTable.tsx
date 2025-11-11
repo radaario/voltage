@@ -5,6 +5,7 @@ import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
 import Label from "@/components/base/Label/Label";
 import { useAuth } from "@/hooks/useAuth";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
+import Button from "@/components/base/Button/Button";
 import {
 	ChevronDoubleLeftIcon,
 	ChevronLeftIcon,
@@ -12,7 +13,7 @@ import {
 	ChevronDoubleRightIcon,
 	EyeIcon,
 	TrashIcon,
-	ArrowPathIcon
+	ArrowUturnLeftIcon
 } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
@@ -193,7 +194,7 @@ const JobsTable = ({
 							case "PROCESSING":
 								return "bg-blue-700 dark:bg-blue-500";
 							default:
-								return "bg-blue-700 dark:bg-blue-500";
+								return "bg-nautral-700 dark:bg-nautral-500";
 						}
 					};
 
@@ -293,7 +294,7 @@ const JobsTable = ({
 
 					// Job devam ediyorsa
 					if (!job.completed_at) {
-						if (job.status === "COMPLETED" || job.status === "FAILED" || job.status === "CANCELLED") {
+						if (["COMPLETED", "FAILED", "CANCELLED", "TIMEOUT"].includes(job.status)) {
 							// Status tamamlanmış ama completed_at yok, bu bir veri tutarsızlığı
 							return <span className="text-gray-400">-</span>;
 						}
@@ -350,37 +351,40 @@ const JobsTable = ({
 					return (
 						<div className="flex items-center gap-1">
 							<Tooltip content="View Details">
-								<button
-									type="button"
+								<Button
+									variant="ghost"
+									size="md"
+									iconOnly
 									onClick={(e) => {
 										e.stopPropagation();
 										onViewJob(job);
-									}}
-									className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-gray-900 dark:hover:text-white transition-colors">
+									}}>
 									<EyeIcon className="h-5 w-5" />
-								</button>
+								</Button>
 							</Tooltip>
 							<Tooltip content="Retry Job">
-								<button
-									type="button"
+								<Button
+									variant="ghost"
+									size="md"
+									iconOnly
 									onClick={(e) => {
 										e.stopPropagation();
 										onRetryJob(job);
-									}}
-									className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-									<ArrowPathIcon className="h-5 w-5" />
-								</button>
+									}}>
+									<ArrowUturnLeftIcon className="h-5 w-5" />
+								</Button>
 							</Tooltip>
 							<Tooltip content="Delete Job">
-								<button
-									type="button"
+								<Button
+									variant="ghost"
+									size="md"
+									iconOnly
 									onClick={(e) => {
 										e.stopPropagation();
 										onDeleteJob(job);
-									}}
-									className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+									}}>
 									<TrashIcon className="h-5 w-5" />
-								</button>
+								</Button>
 							</Tooltip>
 						</div>
 					);

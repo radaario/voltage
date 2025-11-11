@@ -96,7 +96,11 @@ const InstanceDetailModal: React.FC = () => {
 											<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
 												{getInstanceName(instancesData.data, instance)}
 											</h3>
-											<Label size="md">{instance.type || "UNKNOWN"}</Label>
+											<Label
+												size="md"
+												variant={instance.type === "MASTER" ? "purple" : "blue"}>
+												{instance.type || "UNKNOWN"}
+											</Label>
 											<Label
 												size="md"
 												status={instance.status}>

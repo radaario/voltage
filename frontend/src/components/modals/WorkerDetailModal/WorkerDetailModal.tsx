@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { XMarkIcon, CpuChipIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
 import { Worker } from "@/interfaces/instance";
 import Label from "@/components/base/Label/Label";
+import Button from "@/components/base/Button/Button";
 import { useAuth } from "@/hooks/useAuth";
 import { getWorkerName } from "@/utils/naming";
 
@@ -77,11 +78,13 @@ const WorkerDetailModal = () => {
 							<h2 className="text-xl font-semibold text-gray-900 dark:text-white">Worker Detail</h2>
 						)}
 					</div>
-					<button
-						onClick={handleClose}
-						className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors">
+					<Button
+						variant="ghost"
+						size="md"
+						iconOnly
+						onClick={handleClose}>
 						<XMarkIcon className="h-6 w-6" />
-					</button>
+					</Button>
 				</div>
 
 				{/* Tabs Navigation */}
