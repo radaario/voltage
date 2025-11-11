@@ -48,6 +48,7 @@ class Logger {
 
     const data = { message: this.sanitizeMessage(message, metadata), ...metadata };
 
+    /*
     switch (type.toLowerCase()) {
       case 'info':
         pino.info(data);
@@ -72,6 +73,7 @@ class Logger {
         pino.info(data);
         break;
     }
+    */
   }
 
   sanitizeMessage(message: string, metadata: any) {

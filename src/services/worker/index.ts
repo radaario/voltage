@@ -14,6 +14,8 @@ import { createJobNotification } from './notifier.js';
 import path from 'path';
 import fs from 'fs/promises';
 
+// import * as tf from '@tensorflow/tfjs-node';
+
 database.config(config.database);
 
 async function run() {
@@ -130,8 +132,22 @@ async function run() {
     try {
 			await fs.access(jobTempInputPreviewFilePath);
       await logger.insert('INFO', 'Job input preview successfully generated!');
-		} catch {
-			// throw new Error('Input preview couldn\'t be generated!');
+
+      /*
+      async function fn() {
+        const nsfwjs = await import('nsfwjs');
+        const model = await nsfwjs.load();
+        const img = await fs.readFile(jobTempInputPreviewFilePath);
+        const image = await tf.node.decodeImage(img, 3) as tf.Tensor3D;
+        const predictions = await model.classify(image);
+        image.dispose(); // Tensor memory must be managed explicitly (it is not sufficient to let a tf.Tensor go out of scope for its memory to be released).
+        console.log("predictions", predictions);
+      }
+
+      fn();
+      */
+		} catch (error: Error | any){
+      throw new Error('Input preview couldn\'t be generated!');
 		}
     
     // JOB: PROCESSING
