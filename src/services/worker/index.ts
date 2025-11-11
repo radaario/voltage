@@ -332,30 +332,32 @@ async function updateWorkerStatus(status: string): Promise<void> {
   }
 }
 
-// Get job key and instance key from command line arguments
-const instance_key = process.argv[2];
-const worker_key = process.argv[3];
-const job_key = process.argv[4];
+(async () => {
+  // Get job key and instance key from command line arguments
+  const instance_key = process.argv[2];
+  const worker_key = process.argv[3];
+  const job_key = process.argv[4];
 
-if (!instance_key) {
-  await logger.insert('ERROR', 'Instance key required!');
-  process.exit(1);
-}
+  if (!instance_key) {
+    await logger.insert('ERROR', 'Instance key required!');
+    process.exit(1);
+  }
 
-logger.setMetadata({ instance_key });
+  logger.setMetadata({ instance_key });
 
-if (!worker_key) {
-  await logger.insert('ERROR', 'Worker key required!');
-  process.exit(1);
-}
+  if (!worker_key) {
+    await logger.insert('ERROR', 'Worker key required!');
+    process.exit(1);
+  }
 
-logger.setMetadata({ instance_key, worker_key });
+  logger.setMetadata({ instance_key, worker_key });
 
-if (!job_key) {
-  await logger.insert('ERROR', 'Job key required!');
-  process.exit(1);
-}
+  if (!job_key) {
+    await logger.insert('ERROR', 'Job key required!');
+    process.exit(1);
+  }
 
-logger.setMetadata({ instance_key, worker_key, job_key });
+  logger.setMetadata({ instance_key, worker_key, job_key });
 
-await run();
+  await run();
+})();

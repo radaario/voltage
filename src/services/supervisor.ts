@@ -1,7 +1,6 @@
 import { config } from '../config/index.js';
-import { JobNotificationRow } from '../config/types.js';
 
-import { getInstanceSpecs, uukey, hash, getNow, addNow, subtractNow } from '../utils';
+import { getInstanceSpecs, hash, getNow, subtractNow } from '../utils';
 import { logger } from '../utils/logger.js';
 import { storage } from '../utils/storage.js';
 import { database } from '../utils/database.js';

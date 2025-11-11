@@ -1,0 +1,13 @@
+version: "3"
+services:
+    app:
+        restart: always
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: voltage:latest
+        environment:
+            - APP_ENV=prod
+            - APP_PORT=8080
+        ports:
+            - "8080:8080"

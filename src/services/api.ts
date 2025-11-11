@@ -633,9 +633,11 @@ app.get('/test', async (req, res) => {
   return res.json({ ...rows });
 });
 
+/*
 const clientPath = path.join(dirname(fileURLToPath(import.meta.url)), "../../client-build");
 app.use(express.static(clientPath));
 app.get("/*", (req: Request, res: Response) => res.sendFile(path.join(clientPath, "index.html")));
+*/
 
 app.use((error: any, req: any, res: any, _next: any) => {
   logger.insert('ERROR', 'An error occurred on API service!', { error });
