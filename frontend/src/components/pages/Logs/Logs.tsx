@@ -4,7 +4,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Log, LogsResponse } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import LogsTable from "./LogsTable.tsx";
+import { ConfirmModal } from "@/components";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
+import Button from "@/components/base/Button/Button";
 import Alert from "@/components/base/Alert/Alert";
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon, TrashIcon } from "@heroicons/react/24/outline";
 
@@ -30,6 +32,7 @@ const Logs: React.FC = () => {
 	const [typeFilter, setTypeFilter] = useState<string>("");
 	const previousDataRef = useRef<Log[]>([]);
 	const [newLogKeys, setNewLogKeys] = useState<Set<string>>(new Set());
+	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
 	// Fetch logs with React Query
 	const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<LogsResponse>({
@@ -108,6 +111,8 @@ const Logs: React.FC = () => {
 			return resp.json();
 		},
 		onSuccess: async () => {
+			// Close Delete All modal
+			setShowDeleteAllModal(false);
 			// Invalidate and refetch logs immediately
 			await queryClient.invalidateQueries({ queryKey: ["logs"] });
 			await refetch();
@@ -145,8 +150,16 @@ const Logs: React.FC = () => {
 	};
 
 	const handleDeleteAllLogs = () => {
-		if (window.confirm("Are you sure you want to delete ALL logs? This action cannot be undone.")) {
-			deleteAllLogsMutation.mutate();
+		setShowDeleteAllModal(true);
+	};
+
+	const handleConfirmDeleteAll = () => {
+		deleteAllLogsMutation.mutate();
+	};
+
+	const handleCloseDeleteAllModal = () => {
+		if (!deleteAllLogsMutation.isPending) {
+			setShowDeleteAllModal(false);
 		}
 	};
 
@@ -182,25 +195,22 @@ const Logs: React.FC = () => {
 				<div className="flex items-center gap-3">
 					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">System Logs</h3>
 					<Tooltip content="Refresh logs">
-						<button
-							type="button"
+						<Button
+							variant="ghost"
+							size="md"
+							iconOnly
 							onClick={handleRefresh}
-							disabled={isLoading}
-							className={`p-2 -mb-1 rounded-md transition-all ${
-								isLoading
-									? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
-									: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 hover:text-gray-900 dark:hover:text-white"
-							}`}>
+							disabled={isLoading}>
 							<ArrowPathIcon className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
-						</button>
+						</Button>
 					</Tooltip>
 				</div>
-				<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+				<div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
 					{/* Type Filter */}
 					<select
 						value={typeFilter}
 						onChange={(e) => handleTypeFilterChange(e.target.value)}
-						className="px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm">
+						className="h-[38px] px-3 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm">
 						<option value="">All Types</option>
 						<option value="INFO">INFO</option>
 						<option value="WARNING">WARNING</option>
@@ -221,7 +231,7 @@ const Logs: React.FC = () => {
 								value={searchInput}
 								onChange={(e) => setSearchInput(e.target.value)}
 								placeholder="Search logs..."
-								className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-neutral-600 rounded-md leading-5 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
+								className="block w-full h-[38px] pl-10 pr-10 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
 							/>
 							{searchInput && (
 								<button
@@ -233,27 +243,27 @@ const Logs: React.FC = () => {
 							)}
 						</div>
 						<Tooltip content="Search logs">
-							<button
-								type="submit"
-								className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors">
+							<Button
+								variant="soft"
+								size="md"
+								iconOnly
+								type="submit">
 								<MagnifyingGlassIcon className="h-5 w-5" />
-							</button>
+							</Button>
 						</Tooltip>
 					</form>
 
 					{/* Delete All Button */}
 					<Tooltip content="Delete all logs">
-						<button
-							type="button"
+						<Button
+							variant="soft"
+							size="md"
+							iconOnly
 							onClick={handleDeleteAllLogs}
 							disabled={deleteAllLogsMutation.isPending || (data?.data?.length || 0) === 0}
-							className={`p-2 rounded-md transition-colors ${
-								deleteAllLogsMutation.isPending || (data?.data?.length || 0) === 0
-									? "bg-gray-100 dark:bg-neutral-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-									: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
-							}`}>
-							<TrashIcon className="h-5 w-5" />
-						</button>
+							isLoading={deleteAllLogsMutation.isPending}>
+							<TrashIcon className="h-5 w-5 text-red-600" />
+						</Button>
 					</Tooltip>
 				</div>
 			</div>
@@ -289,6 +299,26 @@ const Logs: React.FC = () => {
 					newLogKeys={newLogKeys}
 				/>
 			</div>
+
+			{/* Delete All Confirmation Modal */}
+			{showDeleteAllModal && (
+				<ConfirmModal
+					isOpen={showDeleteAllModal}
+					onClose={handleCloseDeleteAllModal}
+					onConfirm={handleConfirmDeleteAll}
+					title="Delete All Logs"
+					message={
+						<>
+							Are you sure you want to delete <strong>ALL logs</strong>? This action cannot be undone and will permanently
+							remove all log entries from the system.
+						</>
+					}
+					confirmText="Delete All Logs"
+					variant="danger"
+					isLoading={deleteAllLogsMutation.isPending}
+					loadingText="Deleting"
+				/>
+			)}
 
 			{/* Nested modal outlet */}
 			<Outlet />

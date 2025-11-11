@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Instance } from "@/interfaces/instance";
 import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
+import Button from "@/components/base/Button/Button";
 import { ChevronDownIcon, ChevronRightIcon, EyeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
 import { getInstanceName, getWorkerName } from "@/utils/naming";
 import { JobCard } from "@/components";
@@ -77,7 +78,10 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 						<div className="flex items-start gap-3">
 							{/* Expand/Collapse Button */}
 							{hasWorkers && (
-								<button
+								<Button
+									variant="ghost"
+									size="sm"
+									iconOnly
 									onClick={(e) => {
 										e.stopPropagation();
 										const rowId = info.row.id;
@@ -85,14 +89,13 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 											...prev,
 											[rowId]: !prev[rowId]
 										}));
-									}}
-									className="mt-1 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors">
+									}}>
 									{!collapsed[info.row.id] ? (
 										<ChevronDownIcon className="h-4 w-4 text-gray-500" />
 									) : (
 										<ChevronRightIcon className="h-4 w-4 text-gray-500" />
 									)}
-								</button>
+								</Button>
 							)}
 
 							{/* Instance Info Card */}
@@ -278,15 +281,16 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 					return (
 						<div className="flex items-center gap-2">
 							<Tooltip content="View Instance">
-								<button
-									type="button"
+								<Button
+									variant="ghost"
+									size="md"
+									iconOnly
 									onClick={(e) => {
 										e.stopPropagation();
 										navigate(`/instances/${instance.key}`);
-									}}
-									className="p-2 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400">
+									}}>
 									<EyeIcon className="h-5 w-5" />
-								</button>
+								</Button>
 							</Tooltip>
 						</div>
 					);
@@ -404,21 +408,23 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 																className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${
 																	worker.status === "RUNNING"
 																		? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-																		: "bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
+																		: "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800"
 																}`}>
 																{worker.status}
 															</span>
 
 															{/* View Worker Button */}
 															<Tooltip content="View Worker">
-																<button
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	iconOnly
 																	onClick={(e) => {
 																		e.stopPropagation();
 																		navigate(`/instances/workers/${worker.key}`);
-																	}}
-																	className="p-1.5 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400">
+																	}}>
 																	<EyeIcon className="h-4 w-4" />
-																</button>
+																</Button>
 															</Tooltip>
 														</div>
 													</div>

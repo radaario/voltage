@@ -6,15 +6,16 @@ import { Notification } from "@/interfaces/notification";
 import { useAuth } from "@/hooks/useAuth";
 import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
+import Button from "@/components/base/Button/Button";
 import {
 	ChevronDoubleLeftIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
 	ChevronDoubleRightIcon,
-	ArrowPathIcon,
+	ArrowUturnLeftIcon,
 	EyeIcon
 } from "@heroicons/react/24/outline";
-import { JobCard } from "@/components";
+import { JobCard, ConfirmModal } from "@/components";
 
 interface PaginationInfo {
 	total: number;
@@ -69,7 +70,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
-	const [retryingKey, setRetryingKey] = useState<string | null>(null);
+	const [notificationToRetry, setNotificationToRetry] = useState<Notification | null>(null);
 
 	// Retry notification mutation
 	const retryNotificationMutation = useMutation({
@@ -88,19 +89,26 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["notifications"] });
-			setRetryingKey(null);
-		},
-		onError: () => {
-			setRetryingKey(null);
 		}
 	});
 
-	const handleRetryNotification = (notificationKey: string) => {
-		if (window.confirm("Are you sure you want to retry this notification?")) {
-			setRetryingKey(notificationKey);
-			retryNotificationMutation.mutate(notificationKey);
+	const handleRetryNotification = (notification: Notification) => {
+		setNotificationToRetry(notification);
+	};
+
+	const handleConfirmRetry = () => {
+		if (notificationToRetry) {
+			retryNotificationMutation.mutate(notificationToRetry.key);
+			setNotificationToRetry(null);
 		}
 	};
+
+	const handleCloseRetryModal = () => {
+		if (!retryNotificationMutation.isPending) {
+			setNotificationToRetry(null);
+		}
+	};
+
 	// Generate page numbers to display
 	const getPageNumbers = () => {
 		const { page, totalPages } = pagination;
@@ -231,40 +239,38 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 						<div className="flex items-center gap-2">
 							{/* Retry Button (left) */}
 							<Tooltip content="Retry Notification">
-								<button
-									type="button"
+								<Button
+									variant="ghost"
+									size="md"
+									iconOnly
 									onClick={(e) => {
 										e.stopPropagation();
-										handleRetryNotification(notification.key);
+										handleRetryNotification(notification);
 									}}
-									disabled={retryingKey === notification.key}
-									className={`p-2 rounded-md transition-colors ${
-										retryingKey === notification.key
-											? "bg-gray-100 dark:bg-neutral-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-											: "bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400"
-									}`}>
-									<ArrowPathIcon className={`h-5 w-5 ${retryingKey === notification.key ? "animate-spin" : ""}`} />
-								</button>
+									disabled={retryNotificationMutation.isPending}>
+									<ArrowUturnLeftIcon className="h-5 w-5" />
+								</Button>
 							</Tooltip>
 
 							{/* View Button (right) */}
 							<Tooltip content="View Notification">
-								<button
-									type="button"
+								<Button
+									variant="ghost"
+									size="md"
+									iconOnly
 									onClick={(e) => {
 										e.stopPropagation();
 										navigate(`/notifications/${notification.key}`);
-									}}
-									className="p-2 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400">
+									}}>
 									<EyeIcon className="h-5 w-5" />
-								</button>
+								</Button>
 							</Tooltip>
 						</div>
 					);
 				}
 			})
 		],
-		[handleRetryNotification, retryingKey]
+		[handleRetryNotification, retryNotificationMutation.isPending, navigate]
 	);
 
 	const table = useReactTable({
@@ -414,6 +420,26 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 					</select>
 				</div>
 			</div>
+
+			{/* Retry Confirmation Modal */}
+			{notificationToRetry && (
+				<ConfirmModal
+					isOpen={!!notificationToRetry}
+					onClose={handleCloseRetryModal}
+					onConfirm={handleConfirmRetry}
+					title="Retry Notification"
+					message={
+						<>
+							Are you sure you want to retry notification <strong>{notificationToRetry.event}</strong>?
+							<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({notificationToRetry.key})</div>
+						</>
+					}
+					confirmText="Retry Notification"
+					variant="info"
+					isLoading={retryNotificationMutation.isPending}
+					loadingText="Retrying"
+				/>
+			)}
 		</div>
 	);
 };

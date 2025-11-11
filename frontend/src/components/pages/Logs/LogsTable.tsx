@@ -1,6 +1,7 @@
 import { useMemo, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
+import Button from "@/components/base/Button/Button";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Log } from "@/interfaces/log";
@@ -175,12 +176,13 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 					return (
 						<div className="flex items-center gap-2">
 							<Tooltip content="View Log">
-								<button
-									type="button"
-									onClick={() => navigate(`/logs/${log.key}`)}
-									className="p-2 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400">
+								<Button
+									variant="ghost"
+									size="md"
+									iconOnly
+									onClick={() => navigate(`/logs/${log.key}`)}>
 									<EyeIcon className="h-5 w-5" />
-								</button>
+								</Button>
 							</Tooltip>
 						</div>
 					);

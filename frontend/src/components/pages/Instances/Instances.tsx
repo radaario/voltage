@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import InstancesTable from "./InstancesTable";
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
+import Button from "@/components/base/Button/Button";
 
 interface InstancesResponse {
 	data: Instance[];
@@ -86,17 +87,14 @@ const Instances: React.FC = () => {
 				<div className="flex items-center gap-3">
 					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Instances</h3>
 					<Tooltip content="Refresh instances">
-						<button
-							type="button"
+						<Button
+							variant="ghost"
+							size="md"
+							iconOnly
 							onClick={handleRefresh}
-							disabled={isLoading}
-							className={`p-2 -mb-1 rounded-md transition-all ${
-								isLoading
-									? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
-									: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 hover:text-gray-900 dark:hover:text-white"
-							}`}>
+							disabled={isLoading}>
 							<ArrowPathIcon className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
-						</button>
+						</Button>
 					</Tooltip>
 				</div>
 				<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -125,11 +123,13 @@ const Instances: React.FC = () => {
 							)}
 						</div>
 						<Tooltip content="Search instances">
-							<button
-								type="submit"
-								className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors">
+							<Button
+								variant="soft"
+								size="md"
+								iconOnly
+								type="submit">
 								<MagnifyingGlassIcon className="h-5 w-5" />
-							</button>
+							</Button>
 						</Tooltip>
 					</form>
 				</div>

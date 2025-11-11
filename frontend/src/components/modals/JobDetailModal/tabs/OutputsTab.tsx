@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Job } from "@/interfaces/job";
 import { formatDate } from "@/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
-import { CheckCircleIcon, XCircleIcon, ClockIcon, ArrowPathIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, XCircleIcon, ClockIcon, ArrowUturnLeftIcon, ArrowPathIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
+import { ConfirmModal } from "@/components";
+import Tooltip from "@/components/base/Tooltip/Tooltip";
 
 interface OutletContext {
 	job: Job;
@@ -15,6 +18,7 @@ const OutputsTab: React.FC = () => {
 	const { authToken } = useAuth();
 	const { config } = useGlobalStateContext();
 	const queryClient = useQueryClient();
+	const [outputToRetry, setOutputToRetry] = useState<{ key: string; index: number } | null>(null);
 
 	// Retry output mutation
 	const retryOutputMutation = useMutation({
@@ -38,9 +42,20 @@ const OutputsTab: React.FC = () => {
 		}
 	});
 
-	const handleRetryOutput = (outputKey: string) => {
-		if (window.confirm("Are you sure you want to retry this output?")) {
-			retryOutputMutation.mutate(outputKey);
+	const handleRetryOutput = (outputKey: string, index: number) => {
+		setOutputToRetry({ key: outputKey, index });
+	};
+
+	const handleConfirmRetry = () => {
+		if (outputToRetry) {
+			retryOutputMutation.mutate(outputToRetry.key);
+			setOutputToRetry(null);
+		}
+	};
+
+	const handleCloseRetryModal = () => {
+		if (!retryOutputMutation.isPending) {
+			setOutputToRetry(null);
 		}
 	};
 
@@ -182,12 +197,16 @@ const OutputsTab: React.FC = () => {
 										{formatDate(output.updated_at, config?.timezone || "UTC")}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										<button
-											onClick={() => handleRetryOutput(output.key)}
-											disabled={retryOutputMutation.isPending}
-											className="p-1.5 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-											<ArrowPathIcon className={`w-4 h-4 ${retryOutputMutation.isPending ? "animate-spin" : ""}`} />
-										</button>
+										<Tooltip content="Retry Output">
+											<button
+												onClick={() => handleRetryOutput(output.key, output.index)}
+												disabled={retryOutputMutation.isPending}
+												className="p-1.5 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+												<ArrowUturnLeftIcon
+													className={`w-4 h-4 ${retryOutputMutation.isPending ? "animate-spin" : ""}`}
+												/>
+											</button>
+										</Tooltip>
 									</td>
 								</tr>
 							))}
@@ -215,6 +234,25 @@ const OutputsTab: React.FC = () => {
 							))}
 					</div>
 				</div>
+			)}
+
+			{/* Retry Confirmation Modal */}
+			{outputToRetry && (
+				<ConfirmModal
+					isOpen={!!outputToRetry}
+					onClose={handleCloseRetryModal}
+					onConfirm={handleConfirmRetry}
+					title="Retry Output"
+					message={
+						<>
+							Are you sure you want to retry <strong>Output #{outputToRetry.index + 1}</strong>?
+						</>
+					}
+					confirmText="Retry Output"
+					variant="info"
+					isLoading={retryOutputMutation.isPending}
+					loadingText="Retrying"
+				/>
 			)}
 		</div>
 	);

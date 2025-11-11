@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { XMarkIcon, BellIcon, DocumentTextIcon, ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import Label from "@/components/base/Label/Label";
+import Button from "@/components/base/Button/Button";
+import { ConfirmModal } from "@/components";
 import type { Notification } from "@/interfaces/notification";
 
 const NotificationDetailModal: React.FC = () => {
@@ -13,7 +15,7 @@ const NotificationDetailModal: React.FC = () => {
 	const { authToken } = useAuth();
 	const [isAnimating, setIsAnimating] = useState(false);
 	const queryClient = useQueryClient();
-	const [isRetrying, setIsRetrying] = useState(false);
+	const [showRetryModal, setShowRetryModal] = useState(false);
 
 	// Fetch notification details
 	const { data: notificationResponse, isLoading } = useQuery<{ data: Notification; metadata?: any }>({
@@ -81,19 +83,26 @@ const NotificationDetailModal: React.FC = () => {
 			}
 			return await response.json();
 		},
-		onMutate: () => setIsRetrying(true),
-		onSettled: () => setIsRetrying(false),
 		onSuccess: () => {
 			// Invalidate list queries and detail query
 			queryClient.invalidateQueries({ queryKey: ["notifications"] });
 			queryClient.invalidateQueries({ queryKey: ["notification", notificationKey] });
+			setShowRetryModal(false);
 		}
 	});
 
 	const handleRetry = () => {
 		if (!notificationKey) return;
-		if (window.confirm("Are you sure you want to retry this notification?")) {
-			retryNotificationMutation.mutate();
+		setShowRetryModal(true);
+	};
+
+	const handleConfirmRetry = () => {
+		retryNotificationMutation.mutate();
+	};
+
+	const handleCloseRetryModal = () => {
+		if (!retryNotificationMutation.isPending) {
+			setShowRetryModal(false);
 		}
 	};
 
@@ -149,23 +158,20 @@ const NotificationDetailModal: React.FC = () => {
 
 							{/* Retry Button (only for FAILED) */}
 							{notification?.status === "FAILED" && (
-								<button
-									onClick={handleRetry}
-									disabled={isRetrying}
-									className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-										isRetrying
-											? "bg-gray-100 dark:bg-neutral-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-											: "bg-gray-100 dark:bg-neutral-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600"
-									}`}>
-									{isRetrying ? "Retrying..." : "Retry"}
-								</button>
+								<Button
+									variant="secondary"
+									size="sm"
+									onClick={handleRetry}>
+									Retry
+								</Button>
 							)}
-							<button
-								type="button"
-								onClick={handleClose}
-								className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors">
+							<Button
+								variant="ghost"
+								size="md"
+								iconOnly
+								onClick={handleClose}>
 								<XMarkIcon className="h-6 w-6" />
-							</button>
+							</Button>
 						</div>
 					</div>
 
@@ -199,11 +205,12 @@ const NotificationDetailModal: React.FC = () => {
 						) : !notification ? (
 							<div className="flex flex-col justify-center items-center py-12 gap-3">
 								<p className="text-sm text-gray-600 dark:text-gray-400">Notification not found.</p>
-								<button
-									onClick={handleClose}
-									className="px-3 py-1.5 bg-gray-100 dark:bg-neutral-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors">
+								<Button
+									variant="secondary"
+									size="sm"
+									onClick={handleClose}>
 									Close
-								</button>
+								</Button>
 							</div>
 						) : (
 							<Outlet context={{ notification }} />
@@ -214,7 +221,30 @@ const NotificationDetailModal: React.FC = () => {
 		</div>
 	);
 
-	return createPortal(ModalContent, document.body);
+	return (
+		<>
+			{createPortal(ModalContent, document.body)}
+			{/* Retry Confirmation Modal */}
+			{showRetryModal && notification && (
+				<ConfirmModal
+					isOpen={showRetryModal}
+					onClose={handleCloseRetryModal}
+					onConfirm={handleConfirmRetry}
+					title="Retry Notification"
+					message={
+						<>
+							Are you sure you want to retry notification <strong>{notification.event}</strong>?
+							<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({notification.key})</div>
+						</>
+					}
+					confirmText="Retry Notification"
+					variant="info"
+					isLoading={retryNotificationMutation.isPending}
+					loadingText="Retrying"
+				/>
+			)}
+		</>
+	);
 };
 
 export default NotificationDetailModal;

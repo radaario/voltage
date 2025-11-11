@@ -5,7 +5,9 @@ import type { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
 import JobsTable from "./JobsTable";
 import DeleteConfirmModal from "@/components/modals/DeleteConfirmModal/DeleteConfirmModal";
+import { ConfirmModal } from "@/components";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
+import Button from "@/components/base/Button/Button";
 import Alert from "@/components/base/Alert/Alert";
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 
@@ -43,6 +45,7 @@ const Jobs: React.FC = () => {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [currentLimit, setCurrentLimit] = useState(6);
 	const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
+	const [jobToRetry, setJobToRetry] = useState<Job | null>(null);
 	const previousDataRef = useRef<Job[]>([]);
 	const [newJobKeys, setNewJobKeys] = useState<Set<string>>(new Set());
 
@@ -177,7 +180,11 @@ const Jobs: React.FC = () => {
 	// Delete job mutation
 	const deleteJobMutation = useMutation({
 		mutationFn: async (jobKey: string) => {
-			const resp = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/${jobKey}?token=${authToken}`, {
+			const params = new URLSearchParams();
+			params.append("token", authToken || "");
+			params.append("job_key", jobKey);
+
+			const resp = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs?${params}`, {
 				method: "DELETE"
 			});
 
@@ -264,8 +271,19 @@ const Jobs: React.FC = () => {
 	};
 
 	const handleRetryJob = (job: Job) => {
-		if (window.confirm(`Are you sure you want to retry this job?`)) {
-			retryJobMutation.mutate(job.key);
+		setJobToRetry(job);
+	};
+
+	const handleConfirmRetry = () => {
+		if (jobToRetry) {
+			retryJobMutation.mutate(jobToRetry.key);
+			setJobToRetry(null);
+		}
+	};
+
+	const handleCloseRetryModal = () => {
+		if (!retryJobMutation.isPending) {
+			setJobToRetry(null);
 		}
 	};
 
@@ -309,17 +327,14 @@ const Jobs: React.FC = () => {
 				<div className="flex items-center gap-3">
 					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Latest jobs</h3>
 					<Tooltip content="Refresh jobs">
-						<button
-							type="button"
+						<Button
+							variant="ghost"
+							size="md"
+							iconOnly
 							onClick={handleRefresh}
-							disabled={isLoading}
-							className={`p-2 -mb-1 rounded-md transition-all ${
-								isLoading
-									? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
-									: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 hover:text-gray-900 dark:hover:text-white"
-							}`}>
+							disabled={isLoading}>
 							<ArrowPathIcon className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
-						</button>
+						</Button>
 					</Tooltip>
 				</div>
 				<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -348,22 +363,25 @@ const Jobs: React.FC = () => {
 							)}
 						</div>
 						<Tooltip content="Search jobs">
-							<button
-								type="submit"
-								className="p-2 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors">
+							<Button
+								variant="soft"
+								size="md"
+								iconOnly
+								type="submit">
 								<MagnifyingGlassIcon className="h-5 w-5" />
-							</button>
+							</Button>
 						</Tooltip>
 					</form>
 
 					{/* Create Button */}
-					<button
-						type="button"
+					<Button
+						variant="secondary"
+						size="sm"
 						onClick={handleCreateExampleJob}
 						disabled={createJobMutation.isPending}
-						className={`px-4 py-2 border border-gray-300 dark:border-neutral-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 whitespace-nowrap ${createJobMutation.isPending ? "bg-gray-100 dark:bg-neutral-800 cursor-not-allowed opacity-50" : "bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700"} transition-colors`}>
+						isLoading={createJobMutation.isPending}>
 						{createJobMutation.isPending ? "Creating…" : "+ Create Test Job"}
-					</button>
+					</Button>
 				</div>
 			</div>
 
@@ -418,6 +436,34 @@ const Jobs: React.FC = () => {
 					}
 					confirmText="Delete Job"
 					isDeleting={deleteJobMutation.isPending}
+				/>
+			)}
+
+			{/* Retry Confirmation Modal */}
+			{jobToRetry && (
+				<ConfirmModal
+					isOpen={!!jobToRetry}
+					onClose={handleCloseRetryModal}
+					onConfirm={handleConfirmRetry}
+					title="Retry Job"
+					message={
+						<>
+							Are you sure you want to retry{" "}
+							{jobToRetry.input?.file_name || jobToRetry.input?.url?.split("/").pop() ? (
+								<>
+									<strong>{jobToRetry.input?.file_name || jobToRetry.input?.url?.split("/").pop()}</strong>
+									<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({jobToRetry.key})</div>
+								</>
+							) : (
+								<strong>{jobToRetry.key}</strong>
+							)}
+							?
+						</>
+					}
+					confirmText="Retry Job"
+					variant="info"
+					isLoading={retryJobMutation.isPending}
+					loadingText="Retrying"
 				/>
 			)}
 
