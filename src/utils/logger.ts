@@ -1,7 +1,11 @@
 import { config } from '../config/index.js';
 import { getNow, uukey } from './index.js';
 
+import { database } from './database.js';
+
 import {pino as _pino} from 'pino';
+
+database.config(config.database);
 
 const pino = _pino({
   level: process.env.LOG_LEVEL ?? 'info',
@@ -28,8 +32,6 @@ class Logger {
 
     if (!config.logs.is_disabled) {
       try {
-        const { database } = await import('./database.js');
-        database.config(config.database);
         await database.table('logs').insert(log);
       } catch (error: Error | any) {
         this.console('ERROR', 'Could not insert log into database!', { error });
@@ -46,6 +48,7 @@ class Logger {
 
     const data = { message: this.sanitizeMessage(message, metadata), ...metadata };
 
+    /*
     switch (type.toLowerCase()) {
       case 'info':
         pino.info(data);
@@ -70,6 +73,7 @@ class Logger {
         pino.info(data);
         break;
     }
+    */
   }
 
   sanitizeMessage(message: string, metadata: any) {

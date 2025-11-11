@@ -14,13 +14,15 @@ import { createJobNotification } from './notifier.js';
 import path from 'path';
 import fs from 'fs/promises';
 
+// import * as tf from '@tensorflow/tfjs-node';
+
 database.config(config.database);
 
 async function run() {
   await logger.insert('INFO', 'Worker starts running...');
 
-  const jobTempFolder = path.join(config.temp_folder, 'jobs', job_key);
-  await fs.mkdir(jobTempFolder, { recursive: true }).catch(() => {});
+  const tempJobFolder = path.join(config.temp_folder, 'jobs', job_key);
+  await fs.mkdir(tempJobFolder, { recursive: true }).catch(() => {});
   
   const jobProgressForEachStep = 20.00; // Each step contributes 20% to the total progress
 
@@ -37,56 +39,75 @@ async function run() {
   try {
     await updateWorkerStatus('BUSY');
 
-    /* JOB: SELECT */
+    // JOB: SELECT
     job = await database.table('jobs').where('key', job_key).first();
     if (!job) throw new Error('Job couldn\'t be found!');
 
-    /* JOB: UPDATE */
+    // JOB: STARTING
+    await logger.insert('INFO', 'Job found, starting processing...', { job_key: job.key });
+
+    // JOB: UPDATE
     job.instance_key = instance_key;
     job.worker_key = worker_key;
     job.status = 'STARTED';
 
-    /* JOB: PARSE */
+    // JOB: PARSE
     job.input = job.input ? JSON.parse(job.input as string) : null;
     job.outputs = job.outputs ? JSON.parse(job.outputs as string) : null;
     job.destination = job.destination ? JSON.parse(job.destination as string) : null;
     job.notification = job.notification ? JSON.parse(job.notification as string) : null;
     job.metadata = job.metadata ? JSON.parse(job.metadata as string) : null;
+    job.outcome = job.outcome ? JSON.parse(job.outcome as string) : null;
     job.started_at = getNow();
     job.completed_at = null;
-    job.outcome = job.outcome ? JSON.parse(job.outcome as string) : null;
     job.try_count = parseInt(job.try_count as string) + 1;
     job.retry_at = null;
 
     await updateJob(job);
-    await createJobNotification(job, 'STARTED');
+    await createJobNotification(job, job.status);
 
-    /* JOB: OUTPUTs: PARSE */
+    // JOB: OUTPUTs: PARSE
     for (let index = 0; index < job.outputs.length; index++) {
       if (typeof job.outputs[index].specs === 'object') job.outputs[index].specs = JSON.stringify(job.outputs[index].specs);
       job.outputs[index].specs = job.outputs[index].specs ? JSON.parse(job.outputs[index].specs) : null;
     }
 
-    /* JOB: INPUT: DOWNLOADING */
-    job.status = 'DOWNLOADING';
+    let jobOutputsProcessedCount = 0;
+    let jobOutputsUploadedCount = 0;
 
+    // JOB: INPUT: DOWNLOADING
     await logger.insert('INFO', 'Downloading job input...');
 
+    job.status = 'DOWNLOADING';
+
     await updateJob(job);
+    await createJobNotification(job, job.status);
     await updateWorkerStatus('BUSY');
     
-    const jobTempInputFilePath = await downloadInput(job);
-    if (!jobTempInputFilePath) throw new Error('Input couldn\'t be downloaded!');
+    const tempJobInputFilePath = await downloadInput(job);
 
-    await createJobNotification(job, 'DOWNLOADED');
+    try {
+			await fs.access(tempJobInputFilePath);
+		} catch {
+			throw new Error('Input couldn\'t be downloaded!');
+		}
     
-    /* JOB: INPUT: ANALYZING */
-    job.status = 'ANALYZING';
+    // JOB: INPUT: DOWNLOADED
+    await logger.insert('INFO', 'Job input successfully downloaded!');
+
+    job.status = 'DOWNLOADED';
     job.progress += jobProgressForEachStep;
 
-    await logger.insert('INFO', 'Analyzing job input...');
-
     await updateJob(job);
+    await createJobNotification(job, job.status);
+    
+    // JOB: INPUT: ANALYZING
+    await logger.insert('INFO', 'Analyzing job input...');
+    
+    job.status = 'ANALYZING';
+    
+    await updateJob(job);
+    await createJobNotification(job, job.status);
     await updateWorkerStatus('BUSY');
     
     const jobInputMetadata = await analyzeInputMetadata(job);
@@ -94,90 +115,160 @@ async function run() {
 
     job.input = { ...job.input, ...jobInputMetadata };
 
-    await createJobNotification(job, 'ANALYZED');
+    // JOB: INPUT: ANALYZED
+    await logger.insert('INFO', 'Job input successfully analyzed!');
 
-    /* JOB: INPUT: PREVIEW */
+    job.status = 'ANALYZED';
+    job.progress += jobProgressForEachStep;
+    
+    await updateJob(job);
+    await createJobNotification(job, job.status);
+
+    // JOB: INPUT: PREVIEW GENERATING
     await logger.insert('INFO', 'Generating job input preview...');
     
     const jobTempInputPreviewFilePath = await generateInputPreview(job, config.jobs.preview);
-    // if (!jobTempInputPreviewFilePath) throw new Error('Input preview couldn\'t be generated!');    
+
+    try {
+			await fs.access(jobTempInputPreviewFilePath);
+      await logger.insert('INFO', 'Job input preview successfully generated!');
+
+      /*
+      async function fn() {
+        const nsfwjs = await import('nsfwjs');
+        const model = await nsfwjs.load();
+        const img = await fs.readFile(jobTempInputPreviewFilePath);
+        const image = await tf.node.decodeImage(img, 3) as tf.Tensor3D;
+        const predictions = await model.classify(image);
+        image.dispose(); // Tensor memory must be managed explicitly (it is not sufficient to let a tf.Tensor go out of scope for its memory to be released).
+        console.log("predictions", predictions);
+      }
+
+      fn();
+      */
+		} catch (error: Error | any){
+      throw new Error('Input preview couldn\'t be generated!');
+		}
     
-    /* JOB: OUTPUTs: PROCESSING */
+    // JOB: PROCESSING
+    await logger.insert('INFO', 'Processing job outputs...');
+    
     job.status = 'PROCESSING';
 
-    await logger.insert('INFO', 'Processing job outputs...');
-
     await updateJob(job);
+    await createJobNotification(job, job.status);
     await updateWorkerStatus('BUSY');
 
+    // JOB: OUTPUTs: PROCESSING
     for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
       if (['COMPLETED', 'FAILED'].includes(job.outputs[index].status)) continue;
+
+      await logger.insert('INFO', 'Processing job output...', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
       
       job.outputs[index].status = 'PROCESSING';
+      await updateJob(job);
 
       try{
-        job.outputs[index].status = 'PROCESSED';
+        jobOutputsProcessedCount++;
         job.outputs[index].outcome = await processOutput(job, job.outputs[index]);
+        job.outputs[index].status = 'PROCESSED';
+        await logger.insert('INFO', 'Job output successfully processed!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
       } catch (error: Error | any){
         job.outputs[index].status = 'FAILED';
         job.outputs[index].outcome = { message: error.message || 'Couldn\'t be processed!' };
+        await logger.insert('ERROR', 'Failed to process job output!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index, error: error.message });
       }
 
       job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
-
-      await logger.insert('INFO', 'Job output processed!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
 
       await updateJob(job);
       await updateWorkerStatus('BUSY');
     }
 
-    await createJobNotification(job, 'PROCESSED');
+    if (jobOutputsProcessedCount > 0) {
+      // JOB: PROCESSED
+      await logger.insert('INFO', 'Job outputs successfully processed!');
 
-    /* JOB: OUTPUTs: UPLOADING */
-    job.status = 'UPLOADING';
+      job.status = 'PROCESSED';
 
-    await logger.insert('INFO', 'Uploading job outputs...');
+      await updateJob(job);
+      await createJobNotification(job, job.status);
 
-    await updateJob(job);
-    await updateWorkerStatus('BUSY');
-
-    for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
-      if (['COMPLETED', 'FAILED'].includes(job.outputs[index].status)) continue;
+      /* JOB: OUTPUTs: UPLOADING */
+      await logger.insert('INFO', 'Uploading job outputs...');
       
-      job.outputs[index].status = 'UPLOADING';
-
-      try {
-        job.outputs[index].outcome = await uploadOutput(job, job.outputs[index]);
-        job.outputs[index].status = 'COMPLETED';
-      } catch (error: Error | any) {
-        job.outputs[index].status = 'FAILED';
-        job.outputs[index].outcome = { message: error.message || 'Couldn\'t be uploaded!' };
-      }
-
-      job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
-
-      await logger.insert('INFO', 'Job output uploaded!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
+      job.status = 'UPLOADING';
 
       await updateJob(job);
+      await createJobNotification(job, job.status);
       await updateWorkerStatus('BUSY');
+
+      for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
+        if (job.outputs[index].status == 'PROCESSED') {
+          const tempJobOutputFilePath = path.join(tempJobFolder, `output.${job.outputs[index].index}.${(job.outputs[index].specs.format || 'mp4').toLowerCase()}`);
+
+          try {
+            await fs.access(tempJobOutputFilePath);
+          } catch {
+            job.outputs[index].status = 'FAILED';
+            job.outputs[index].outcome = { message: 'Output file is missing!' };
+          }
+        }
+
+        if (['COMPLETED', 'FAILED'].includes(job.outputs[index].status)) continue;
+
+        await logger.insert('INFO', 'Uploading job output...', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
+        
+        job.outputs[index].status = 'UPLOADING';
+        await updateJob(job);
+
+        try {
+          job.outputs[index].outcome = await uploadOutput(job, job.outputs[index]);
+          job.outputs[index].status = 'COMPLETED';
+          await logger.insert('INFO', 'Job output successfully uploaded!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index });
+          jobOutputsUploadedCount++;
+        } catch (error: Error | any) {
+          job.outputs[index].status = 'FAILED';
+          job.outputs[index].outcome = { message: error.message || 'Couldn\'t be uploaded!' };
+          await logger.insert('ERROR', 'Failed to upload job output!', { output_key: job.outputs[index].key, output_index: job.outputs[index].index, error: error.message });
+        }
+
+        job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
+
+        await updateJob(job);
+        await updateWorkerStatus('BUSY');
+      }
+
+      if (jobOutputsUploadedCount > 0) {
+        // JOB: UPLOADED
+        await logger.insert('INFO', 'Job outputs successfully uploaded!');
+
+        job.status = 'UPLOADED';
+
+        await updateJob(job);
+        await createJobNotification(job, job.status);
+      }
+
+      /*
+      for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
+        if (job.outputs[index].status === 'FAILED') {
+          throw new Error('Some outputs failed!');
+          break;
+        }
+      }
+      */
     }
 
-    await createJobNotification(job, 'UPLOADED');
-
-    for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
-      if (job.outputs[index].status === 'FAILED') {
-        throw new Error('Some outputs failed!');
-        break;
-      }
+    // JOB: OUTPUTs: CHECK FAILED
+    if (jobOutputsProcessedCount === job.outputs?.length || jobOutputsUploadedCount === job.outputs?.length) {
+      throw new Error('Some outputs failed!');
     }
 
     job.status = 'COMPLETED';
     job.outcome = { message: 'Successfully completed!' };
   } catch (error: Error | any) {
-    console.log(error.message);
-
     job.status = 'FAILED';
-    job.outcome = { message: error.message || 'Unknown error' };
+    job.outcome = { message: error.message || 'Unknown error occurred!' };
 
     if (job.try_count < job.try_max) {
       job.status = 'RETRYING';
@@ -188,18 +279,18 @@ async function run() {
   job.progress = 100.00;
   job.completed_at = getNow();
 
-  // await fs.rm(jobTempFolder, { recursive: true }).catch(() => {});
+  await fs.rm(tempJobFolder, { recursive: true }).catch(() => {});
 
   await updateJob(job);
   // await updateWorkerStatus('IDLE');
 
   if (job.status === 'COMPLETED') {
     await logger.insert('INFO', 'Job completed successfully!');
-    await createJobNotification(job, 'COMPLETED');
+    await createJobNotification(job, job.status);
     process.exit(0);
   } else {
     await logger.insert('ERROR', 'Job failed!', { error: job.outcome });
-    await createJobNotification(job, 'FAILED');
+    await createJobNotification(job, job.status);
     process.exit(1);
   }
 }
@@ -221,7 +312,7 @@ async function updateJob(job: any): Promise<void> {
         updated_at: getNow(),
       });
   } catch (error: Error | any) {
-    console.log("ERROR", error);
+    console.log('updateJob', 'ERROR', error);
   }
 }
 

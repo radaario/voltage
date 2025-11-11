@@ -320,11 +320,31 @@ export async function startSupervisorService(instance_key: string) {
               for (let index = 0; index < queuedJobs.length; index++) {
                 const idleWorker = idleWorkers[index];
                 const queuedJob = queuedJobs[index];
-                await spawnWorkerForJob(idleWorker.key, queuedJob.key);
+                
+                try {
+                  await logger.insert('INFO', 'Spawning worker for job...', { worker_key: idleWorker.key, job_key: queuedJob.key });
+
+                  // WORKER: UPDATE: BUSY
+                  await database.table('instances_workers').where('key', idleWorker.key).update({ status: 'BUSY', updated_at: getNow() });
+
+                  await spawnWorkerForJob(idleWorker.key, queuedJob.key);
+
+                  // JOB: QUEUE: DELETE
+                  await database.table('jobs_queue').where('key', queuedJob.key).delete();
+
+                  await logger.insert('INFO', 'Spawned worker for job...', { worker_key: idleWorker.key, job_key: queuedJob.key });
+                } catch (error: Error | any) {
+                  // WORKER: UPDATE: BUSY
+                  await database.table('instances_workers').where('key', idleWorker.key).update({ status: 'IDLE', updated_at: getNow() });
+
+                  await logger.insert('ERROR', 'Failed to spawn worker for job!', { worker_key: idleWorker.key, job_key: queuedJob.key, error });
+                }
               }
 
               // JOBs: QUEUEDs: RELEASE
-              await database.table('jobs_queue').where('locked_by', instance_key).update({ locked_by: null });
+              if (queuedJobs.length > 0) {
+                await database.table('jobs_queue').where('locked_by', instance_key).update({ locked_by: null });
+              }
           } catch (error: Error | any) {
               await logger.insert('ERROR', 'Failed to poll jobs!', { error });
           }
@@ -385,14 +405,6 @@ export async function startSupervisorService(instance_key: string) {
 
     async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<any> {
       try {
-        await logger.insert('INFO', 'Spawning worker for job...', { worker_key, job_key });
-
-        // WORKER: UPDATE: BUSY
-        await database.table('instances_workers').where('key', worker_key).update({ status: 'BUSY' });
-
-        // JOB: QUEUE: DELETE
-        await database.table('jobs_queue').where('key', job_key).delete();
-        
         /* JOB: NOTIFICATIONs: UPDATE */
         // await database.table('jobs_notifications').where('job_key', job_key).update({ instance_key, worker_key: worker_key });
 
@@ -456,6 +468,7 @@ export async function startSupervisorService(instance_key: string) {
         logger.console('INFO', 'Worker successfully spawned for the job!', { worker_key, job_key });
       } catch (error: Error | any) {
         await logger.insert('ERROR', 'Failed to spawn worker for the job!', { job_key, error });
+        throw error;
       }
     }
 

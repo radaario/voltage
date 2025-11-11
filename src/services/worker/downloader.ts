@@ -11,18 +11,18 @@ export async function downloadInput(job: any): Promise<string> {
   try {
     logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
-    const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
-    const jobTempInputFilePath = path.join(jobTempFolder, 'input');
+    const tempJobFolder = path.join(config.temp_folder, 'jobs', job.key);
+    const tempJobInputFilePath = path.join(tempJobFolder, 'input');
 
     logger.console('INFO', 'Downloading job input file...');
 
     if (['BASE64'].includes(job.input.type)) {
       const buffer = Buffer.from(job.input.content, 'base64');
       
-      await fs.writeFile(jobTempInputFilePath, buffer);
+      await fs.writeFile(tempJobInputFilePath, buffer);
 
       logger.console('INFO', 'Job input file successfully downloaded!');
-      return jobTempInputFilePath;
+      return tempJobInputFilePath;
     }
 
     if (['HTTP', 'HTTPS'].includes(job.input.type)) {
@@ -36,18 +36,18 @@ export async function downloadInput(job: any): Promise<string> {
         auth
       });
 
-      await fs.writeFile(jobTempInputFilePath, Buffer.from(resp.data));
+      await fs.writeFile(tempJobInputFilePath, Buffer.from(resp.data));
 
       logger.console('INFO', 'Job input file successfully downloaded!');
-      return jobTempInputFilePath;
+      return tempJobInputFilePath;
     }
 
     if (!['BASE64', 'HTTP', 'HTTPS'].includes(job.input.type)) {
       await storage.config(job.input);
-      await storage.download(job.input.path, jobTempInputFilePath);
+      await storage.download(job.input.path, tempJobInputFilePath);
 
       logger.console('INFO', 'Job input file successfully downloaded!');
-      return jobTempInputFilePath;
+      return tempJobInputFilePath;
     }
 
     throw new Error(`Unsupported input type: ${job.input.type}!`);

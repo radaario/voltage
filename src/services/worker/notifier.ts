@@ -3,11 +3,12 @@ import { NotificationSpecs } from '../../config/types.js';
 
 import { uukey, getNow, addNow, sanitizeData } from '../../utils/index.js';
 import { logger } from '../../utils/logger.js';
+import { database } from '../../utils/database.js';
 
 import axios from 'axios';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 
-let database: any = null;
+database.config(config.database);
 
 export async function createJobNotification(job: any, jobStatus: string): Promise<any> {
     if (!job.notification || !job.notification.type) {
@@ -28,12 +29,6 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
     let outcome: any = {
       status: 'FAILED',
     };
-
-    if (!database) {
-      const _database = await import('../../utils/database.js');
-      database = _database.database;
-      database.config(config.database);
-    }
 
     const sanitizedJob = sanitizeData({ ...job, status: jobStatus });
     const now = getNow();
@@ -108,12 +103,6 @@ export async function retryJobNotification(notification: any): Promise<any> {
   let outcome: any = {
     status: 'FAILED',
   };
-
-  if (!database) {
-    const _database = await import('../../utils/database.js');
-    database = _database.database;
-    database.config(config.database);
-  }
 
   try {
     const notificationOutcome = await notify(JSON.parse(notification.specs), JSON.parse(notification.payload));
@@ -227,7 +216,7 @@ async function notifyHttp(specs: any, payload: any): Promise<any> {
     http_status_code: response.status,
   };
 
-  if (response.status !== 200) outcome.error = { message: response.statusText || 'Unknown error' };
+  if (response.status !== 200) outcome.error = { message: response.statusText || 'Unknown error occurred!' };
   if (response.headers) outcome.header = response.headers;
   if (response.data) outcome.body = response.data;
 
@@ -257,7 +246,7 @@ async function notifySns(specs: any, payload: any): Promise<any> {
     http_status_code: response.$metadata.httpStatusCode,
   };
 
-  if (response.$metadata.httpStatusCode !== 200) outcome.error = { message: 'Unknown error' }; // response.$metadata?.httpStatusText
+  if (response.$metadata.httpStatusCode !== 200) outcome.error = { message: 'Unknown error occurred!' }; // response.$metadata?.httpStatusText
   if (response.MessageId) outcome.message_id = response.MessageId;
   
   return outcome;

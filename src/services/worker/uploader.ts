@@ -12,8 +12,8 @@ import axios from 'axios';
 export async function uploadOutput(job: any, output: any): Promise<Record<string, unknown>> {
   logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
   
-  const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
-  const jobTempOutputFilePath = path.join(jobTempFolder, `output.${output.index}.${(output.format || 'mp4').toLowerCase()}`);
+  const tempJobFolder = path.join(config.temp_folder, 'jobs', job.key);
+  const tempJobOutputFilePath = path.join(tempJobFolder, `output.${output.index}.${(output.specs.format || 'mp4').toLowerCase()}`);
 
   // Use output's destination if available, otherwise fall back to global destination
   const destination = output?.specs?.destination || job?.destination;
@@ -22,7 +22,7 @@ export async function uploadOutput(job: any, output: any): Promise<Record<string
     throw new Error('No destination specified for job output!');
   }
 
-  if (!jobTempOutputFilePath) {
+  if (!tempJobOutputFilePath) {
     throw new Error('No local file path provided for upload!');
   }
 
@@ -32,7 +32,7 @@ export async function uploadOutput(job: any, output: any): Promise<Record<string
       url: destination.url,
       method: destination.method ?? 'POST',
       headers: { 'Content-Type': 'application/octet-stream', ...(destination.headers ?? {}) },
-      data: await fs.readFile(jobTempOutputFilePath)
+      data: await fs.readFile(tempJobOutputFilePath)
     });
 
     return { status: resp.status, headers: resp.headers, body: resp.data };
@@ -49,7 +49,7 @@ export async function uploadOutput(job: any, output: any): Promise<Record<string
   
   try {
     await storage.config(destination);
-    await storage.upload(jobTempOutputFilePath, key, contentType);
+    await storage.upload(tempJobOutputFilePath, key, contentType);
 
     // Build a result similar to previous S3 uploader
     const location = (destination as any).bucket ? `s3://${(destination as any).bucket}/${key}` : key;

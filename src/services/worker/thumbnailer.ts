@@ -10,9 +10,9 @@ export async function generateInputPreview(job: any, options: any): Promise<stri
   try {
     logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
-    const jobTempFolder = path.join(config.temp_folder, 'jobs', job.key);
-    const jobTempInputFilePath = path.join(jobTempFolder, 'input');
-    const jobTempInputPreviewFilePath = path.join(jobTempFolder, `preview.${(options.format || 'webp').toLowerCase()}`);
+    const tempJobFolder = path.join(config.temp_folder, 'jobs', job.key);
+    const tempJobInputFilePath = path.join(tempJobFolder, 'input');
+    const tempJobInputPreviewFilePath = path.join(tempJobFolder, `preview.${(options.format || 'webp').toLowerCase()}`);
 
     logger.console('INFO', 'Generating preview from job input...');
 
@@ -25,11 +25,11 @@ export async function generateInputPreview(job: any, options: any): Promise<stri
     const args = [
       '-y', // overwrite output file if exists
       '-ss', offset.toString(),
-      '-i', jobTempInputFilePath,
+      '-i', tempJobInputFilePath,
       '-vframes', '1',
       // '-vf', 'scale=640:-1', // width 640, height auto to maintain aspect ratio
       '-quality', (options.quality || 75).toString(), // webp quality
-      jobTempInputPreviewFilePath
+      tempJobInputPreviewFilePath
     ];
     
     await new Promise<void>((resolve, reject) => {
@@ -42,10 +42,10 @@ export async function generateInputPreview(job: any, options: any): Promise<stri
     });
 
     storage.config(config.storage);
-    await storage.upload(jobTempInputPreviewFilePath, `/jobs/${job.key}/preview.${options.format || 'webp'}`);
+    await storage.upload(tempJobInputPreviewFilePath, `/jobs/${job.key}/preview.${options.format || 'webp'}`);
 
     logger.console('INFO', 'Preview generated from job input!');
-    return jobTempInputPreviewFilePath;
+    return tempJobInputPreviewFilePath;
   } catch (error: Error | any) {
     await logger.insert('ERROR', 'Failed to generate preview from job input!', { error });
     throw new Error((`Failed to generate preview from job input! ${error.message || ''}`).trim());

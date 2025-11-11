@@ -155,7 +155,7 @@ export type JobRow = {
   destination?: any | null;
   notification?: any | null;
   metadata?: any | null;
-  status?: 'RECEIVED' | 'PENDING' | 'RETRYING' | 'QUEUED' | 'STARTED' | 'DOWNLOADING' | 'ANALYZING' | 'PROCESSING' | 'UPLOADING' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED';
+  status?: 'RECEIVED' | 'PENDING' | 'RETRYING' | 'QUEUED' | 'STARTED' | 'DOWNLOADING' | 'DOWNLOADED' | 'ANALYZING' | 'ANALYZED' | 'PROCESSING' | 'PROCESSED' | 'UPLOADING' | 'UPLOADED' | 'COMPLETED' | 'CANCELLED' | 'DELETED' | 'FAILED' | 'TIMEOUT';
   progress?: number | 0.00; // STARTED = 0; DOWNLOADING = 20; ANALYZING = 40; PROCESSING = 60; UPLOADING = 80; COMPLETED = 100;
   started_at?: string | null;
   completed_at?: string | null;
