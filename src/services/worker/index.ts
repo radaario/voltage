@@ -332,12 +332,12 @@ async function updateWorkerStatus(status: string): Promise<void> {
   }
 }
 
-(async () => {
-  // Get job key and instance key from command line arguments
-  const instance_key = process.argv[2];
-  const worker_key = process.argv[3];
-  const job_key = process.argv[4];
+// Get job key and instance key from command line arguments
+const instance_key = process.argv[2];
+const worker_key = process.argv[3];
+const job_key = process.argv[4];
 
+(async () => {
   if (!instance_key) {
     await logger.insert('ERROR', 'Instance key required!');
     process.exit(1);
