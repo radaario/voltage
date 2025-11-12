@@ -1,4 +1,4 @@
-import { logger } from './logger.js';
+import { logger } from '@voltage/utils/logger';
 import knex, { Knex } from 'knex';
 
 class Database {

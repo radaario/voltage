@@ -1,7 +1,7 @@
-import { config } from '../../config/index.js';
+import { config } from '@voltage/config';
 
-import { logger } from '../../utils/logger.js';
-import { storage } from '../../utils/storage.js';
+import { logger } from '@voltage/utils/logger';
+import { storage } from '@voltage/utils/storage';
 
 import { spawn } from 'child_process';
 import path from 'path';

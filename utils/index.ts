@@ -10,7 +10,7 @@ moment.defaultFormat = 'YYYY-MM-DD HH:mm:ss.SSS';
 
 const networkInterfaces = os.networkInterfaces();
 
-export function createInstanceKey(): string {
+export function getInstanceKey(): string {
   if(config.instances.key_method === 'IP_ADDRESS'){
     const ipAddress = getInstanceLocalIpAddress();
     return hash(ipAddress || uuid());

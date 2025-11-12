@@ -1,9 +1,8 @@
-import { config } from '../../config/index.js';
-import { NotificationSpecs } from '../../config/types.js';
-
-import { uukey, getNow, addNow, sanitizeData } from '../../utils/index.js';
-import { logger } from '../../utils/logger.js';
-import { database } from '../../utils/database.js';
+import { config } from '@voltage/config';
+import { NotificationSpecs } from '@voltage/config/types';
+import { uukey, getNow, addNow, sanitizeData } from '@voltage/utils';
+import { logger } from '@voltage/utils/logger';
+import { database } from '@voltage/utils/database';
 
 import axios from 'axios';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';

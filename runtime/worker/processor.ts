@@ -1,6 +1,6 @@
-import { config } from '../../config/index.js';
+import { config } from '@voltage/config';
 
-import { logger } from '../../utils/logger.js';
+import { logger } from '@voltage/utils/logger';
 
 import { spawn } from 'child_process';
 import path from 'path';

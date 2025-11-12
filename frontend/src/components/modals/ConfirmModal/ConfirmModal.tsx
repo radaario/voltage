@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { XMarkIcon, ExclamationTriangleIcon, InformationCircleIcon, ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, ExclamationTriangleIcon, ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 
 export type ConfirmModalVariant = "danger" | "warning" | "info";
 

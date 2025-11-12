@@ -1,15 +1,15 @@
-import { config } from '../../config';
+import { config } from '@voltage/config';
 
-import { getNow, addNow } from '../../utils';
-import { logger } from '../../utils/logger.js';
-import { database } from '../../utils/database.js';
+import { getNow, addNow } from '@voltage/utils';
+import { logger } from '@voltage/utils/logger';
+import { database } from '@voltage/utils/database';
 
-import { downloadInput } from './downloader.js';
-import { analyzeInputMetadata } from './analyzer.js';
-import { generateInputPreview } from './thumbnailer.js';
-import { processOutput } from './processor.js';
-import { uploadOutput } from './uploader.js';
-import { createJobNotification } from './notifier.js';
+import { downloadInput } from '@voltage/runtime/worker/downloader';
+import { analyzeInputMetadata } from '@voltage/runtime/worker/analyzer';
+import { generateInputPreview } from '@voltage/runtime/worker/thumbnailer';
+import { processOutput } from '@voltage/runtime/worker/processor';
+import { uploadOutput } from '@voltage/runtime/worker/uploader';
+import { createJobNotification } from '@voltage/runtime/worker/notifier';
 
 import path from 'path';
 import fs from 'fs/promises';

@@ -1,0 +1,10 @@
+{
+  "name": "@voltage/config",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./types": "./types.ts"
+  }
+}

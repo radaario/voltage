@@ -31,6 +31,7 @@ export interface Instance {
 	key: string;
 	type: "MASTER" | "SLAVE";
 	status: string;
+	system: any;
 	specs: InstanceSpecs | null;
 	workers: Worker[];
 	restart_count?: number;

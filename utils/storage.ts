@@ -1,5 +1,5 @@
-import { guessContentType } from './index.js';
-import { logger } from './logger.js';
+import { guessContentType } from '@voltage/utils';
+import { logger } from '@voltage/utils/logger';
 
 import fs from 'fs/promises';
 import fssync from 'fs';

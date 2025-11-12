@@ -1,9 +1,13 @@
 node_modules
 dist
 storage
-.env
 db.sqlite*
 npm-debug.log*
 .DS_Store
 notes.txt
 
+# locale env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

@@ -59,7 +59,7 @@ const Instances: React.FC = () => {
 			return (
 				instance.key.toLowerCase().includes(query) ||
 				instance.status.toLowerCase().includes(query) ||
-				instance.system?.hostname?.toLowerCase().includes(query)
+				instance?.system?.hostname?.toLowerCase().includes(query)
 			);
 		}) || [];
 

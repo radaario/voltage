@@ -1,7 +1,7 @@
-import { config } from '../config/index.js';
-import { getNow, uukey } from './index.js';
+import { config } from '@voltage/config';
+import { getNow, uukey } from '@voltage/utils';
 
-import { database } from './database.js';
+import { database } from '@voltage/utils/database';
 
 import {pino as _pino} from 'pino';
 

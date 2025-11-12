@@ -1,5 +1,5 @@
 {
-  "name": "VOLTAGE",
+  "name": "voltage",
   "description": "An open-source, FFmpeg-based video encoding API that supports multiple concurrent instances. Easily scale video processing with parallel encoding, efficient resource management, and flexible API endpoints for a reliable, production-ready solution.",
   "version": "0.0.1",
   "author": {
@@ -17,45 +17,27 @@
       "url": "https://github.com/favger"
     }
   ],
+  "workspaces": [
+    "api",
+    "config",
+    "frontend", 
+    "runtime",
+    "utils"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "dev": "tsx watch src/app.ts",
+    "build": "npm run build:api && npm run build:frontend && npm run build:runtime",
+    "build:runtime": "npm --prefix runtime run build",
+    "build:api": "npm --prefix api run build",
+    "build:frontend": "npm --prefix frontend run build",
+
+    "dev": "concurrently \"npm run dev:runtime\" \"npm run dev:api\" \"npm run dev:frontend\"",
+    "dev:runtime": "npm --prefix runtime run dev",
+    "dev:api": "npm --prefix api run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+
     "start": "node dist/app.js"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.901.0",
-    "@aws-sdk/client-sns": "^3.906.0",
-    "@aws-sdk/s3-request-presigner": "^3.901.0",
-    "axios": "^1.7.2",
-    "basic-ftp": "^5.0.5",
-    "better-sqlite3": "^11.7.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "express-async-errors": "^3.1.1",
-    "form-data": "^4.0.0",
-    "knex": "^3.1.0",
-    "moment": "^2.30.1",
-    "moment-timezone": "^0.6.0",
-    "mssql": "^11.0.1",
-    "mysql2": "^3.11.0",
-    "nodejs-whisper": "^0.2.9",
-    "pg": "^8.13.1",
-    "pino": "^9.3.2",
-    "pino-pretty": "^11.2.2",
-    "ssh2-sftp-client": "^12.0.1",
-    "uuid": "^9.0.1"
-  },
-  "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^4.17.21",
-    "@types/mssql": "^9.1.5",
-    "@types/node": "^22.5.4",
-    "@types/pg": "^8.11.10",
-    "@types/ssh2-sftp-client": "^9.0.5",
-    "@types/uuid": "^9.0.7",
-    "tsx": "^4.19.1",
-    "typescript": "^5.5.4"
+    "concurrently": "^9.2.1"
   }
 }

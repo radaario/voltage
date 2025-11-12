@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import os, { hostname } from 'os';
+import path from 'path';
 
 dotenv.config();
 
@@ -9,7 +10,10 @@ const cpuCoresCount = os.cpus().length;
 const ffmpegPathDefault = isWindows ? 'C:\\ffmpeg\\bin\\ffmpeg' : 'ffmpeg';
 const ffprobePathDefault = isWindows ? 'C:\\ffmpeg\\bin\\ffprobe' : 'ffprobe';
 
-const dashboardPassword = process.env.VOLTAGE_DASHBOARD_PASSWORD ?? '12345678';
+const frontendPassword = process.env.VOLTAGE_DASHBOARD_PASSWORD ?? '12345678';
+
+const rootFolder = path.resolve(__dirname, '..');
+console.log("rootFolder:", rootFolder);
 
 export const config = {
   name: process.env.APP_NAME ?? 'VOLTAGE',
@@ -17,7 +21,7 @@ export const config = {
   env: (process.env.APP_ENV ?? 'local') as 'local' | 'dev' | 'test' | 'prod',
   port: Number(process.env.APP_PORT ?? 8080),
   timezone: (process.env.VOLTAGE_TIMEZONE ?? 'UTC'),
-  temp_folder: process.env.VOLTAGE_INSTANCES_TEMP_FOLDER ?? './storage/tmp', // os.tmpdir(),
+  temp_folder: process.env.VOLTAGE_INSTANCES_TEMP_FOLDER ?? `${rootFolder}/storage/tmp`, // os.tmpdir(),
   storage: {
     type: (process.env.VOLTAGE_STORAGE_TYPE ?? 'LOCAL') as 'LOCAL' | 'AWS_S3' | 'GOOGLE_CLOUD_STORAGE' | 'DO_SPACES' | 'LINODE' | 'WASABI' | 'BACKBLAZE' | 'RACKSPACE' | 'MICROSOFT_AZURE' | 'OTHER_S3' | 'FTP' | 'SFTP',
     endpoint: process.env.VOLTAGE_STORAGE_ENDPOINT ?? '', // for S3-compatible types
@@ -29,7 +33,7 @@ export const config = {
     username: process.env.VOLTAGE_STORAGE_USERNAME ?? '', // for FTP/SFTP
     password: process.env.VOLTAGE_STORAGE_PASSWORD ?? '', // for FTP/SFTP
     secure: process.env.VOLTAGE_STORAGE_SECURE === 'true', // for FTP (FTPS with explicit TLS)
-    base_path: process.env.VOLTAGE_STORAGE_BASE_PATH ?? './storage',
+    base_path: process.env.VOLTAGE_STORAGE_BASE_PATH ?? `${rootFolder}/storage`,
   },
   database: {
     type: (process.env.VOLTAGE_DATABASE_TYPE ?? 'SQLITE') as 'SQLITE' | 'MYSQL' | 'MARIADB' | 'POSTGRESQL' | 'MSSQL' | 'AWS_REDSHIFT' | 'COCKROACHDB',
@@ -39,17 +43,19 @@ export const config = {
     password: process.env.VOLTAGE_DATABASE_PASSWORD ?? '',
     name: process.env.VOLTAGE_DATABASE_NAME ?? 'voltage',
     table_prefix: process.env.VOLTAGE_DATABASE_TABLE_PREFIX ?? '',
-    file_name: process.env.VOLTAGE_DATABASE_FILE_NAME ?? './db.sqlite', // SQLite specific
+    file_name: process.env.VOLTAGE_DATABASE_FILE_NAME ?? `${rootFolder}/db.sqlite`, // SQLite specific
     cleanup_interval: Number(process.env.VOLTAGE_DATABASE_CLEANUP_INTERVAL ?? (60 * 60 * 1000)), // in milliseconds, default 1 hour
   },
   api: {
+    port: Number(process.env.VOLTAGE_API_PORT ?? 4000),
     key: process.env.VOLTAGE_API_KEY ?? '5ef438b9bd1e3f62d2e91385e72b2972',
     request_body_limit: process.env.VOLTAGE_API_REQUEST_BODY_LIMIT ?? 0, // in MB, 0 means no limit
     sensitive_fields: process.env.VOLTAGE_API_SENSITIVE_FIELDS ?? 'password,access_secret',
   },
-  dashboard: {
-    is_authentication_required: dashboardPassword ? true : false,
-    password: dashboardPassword,
+  frontend: {
+    port: Number(process.env.VOLTAGE_FRONTEND_PORT ?? 3000),
+    is_authentication_required: frontendPassword ? true : false,
+    password: frontendPassword,
   },
   utils: {
     ffmpeg: {

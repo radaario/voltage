@@ -1,7 +1,6 @@
-import { config } from '../../config/index.js';
-
-import { logger } from '../../utils/logger.js';
-import { storage } from '../../utils/storage.js';
+import { config } from '@voltage/config';
+import { logger } from '@voltage/utils/logger';
+import { storage } from '@voltage/utils/storage';
 
 import path from 'path';
 import fs from 'fs/promises';

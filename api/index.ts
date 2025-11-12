@@ -1,20 +1,19 @@
-import { config } from '../config/index.js';
-import { JobRequest, JobRow, OutputSpecs } from '../config/types.js';
+import { config } from '@voltage/config';
+import { JobRequest, JobRow, OutputSpecs } from '@voltage/config/types';
 
-import { sanitizeData, uuid, uukey, hash, getNow } from '../utils/index.js';
-import { logger } from '../utils/logger.js';
-import { storage } from '../utils/storage.js';
-import { database } from '../utils/database.js';
+import { getInstanceKey, sanitizeData, uuid, uukey, hash, getNow } from '@voltage/utils';
+import { logger } from '@voltage/utils/logger';
+import { storage } from '@voltage/utils/storage';
+import { database } from '@voltage/utils/database';
 
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import 'express-async-errors';
 import express, { Request, Response } from "express";
 import cors from "cors";
-import { createJobNotification } from './worker/notifier.js';
+import { createJobNotification } from '@voltage/runtime/worker/notifier';
 
-let currentInstanceKey: string | null = null;
+// INSTANCE: KEY
+const instance_key = getInstanceKey();
 
 const app = express();
 
@@ -32,7 +31,7 @@ app.use(cors());
 const authMiddleware = (options: { forceAuth?: boolean } = {}) => {
   return (req: Request, res: Response, next: any) => {
     // Check if authentication is required
-    const requireAuth = options.forceAuth || config.dashboard.is_authentication_required;
+    const requireAuth = options.forceAuth || config.frontend.is_authentication_required;
     
     if (!requireAuth) {
       return next();
@@ -54,11 +53,11 @@ const authMiddleware = (options: { forceAuth?: boolean } = {}) => {
     }
 
     // Expected tokens
-    const dashboardToken = hash(config.dashboard.password || uuid());
+    const frontendToken = hash(config.frontend.password || uuid());
     const apiToken = config.api.key;
 
-    // Check if token matches either dashboard token or API key
-    if (token !== dashboardToken && token !== apiToken) {
+    // Check if token matches either frontend token or API key
+    if (token !== frontendToken && token !== apiToken) {
       return res.status(401).json({ metadata: { status: 'ERROR', error: {code: 'AUTH_TOKEN_INVALID', message: 'Invalid authentication token!'}} });
     }
 
@@ -79,12 +78,12 @@ app.post('/auth', async (req, res) => {
   // Accept password from body, query string, or POST data
   const inputPassword = (req.query.password || req.body.password || '').trim();
 
-  if (config.dashboard.is_authentication_required) {
+  if (config.frontend.is_authentication_required) {
     if (!inputPassword) {
       return res.status(400).json({ metadata: {status: 'ERROR', error: {code: 'PASSWORD_REQUIRED', message: 'Password required!'}} });
     }
 
-    if (inputPassword === config.dashboard.password) {
+    if (inputPassword === config.frontend.password) {
       const token = hash(inputPassword);
       return res.json({ metadata: {status: 'SUCCESSFUL'}, data: {token} });
     } else {
@@ -423,7 +422,7 @@ app.put('/jobs', authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
         notification: job.notification ? JSON.stringify(job.notification) : null,
         metadata: job.metadata ? JSON.stringify(job.metadata) : null,
         status: 'PENDING',
-        locked_by: config.jobs.enqueue_on_receive ? currentInstanceKey : null,
+        locked_by: config.jobs.enqueue_on_receive ? instance_key : null,
       })
       .then(async result => {
         job.status = 'PENDING';
@@ -634,9 +633,9 @@ app.get('/test', async (req, res) => {
 });
 
 /*
-const clientPath = path.join(dirname(fileURLToPath(import.meta.url)), "../../client-build");
-app.use(express.static(clientPath));
-app.get("/*", (req: Request, res: Response) => res.sendFile(path.join(clientPath, "index.html")));
+const frontendPath = path.join(__dirname, '../../frontend-build');
+app.use(express.static(frontendPath));
+app.get("/*", (req: Request, res: Response) => res.sendFile(path.join(frontendPath, "index.html")));
 */
 
 app.use((error: any, req: any, res: any, _next: any) => {
@@ -644,29 +643,17 @@ app.use((error: any, req: any, res: any, _next: any) => {
   return res.status(500).json({ metadata: {status: 'ERROR', error: {code: 'INTERNAL_ERROR', message: 'An error occurred on API service!'}} });
 });
 
-export async function startApiService(instance_key: string) {
-  logger.insert('INFO', 'Starting API service on :port...', { instance_key, port: config.port });
+logger.insert('INFO', 'Starting API service on :port...', { instance_key, port: config.api.port });
 
-  if (!instance_key) {
-    await logger.insert('ERROR', 'Instance key required!');
-    throw new Error('Instance key required!');
-  }
-
-  currentInstanceKey = instance_key;
-
+(async () => {
   logger.setMetadata({ instance_key });
   await storage.config(config.storage);
   database.config(config.database);
   await database.verifySchemaExists();
 
-  // SERVER: START
-  return new Promise((resolve, reject) => {
-    const server = app.listen(config.port, () => {
-      logger.insert('INFO', 'API service started successfully on :port!', { port: config.port });
-      resolve(server);
-    }).on('error', (error: Error | any) => {
-      logger.insert('ERROR', 'Failed to start API service!', { error });
-      reject(error);
-    });
+  app.listen(config.api.port, () => {
+      logger.insert('INFO', 'API service started successfully on :port!', { port: config.api.port });
+  }).on('error', (error: Error | any) => {
+    logger.insert('ERROR', 'Failed to start API service!', { error });
   });
-}
+})();

@@ -166,6 +166,18 @@
 		}
 	}
 
+	@keyframes highlightPulseDark {
+		0% {
+			background-color: rgb(59 130 246 / 0.2);
+		}
+		50% {
+			background-color: rgb(59 130 246 / 0.3);
+		}
+		100% {
+			background-color: transparent;
+		}
+	}
+
 	.animate-slide-in-highlight {
 		animation:
 			slideInHighlight 0.5s ease-out,
@@ -173,17 +185,6 @@
 	}
 
 	.dark .animate-slide-in-highlight {
-		@keyframes highlightPulseDark {
-			0% {
-				background-color: rgb(59 130 246 / 0.2);
-			}
-			50% {
-				background-color: rgb(59 130 246 / 0.3);
-			}
-			100% {
-				background-color: transparent;
-			}
-		}
 		animation:
 			slideInHighlight 0.5s ease-out,
 			highlightPulseDark 2s ease-out;
