@@ -1,10 +1,8 @@
+import "dotenv/config";
 import { config } from "@voltage/config";
 import { JobRequest, JobRow, OutputSpecs } from "@voltage/config/types";
 
-import { getInstanceKey, sanitizeData, uuid, uukey, hash, getNow } from "@voltage/utils";
-import { logger } from "@voltage/utils/logger";
-import { storage } from "@voltage/utils/storage";
-import { database } from "@voltage/utils/database";
+import { getInstanceKey, sanitizeData, uuid, uukey, hash, getNow, logger, storage, database } from "@voltage/utils";
 
 import path from "path";
 import "express-async-errors";

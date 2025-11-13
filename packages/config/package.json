@@ -4,16 +4,24 @@
 	"type": "module",
 	"private": true,
 	"main": "./dist/index.js",
+	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
-		".": "./dist/index.js",
-		"./types": "./dist/types.js"
+		".": {
+			"types": "./dist/index.d.ts",
+			"require": "./dist/index.cjs",
+			"import": "./dist/index.js"
+		}
 	},
 	"scripts": {
-		"build": "tsc --build tsconfig.json",
+		"build": "tsup ./index.ts --format cjs,esm --dts",
+		"dev": "tsup ./index.ts --format cjs,esm --dts --watch",
+		"typecheck": "tsc --noEmit",
 		"clean": "rm -rf ./dist"
 	},
 	"dependencies": {
-		"dotenv": "^16.4.5"
+		"@types/node": "^20.10.6",
+		"tsup": "^8.0.1",
+		"typescript": "^5.3.3"
 	}
 }

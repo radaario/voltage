@@ -8,7 +8,7 @@
 		"dev": "tsx watch index.ts",
 		"build": "tsc --build tsconfig.json",
 		"start": "node dist/index.js",
-		"clean": "rm -rf ../dist/api"
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@voltage/config": "workspace:*",

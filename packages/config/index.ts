@@ -1,8 +1,10 @@
-import dotenv from "dotenv";
 import os from "os";
 import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config();
+// ES module ortamında __filename ve __dirname yerine:
+const __file = fileURLToPath(import.meta.url);
+const __dir = path.dirname(__file);
 
 const isWindows = os.platform() === "win32";
 const cpuCoresCount = os.cpus().length;
@@ -12,7 +14,7 @@ const ffprobePathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffprobe" : "ffprobe";
 
 const frontendPassword = process.env.VOLTAGE_DASHBOARD_PASSWORD ?? "12345678";
 
-const rootFolder = path.resolve(__dirname, "../..");
+const rootFolder = path.resolve(__dir, "../..");
 
 export const config = {
 	name: process.env.APP_NAME ?? "VOLTAGE",

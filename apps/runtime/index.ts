@@ -1,9 +1,7 @@
+import "dotenv/config";
 import { config } from "@voltage/config";
 
-import { getInstanceKey, getInstanceSpecs, hash, getNow, subtractNow } from "@voltage/utils";
-import { logger } from "@voltage/utils/logger";
-import { storage } from "@voltage/utils/storage";
-import { database } from "@voltage/utils/database";
+import { getInstanceKey, getInstanceSpecs, hash, getNow, subtractNow, logger, storage, database } from "@voltage/utils";
 
 import path from "path";
 import { spawn, ChildProcess } from "child_process";
@@ -11,13 +9,6 @@ import { createJobNotification, retryJobNotification } from "./worker/notifier.j
 
 // INSTANCE: KEY
 const instance_key = getInstanceKey();
-
-(async () => {
-	logger.setMetadata({ instance_key });
-	await storage.config(config.storage);
-	database.config(config.database);
-	await database.verifySchemaExists();
-})();
 
 const intervals = new Map<string, NodeJS.Timeout>();
 const workersProcessMap = new Map<string, ChildProcess>();
@@ -439,13 +430,13 @@ async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<a
 		let child: ChildProcess;
 
 		if (config.env === "prod") {
-			const workerScriptPath = path.join(process.cwd(), "dist", "services", "worker", "index.js");
+			const workerScriptPath = path.join(process.cwd(), "dist", "worker", "index.js");
 			child = spawn("node", [workerScriptPath, instance_key, worker_key, job_key], {
 				stdio: ["inherit", "inherit", "inherit"],
 				cwd: process.cwd()
 			});
 		} else {
-			const workerScriptPath = path.join(process.cwd(), "src", "services", "worker", "index.ts");
+			const workerScriptPath = path.join(process.cwd(), "worker", "index.ts");
 			child = spawn("npx", ["tsx", workerScriptPath, instance_key, worker_key, job_key], {
 				stdio: ["inherit", "inherit", "inherit"],
 				cwd: process.cwd(),
@@ -598,7 +589,12 @@ const gracefulShutdown = async (signal: string) => {
 	process.exit(0);
 };
 
-(async () => {
+async function bootstrap() {
+	logger.setMetadata({ instance_key });
+	await storage.config(config.storage);
+	database.config(config.database);
+	await database.verifySchemaExists();
+
 	await logger.insert("INFO", "Starting runtime service...");
 
 	try {
@@ -631,4 +627,9 @@ const gracefulShutdown = async (signal: string) => {
 		await logger.insert("ERROR", "Failed to start runtime service!", { error });
 		throw error;
 	}
-})();
+}
+
+bootstrap().catch((err) => {
+	// Final catch to avoid unhandled rejections
+	logger.console("ERROR", "Runtime bootstrap failed!", { error: err });
+});

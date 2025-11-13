@@ -1,7 +1,7 @@
 import { config } from "@voltage/config";
-import { getNow, uukey } from "@voltage/utils";
+import { getNow, uukey } from "./index";
 
-import { database } from "@voltage/utils/database";
+import { database } from "./database";
 
 import { pino as _pino } from "pino";
 

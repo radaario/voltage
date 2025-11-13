@@ -9,8 +9,8 @@
 		"skipLibCheck": true,
 		"strict": true,
 		"resolveJsonModule": true,
-		"composite": true,
-		"declaration": true,
+		"composite": false,
+		"declaration": false,
 		"types": [],
 		"baseUrl": "./",
 		"paths": {
@@ -21,6 +21,6 @@
 		}
 	},
 	"include": ["./*.ts"],
-	"exclude": ["node_modules", "./dist"],
-	"references": [{ "path": "../config" }]
+	"exclude": ["node_modules", "dist"],
+	"files": ["index.ts", "logger.ts", "storage.ts", "database.ts"]
 }
