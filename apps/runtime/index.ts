@@ -58,7 +58,7 @@ async function initInstance() {
 			.count("* as count")
 			.first();
 		const existsWorkersCount = (_existsWorkersCount as any).count || 0;
-		const missingWorkersCount = config.instances.workers.max - existsWorkersCount;
+		const missingWorkersCount = config.runtime.workers.max - existsWorkersCount;
 
 		/* WORKERs: INSERT */
 		if (missingWorkersCount > 0) {
@@ -83,7 +83,7 @@ async function initInstance() {
 			.where("instance_key", instance_key)
 			.update({
 				job_key: null,
-				status: database.knex.raw(`CASE WHEN \`index\` < ? THEN 'IDLE' ELSE 'TERMINATED' END`, [config.instances.workers.max]),
+				status: database.knex.raw(`CASE WHEN \`index\` < ? THEN 'IDLE' ELSE 'TERMINATED' END`, [config.runtime.workers.max]),
 				updated_at: now
 			});
 	} catch (error: Error | any) {}
@@ -157,7 +157,7 @@ async function maintainInstancesAndWorkers() {
 		logger.console("INFO", "Maintaining workers...");
 
 		/* WORKERs: UPDATE: TIMEOUT */
-		const busyTimeout = config.instances.workers.busy_timeout || 5 * 60 * 1000; // in milliseconds, default 5 minutes
+		const busyTimeout = config.runtime.workers.busy_timeout || 5 * 60 * 1000; // in milliseconds, default 5 minutes
 
 		const timeoutedWorkers = await database
 			.table("instances_workers")
@@ -183,7 +183,7 @@ async function maintainInstancesAndWorkers() {
 		}
 
 		/* WORKERs: UPDATE: IDLE */
-		const idleAfter = config.instances.workers.idle_after || 1 * 10 * 1000; // in milliseconds, default 10 seconds
+		const idleAfter = config.runtime.workers.idle_after || 1 * 10 * 1000; // in milliseconds, default 10 seconds
 
 		try {
 			await database
@@ -203,7 +203,7 @@ async function maintainInstancesAndWorkers() {
 		logger.console("INFO", "Maintaining instances...");
 
 		/* INSTANCEs: UPDATE: OFFLINE */
-		const offlineTimeout = config.instances.online_timeout || 1 * 60 * 1000; // in milliseconds, default 1 minute
+		const offlineTimeout = config.runtime.online_timeout || 1 * 60 * 1000; // in milliseconds, default 1 minute
 
 		try {
 			const inactiveInstances = await database
@@ -241,7 +241,7 @@ async function maintainInstancesAndWorkers() {
 		}
 
 		/* INSTANCEs: DELETE: PURGE */
-		const purgeAfter = config.instances.purge_after || 1 * 60 * 1000; // in milliseconds, default 1 minute
+		const purgeAfter = config.runtime.purge_after || 1 * 60 * 1000; // in milliseconds, default 1 minute
 
 		try {
 			const offlineInstances = await database
@@ -603,7 +603,7 @@ async function bootstrap() {
 		await maintainInstancesAndWorkers();
 		intervals.set(
 			"maintainInstancesAndWorkers",
-			setInterval(() => maintainInstancesAndWorkers(), config.instances.maintain_interval || 60000)
+			setInterval(() => maintainInstancesAndWorkers(), config.runtime.maintain_interval || 60000)
 		);
 
 		await processJobs();

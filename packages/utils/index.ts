@@ -11,7 +11,7 @@ moment.defaultFormat = "YYYY-MM-DD HH:mm:ss.SSS";
 const networkInterfaces = os.networkInterfaces();
 
 export function getInstanceKey(): string {
-	if (config.instances.key_method === "IP_ADDRESS") {
+	if (config.runtime.key_method === "IP_ADDRESS") {
 		const ipAddress = getInstanceLocalIpAddress();
 		return hash(ipAddress || uuid());
 	}
@@ -32,8 +32,8 @@ export function getInstanceSpecs(): any {
 		memory_total: os.totalmem(),
 		memory_free: os.freemem(),
 		memory_usage_percent: getInstanceMemoryUsagePercent(),
-		workers_per_cpu_core: config.instances.workers.per_cpu_core,
-		workers_max: config.instances.workers.max
+		workers_per_cpu_core: config.runtime.workers.per_cpu_core,
+		workers_max: config.runtime.workers.max
 	};
 }
 

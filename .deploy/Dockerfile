@@ -44,7 +44,10 @@ RUN rm pnpm-lock.yaml
 RUN pnpm install
 
 # Build all services
-RUN npm run build
+RUN npm run build:packages
+RUN if [ "$VOLTAGE_RUNTIME_IS_DISABLED" != "false" ]; then npm run build:runtime; else echo "Runtime build skipped"; fi
+RUN if [ "$VOLTAGE_API_IS_DISABLED" != "false" ]; then npm run build:api; else echo "API build skipped"; fi
+RUN if [ "$VOLTAGE_FRONTEND_IS_DISABLED" != "false" ]; then npm run build:frontend; else echo "Frontend build skipped"; fi
 
 # Setup nginx configuration
 COPY ./.deploy/nginx.conf /etc/nginx/nginx.conf

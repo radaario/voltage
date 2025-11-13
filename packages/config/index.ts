@@ -13,7 +13,7 @@ const cpuCoresCount = os.cpus().length;
 const ffmpegPathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffmpeg" : "ffmpeg";
 const ffprobePathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffprobe" : "ffprobe";
 
-const frontendPassword = process.env.VOLTAGE_DASHBOARD_PASSWORD ?? "12345678";
+const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? "12345678";
 
 const rootFolder = path.resolve(__dir, "../..");
 
@@ -22,8 +22,17 @@ export const config = {
 	version: process.env.APP_VERSION ?? "0.0.1",
 	env: (process.env.APP_ENV ?? "local") as "local" | "dev" | "test" | "prod",
 	port: Number(process.env.APP_PORT ?? 8080),
+	base_url: process.env.APP_BASE_URL ?? "",
 	timezone: process.env.VOLTAGE_TIMEZONE ?? "UTC",
 	temp_folder: process.env.VOLTAGE_INSTANCES_TEMP_FOLDER ?? `${rootFolder}/storage/tmp`, // os.tmpdir(),
+	utils: {
+		ffmpeg: {
+			path: process.env.FFMPEG_PATH ?? ffmpegPathDefault
+		},
+		ffprobe: {
+			path: process.env.FFPROBE_PATH ?? ffprobePathDefault
+		}
+	},
 	storage: {
 		type: (process.env.VOLTAGE_STORAGE_TYPE ?? "LOCAL") as
 			| "LOCAL"
@@ -67,26 +76,8 @@ export const config = {
 		file_name: process.env.VOLTAGE_DATABASE_FILE_NAME ?? `${rootFolder}/db.sqlite`, // SQLite specific
 		cleanup_interval: Number(process.env.VOLTAGE_DATABASE_CLEANUP_INTERVAL ?? 60 * 60 * 1000) // in milliseconds, default 1 hour
 	},
-	api: {
-		port: Number(process.env.VOLTAGE_API_PORT ?? 4000),
-		key: process.env.VOLTAGE_API_KEY ?? "5ef438b9bd1e3f62d2e91385e72b2972",
-		request_body_limit: process.env.VOLTAGE_API_REQUEST_BODY_LIMIT ?? 0, // in MB, 0 means no limit
-		sensitive_fields: process.env.VOLTAGE_API_SENSITIVE_FIELDS ?? "password,access_secret"
-	},
-	frontend: {
-		port: Number(process.env.VOLTAGE_FRONTEND_PORT ?? 3000),
-		is_authentication_required: frontendPassword ? true : false,
-		password: frontendPassword
-	},
-	utils: {
-		ffmpeg: {
-			path: process.env.FFMPEG_PATH ?? ffmpegPathDefault
-		},
-		ffprobe: {
-			path: process.env.FFPROBE_PATH ?? ffprobePathDefault
-		}
-	},
-	instances: {
+	runtime: {
+		is_disabled: process.env.VOLTAGE_RUNTIME_IS_DISABLED === "true",
 		key_method: (process.env.VOLTAGE_INSTANCES_KEY_METHOD ?? "IP_ADDRESS") as "IP_ADDRESS" | "UNIQUE_KEY",
 		maintain_interval: Number(process.env.VOLTAGE_INSTANCES_MAINTAIN_INTERVAL ?? 1 * 10 * 1000), // in milliseconds, default 10 seconds
 		online_timeout: Number(process.env.VOLTAGE_INSTANCES_ONLINE_TIMEOUT ?? 1 * 60 * 1000), // in milliseconds, default 1 minute
@@ -97,6 +88,23 @@ export const config = {
 			busy_timeout: Number(process.env.VOLTAGE_WORKERS_BUSY_TIMEOUT ?? 5 * 60 * 1000), // in milliseconds, default 5 minutes
 			idle_after: Number(process.env.VOLTAGE_WORKERS_IDLE_AFTER ?? 1 * 10 * 1000) // in milliseconds, default 10 seconds
 		}
+	},
+	api: {
+		is_disabled: process.env.VOLTAGE_API_IS_DISABLED === "true",
+		port: Number(process.env.VOLTAGE_API_PORT ?? 4000),
+		key: process.env.VOLTAGE_API_KEY ?? "5ef438b9bd1e3f62d2e91385e72b2972",
+		request_body_limit: process.env.VOLTAGE_API_REQUEST_BODY_LIMIT ?? 0, // in MB, 0 means no limit
+		sensitive_fields: process.env.VOLTAGE_API_SENSITIVE_FIELDS ?? "password,access_secret"
+	},
+	frontend: {
+		is_disabled: process.env.VOLTAGE_FRONTEND_IS_DISABLED === "true",
+		port: Number(process.env.VOLTAGE_FRONTEND_PORT ?? 3000),
+		is_authentication_required: frontendPassword ? true : false,
+		password: frontendPassword
+	},
+	logs: {
+		is_disabled: process.env.VOLTAGE_LOGS_IS_DISABLED === "true",
+		retention: Number(process.env.VOLTAGE_LOGS_RETENTION ?? 60 * 60 * 1000) // in milliseconds, default 1 hour
 	},
 	jobs: {
 		process_interval: Number(process.env.VOLTAGE_JOBS_PROCESS_INTERVAL ?? 1 * 1 * 1000), // in milliseconds, default 1 second
@@ -128,9 +136,5 @@ export const config = {
 			retry_in: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN ?? 1 * 60 * 1000), // in milliseconds, default 1 minute
 			retry_in_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MAX ?? 60 * 60 * 1000) // in milliseconds, default 60 minutes
 		}
-	},
-	logs: {
-		is_disabled: process.env.VOLTAGE_LOGS_IS_DISABLED === "true",
-		retention: Number(process.env.VOLTAGE_LOGS_RETENTION ?? 60 * 60 * 1000) // in milliseconds, default 1 hour
 	}
 };
