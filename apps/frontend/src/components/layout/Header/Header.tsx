@@ -21,7 +21,7 @@ function Header() {
 	const { isAuthenticated, logout } = useAuth();
 	const { config, configError, refetchConfig } = useGlobalStateContext();
 
-	const showLogout = isAuthenticated && config?.dashboard?.is_authentication_required;
+	const showLogout = isAuthenticated && config?.frontend?.is_authentication_required;
 
 	return (
 		<header className="layout-header">

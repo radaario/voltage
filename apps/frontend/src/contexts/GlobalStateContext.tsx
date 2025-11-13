@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-interface DashboardConfig {
+interface FrontendConfig {
 	is_authentication_required?: boolean;
 	password?: string;
 }
@@ -16,7 +16,7 @@ interface Config {
 	storage?: any;
 	database?: any;
 	api?: any;
-	dashboard?: DashboardConfig;
+	frontend?: FrontendConfig;
 	utils?: any;
 	instances?: any;
 	workers?: any;

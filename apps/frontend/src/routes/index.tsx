@@ -40,7 +40,7 @@ const AuthSafeRoute = () => {
 	}
 
 	// Authentication gerekli değilse direkt içeri al
-	if (!config?.dashboard?.is_authentication_required) {
+	if (!config?.frontend?.is_authentication_required) {
 		return <Outlet />;
 	}
 
@@ -67,7 +67,7 @@ const AuthRedirect = () => {
 	}
 
 	// Authentication gerekli değilse direkt dashboard'a yönlendir
-	if (!config?.dashboard?.is_authentication_required) {
+	if (!config?.frontend?.is_authentication_required) {
 		return (
 			<Navigate
 				to="/"

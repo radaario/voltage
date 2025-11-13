@@ -3,8 +3,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // ES module ortamında __filename ve __dirname yerine:
-const __file = fileURLToPath(import.meta.url);
-const __dir = path.dirname(__file);
+// const __file = fileURLToPath(import.meta.url);
+// const __dir = path.dirname(__file);
+const __dir = process.cwd();
 
 const isWindows = os.platform() === "win32";
 const cpuCoresCount = os.cpus().length;

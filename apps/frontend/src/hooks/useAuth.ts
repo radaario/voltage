@@ -15,7 +15,7 @@ export const useAuth = () => {
 
 	// Authentication gerekli değilse otomatik olarak authenticated olarak işaretle
 	useEffect(() => {
-		if (!configLoading && config?.dashboard?.is_authentication_required === false) {
+		if (!configLoading && config?.frontend?.is_authentication_required === false) {
 			setAuthState({
 				authToken: "no-auth-required",
 				isAuthenticated: true

@@ -1,0 +1,30 @@
+{
+  "0 debug pnpm:scope": {
+    "selected": 1,
+    "total": 6,
+    "workspacePrefix": "C:\\Users\\frkgr\\Desktop\\RADAAR\\voltage"
+  },
+  "1 info pnpm": {
+    "err": {
+      "name": "Error",
+      "message": "@voltage/config@1.0.0 build: `tsup ./index.ts --format cjs,esm --dts`\nExit status 1",
+      "code": "ELIFECYCLE",
+      "stack": "Error: @voltage/config@1.0.0 build: `tsup ./index.ts --format cjs,esm --dts`\nExit status 1\n    at EventEmitter.<anonymous> (C:\\Users\\frkgr\\.node\\corepack\\pnpm\\6.11.0\\dist\\pnpm.cjs:104774:20)\n    at EventEmitter.emit (node:events:524:28)\n    at ChildProcess.<anonymous> (C:\\Users\\frkgr\\.node\\corepack\\pnpm\\6.11.0\\dist\\pnpm.cjs:93080:18)\n    at ChildProcess.emit (node:events:524:28)\n    at maybeClose (node:internal/child_process:1104:16)\n    at ChildProcess._handle.onexit (node:internal/child_process:304:5)"
+    }
+  },
+  "2 error pnpm": {
+    "errno": 1,
+    "code": "ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL",
+    "pkgid": "@voltage/config@1.0.0",
+    "stage": "build",
+    "script": "tsup ./index.ts --format cjs,esm --dts",
+    "pkgname": "@voltage/config",
+    "prefix": "C:\\Users\\frkgr\\Desktop\\RADAAR\\voltage\\packages\\config",
+    "err": {
+      "name": "Error",
+      "message": "@voltage/config@1.0.0 build: `tsup ./index.ts --format cjs,esm --dts`\nExit status 1",
+      "code": "ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL",
+      "stack": "Error: @voltage/config@1.0.0 build: `tsup ./index.ts --format cjs,esm --dts`\nExit status 1\n    at EventEmitter.<anonymous> (C:\\Users\\frkgr\\.node\\corepack\\pnpm\\6.11.0\\dist\\pnpm.cjs:104774:20)\n    at EventEmitter.emit (node:events:524:28)\n    at ChildProcess.<anonymous> (C:\\Users\\frkgr\\.node\\corepack\\pnpm\\6.11.0\\dist\\pnpm.cjs:93080:18)\n    at ChildProcess.emit (node:events:524:28)\n    at maybeClose (node:internal/child_process:1104:16)\n    at ChildProcess._handle.onexit (node:internal/child_process:304:5)"
+    }
+  }
+}

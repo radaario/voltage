@@ -12,6 +12,6 @@
 			"@voltage/runtime/*": ["../runtime/*"]
 		}
 	},
-	"include": ["./**/*.ts", "../runtime/**/*.ts"],
+	"include": ["./*.ts", "../runtime/**/*.ts"],
 	"exclude": ["node_modules", "dist"]
 }

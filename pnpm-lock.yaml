@@ -241,7 +241,12 @@ importers:
     specifiers:
       '@aws-sdk/client-s3': ^3.901.0
       '@aws-sdk/s3-request-presigner': ^3.901.0
-      '@types/node': ^20.10.6
+      '@types/better-sqlite3': ^7.6.13
+      '@types/mssql': ^9.1.5
+      '@types/node': ^22.5.4
+      '@types/pg': ^8.11.10
+      '@types/ssh2-sftp-client': ^9.0.5
+      '@types/uuid': ^9.0.7
       '@voltage/config': workspace:*
       basic-ftp: ^5.0.5
       better-sqlite3: ^11.7.0
@@ -272,7 +277,12 @@ importers:
       ssh2-sftp-client: 12.0.1
       uuid: 9.0.1
     devDependencies:
-      '@types/node': 20.19.25
+      '@types/better-sqlite3': 7.6.13
+      '@types/mssql': 9.1.8
+      '@types/node': 22.19.1
+      '@types/pg': 8.15.6
+      '@types/ssh2-sftp-client': 9.0.5
+      '@types/uuid': 9.0.8
       tsup: 8.5.1_typescript@5.9.3
       typescript: 5.9.3
 
@@ -3164,7 +3174,7 @@ packages:
   /@types/better-sqlite3/7.6.13:
     resolution: {integrity: sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==}
     dependencies:
-      '@types/node': 22.19.1
+      '@types/node': 24.10.1
     dev: true
 
   /@types/body-parser/1.19.6:
@@ -3232,7 +3242,7 @@ packages:
   /@types/mssql/9.1.8:
     resolution: {integrity: sha512-mt9h5jWj+DYE5jxnKaWSV/GqDf9FV52XYVk6T3XZF69noEe+JJV6MKirii48l81+cjmAkSq+qeKX+k61fHkYrQ==}
     dependencies:
-      '@types/node': 22.19.1
+      '@types/node': 24.10.1
       tarn: 3.0.2
       tedious: 18.6.1
     transitivePeerDependencies:
@@ -3249,22 +3259,23 @@ packages:
     resolution: {integrity: sha512-ZsJzA5thDQMSQO788d7IocwwQbI8B5OPzmqNvpf3NY/+MHDAS759Wo0gd2WQeXYt5AAAQjzcrTVC6SKCuYgoCQ==}
     dependencies:
       undici-types: 6.21.0
+    dev: false
 
   /@types/node/22.19.1:
     resolution: {integrity: sha512-LCCV0HdSZZZb34qifBsyWlUmok6W7ouER+oQIGBScS8EsZsQbrtFTUrDX4hOl+CS6p7cnNC4td+qrSVGSCTUfQ==}
     dependencies:
       undici-types: 6.21.0
+    dev: true
 
   /@types/node/24.10.1:
     resolution: {integrity: sha512-GNWcUTRBgIRJD5zj+Tq0fKOJ5XZajIiBroOF0yvj2bSU1WvNdYS/dn9UxwsujGW4JX06dnHyjV2y9rRaybH0iQ==}
     dependencies:
       undici-types: 7.16.0
-    dev: true
 
   /@types/pg/8.15.6:
     resolution: {integrity: sha512-NoaMtzhxOrubeL/7UZuNTrejB4MPAJ0RpxZqXQf2qXuVlTPuG6Y8p4u9dKRaue4yjmC7ZhzVO2/Yyyn25znrPQ==}
     dependencies:
-      '@types/node': 22.19.1
+      '@types/node': 24.10.1
       pg-protocol: 1.10.3
       pg-types: 2.2.0
     dev: true
@@ -3294,7 +3305,7 @@ packages:
   /@types/readable-stream/4.0.22:
     resolution: {integrity: sha512-/FFhJpfCLAPwAcN3mFycNUa77ddnr8jTgF5VmSNetaemWB2cIlfCA9t0YTM3JAT0wOcv8D4tjPo7pkDhK3EJIg==}
     dependencies:
-      '@types/node': 22.19.1
+      '@types/node': 24.10.1
 
   /@types/send/0.17.6:
     resolution: {integrity: sha512-Uqt8rPBE8SY0RK8JB1EzVOIZ32uqy8HwdxCnoCOsYrvnswqmFZ/k+9Ikidlk/ImhsdvBsloHbAlewb2IEBV/Og==}
@@ -6282,7 +6293,7 @@ packages:
       '@azure/identity': 4.13.0
       '@azure/keyvault-keys': 4.10.0
       '@js-joda/core': 5.6.5
-      '@types/node': 22.19.1
+      '@types/node': 24.10.1
       bl: 6.1.4
       iconv-lite: 0.6.3
       js-md4: 0.3.2
@@ -6483,7 +6494,6 @@ packages:
 
   /undici-types/7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
-    dev: true
 
   /unpipe/1.0.0:
     resolution: {integrity: sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==}
