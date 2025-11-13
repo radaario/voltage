@@ -35,9 +35,12 @@ COPY ./ ./
 RUN npx nodejs-whisper download
 
 # Install pnpm globally
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@9.1.0 --activate
+# RUN npm install -g pnpm@9.1.0
 
 # Install dependencies
+# RUN pnpm approve-builds
+RUN rm pnpm-lock.yaml
 RUN pnpm install
 
 # Build all services
