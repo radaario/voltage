@@ -51,7 +51,12 @@
 		"uuid": "^9.0.1"
 	},
 	"devDependencies": {
-		"@types/node": "^20.10.6",
+		"@types/better-sqlite3": "^7.6.13",
+		"@types/mssql": "^9.1.5",
+		"@types/node": "^22.5.4",
+		"@types/pg": "^8.11.10",
+		"@types/ssh2-sftp-client": "^9.0.5",
+		"@types/uuid": "^9.0.7",
 		"tsup": "^8.0.1",
 		"typescript": "^5.3.3"
 	}

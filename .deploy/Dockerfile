@@ -28,25 +28,20 @@ RUN python3 -m venv /opt/venv && \
 # Set working directory
 WORKDIR /voltage
 
-# Copy package files
-COPY package*.json ./
-COPY api/package*.json ./api/
-COPY frontend/package*.json ./frontend/
-COPY runtime/package*.json ./runtime/
-
-# Install dependencies
-RUN npm install
-
 # Copy source code
-COPY . .
+COPY ./ ./
 
 # Download whisper models
 RUN npx nodejs-whisper download
 
+# Install pnpm globally
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Install dependencies
+RUN pnpm install
+
 # Build all services
-RUN npm run build:runtime
-RUN npm run build:api
-RUN npm run build:frontend
+RUN npm run build
 
 # Setup nginx configuration
 COPY ./.deploy/nginx.conf /etc/nginx/nginx.conf
