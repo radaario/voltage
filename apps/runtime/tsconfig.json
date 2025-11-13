@@ -1,6 +1,7 @@
 {
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
+		"composite": true,
 		"declaration": true,
 		"declarationMap": true,
 		"outDir": "./dist",
@@ -8,8 +9,8 @@
 		"paths": {
 			"@voltage/config": ["../../packages/config"],
 			"@voltage/utils": ["../../packages/utils"]
-		},
+		}
 	},
-	"include": ["./*.ts"],
+	"include": ["**/*.ts"],
 	"exclude": ["node_modules", "dist"]
 }
