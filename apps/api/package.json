@@ -11,9 +11,9 @@
 		"clean": "rm -rf ../dist/api"
 	},
 	"dependencies": {
-		"@voltage/config": "*",
-		"@voltage/utils": "*",
-		"@voltage/runtime": "*",
+		"@voltage/config": "workspace:*",
+		"@voltage/utils": "workspace:*",
+		"@voltage/runtime": "workspace:*",
 		"@aws-sdk/client-s3": "^3.901.0",
 		"@aws-sdk/client-sns": "^3.906.0",
 		"@aws-sdk/s3-request-presigner": "^3.901.0",

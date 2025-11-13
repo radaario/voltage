@@ -1,6 +1,9 @@
 import { config } from "@voltage/config";
 
-import { getInstanceKey, getInstanceSpecs, hash, getNow, subtractNow, logger, storage, database } from "@voltage/utils";
+import { getInstanceKey, getInstanceSpecs, hash, getNow, subtractNow } from "@voltage/utils";
+import { logger } from "@voltage/utils/logger";
+import { storage } from "@voltage/utils/storage";
+import { database } from "@voltage/utils/database";
 
 import path from "path";
 import { spawn, ChildProcess } from "child_process";

@@ -43,14 +43,13 @@
 		"build": "pnpm -r build",
 		"build:start": "pnpm build && pnpm start",
 		"start": "concurrently --names \"RUNTIME,API,FRONTEND\" --prefix-colors \"blue,green,magenta\" \"pnpm --filter @voltage/runtime start\" \"pnpm --filter @voltage/api start\" \"pnpm --filter @voltage/frontend preview\"",
-		"dev": "pnpm --filter ./apps/frontend dev",
+		"dev": "pnpm --recursive --parallel --stream run dev",
 		"lint": "pnpm -r lint",
 		"clean": "pnpm -r exec rimraf dist",
 		"format": "prettier --write \"**/*.{js,ts,tsx,md,json}\"",
 		"format:check": "prettier --check \"**/*.{js,ts,tsx,md,json}\""
 	},
 	"devDependencies": {
-		"@types/dotenv": "^8.2.3",
 		"concurrently": "^9.2.1",
 		"prettier": "^3.0.0",
 		"rimraf": "^6.1.0",

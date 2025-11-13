@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import os, { hostname } from "os";
+import os from "os";
 import path from "path";
 
 dotenv.config();

@@ -1,5 +1,5 @@
 import { guessContentType } from "./index";
-import { logger } from "./logger";
+import { logger } from "@voltage/utils/logger";
 
 import fs from "fs/promises";
 import fssync from "fs";

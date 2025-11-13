@@ -1,9 +1,12 @@
 FROM node:20.19.5
 
-# Set default environment variables
-ENV APP_PORT=80
-ENV VOLTAGE_API_PORT=4000
-ENV VOLTAGE_FRONTEND_PORT=3000
+ARG APP_PORT=10011
+ARG VOLTAGE_API_PORT=4000
+ARG VOLTAGE_FRONTEND_PORT=8080
+
+ENV APP_PORT ${APP_PORT}
+ENV VOLTAGE_API_PORT ${VOLTAGE_API_PORT}
+ENV VOLTAGE_FRONTEND_PORT ${VOLTAGE_FRONTEND_PORT}
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -15,8 +18,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     nginx \
     supervisor \
-    gettext-base \
-    && rm -rf /var/lib/apt/lists/*
+    gettext-base
 
 # Setup Python virtual environment and install whisper-cli
 RUN python3 -m venv /opt/venv && \
@@ -48,6 +50,9 @@ RUN npm run build:frontend
 
 # Setup nginx configuration
 COPY ./.deploy/nginx.conf /etc/nginx/nginx.conf
+RUN sed -i "s|\${APP_PORT}|${APP_PORT}|g" /etc/nginx/nginx.conf && \
+    sed -i "s|\${VOLTAGE_API_PORT}|${VOLTAGE_API_PORT}|g" /etc/nginx/nginx.conf && \
+    sed -i "s|\${VOLTAGE_FRONTEND_PORT}|${VOLTAGE_FRONTEND_PORT}|g" /etc/nginx/nginx.conf
 
 # Create supervisor configuration
 COPY ./.deploy/supervisord.conf /etc/supervisord.conf
@@ -57,3 +62,5 @@ EXPOSE ${APP_PORT}
 
 # Start supervisor
 CMD ["supervisord", "--nodaemon"]
+
+RUN rm -rf /tmp/* && rm -rf /var/lib/apt/lists/*
