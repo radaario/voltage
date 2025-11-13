@@ -1,43 +1,59 @@
 {
-  "name": "voltage",
-  "description": "An open-source, FFmpeg-based video encoding API that supports multiple concurrent instances. Easily scale video processing with parallel encoding, efficient resource management, and flexible API endpoints for a reliable, production-ready solution.",
-  "version": "0.0.1",
-  "author": {
-    "name": "RADAAR",
-    "email": "dev@radaar.io",
-    "url": "http://www.radaar.io/"
-  },
-  "contributors": [
-    {
-      "name": "Mustafa Ercan Zirh",
-      "url": "https://github.com/ercanzirh"
-    },
-    {
-      "name": "Faruk Gercek",
-      "url": "https://github.com/favger"
-    }
-  ],
-  "workspaces": [
-    "api",
-    "config",
-    "frontend", 
-    "runtime",
-    "utils"
-  ],
-  "scripts": {
-    "build": "npm run build:api && npm run build:frontend && npm run build:runtime",
-    "build:runtime": "npm --prefix runtime run build",
-    "build:api": "npm --prefix api run build",
-    "build:frontend": "npm --prefix frontend run build",
-
-    "dev": "concurrently \"npm run dev:runtime\" \"npm run dev:api\" \"npm run dev:frontend\"",
-    "dev:runtime": "npm --prefix runtime run dev",
-    "dev:api": "npm --prefix api run dev",
-    "dev:frontend": "npm --prefix frontend run dev",
-
-    "start": "node dist/app.js"
-  },
-  "dependencies": {
-    "concurrently": "^9.2.1"
-  }
+	"name": "voltage",
+	"description": "An open-source, FFmpeg-based video encoding API that supports multiple concurrent instances. Easily scale video processing with parallel encoding, efficient resource management, and flexible API endpoints for a reliable, production-ready solution.",
+	"version": "1.0.0",
+	"private": true,
+	"author": {
+		"name": "RADAAR",
+		"email": "dev@radaar.io",
+		"url": "http://www.radaar.io/"
+	},
+	"contributors": [
+		{
+			"name": "Mustafa Ercan Zirh",
+			"url": "https://github.com/ercanzirh"
+		},
+		{
+			"name": "Faruk Gercek",
+			"url": "https://github.com/favger"
+		}
+	],
+	"workspaces": [
+		"packages/*",
+		"apps/*"
+	],
+	"engines": {
+		"node": ">=20.19.5",
+		"npm": ">=10.8.2"
+	},
+	"scripts": {
+		"__build": "npm run clean && npm run build:config && npm run build:utils && npm run build:api && npm run build:runtime && npm run build:frontend",
+		"__build:config": "npm --prefix config run build",
+		"__build:utils": "npm --prefix utils run build",
+		"__build:runtime": "npm --prefix runtime run build",
+		"__build:api": "npm --prefix api run build",
+		"__build:frontend": "npm --prefix frontend run build",
+		"__clean": "rm -rf dist",
+		"__dev": "concurrently \"npm run dev:runtime\" \"npm run dev:api\" \"npm run dev:frontend\"",
+		"__dev:runtime": "npm --prefix runtime run dev",
+		"__dev:api": "npm --prefix api run dev",
+		"__dev:frontend": "npm --prefix frontend run dev",
+		"__start:api": "node dist/api/index.js",
+		"__start:runtime": "node dist/runtime/index.js",
+		"build": "pnpm -r build",
+		"build:start": "pnpm build && pnpm start",
+		"start": "concurrently --names \"RUNTIME,API,FRONTEND\" --prefix-colors \"blue,green,magenta\" \"pnpm --filter @voltage/runtime start\" \"pnpm --filter @voltage/api start\" \"pnpm --filter @voltage/frontend preview\"",
+		"dev": "pnpm --filter ./apps/frontend dev",
+		"lint": "pnpm -r lint",
+		"clean": "pnpm -r exec rimraf dist",
+		"format": "prettier --write \"**/*.{js,ts,tsx,md,json}\"",
+		"format:check": "prettier --check \"**/*.{js,ts,tsx,md,json}\""
+	},
+	"devDependencies": {
+		"@types/dotenv": "^8.2.3",
+		"concurrently": "^9.2.1",
+		"prettier": "^3.0.0",
+		"rimraf": "^6.1.0",
+		"typescript": "^5.4.4"
+	}
 }

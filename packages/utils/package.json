@@ -1,0 +1,36 @@
+{
+	"name": "@voltage/utils",
+	"version": "1.0.0",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./logger": "./dist/logger.js",
+		"./storage": "./dist/storage.js",
+		"./database": "./dist/database.js"
+	},
+	"scripts": {
+		"build": "tsc --build tsconfig.json",
+		"clean": "rimraf ./dist"
+	},
+	"dependencies": {
+		"@voltage/config": "*",
+		"@aws-sdk/client-s3": "^3.901.0",
+		"@aws-sdk/s3-request-presigner": "^3.901.0",
+		"basic-ftp": "^5.0.5",
+		"better-sqlite3": "^11.7.0",
+		"knex": "^3.1.0",
+		"moment-timezone": "^0.6.0",
+		"mssql": "^11.0.1",
+		"mysql2": "^3.11.0",
+		"pg": "^8.13.1",
+		"pino": "^9.3.2",
+		"pino-pretty": "^11.2.2",
+		"ssh2-sftp-client": "^12.0.1",
+		"uuid": "^9.0.1"
+	},
+	"devDependencies": {
+		"@types/dotenv": "^8.2.3"
+	}
+}

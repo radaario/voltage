@@ -1,0 +1,21 @@
+{
+	"name": "@voltage/config",
+	"version": "1.0.0",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./types": "./dist/types.js"
+	},
+	"scripts": {
+		"build": "tsc --build tsconfig.json",
+		"clean": "rm -rf ./dist"
+	},
+	"dependencies": {
+		"dotenv": "^16.4.5"
+	},
+	"devDependencies": {
+		"@types/dotenv": "^8.2.3"
+	}
+}

@@ -1,25 +1,46 @@
-import { guessContentType } from '@voltage/utils';
-import { logger } from '@voltage/utils/logger';
+import { guessContentType } from "./index";
+import { logger } from "./logger";
 
-import fs from 'fs/promises';
-import fssync from 'fs';
-import path from 'path';
+import fs from "fs/promises";
+import fssync from "fs";
+import path from "path";
 
-import { S3Client, GetObjectCommand, PutObjectCommand, CopyObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, HeadObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Client as FTPClient } from 'basic-ftp';
-import SFTPClient from 'ssh2-sftp-client';
+import {
+	S3Client,
+	GetObjectCommand,
+	PutObjectCommand,
+	CopyObjectCommand,
+	DeleteObjectCommand,
+	DeleteObjectsCommand,
+	HeadObjectCommand,
+	ListObjectsV2Command
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { Client as FTPClient } from "basic-ftp";
+import SFTPClient from "ssh2-sftp-client";
 
-export type StorageType = 'LOCAL' | 'OTHER_S3' | 'AWS_S3' | 'GOOGLE_CLOUD_STORAGE' | 'DO_SPACES' | 'LINODE' | 'WASABI' | 'BACKBLAZE' | 'RACKSPACE' | 'MICROSOFT_AZURE' | 'FTP' | 'SFTP';
+export type StorageType =
+	| "LOCAL"
+	| "OTHER_S3"
+	| "AWS_S3"
+	| "GOOGLE_CLOUD_STORAGE"
+	| "DO_SPACES"
+	| "LINODE"
+	| "WASABI"
+	| "BACKBLAZE"
+	| "RACKSPACE"
+	| "MICROSOFT_AZURE"
+	| "FTP"
+	| "SFTP";
 
 export interface StorageConfigOptions {
 	type?: StorageType;
 	// Common
-    endpoint?: string; // custom S3-compatible endpoint
-    access_key?: string;
+	endpoint?: string; // custom S3-compatible endpoint
+	access_key?: string;
 	access_secret?: string;
 	region?: string; // required for most S3 providers
-    bucket?: string; // required for non-LOCAL
+	bucket?: string; // required for non-LOCAL
 	base_path?: string; // LOCAL base folder or FTP/SFTP remote path prefix
 	force_path_style?: boolean; // path-style URLs for some providers
 	public_url_base?: string; // base for public URL construction (optional override)
@@ -51,7 +72,7 @@ export interface StorageDriver {
 	move(srcKey: string, destKey: string): Promise<void>;
 	delete(keyOrPrefix: string): Promise<void>; // if endsWith('/') treat as prefix
 	getPublicUrl(key: string): string | null;
-	generateSignedUrl(key: string, opts?: { operation?: 'get' | 'put'; expiresInSeconds?: number; contentType?: string }): Promise<string>;
+	generateSignedUrl(key: string, opts?: { operation?: "get" | "put"; expiresInSeconds?: number; contentType?: string }): Promise<string>;
 	getMetadata(key: string): Promise<ObjectMetadata>;
 }
 
@@ -61,16 +82,16 @@ async function ensureDir(dirPath: string) {
 }
 
 function normalizePath(key: string): string {
-    return key.replace(/^\/+/, '');
+	return key.replace(/^\/+/, "");
 }
 
 class LocalStorageDriver implements StorageDriver {
 	private basePath!: string;
 
 	async config(options?: StorageConfigOptions): Promise<void> {
-		this.basePath = options?.base_path ? normalizePath(options?.base_path) : path.resolve('./storage');
+		this.basePath = options?.base_path ? normalizePath(options?.base_path) : path.resolve("./storage");
 		await ensureDir(this.basePath);
-		logger.console('INFO', 'Local storage initialized!', { basePath: this.basePath });
+		logger.console("INFO", "Local storage initialized!", { basePath: this.basePath });
 	}
 
 	// Prefix provided key with configured basePath (if any)
@@ -83,11 +104,11 @@ class LocalStorageDriver implements StorageDriver {
 	// Remove basePath prefix from a full S3 key for returning keys relative to base
 	private stripBasePath(fullKey: string): string {
 		if (!this.basePath) return fullKey;
-		if (fullKey === this.basePath) return '';
-		return fullKey.startsWith(this.basePath + '/') ? fullKey.slice(this.basePath.length + 1) : fullKey;
+		if (fullKey === this.basePath) return "";
+		return fullKey.startsWith(this.basePath + "/") ? fullKey.slice(this.basePath.length + 1) : fullKey;
 	}
 
-	async list(prefix = ''): Promise<string[]> {
+	async list(prefix = ""): Promise<string[]> {
 		const base = this.withBasePath(prefix);
 		if (!fssync.existsSync(base)) return [];
 		const results: string[] = [];
@@ -96,7 +117,7 @@ class LocalStorageDriver implements StorageDriver {
 			const entries = await fs.readdir(dir, { withFileTypes: true });
 			for (const e of entries) {
 				const absPath = path.join(dir, e.name);
-				const relPath = path.join(rel, e.name).replace(/\\/g, '/');
+				const relPath = path.join(rel, e.name).replace(/\\/g, "/");
 				if (e.isDirectory()) {
 					await walk(absPath, relPath);
 				} else {
@@ -105,7 +126,7 @@ class LocalStorageDriver implements StorageDriver {
 			}
 		};
 
-		await walk(base, prefix.replace(/^\/+/, ''));
+		await walk(base, prefix.replace(/^\/+/, ""));
 		return results;
 	}
 
@@ -122,10 +143,11 @@ class LocalStorageDriver implements StorageDriver {
 		return fs.readFile(this.withBasePath(key));
 	}
 
-	async write(key: string, data: Buffer | string, contentType?: string): Promise<void> { // contentType ignored for local
+	async write(key: string, data: Buffer | string, contentType?: string): Promise<void> {
+		// contentType ignored for local
 		const filePath = this.withBasePath(key);
 		await ensureDir(path.dirname(filePath));
-		await fs.writeFile(filePath, typeof data === 'string' ? Buffer.from(data) : data);
+		await fs.writeFile(filePath, typeof data === "string" ? Buffer.from(data) : data);
 	}
 
 	async upload(localFilePath: string, key: string): Promise<void> {
@@ -156,7 +178,7 @@ class LocalStorageDriver implements StorageDriver {
 
 	async delete(keyOrPrefix: string): Promise<void> {
 		const p = this.withBasePath(keyOrPrefix);
-		if (keyOrPrefix.endsWith('/')) {
+		if (keyOrPrefix.endsWith("/")) {
 			// delete folder recursively
 			if (fssync.existsSync(p)) {
 				await fs.rm(p, { recursive: true, force: true });
@@ -172,7 +194,7 @@ class LocalStorageDriver implements StorageDriver {
 	}
 
 	async generateSignedUrl(_key: string): Promise<string> {
-		throw new Error('Signed URLs are not supported for LOCAL storage');
+		throw new Error("Signed URLs are not supported for LOCAL storage");
 	}
 
 	async getMetadata(key: string): Promise<ObjectMetadata> {
@@ -183,29 +205,29 @@ class LocalStorageDriver implements StorageDriver {
 			contentType: guessContentType(key),
 			lastModified: st.mtime,
 			etag: null,
-			raw: st,
+			raw: st
 		};
 	}
 }
 
-type S3LikeType = Exclude<StorageType, 'LOCAL'>;
+type S3LikeType = Exclude<StorageType, "LOCAL">;
 
 class S3StorageDriver implements StorageDriver {
 	private client!: S3Client;
 	private type!: S3LikeType;
-    private endpoint?: string;
-    private region?: string;
-    private bucket?: string;
+	private endpoint?: string;
+	private region?: string;
+	private bucket?: string;
 	private basePath?: string; // acts as key prefix within the bucket
 	private forcePathStyle?: boolean;
 	private publicUrlBase?: string;
 
 	async config(options?: StorageConfigOptions): Promise<void> {
-		this.type = ((options?.type) as S3LikeType);
+		this.type = options?.type as S3LikeType;
 		this.endpoint = options?.endpoint;
-        this.region = options?.region;
-        this.bucket = options?.bucket;
-        this.basePath = (options?.base_path || '').replace(/^\/+|\/+$/g, '');
+		this.region = options?.region;
+		this.bucket = options?.bucket;
+		this.basePath = (options?.base_path || "").replace(/^\/+|\/+$/g, "");
 		this.forcePathStyle = options?.force_path_style;
 		this.publicUrlBase = options?.public_url_base;
 
@@ -214,39 +236,42 @@ class S3StorageDriver implements StorageDriver {
 
 		const clientConfig: any = {
 			region: this.region,
-			credentials: accessKeyId && secretAccessKey ? {
-				accessKeyId,
-				secretAccessKey,
-			} : undefined,
+			credentials:
+				accessKeyId && secretAccessKey
+					? {
+							accessKeyId,
+							secretAccessKey
+						}
+					: undefined
 		};
 
 		// Endpoint resolution (align with existing uploader.ts behavior)
 		if (!this.endpoint) {
 			switch (this.type) {
-				case 'OTHER_S3':
-                    // if (!this.endpoint) throw new Error('Endpoint is required for OTHER_S3 type');
+				case "OTHER_S3":
+					// if (!this.endpoint) throw new Error('Endpoint is required for OTHER_S3 type');
 					break;
-                case 'AWS_S3':
+				case "AWS_S3":
 					break;
-				case 'GOOGLE_CLOUD_STORAGE':
-					this.endpoint = 'https://storage.googleapis.com';
+				case "GOOGLE_CLOUD_STORAGE":
+					this.endpoint = "https://storage.googleapis.com";
 					break;
-				case 'DO_SPACES':
+				case "DO_SPACES":
 					this.endpoint = `https://${this.region}.digitaloceanspaces.com`;
 					break;
-				case 'LINODE':
+				case "LINODE":
 					this.endpoint = `https://${this.region}.linodeobjects.com`;
 					break;
-				case 'WASABI':
+				case "WASABI":
 					this.endpoint = `https://s3.${this.region}.wasabisys.com`;
 					break;
-				case 'BACKBLAZE':
+				case "BACKBLAZE":
 					this.endpoint = `https://s3.${this.region}.backblazeb2.com`;
 					break;
-				case 'RACKSPACE':
+				case "RACKSPACE":
 					if (!this.endpoint) this.endpoint = `https://storage101.${this.region}.clouddrive.com/v1`;
 					break;
-				case 'MICROSOFT_AZURE':
+				case "MICROSOFT_AZURE":
 					if (!this.endpoint) this.endpoint = `https://${this.bucket}.blob.core.windows.net`;
 					break;
 			}
@@ -254,13 +279,18 @@ class S3StorageDriver implements StorageDriver {
 
 		if (this.endpoint) {
 			clientConfig.endpoint = this.endpoint;
-			if (typeof this.forcePathStyle === 'boolean') {
+			if (typeof this.forcePathStyle === "boolean") {
 				clientConfig.forcePathStyle = this.forcePathStyle;
 			}
 		}
 
 		this.client = new S3Client(clientConfig);
-		logger.console('INFO', 'S3-like storage initialized!', { type: this.type, bucket: this.bucket, region: this.region, endpoint: this.endpoint });
+		logger.console("INFO", "S3-like storage initialized!", {
+			type: this.type,
+			bucket: this.bucket,
+			region: this.region,
+			endpoint: this.endpoint
+		});
 	}
 
 	// Prefix provided key with configured basePath (if any)
@@ -273,20 +303,20 @@ class S3StorageDriver implements StorageDriver {
 	// Remove basePath prefix from a full S3 key for returning keys relative to base
 	private stripBasePath(fullKey: string): string {
 		if (!this.basePath) return fullKey;
-		if (fullKey === this.basePath) return '';
-		return fullKey.startsWith(this.basePath + '/') ? fullKey.slice(this.basePath.length + 1) : fullKey;
+		if (fullKey === this.basePath) return "";
+		return fullKey.startsWith(this.basePath + "/") ? fullKey.slice(this.basePath.length + 1) : fullKey;
 	}
 
-	async list(prefix = ''): Promise<string[]> {
+	async list(prefix = ""): Promise<string[]> {
 		const keys: string[] = [];
 		let ContinuationToken: string | undefined = undefined;
 		const Prefix = this.withBasePath(prefix);
 		do {
 			const out: any = await this.client.send(new ListObjectsV2Command({ Bucket: this.bucket, Prefix, ContinuationToken }));
-			((out).Contents || []).forEach((o: any) => {
+			(out.Contents || []).forEach((o: any) => {
 				if (o.Key) keys.push(this.stripBasePath(o.Key));
 			});
-			ContinuationToken = (out).IsTruncated ? (out).NextContinuationToken : undefined;
+			ContinuationToken = out.IsTruncated ? out.NextContinuationToken : undefined;
 		} while (ContinuationToken);
 		return keys;
 	}
@@ -309,22 +339,26 @@ class S3StorageDriver implements StorageDriver {
 	}
 
 	async write(key: string, data: Buffer | string, contentType?: string): Promise<void> {
-		await this.client.send(new PutObjectCommand({
-			Bucket: this.bucket,
-			Key: this.withBasePath(key),
-			Body: typeof data === 'string' ? Buffer.from(data) : data,
-			ContentType: contentType || guessContentType(key),
-		}));
+		await this.client.send(
+			new PutObjectCommand({
+				Bucket: this.bucket,
+				Key: this.withBasePath(key),
+				Body: typeof data === "string" ? Buffer.from(data) : data,
+				ContentType: contentType || guessContentType(key)
+			})
+		);
 	}
 
 	async upload(localFilePath: string, key: string, contentType?: string): Promise<void> {
 		const stream = fssync.createReadStream(localFilePath);
-		await this.client.send(new PutObjectCommand({
-			Bucket: this.bucket,
-			Key: this.withBasePath(key),
-			Body: stream,
-			ContentType: contentType || guessContentType(key),
-		}));
+		await this.client.send(
+			new PutObjectCommand({
+				Bucket: this.bucket,
+				Key: this.withBasePath(key),
+				Body: stream,
+				ContentType: contentType || guessContentType(key)
+			})
+		);
 	}
 
 	async download(key: string, localFilePath: string): Promise<void> {
@@ -333,18 +367,20 @@ class S3StorageDriver implements StorageDriver {
 		const write = fssync.createWriteStream(localFilePath);
 		await new Promise<void>((resolve, reject) => {
 			(res.Body as any).pipe(write);
-			write.on('finish', () => resolve());
-			write.on('error', reject);
+			write.on("finish", () => resolve());
+			write.on("error", reject);
 		});
 	}
 
 	async copy(srcKey: string, destKey: string): Promise<void> {
 		const src = `${this.bucket}/${this.withBasePath(srcKey)}`;
-		await this.client.send(new CopyObjectCommand({
-			Bucket: this.bucket,
-			Key: this.withBasePath(destKey),
-			CopySource: encodeURI(src),
-		}));
+		await this.client.send(
+			new CopyObjectCommand({
+				Bucket: this.bucket,
+				Key: this.withBasePath(destKey),
+				CopySource: encodeURI(src)
+			})
+		);
 	}
 
 	async move(srcKey: string, destKey: string): Promise<void> {
@@ -354,14 +390,14 @@ class S3StorageDriver implements StorageDriver {
 
 	async delete(keyOrPrefix: string): Promise<void> {
 		const rel = normalizePath(keyOrPrefix);
-		
-        if (rel.endsWith('/')) {
+
+		if (rel.endsWith("/")) {
 			// delete all under prefix (relative to basePath)
 			const toDelete = await this.list(rel); // returns relative keys
 			if (toDelete.length === 0) return;
 			// Batch delete up to 1000
 			for (let i = 0; i < toDelete.length; i += 1000) {
-				const chunk = toDelete.slice(i, i + 1000).map(k => ({ Key: this.withBasePath(k) }));
+				const chunk = toDelete.slice(i, i + 1000).map((k) => ({ Key: this.withBasePath(k) }));
 				await this.client.send(new DeleteObjectsCommand({ Bucket: this.bucket, Delete: { Objects: chunk } }));
 			}
 			return;
@@ -372,12 +408,12 @@ class S3StorageDriver implements StorageDriver {
 
 	getPublicUrl(key: string): string | null {
 		const k = this.withBasePath(key);
-		if (this.publicUrlBase) return `${this.publicUrlBase.replace(/\/$/, '')}/${k}`;
+		if (this.publicUrlBase) return `${this.publicUrlBase.replace(/\/$/, "")}/${k}`;
 
 		// Attempt to construct a reasonable virtual-hosted URL
 		if (this.endpoint) {
 			// If endpoint includes protocol, strip trailing slashes
-			const base = this.endpoint.replace(/\/$/, '');
+			const base = this.endpoint.replace(/\/$/, "");
 			// Prefer virtual hosted if endpoint host is not an IP and not path-style enforced
 			if (!this.forcePathStyle) {
 				try {
@@ -393,14 +429,21 @@ class S3StorageDriver implements StorageDriver {
 		return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${k}`;
 	}
 
-	async generateSignedUrl(key: string, opts?: { operation?: 'get' | 'put'; expiresInSeconds?: number; contentType?: string }): Promise<string> {
-		const operation = opts?.operation || 'get';
+	async generateSignedUrl(
+		key: string,
+		opts?: { operation?: "get" | "put"; expiresInSeconds?: number; contentType?: string }
+	): Promise<string> {
+		const operation = opts?.operation || "get";
 		const expiresIn = Math.max(1, Math.min(7 * 24 * 3600, opts?.expiresInSeconds || 3600));
-		if (operation === 'get') {
+		if (operation === "get") {
 			const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: this.withBasePath(key) });
 			return getSignedUrl(this.client, cmd, { expiresIn });
 		} else {
-			const cmd = new PutObjectCommand({ Bucket: this.bucket, Key: this.withBasePath(key), ContentType: opts?.contentType || guessContentType(key) });
+			const cmd = new PutObjectCommand({
+				Bucket: this.bucket,
+				Key: this.withBasePath(key),
+				ContentType: opts?.contentType || guessContentType(key)
+			});
 			return getSignedUrl(this.client, cmd, { expiresIn });
 		}
 	}
@@ -412,12 +455,12 @@ class S3StorageDriver implements StorageDriver {
 			contentType: head.ContentType || null,
 			lastModified: head.LastModified || null,
 			etag: head.ETag || null,
-			raw: head,
+			raw: head
 		};
 	}
 }
 
-type FTPLikeType = Extract<StorageType, 'FTP' | 'SFTP'>;
+type FTPLikeType = Extract<StorageType, "FTP" | "SFTP">;
 
 class FTPStorageDriver implements StorageDriver {
 	private type!: FTPLikeType;
@@ -428,43 +471,43 @@ class FTPStorageDriver implements StorageDriver {
 	private secure?: boolean;
 	private basePath?: string;
 	private publicUrlBase?: string;
-	
-    private ftpClient?: FTPClient;
+
+	private ftpClient?: FTPClient;
 	private sftpClient?: SFTPClient;
 
 	async config(options?: StorageConfigOptions): Promise<void> {
 		this.type = options?.type as FTPLikeType;
 		this.host = options?.host;
-		this.username = options?.username || 'anonymous';
-		this.password = options?.password || '';
+		this.username = options?.username || "anonymous";
+		this.password = options?.password || "";
 		this.secure = options?.secure ?? false;
-		this.basePath = (options?.base_path || '').replace(/^\/+|\/+$/g, '');
+		this.basePath = (options?.base_path || "").replace(/^\/+|\/+$/g, "");
 		this.publicUrlBase = options?.public_url_base;
 
-		if (this.type === 'FTP') {
+		if (this.type === "FTP") {
 			this.port = options?.port || 21;
 			this.ftpClient = new FTPClient();
 			this.ftpClient.ftp.verbose = false;
-		} else if (this.type === 'SFTP') {
+		} else if (this.type === "SFTP") {
 			this.port = options?.port || 22;
 			this.sftpClient = new SFTPClient();
 		}
 
-		logger.console('INFO', 'FTP/SFTP storage initialized!', { type: this.type, host: this.host, port: this.port, secure: this.secure });
+		logger.console("INFO", "FTP/SFTP storage initialized!", { type: this.type, host: this.host, port: this.port, secure: this.secure });
 	}
 
 	private async connect(): Promise<void> {
-		if (this.type === 'FTP' && this.ftpClient) {
+		if (this.type === "FTP" && this.ftpClient) {
 			if (this.ftpClient.closed) {
 				await this.ftpClient.access({
 					host: this.host,
 					port: this.port,
 					user: this.username,
 					password: this.password,
-					secure: this.secure,
+					secure: this.secure
 				});
 			}
-		} else if (this.type === 'SFTP' && this.sftpClient) {
+		} else if (this.type === "SFTP" && this.sftpClient) {
 			try {
 				// Check if connection is alive by trying to get current directory
 				await this.sftpClient.cwd();
@@ -474,16 +517,16 @@ class FTPStorageDriver implements StorageDriver {
 					host: this.host,
 					port: this.port,
 					username: this.username,
-					password: this.password,
+					password: this.password
 				});
 			}
 		}
 	}
 
 	private async disconnect(): Promise<void> {
-		if (this.type === 'FTP' && this.ftpClient) {
+		if (this.type === "FTP" && this.ftpClient) {
 			this.ftpClient.close();
-		} else if (this.type === 'SFTP' && this.sftpClient) {
+		} else if (this.type === "SFTP" && this.sftpClient) {
 			await this.sftpClient.end();
 		}
 	}
@@ -495,23 +538,23 @@ class FTPStorageDriver implements StorageDriver {
 	}
 
 	private stripBasePath(fullKey: string): string {
-		if (!this.basePath) return fullKey.replace(/^\/+/, '');
+		if (!this.basePath) return fullKey.replace(/^\/+/, "");
 		const prefix = `/${this.basePath}/`;
-		return fullKey.startsWith(prefix) ? fullKey.slice(prefix.length) : fullKey.replace(/^\/+/, '');
+		return fullKey.startsWith(prefix) ? fullKey.slice(prefix.length) : fullKey.replace(/^\/+/, "");
 	}
 
-	async list(prefix = ''): Promise<string[]> {
+	async list(prefix = ""): Promise<string[]> {
 		await this.connect();
 		try {
 			const remotePath = this.withBasePath(prefix);
 			const results: string[] = [];
 
-			if (this.type === 'FTP' && this.ftpClient) {
+			if (this.type === "FTP" && this.ftpClient) {
 				const walk = async (dir: string) => {
 					try {
 						const list = await this.ftpClient!.list(dir);
 						for (const item of list) {
-							const itemPath = `${dir}/${item.name}`.replace(/\/+/g, '/');
+							const itemPath = `${dir}/${item.name}`.replace(/\/+/g, "/");
 							if (item.isDirectory) {
 								await walk(itemPath);
 							} else if (item.isFile) {
@@ -523,15 +566,15 @@ class FTPStorageDriver implements StorageDriver {
 					}
 				};
 				await walk(remotePath);
-			} else if (this.type === 'SFTP' && this.sftpClient) {
+			} else if (this.type === "SFTP" && this.sftpClient) {
 				const walk = async (dir: string) => {
 					try {
 						const list = await this.sftpClient!.list(dir);
 						for (const item of list) {
-							const itemPath = `${dir}/${item.name}`.replace(/\/+/g, '/');
-							if (item.type === 'd') {
+							const itemPath = `${dir}/${item.name}`.replace(/\/+/g, "/");
+							if (item.type === "d") {
 								await walk(itemPath);
-							} else if (item.type === '-') {
+							} else if (item.type === "-") {
 								results.push(this.stripBasePath(itemPath));
 							}
 						}
@@ -552,16 +595,16 @@ class FTPStorageDriver implements StorageDriver {
 		await this.connect();
 		try {
 			const remotePath = this.withBasePath(key);
-			
-			if (this.type === 'FTP' && this.ftpClient) {
+
+			if (this.type === "FTP" && this.ftpClient) {
 				try {
 					await this.ftpClient.size(remotePath);
 					return true;
 				} catch {
 					return false;
 				}
-			} else if (this.type === 'SFTP' && this.sftpClient) {
-				return await this.sftpClient.exists(remotePath) !== false;
+			} else if (this.type === "SFTP" && this.sftpClient) {
+				return (await this.sftpClient.exists(remotePath)) !== false;
 			}
 			return false;
 		} finally {
@@ -573,12 +616,12 @@ class FTPStorageDriver implements StorageDriver {
 		await this.connect();
 		try {
 			const remotePath = this.withBasePath(key);
-			const tempFile = path.join(path.resolve('./storage'), 'temp', `ftp_${Date.now()}_${path.basename(key)}`);
+			const tempFile = path.join(path.resolve("./storage"), "temp", `ftp_${Date.now()}_${path.basename(key)}`);
 			await ensureDir(path.dirname(tempFile));
 
-			if (this.type === 'FTP' && this.ftpClient) {
+			if (this.type === "FTP" && this.ftpClient) {
 				await this.ftpClient.downloadTo(tempFile, remotePath);
-			} else if (this.type === 'SFTP' && this.sftpClient) {
+			} else if (this.type === "SFTP" && this.sftpClient) {
 				await this.sftpClient.get(remotePath, tempFile);
 			}
 
@@ -594,22 +637,22 @@ class FTPStorageDriver implements StorageDriver {
 		await this.connect();
 		try {
 			const remotePath = this.withBasePath(key);
-			const remoteDir = path.dirname(remotePath).replace(/\\/g, '/');
-			
+			const remoteDir = path.dirname(remotePath).replace(/\\/g, "/");
+
 			// Ensure remote directory exists
-			if (this.type === 'FTP' && this.ftpClient) {
+			if (this.type === "FTP" && this.ftpClient) {
 				await this.ftpClient.ensureDir(remoteDir);
-			} else if (this.type === 'SFTP' && this.sftpClient) {
+			} else if (this.type === "SFTP" && this.sftpClient) {
 				await this.sftpClient.mkdir(remoteDir, true);
 			}
 
-			const tempFile = path.join(path.resolve('./storage'), 'temp', `ftp_${Date.now()}_${path.basename(key)}`);
+			const tempFile = path.join(path.resolve("./storage"), "temp", `ftp_${Date.now()}_${path.basename(key)}`);
 			await ensureDir(path.dirname(tempFile));
-			await fs.writeFile(tempFile, typeof data === 'string' ? Buffer.from(data) : data);
+			await fs.writeFile(tempFile, typeof data === "string" ? Buffer.from(data) : data);
 
-			if (this.type === 'FTP' && this.ftpClient) {
+			if (this.type === "FTP" && this.ftpClient) {
 				await this.ftpClient.uploadFrom(tempFile, remotePath);
-			} else if (this.type === 'SFTP' && this.sftpClient) {
+			} else if (this.type === "SFTP" && this.sftpClient) {
 				await this.sftpClient.put(tempFile, remotePath);
 			}
 
@@ -623,18 +666,18 @@ class FTPStorageDriver implements StorageDriver {
 		await this.connect();
 		try {
 			const remotePath = this.withBasePath(key);
-			const remoteDir = path.dirname(remotePath).replace(/\\/g, '/');
+			const remoteDir = path.dirname(remotePath).replace(/\\/g, "/");
 
 			// Ensure remote directory exists
-			if (this.type === 'FTP' && this.ftpClient) {
+			if (this.type === "FTP" && this.ftpClient) {
 				await this.ftpClient.ensureDir(remoteDir);
-			} else if (this.type === 'SFTP' && this.sftpClient) {
+			} else if (this.type === "SFTP" && this.sftpClient) {
 				await this.sftpClient.mkdir(remoteDir, true);
 			}
 
-			if (this.type === 'FTP' && this.ftpClient) {
+			if (this.type === "FTP" && this.ftpClient) {
 				await this.ftpClient.uploadFrom(localFilePath, remotePath);
-			} else if (this.type === 'SFTP' && this.sftpClient) {
+			} else if (this.type === "SFTP" && this.sftpClient) {
 				await this.sftpClient.put(localFilePath, remotePath);
 			}
 		} finally {
@@ -648,9 +691,9 @@ class FTPStorageDriver implements StorageDriver {
 			const remotePath = this.withBasePath(key);
 			await ensureDir(path.dirname(localFilePath));
 
-			if (this.type === 'FTP' && this.ftpClient) {
+			if (this.type === "FTP" && this.ftpClient) {
 				await this.ftpClient.downloadTo(localFilePath, remotePath);
-			} else if (this.type === 'SFTP' && this.sftpClient) {
+			} else if (this.type === "SFTP" && this.sftpClient) {
 				await this.sftpClient.get(remotePath, localFilePath);
 			}
 		} finally {
@@ -669,13 +712,13 @@ class FTPStorageDriver implements StorageDriver {
 		try {
 			const srcPath = this.withBasePath(srcKey);
 			const destPath = this.withBasePath(destKey);
-			const destDir = path.dirname(destPath).replace(/\\/g, '/');
+			const destDir = path.dirname(destPath).replace(/\\/g, "/");
 
 			// Ensure destination directory exists
-			if (this.type === 'FTP' && this.ftpClient) {
+			if (this.type === "FTP" && this.ftpClient) {
 				await this.ftpClient.ensureDir(destDir);
 				await this.ftpClient.rename(srcPath, destPath);
-			} else if (this.type === 'SFTP' && this.sftpClient) {
+			} else if (this.type === "SFTP" && this.sftpClient) {
 				await this.sftpClient.mkdir(destDir, true);
 				await this.sftpClient.rename(srcPath, destPath);
 			}
@@ -689,18 +732,18 @@ class FTPStorageDriver implements StorageDriver {
 		try {
 			const remotePath = this.withBasePath(keyOrPrefix);
 
-			if (keyOrPrefix.endsWith('/')) {
+			if (keyOrPrefix.endsWith("/")) {
 				// Delete directory recursively
-				if (this.type === 'FTP' && this.ftpClient) {
+				if (this.type === "FTP" && this.ftpClient) {
 					await this.ftpClient.removeDir(remotePath);
-				} else if (this.type === 'SFTP' && this.sftpClient) {
+				} else if (this.type === "SFTP" && this.sftpClient) {
 					await this.sftpClient.rmdir(remotePath, true);
 				}
 			} else {
 				// Delete single file
-				if (this.type === 'FTP' && this.ftpClient) {
+				if (this.type === "FTP" && this.ftpClient) {
 					await this.ftpClient.remove(remotePath);
-				} else if (this.type === 'SFTP' && this.sftpClient) {
+				} else if (this.type === "SFTP" && this.sftpClient) {
 					await this.sftpClient.delete(remotePath);
 				}
 			}
@@ -712,16 +755,19 @@ class FTPStorageDriver implements StorageDriver {
 	getPublicUrl(key: string): string | null {
 		const k = normalizePath(key);
 		if (this.publicUrlBase) {
-			return `${this.publicUrlBase.replace(/\/$/, '')}/${this.basePath ? this.basePath + '/' : ''}${k}`;
+			return `${this.publicUrlBase.replace(/\/$/, "")}/${this.basePath ? this.basePath + "/" : ""}${k}`;
 		}
-		
+
 		// Construct default URL
-		const protocol = this.type === 'FTP' ? (this.secure ? 'ftps' : 'ftp') : 'sftp';
-		return `${protocol}://${this.host}:${this.port}/${this.basePath ? this.basePath + '/' : ''}${k}`;
+		const protocol = this.type === "FTP" ? (this.secure ? "ftps" : "ftp") : "sftp";
+		return `${protocol}://${this.host}:${this.port}/${this.basePath ? this.basePath + "/" : ""}${k}`;
 	}
 
-	async generateSignedUrl(_key: string, _opts?: { operation?: 'get' | 'put'; expiresInSeconds?: number; contentType?: string }): Promise<string> {
-		throw new Error('Signed URLs are not supported for FTP/SFTP storage');
+	async generateSignedUrl(
+		_key: string,
+		_opts?: { operation?: "get" | "put"; expiresInSeconds?: number; contentType?: string }
+	): Promise<string> {
+		throw new Error("Signed URLs are not supported for FTP/SFTP storage");
 	}
 
 	async getMetadata(key: string): Promise<ObjectMetadata> {
@@ -729,7 +775,7 @@ class FTPStorageDriver implements StorageDriver {
 		try {
 			const remotePath = this.withBasePath(key);
 
-			if (this.type === 'FTP' && this.ftpClient) {
+			if (this.type === "FTP" && this.ftpClient) {
 				const size = await this.ftpClient.size(remotePath);
 				const modifiedAt = await this.ftpClient.lastMod(remotePath);
 				return {
@@ -737,20 +783,20 @@ class FTPStorageDriver implements StorageDriver {
 					contentType: guessContentType(key),
 					lastModified: modifiedAt || null,
 					etag: null,
-					raw: { size, modifiedAt },
+					raw: { size, modifiedAt }
 				};
-			} else if (this.type === 'SFTP' && this.sftpClient) {
+			} else if (this.type === "SFTP" && this.sftpClient) {
 				const stat = await this.sftpClient.stat(remotePath);
 				return {
 					size: stat.size,
 					contentType: guessContentType(key),
 					lastModified: new Date(stat.modifyTime),
 					etag: null,
-					raw: stat,
+					raw: stat
 				};
 			}
 
-			throw new Error('FTP client not initialized!');
+			throw new Error("FTP client not initialized!");
 		} finally {
 			await this.disconnect();
 		}
@@ -763,11 +809,11 @@ class StorageFacade implements StorageDriver {
 	private type: StorageType | null = null;
 
 	async config(options?: StorageConfigOptions): Promise<void> {
-		this.type = (options?.type) as StorageType;
-		
-        if (this.type === 'LOCAL') {
+		this.type = options?.type as StorageType;
+
+		if (this.type === "LOCAL") {
 			this.driver = new LocalStorageDriver();
-		} else if (this.type === 'FTP' || this.type === 'SFTP') {
+		} else if (this.type === "FTP" || this.type === "SFTP") {
 			this.driver = new FTPStorageDriver();
 		} else {
 			this.driver = new S3StorageDriver();
@@ -775,11 +821,11 @@ class StorageFacade implements StorageDriver {
 
 		await this.driver.config({
 			type: this.type,
-            endpoint: options?.endpoint,
-            access_key: options?.access_key,
+			endpoint: options?.endpoint,
+			access_key: options?.access_key,
 			access_secret: options?.access_secret,
 			region: options?.region,
-            bucket: options?.bucket,
+			bucket: options?.bucket,
 			base_path: options?.base_path,
 			force_path_style: options?.force_path_style,
 			public_url_base: options?.public_url_base,
@@ -787,29 +833,64 @@ class StorageFacade implements StorageDriver {
 			port: options?.port,
 			username: options?.username,
 			password: options?.password,
-			secure: options?.secure,
+			secure: options?.secure
 		});
 	}
 
 	private assertReady() {
-		if (!this.driver) throw new Error('Storage is not initialized. Call storage.config() first.');
+		if (!this.driver) throw new Error("Storage is not initialized. Call storage.config() first.");
 	}
 
-	list(prefix?: string): Promise<string[]> { this.assertReady(); return this.driver!.list(prefix); }
-	exists(key: string): Promise<boolean> { this.assertReady(); return this.driver!.exists(key); }
-	read(key: string): Promise<Buffer> { this.assertReady(); return this.driver!.read(key); }
-	write(key: string, data: Buffer | string, contentType?: string): Promise<void> { this.assertReady(); return this.driver!.write(key, data, contentType); }
-	upload(localFilePath: string, key: string, contentType?: string): Promise<void> { this.assertReady(); return this.driver!.upload(localFilePath, key, contentType); }
-	download(key: string, localFilePath: string): Promise<void> { this.assertReady(); return this.driver!.download(key, localFilePath); }
-	copy(srcKey: string, destKey: string): Promise<void> { this.assertReady(); return this.driver!.copy(srcKey, destKey); }
-	move(srcKey: string, destKey: string): Promise<void> { this.assertReady(); return this.driver!.move(srcKey, destKey); }
-	delete(keyOrPrefix: string): Promise<void> { this.assertReady(); return this.driver!.delete(keyOrPrefix); }
-	getPublicUrl(key: string): string | null { this.assertReady(); return this.driver!.getPublicUrl(key); }
-	generateSignedUrl(key: string, opts?: { operation?: 'get' | 'put'; expiresInSeconds?: number; contentType?: string }): Promise<string> { this.assertReady(); return this.driver!.generateSignedUrl(key, opts); }
-	getMetadata(key: string): Promise<ObjectMetadata> { this.assertReady(); return this.driver!.getMetadata(key); }
+	list(prefix?: string): Promise<string[]> {
+		this.assertReady();
+		return this.driver!.list(prefix);
+	}
+	exists(key: string): Promise<boolean> {
+		this.assertReady();
+		return this.driver!.exists(key);
+	}
+	read(key: string): Promise<Buffer> {
+		this.assertReady();
+		return this.driver!.read(key);
+	}
+	write(key: string, data: Buffer | string, contentType?: string): Promise<void> {
+		this.assertReady();
+		return this.driver!.write(key, data, contentType);
+	}
+	upload(localFilePath: string, key: string, contentType?: string): Promise<void> {
+		this.assertReady();
+		return this.driver!.upload(localFilePath, key, contentType);
+	}
+	download(key: string, localFilePath: string): Promise<void> {
+		this.assertReady();
+		return this.driver!.download(key, localFilePath);
+	}
+	copy(srcKey: string, destKey: string): Promise<void> {
+		this.assertReady();
+		return this.driver!.copy(srcKey, destKey);
+	}
+	move(srcKey: string, destKey: string): Promise<void> {
+		this.assertReady();
+		return this.driver!.move(srcKey, destKey);
+	}
+	delete(keyOrPrefix: string): Promise<void> {
+		this.assertReady();
+		return this.driver!.delete(keyOrPrefix);
+	}
+	getPublicUrl(key: string): string | null {
+		this.assertReady();
+		return this.driver!.getPublicUrl(key);
+	}
+	generateSignedUrl(key: string, opts?: { operation?: "get" | "put"; expiresInSeconds?: number; contentType?: string }): Promise<string> {
+		this.assertReady();
+		return this.driver!.generateSignedUrl(key, opts);
+	}
+	getMetadata(key: string): Promise<ObjectMetadata> {
+		this.assertReady();
+		return this.driver!.getMetadata(key);
+	}
 }
 
 export const storage = new StorageFacade();
 
 export default storage;
-

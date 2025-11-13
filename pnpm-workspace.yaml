@@ -1,0 +1,8 @@
+packages:
+    - "apps/*"
+    - "packages/*"
+
+hoistPattern:
+    - typescript
+    - eslint*
+    - prettier

@@ -14,8 +14,8 @@ export default defineConfig(({ command, mode }) => {
 		plugins: [react(), tailwindcss()],
 		base: env.VITE_APP_BASE || "/",
 		mode: newMode,
-		server: { port: 4000, host: env.NODE_ENV === "development" },
-		build: { outDir: "../frontend-build", sourcemap: false },
+		server: { port: 3000, host: env.NODE_ENV === "development" },
+		build: { outDir: "../dist/frontend", sourcemap: false },
 		resolve: { mainFields: [], alias: { "@": path.resolve(__dirname, "./src") } }
 	};
 });

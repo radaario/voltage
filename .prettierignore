@@ -1,0 +1,27 @@
+# Build outputs
+dist
+build
+.next
+out
+
+# Package management
+node_modules
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Turbo
+.turbo
+
+# Cache
+.cache
+
+# Coverage reports
+coverage
+
+# Logs
+*.log
+
+# Editor directories
+.idea
+.DS_Store
