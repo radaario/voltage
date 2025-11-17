@@ -15,6 +15,7 @@ const cpuCoresCount = os.cpus().length;
 const ffmpegPathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffmpeg" : "ffmpeg";
 const ffprobePathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffprobe" : "ffprobe";
 
+const appPort = Number(process.env.APP_PORT ?? 8080);
 const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? "12345678";
 
 // Load environment specific .env files and override
@@ -30,11 +31,11 @@ const rootFolder = path.resolve(__dir, "../..");
 
 export const config = {
 	name: process.env.APP_NAME ?? "VOLTAGE",
-	version: process.env.APP_VERSION ?? "0.0.2",
+	version: process.env.APP_VERSION ?? "0.0.3",
 	env: (process.env.APP_ENV ?? "local") as "local" | "dev" | "test" | "prod",
-	port: Number(process.env.APP_PORT ?? 8080),
-	base_url: process.env.APP_BASE_URL ?? "",
-	base_path: process.env.APP_BASE_PATH ?? "",
+	port: appPort,
+	base_url: process.env.APP_BASE_URL ?? `http://localhost:${appPort}`,
+	base_path: process.env.APP_BASE_PATH ?? "/",
 	timezone: process.env.APP_TIMEZONE ?? "UTC",
 	temp_folder: process.env.APP_TEMP_FOLDER ?? `${rootFolder}/storage/tmp`, // os.tmpdir(),
 	utils: {
