@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, NavLink, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
@@ -6,6 +6,7 @@ import { XMarkIcon, DocumentTextIcon, CircleStackIcon } from "@heroicons/react/2
 import { useAuth } from "@/hooks/useAuth";
 import type { Log } from "@/interfaces/log";
 import Label from "@/components/base/Label/Label";
+import { api, ApiResponse } from "@/utils";
 
 const LogDetailModal: React.FC = () => {
 	const { logKey } = useParams<{ logKey: string }>();
@@ -14,23 +15,18 @@ const LogDetailModal: React.FC = () => {
 	const [isAnimating, setIsAnimating] = useState(false);
 
 	// Fetch log details
-	const { data: log, isLoading } = useQuery<Log | undefined>({
+	const { data: logResponse, isLoading } = useQuery<ApiResponse<Log>>({
 		queryKey: ["log", logKey],
 		queryFn: async () => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("log_key", logKey || "");
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/logs?${params}`);
-			if (!response.ok) {
-				throw new Error("Failed to fetch log");
-			}
-			const result = await response.json();
-			// Backend returns { data: Log } not an array
-			return result?.data;
+			return await api.get<Log>("/logs", {
+				token: authToken || "",
+				log_key: logKey || ""
+			});
 		},
 		enabled: !!logKey && !!authToken
 	});
+
+	const log = logResponse?.data;
 
 	useEffect(() => {
 		const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;

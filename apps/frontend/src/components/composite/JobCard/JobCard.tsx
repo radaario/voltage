@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { api, ApiResponse } from "@/utils";
 import type { Job } from "@/interfaces/job";
 
 interface JobCardProps {
@@ -14,31 +15,27 @@ const JobCard = ({ jobKey, title, onClick }: JobCardProps) => {
 	const { authToken } = useAuth();
 
 	// Fetch job to get file name
-	const { data: jobResponse } = useQuery<{ data: Job; metadata?: any }>({
+	const { data: jobResponse } = useQuery<ApiResponse<Job>>({
 		queryKey: ["job", jobKey, authToken],
 		queryFn: async () => {
-			const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs?job_key=${jobKey}&token=${authToken}`);
-			if (!res.ok) throw new Error("Failed to fetch job");
-			return res.json();
+			return await api.get<Job>("/jobs", { job_key: jobKey, token: authToken });
 		},
 		enabled: !!jobKey && !!authToken
 	});
 
 	const job = jobResponse?.data;
 
-	// Fetch all jobs to get index
-	const { data: allJobsResponse } = useQuery<{ data: Job[]; metadata?: any }>({
+	// Fetch all jobs for count context
+	const { data: allJobsResponse } = useQuery<ApiResponse<Job[]>>({
 		queryKey: ["jobs", authToken],
 		queryFn: async () => {
-			const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs?token=${authToken}`);
-			if (!res.ok) throw new Error("Failed to fetch jobs");
-			return res.json();
+			return await api.get<Job[]>("/jobs", { token: authToken });
 		},
 		enabled: !!authToken && !job?.input?.file_name
 	});
 
 	// Find job index (1-based)
-	const jobIndex = allJobsResponse?.data?.findIndex((j) => j.key === jobKey);
+	const jobIndex = allJobsResponse?.data?.findIndex((j: Job) => j.key === jobKey);
 	const jobNumber = jobIndex !== undefined && jobIndex !== -1 ? jobIndex + 1 : null;
 
 	// Use title prop first, then file_name, then fallback to "Job #X" or "Job"
@@ -60,7 +57,7 @@ const JobCard = ({ jobKey, title, onClick }: JobCardProps) => {
 			{/* Preview Image */}
 			<div className="w-12 h-9 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden">
 				<img
-					src={`${import.meta.env.VITE_API_BASE_URL}/jobs/preview?job_key=${jobKey}&token=${authToken}`}
+					src={api.getResourceUrl("/jobs/preview", { job_key: jobKey, token: authToken })}
 					alt="Preview"
 					className="w-full h-full object-cover"
 					onError={(e) => {

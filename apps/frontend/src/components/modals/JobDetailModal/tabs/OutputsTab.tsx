@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Job } from "@/interfaces/job";
 import { formatDate } from "@/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/utils";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { CheckCircleIcon, XCircleIcon, ClockIcon, ArrowUturnLeftIcon, ArrowPathIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
 import { ConfirmModal } from "@/components";
@@ -23,19 +24,9 @@ const OutputsTab: React.FC = () => {
 	// Retry output mutation
 	const retryOutputMutation = useMutation({
 		mutationFn: async (outputKey: string) => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("output_key", outputKey);
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/retry?${params}`, {
-				method: "POST"
+			return await api.post("/jobs/retry", null, {
+				params: { token: authToken, output_key: outputKey }
 			});
-
-			if (!response.ok) {
-				throw new Error("Failed to retry output");
-			}
-
-			return await response.json();
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["job", job.key] });

@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/utils";
 import type { Instance } from "@/interfaces/instance";
 import { getInstanceName } from "@/utils/naming";
 import { ServerIcon } from "@heroicons/react/24/outline";
@@ -18,11 +19,7 @@ const InstanceCard = ({ instanceKey, onClick }: InstanceCardProps) => {
 	const { data: instancesResponse } = useQuery<{ data: Instance[]; metadata?: any }>({
 		queryKey: ["instances", authToken],
 		queryFn: async () => {
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/instances?token=${authToken}`);
-			if (!response.ok) {
-				throw new Error("Failed to fetch instances");
-			}
-			return response.json();
+			return await api.get<Instance[]>("/instances", { token: authToken });
 		},
 		enabled: !!authToken
 	});

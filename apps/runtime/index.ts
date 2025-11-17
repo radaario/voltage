@@ -295,6 +295,7 @@ async function processJobs(): Promise<void> {
 						.table("jobs")
 						.where("key", pendingJob.key)
 						.update({ status: "QUEUED", updated_at: getNow(), locked_by: null });
+					
 					await createJobNotification(pendingJob, "QUEUED");
 					await logger.insert("INFO", "Job successfully queued!", { job_key: pendingJob.key });
 				})
@@ -304,6 +305,7 @@ async function processJobs(): Promise<void> {
 						.table("jobs")
 						.where("key", pendingJob.key)
 						.update({ status: "PENDING", updated_at: getNow(), locked_by: null });
+					
 					await logger.insert("ERROR", "Enqueuing job failed!", { job_key: pendingJob.key, error });
 				});
 		}

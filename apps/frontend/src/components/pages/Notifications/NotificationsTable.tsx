@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Notification } from "@/interfaces/notification";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/utils";
 import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
 import Button from "@/components/base/Button/Button";
@@ -75,17 +76,9 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 	// Retry notification mutation
 	const retryNotificationMutation = useMutation({
 		mutationFn: async (notificationKey: string) => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("notification_key", notificationKey);
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/notifications/retry?${params}`, {
-				method: "POST"
+			return await api.post("/jobs/notifications/retry", null, {
+				params: { token: authToken, notification_key: notificationKey }
 			});
-			if (!response.ok) {
-				throw new Error("Failed to retry notification");
-			}
-			return await response.json();
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["notifications"] });

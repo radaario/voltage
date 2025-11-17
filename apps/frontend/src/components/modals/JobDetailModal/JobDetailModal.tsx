@@ -12,6 +12,7 @@ import {
 	ClipboardDocumentCheckIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
+import { api, ApiResponse } from "@/utils";
 import Label from "@/components/base/Label/Label";
 import type { Job } from "@/interfaces/job";
 
@@ -22,19 +23,13 @@ const JobDetailModal: React.FC = () => {
 	const [isAnimating, setIsAnimating] = useState(false);
 
 	// Fetch job details
-	const { data: job, isLoading } = useQuery<Job>({
+	const { data: job, isLoading } = useQuery<ApiResponse<Job>>({
 		queryKey: ["job", jobKey],
 		queryFn: async () => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("job_key", jobKey || "");
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs?${params}`);
-			if (!response.ok) {
-				throw new Error("Failed to fetch job");
-			}
-			const data = await response.json();
-			return data?.data;
+			return await api.get<Job>("/jobs", {
+				token: authToken || "",
+				job_key: jobKey || ""
+			});
 		},
 		enabled: !!jobKey && !!authToken
 	});
@@ -105,10 +100,10 @@ const JobDetailModal: React.FC = () => {
 					<div className="shrink-0 flex items-start justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 						<div className="flex items-center gap-4">
 							{/* Preview Image */}
-							{job && (
+							{job?.data && (
 								<div className="w-24 h-16 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden">
 									<img
-										src={`${import.meta.env.VITE_API_BASE_URL}/jobs/preview?job_key=${job.key}&token=${authToken}`}
+										src={api.getResourceUrl("/jobs/preview", { job_key: job.data.key, token: authToken })}
 										alt="Preview"
 										className="w-full h-full object-cover"
 										onError={(e) => {
@@ -119,24 +114,24 @@ const JobDetailModal: React.FC = () => {
 								</div>
 							)}
 							<div>
-								{job && (
+								{job?.data && (
 									<>
 										<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-											{job.input?.file_name || job.input?.url?.split("/").pop() || "Untitled Job"}
+											{job.data.input?.file_name || job.data.input?.url?.split("/").pop() || "Untitled Job"}
 										</h3>
-										<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">{job.key}</p>
+										<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">{job.data.key}</p>
 									</>
 								)}
-								{!job && <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
+								{!job?.data && <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
 							</div>
 						</div>
 						<div className="flex items-center gap-3">
 							{/* Status Badge */}
-							{job && (
+							{job?.data && (
 								<Label
-									status={job.status}
+									status={job.data.status}
 									size="lg">
-									{job.status}
+									{job.data.status}
 								</Label>
 							)}
 							<button

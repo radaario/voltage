@@ -1,10 +1,12 @@
 FROM node:20.19.5
 
-ARG APP_PORT=10011
+ARG APP_PORT=8080
+ARG APP_BASE_URL=http://localhost:${APP_PORT}
 ARG VOLTAGE_API_PORT=4000
 ARG VOLTAGE_FRONTEND_PORT=8080
 
 ENV APP_PORT ${APP_PORT}
+ENV APP_BASE_URL ${APP_BASE_URL}
 ENV VOLTAGE_API_PORT ${VOLTAGE_API_PORT}
 ENV VOLTAGE_FRONTEND_PORT ${VOLTAGE_FRONTEND_PORT}
 
@@ -26,7 +28,7 @@ RUN python3 -m venv /opt/venv && \
     /opt/venv/bin/pip install whisper-cli
 
 # Set working directory
-WORKDIR /voltage
+WORKDIR /var/voltage
 
 # Copy source code
 COPY ./ ./

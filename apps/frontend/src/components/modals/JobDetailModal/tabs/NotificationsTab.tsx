@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { api, ApiResponse } from "@/utils";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { formatDate } from "@/utils";
 import type { Job } from "@/interfaces/job";
@@ -26,20 +27,15 @@ const NotificationsTab: React.FC = () => {
 	const [notificationToRetry, setNotificationToRetry] = useState<Notification | null>(null);
 
 	// Fetch notifications
-	const { data, isLoading } = useQuery<NotificationsResponse>({
+	const { data: notificationsResponse, isLoading } = useQuery<ApiResponse<NotificationsResponse>>({
 		queryKey: ["notifications", job.key, currentPage, currentLimit],
 		queryFn: async () => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("job_key", job.key);
-			params.append("page", String(currentPage));
-			params.append("limit", String(currentLimit));
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/notifications?${params}`);
-			if (!response.ok) {
-				throw new Error("Failed to fetch notifications");
-			}
-			return await response.json();
+			return await api.get<NotificationsResponse>("/jobs/notifications", {
+				token: authToken || "",
+				job_key: job.key,
+				page: currentPage,
+				limit: currentLimit
+			});
 		},
 		enabled: !!job.key && !!authToken
 	});
@@ -47,17 +43,9 @@ const NotificationsTab: React.FC = () => {
 	// Retry notification mutation
 	const retryNotificationMutation = useMutation({
 		mutationFn: async (notificationKey: string) => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("notification_key", notificationKey);
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/notifications/retry?${params}`, {
-				method: "POST"
+			return await api.post("/jobs/notifications/retry", null, {
+				params: { token: authToken, notification_key: notificationKey }
 			});
-			if (!response.ok) {
-				throw new Error("Failed to retry notification");
-			}
-			return await response.json();
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["notifications", job.key] });
@@ -81,8 +69,8 @@ const NotificationsTab: React.FC = () => {
 		}
 	};
 
-	const notifications = data?.data || [];
-	const pagination = data?.pagination;
+	const notifications = notificationsResponse?.data?.data || [];
+	const pagination = notificationsResponse?.data?.pagination;
 
 	const getStatusColor = (status?: string) => {
 		switch (status) {

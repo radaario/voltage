@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { api } from "@/utils";
 
 interface FrontendConfig {
 	is_authentication_required?: boolean;
@@ -54,12 +55,7 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 	} = useQuery({
 		queryKey: ["config"],
 		queryFn: async () => {
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/config`);
-			if (!response.ok) {
-				throw new Error("Failed to fetch config");
-			}
-			const result = await response.json();
-			return result.data as Config;
+			return await api.get<Config>("/config");
 		},
 		staleTime: 5 * 60 * 1000, // Config 5 dakika boyunca fresh kabul edilir
 		refetchOnWindowFocus: false // Pencere focus olduğunda otomatik refetch etme
@@ -75,7 +71,7 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 		setCurrentScreenDimension,
 		isLoading,
 		setLoading,
-		config: configData,
+		config: configData?.data,
 		configLoading,
 		configError,
 		refetchConfig

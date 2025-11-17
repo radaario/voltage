@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import { XMarkIcon, BellIcon, DocumentTextIcon, ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
+import { api, ApiResponse } from "@/utils";
 import Label from "@/components/base/Label/Label";
 import Button from "@/components/base/Button/Button";
 import { ConfirmModal } from "@/components";
@@ -18,20 +19,13 @@ const NotificationDetailModal: React.FC = () => {
 	const [showRetryModal, setShowRetryModal] = useState(false);
 
 	// Fetch notification details
-	const { data: notificationResponse, isLoading } = useQuery<{ data: Notification; metadata?: any }>({
+	const { data: notificationResponse, isLoading } = useQuery<ApiResponse<Notification>>({
 		queryKey: ["notification", notificationKey],
 		queryFn: async () => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("notification_key", notificationKey || "");
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/notifications?${params}`);
-			if (!response.ok) {
-				throw new Error("Failed to fetch notification");
-			}
-			const data = await response.json();
-			console.log("Notification response:", data);
-			return data;
+			return await api.get<Notification>("/jobs/notifications", {
+				token: authToken || "",
+				notification_key: notificationKey || ""
+			});
 		},
 		enabled: !!notificationKey && !!authToken
 	});
@@ -71,17 +65,9 @@ const NotificationDetailModal: React.FC = () => {
 	// Retry notification mutation
 	const retryNotificationMutation = useMutation({
 		mutationFn: async () => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("notification_key", notificationKey || "");
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/notifications/retry?${params}`, {
-				method: "POST"
+			return await api.post("/jobs/notifications/retry", null, {
+				params: { token: authToken, notification_key: notification?.key }
 			});
-			if (!response.ok) {
-				throw new Error("Failed to retry notification");
-			}
-			return await response.json();
 		},
 		onSuccess: () => {
 			// Invalidate list queries and detail query

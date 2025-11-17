@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, Outlet } from "react-router-dom";
 import type { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
+import { api, ApiResponse } from "@/utils";
 import JobsTable from "./JobsTable";
 import DeleteConfirmModal from "@/components/modals/DeleteConfirmModal/DeleteConfirmModal";
 import { ConfirmModal } from "@/components";
@@ -21,19 +22,6 @@ interface PaginationInfo {
 	prev_page?: number | null;
 }
 
-interface JobsResponse {
-	data: Job[];
-	pagination: {
-		total: number;
-		page: number;
-		limit: number;
-		total_pages: number;
-		has_more?: boolean;
-		next_page?: number | null;
-		prev_page?: number | null;
-	};
-}
-
 const Jobs: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
@@ -50,28 +38,21 @@ const Jobs: React.FC = () => {
 	const [newJobKeys, setNewJobKeys] = useState<Set<string>>(new Set());
 
 	// Fetch jobs with React Query
-	const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<JobsResponse>({
+	const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<ApiResponse<Job[]>>({
 		queryKey: ["jobs", currentPage, currentLimit, searchQuery, authToken],
 		queryFn: async () => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("page", String(currentPage));
-			params.append("limit", String(currentLimit));
-			if (searchQuery) {
-				params.append("q", searchQuery);
-			}
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs?${params}`);
-
-			if (!response.ok) {
-				throw new Error("Failed to fetch jobs");
-			}
-
-			return response.json();
+			return await api.get<Job[]>("/jobs", {
+				token: authToken || "",
+				page: currentPage,
+				limit: currentLimit,
+				...(searchQuery && { q: searchQuery })
+			});
 		},
 		enabled: !!authToken,
 		refetchInterval: 5000 // 5 saniyede bir otomatik refresh
 	});
+
+	console.log("fav:2", data);
 
 	// Detect new jobs when data updates
 	useEffect(() => {
@@ -90,7 +71,7 @@ const Jobs: React.FC = () => {
 
 		// Find new jobs by comparing keys
 		const previousKeys = new Set(previousJobs.map((j) => j.key));
-		const newKeys = currentJobs.filter((job) => !previousKeys.has(job.key)).map((job) => job.key);
+		const newKeys = currentJobs.filter((job: Job) => !previousKeys.has(job.key)).map((job: Job) => job.key);
 
 		if (newKeys.length > 0) {
 			setNewJobKeys(new Set(newKeys));
@@ -157,18 +138,7 @@ const Jobs: React.FC = () => {
 				metadata: { from: "dashboard", example: true, timestamp: new Date().toISOString() }
 			};
 
-			const resp = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs?token=${authToken}`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(payload)
-			});
-
-			if (!resp.ok) {
-				const errText = await resp.text();
-				throw new Error(errText || "Failed to create job");
-			}
-
-			return resp.json();
+			return await api.put("/jobs", payload, { params: { token: authToken } });
 		},
 		onSuccess: () => {
 			setCurrentPage(1);
@@ -180,25 +150,7 @@ const Jobs: React.FC = () => {
 	// Delete job mutation
 	const deleteJobMutation = useMutation({
 		mutationFn: async (jobKey: string) => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("job_key", jobKey);
-
-			const resp = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs?${params}`, {
-				method: "DELETE"
-			});
-
-			if (!resp.ok) {
-				const errText = await resp.text();
-				throw new Error(errText || "Failed to delete job");
-			}
-
-			// 204 No Content doesn't have a body
-			if (resp.status === 204) {
-				return null;
-			}
-
-			return resp.json();
+			return await api.delete("/jobs", { token: authToken, job_key: jobKey });
 		},
 		onSuccess: async () => {
 			// Invalidate and refetch jobs immediately
@@ -210,20 +162,9 @@ const Jobs: React.FC = () => {
 	// Retry job mutation
 	const retryJobMutation = useMutation({
 		mutationFn: async (jobKey: string) => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("job_key", jobKey);
-
-			const resp = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/retry?${params}`, {
-				method: "POST"
+			return await api.post("/jobs/retry", null, {
+				params: { token: authToken, job_key: jobKey }
 			});
-
-			if (!resp.ok) {
-				const errText = await resp.text();
-				throw new Error(errText || "Failed to retry job");
-			}
-
-			return resp.json();
 		},
 		onSuccess: async () => {
 			// Invalidate and refetch jobs immediately

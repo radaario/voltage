@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Log, LogsResponse } from "@/interfaces/log";
+import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
+import { api, ApiResponse } from "@/utils";
 import LogsTable from "./LogsTable.tsx";
 import { ConfirmModal } from "@/components";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
@@ -35,27 +36,16 @@ const Logs: React.FC = () => {
 	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
 	// Fetch logs with React Query
-	const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<LogsResponse>({
+	const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<ApiResponse<Log[]>>({
 		queryKey: ["logs", currentPage, currentLimit, searchQuery, typeFilter, authToken],
 		queryFn: async () => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("page", String(currentPage));
-			params.append("limit", String(currentLimit));
-			if (searchQuery) {
-				params.append("q", searchQuery);
-			}
-			if (typeFilter) {
-				params.append("type", typeFilter);
-			}
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/logs?${params}`);
-
-			if (!response.ok) {
-				throw new Error("Failed to fetch logs");
-			}
-
-			return response.json();
+			return await api.get<Log[]>("/logs", {
+				token: authToken || "",
+				page: currentPage,
+				limit: currentLimit,
+				...(searchQuery && { q: searchQuery }),
+				...(typeFilter && { type: typeFilter })
+			});
 		},
 		enabled: !!authToken,
 		refetchInterval: 5000 // 5 saniyede bir otomatik refresh
@@ -99,16 +89,7 @@ const Logs: React.FC = () => {
 	// Delete all logs mutation
 	const deleteAllLogsMutation = useMutation({
 		mutationFn: async () => {
-			const resp = await fetch(`${import.meta.env.VITE_API_BASE_URL}/logs/all?token=${authToken}`, {
-				method: "DELETE"
-			});
-
-			if (!resp.ok) {
-				const errText = await resp.text();
-				throw new Error(errText || "Failed to delete all logs");
-			}
-
-			return resp.json();
+			return await api.delete("/logs/all", { token: authToken });
 		},
 		onSuccess: async () => {
 			// Close Delete All modal

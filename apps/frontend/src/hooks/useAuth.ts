@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { AuthState } from "@/interfaces/auth";
 import { useNavigate } from "react-router-dom";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
+import { api } from "@/utils";
 
 export const useAuth = () => {
 	const navigate = useNavigate();
@@ -26,18 +27,8 @@ export const useAuth = () => {
 	// actions
 	const login = useCallback(async (password: string) => {
 		try {
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ password })
-			});
-
-			if (!response.ok) {
-				throw new Error("Invalid password");
-			}
-
-			const responseJson = await response.json();
-			const authToken = responseJson.data?.token;
+			const response = await api.post("/auth", { password });
+			const authToken = response.data?.token;
 
 			localStorage.setItem("authToken", authToken);
 			setAuthState({ authToken, isAuthenticated: true });

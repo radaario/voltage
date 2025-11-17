@@ -7,15 +7,17 @@ import path from "path";
 export default defineConfig(({ command, mode }) => {
 	// Load env file based on `mode` in the current working directory.
 	// Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
-	const newMode = process.env.APP_ENV ? `${process.env.APP_ENV}`.trim() : undefined;
+	const newMode = process.env.APP_ENV ? `${process.env.APP_ENV}`.trim() : mode;
 	const env = loadEnv(newMode, process.cwd(), ""); // test|prod
+
+	const frontendPort = Number(process.env.VOLTAGE_FRONTEND_PORT) || 3000;
 
 	return {
 		plugins: [react(), tailwindcss()],
 		base: env.VITE_APP_BASE || "/",
 		mode: newMode,
-		server: { port: env.VOLTAGE_FRONTEND_PORT || 3000, host: env.NODE_ENV === "development" },
-		preview: { port: env.VOLTAGE_FRONTEND_PORT || 3000, host: env.NODE_ENV === "development" },
+		server: { port: frontendPort, host: env.NODE_ENV === "development" },
+		preview: { port: frontendPort, host: env.NODE_ENV === "development" },
 		build: { outDir: "./dist", sourcemap: false },
 		resolve: { mainFields: [], alias: { "@": path.resolve(__dirname, "./src") } }
 	};

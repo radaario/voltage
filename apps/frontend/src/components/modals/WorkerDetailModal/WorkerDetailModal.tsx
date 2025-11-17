@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { XMarkIcon, CpuChipIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
 import { Worker } from "@/interfaces/instance";
+import { api, ApiResponse } from "@/utils";
 import Label from "@/components/base/Label/Label";
 import Button from "@/components/base/Button/Button";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,27 +15,22 @@ const WorkerDetailModal = () => {
 	const { authToken } = useAuth();
 
 	// Fetch specific worker
-	const { data: worker, isLoading } = useQuery<Worker>({
+	const { data: worker, isLoading } = useQuery<ApiResponse<Worker>>({
 		queryKey: ["worker", workerKey, authToken],
 		queryFn: async () => {
-			const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/workers?worker_key=${workerKey}&token=${authToken}`);
-			if (!res.ok) throw new Error("Failed to fetch worker");
-			const json = await res.json();
-			return json.data;
+			return await api.get<Worker>("/workers", { worker_key: workerKey, token: authToken });
 		},
 		enabled: !!workerKey && !!authToken,
 		refetchInterval: 5000
 	});
 
 	// Fetch all workers from the same instance for naming
-	const { data: instanceWorkers } = useQuery<{ data: Worker[] }>({
-		queryKey: ["instanceWorkers", worker?.instance_key, authToken],
+	const { data: instanceWorkers } = useQuery<ApiResponse<Worker[]>>({
+		queryKey: ["instanceWorkers", worker?.data?.instance_key, authToken],
 		queryFn: async () => {
-			const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/workers?instance_key=${worker?.instance_key}&token=${authToken}`);
-			if (!res.ok) throw new Error("Failed to fetch instance workers");
-			return res.json();
+			return await api.get<Worker[]>("/workers", { instance_key: worker?.data?.instance_key, token: authToken });
 		},
-		enabled: !!worker?.instance_key && !!authToken
+		enabled: !!worker?.data?.instance_key && !!authToken
 	});
 
 	const handleClose = () => {
@@ -66,13 +62,13 @@ const WorkerDetailModal = () => {
 				<div className="shrink-0 flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 					<div className="flex items-center gap-3">
 						<CpuChipIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-						{worker && instanceWorkers?.data ? (
+						{worker?.data && instanceWorkers?.data ? (
 							<>
-								<h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-									{getWorkerName(instanceWorkers.data, worker)}
+								<h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+									{getWorkerName(instanceWorkers.data, worker.data)}
 								</h2>
-								<Label size="md">{worker.status}</Label>
-								<span className="text-sm text-gray-500 dark:text-gray-400 font-mono">({worker.key})</span>
+								<Label size="md">{worker.data.status}</Label>
+								<span className="text-sm text-gray-500 dark:text-gray-400 font-mono">({worker.data.key})</span>
 							</>
 						) : (
 							<h2 className="text-xl font-semibold text-gray-900 dark:text-white">Worker Detail</h2>

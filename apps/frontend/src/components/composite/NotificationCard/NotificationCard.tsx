@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/utils";
 import type { Notification } from "@/interfaces/notification";
 import Label from "@/components/base/Label/Label";
 
@@ -17,15 +18,10 @@ const NotificationCard = ({ notificationKey, onClick }: NotificationCardProps) =
 	const { data: notificationResponse } = useQuery<{ data: Notification[]; metadata?: any }>({
 		queryKey: ["notification", notificationKey],
 		queryFn: async () => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("notification_key", notificationKey || "");
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/notifications?${params}`);
-			if (!response.ok) {
-				throw new Error("Failed to fetch notification");
-			}
-			return response.json();
+			return await api.get<{ data: Notification[]; metadata?: any }>("/jobs/notifications", {
+				token: authToken || "",
+				notification_key: notificationKey || ""
+			});
 		},
 		enabled: !!notificationKey && !!authToken
 	});

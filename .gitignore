@@ -8,6 +8,6 @@ notes.txt
 
 # locale env files
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.dev
+.env.test
+.env.prod

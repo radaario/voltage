@@ -101,8 +101,8 @@ importers:
       '@tanstack/react-table': ^8.21.3
       '@types/lodash-es': ^4.17.12
       '@types/node': ^24.6.0
-      '@types/react': ^19.1.16
-      '@types/react-dom': ^19.1.9
+      '@types/react': ^19.1.1
+      '@types/react-dom': ^19.1.1
       '@vitejs/plugin-react': ^5.0.4
       eslint: ^9.36.0
       eslint-plugin-react-hooks: ^5.2.0
@@ -229,13 +229,16 @@ importers:
 
   packages/config:
     specifiers:
-      '@types/node': ^20.10.6
+      '@types/node': ^24.10.1
+      dotenv: ^17.2.3
       tsup: ^8.0.1
       typescript: ^5.3.3
     dependencies:
-      '@types/node': 20.19.25
+      dotenv: 17.2.3
       tsup: 8.5.1_typescript@5.9.3
       typescript: 5.9.3
+    devDependencies:
+      '@types/node': 24.10.1
 
   packages/utils:
     specifiers:
@@ -3255,12 +3258,6 @@ packages:
       undici-types: 5.26.5
     dev: true
 
-  /@types/node/20.19.25:
-    resolution: {integrity: sha512-ZsJzA5thDQMSQO788d7IocwwQbI8B5OPzmqNvpf3NY/+MHDAS759Wo0gd2WQeXYt5AAAQjzcrTVC6SKCuYgoCQ==}
-    dependencies:
-      undici-types: 6.21.0
-    dev: false
-
   /@types/node/22.19.1:
     resolution: {integrity: sha512-LCCV0HdSZZZb34qifBsyWlUmok6W7ouER+oQIGBScS8EsZsQbrtFTUrDX4hOl+CS6p7cnNC4td+qrSVGSCTUfQ==}
     dependencies:
@@ -4019,6 +4016,11 @@ packages:
 
   /dotenv/16.6.1:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
+    engines: {node: '>=12'}
+    dev: false
+
+  /dotenv/17.2.3:
+    resolution: {integrity: sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w==}
     engines: {node: '>=12'}
     dev: false
 
@@ -6491,6 +6493,7 @@ packages:
 
   /undici-types/6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
+    dev: true
 
   /undici-types/7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}

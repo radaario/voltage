@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import type { Notification, NotificationsResponse } from "@/interfaces/notification";
+import { api, ApiResponse } from "@/utils";
+import type { Notification } from "@/interfaces/notification";
 import NotificationsTable from "./NotificationsTable.tsx";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
 import Button from "@/components/base/Button/Button";
@@ -33,25 +34,16 @@ const Notifications: React.FC = () => {
 	const [newNotificationKeys, setNewNotificationKeys] = useState<Set<string>>(new Set());
 
 	// Fetch notifications with React Query
-	const { data, isLoading, error, dataUpdatedAt } = useQuery<NotificationsResponse>({
+	const { data, isLoading, error, dataUpdatedAt } = useQuery<ApiResponse<Notification[]>>({
 		queryKey: ["notifications", currentPage, currentLimit, searchQuery, statusFilter, authToken],
 		queryFn: async () => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("page", String(currentPage));
-			params.append("limit", String(currentLimit));
-			if (searchQuery) {
-				params.append("q", searchQuery);
-			}
-			if (statusFilter) {
-				params.append("status", statusFilter);
-			}
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jobs/notifications?${params}`);
-			if (!response.ok) {
-				throw new Error("Failed to fetch notifications");
-			}
-			return await response.json();
+			return await api.get<Notification[]>("/jobs/notifications", {
+				token: authToken || "",
+				page: currentPage,
+				limit: currentLimit,
+				...(searchQuery && { q: searchQuery }),
+				...(statusFilter && { status: statusFilter })
+			});
 		},
 		enabled: !!authToken,
 		refetchInterval: 5000 // 5 saniyede bir otomatik refresh

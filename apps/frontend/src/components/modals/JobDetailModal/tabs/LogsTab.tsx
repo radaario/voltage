@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Job } from "@/interfaces/job";
 import type { Log, LogsResponse } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
+import { api, ApiResponse } from "@/utils";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { formatDate } from "@/utils";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
@@ -40,28 +41,17 @@ const LogsTab: React.FC = () => {
 	const [newLogKeys, setNewLogKeys] = useState<Set<string>>(new Set());
 
 	// Fetch logs with React Query
-	const { data, isLoading } = useQuery<LogsResponse>({
+	const { data: logsResponse, isLoading } = useQuery<ApiResponse<LogsResponse>>({
 		queryKey: ["job-logs", job.key, currentPage, currentLimit, searchQuery, typeFilter, authToken],
 		queryFn: async () => {
-			const params = new URLSearchParams();
-			params.append("token", authToken || "");
-			params.append("job_key", job.key);
-			params.append("page", String(currentPage));
-			params.append("limit", String(currentLimit));
-			if (searchQuery) {
-				params.append("q", searchQuery);
-			}
-			if (typeFilter) {
-				params.append("type", typeFilter);
-			}
-
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/logs?${params}`);
-
-			if (!response.ok) {
-				throw new Error("Failed to fetch logs");
-			}
-
-			return response.json();
+			return await api.get<LogsResponse>("/logs", {
+				token: authToken || "",
+				job_key: job.key,
+				page: currentPage,
+				limit: currentLimit,
+				...(searchQuery && { q: searchQuery }),
+				...(typeFilter && { type: typeFilter })
+			});
 		},
 		enabled: !!authToken && !!job.key,
 		refetchInterval: 5000
@@ -69,17 +59,18 @@ const LogsTab: React.FC = () => {
 
 	// Detect new logs when data updates
 	useEffect(() => {
-		if (!data?.data || currentPage !== 1) {
+		const logs = logsResponse?.data?.data;
+		if (!logs || currentPage !== 1) {
 			return;
 		}
 
 		// İlk yükleme: sadece ref'i set et, animasyon gösterme
 		if (previousDataRef.current.length === 0) {
-			previousDataRef.current = data.data;
+			previousDataRef.current = logs;
 			return;
 		}
 
-		const currentLogKeys = new Set(data.data.map((log) => log.key));
+		const currentLogKeys = new Set(logs.map((log) => log.key));
 		const previousLogKeys = new Set(previousDataRef.current.map((log) => log.key));
 
 		const newKeys = [...currentLogKeys].filter((key) => !previousLogKeys.has(key));
@@ -91,11 +82,11 @@ const LogsTab: React.FC = () => {
 			}, 2000);
 		}
 
-		previousDataRef.current = data.data;
-	}, [data?.data, currentPage]);
+		previousDataRef.current = logs;
+	}, [logsResponse?.data?.data, currentPage]);
 
-	const logs = data?.data || [];
-	const pagination: PaginationInfo | undefined = data?.pagination;
+	const logs = logsResponse?.data?.data || [];
+	const pagination: PaginationInfo | undefined = logsResponse?.data?.pagination;
 
 	const handleSearch = (e: React.FormEvent) => {
 		e.preventDefault();

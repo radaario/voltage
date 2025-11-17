@@ -28,7 +28,9 @@
 		/* Path Aliases */
 		"baseUrl": "./",
 		"paths": {
-			"@/*": ["src/*"]
+			"@/*": ["src/*"],
+			"@voltage/config": ["../../packages/config"],
+			"@voltage/utils": ["../../packages/utils"]
 		}
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx", "src/types/global.d.ts"],

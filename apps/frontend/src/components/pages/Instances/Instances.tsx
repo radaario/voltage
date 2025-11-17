@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Outlet } from "react-router-dom";
 import type { Instance } from "@/interfaces/instance";
 import { useAuth } from "@/hooks/useAuth";
+import { api, ApiResponse } from "@/utils";
 import InstancesTable from "./InstancesTable";
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
@@ -23,14 +24,10 @@ const Instances: React.FC = () => {
 	const [searchInput, setSearchInput] = useState("");
 
 	// Fetch instances with React Query
-	const { data, isLoading, error, refetch } = useQuery<InstancesResponse>({
+	const { data, isLoading, error, refetch } = useQuery<ApiResponse<Instance[]>>({
 		queryKey: ["instances", authToken],
 		queryFn: async () => {
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/instances?token=${authToken}`);
-			if (!response.ok) {
-				throw new Error("Failed to fetch instances");
-			}
-			return response.json();
+			return await api.get<Instance[]>("/instances", { token: authToken });
 		},
 		enabled: !!authToken,
 		refetchInterval: 5000 // Auto refresh every 5 seconds

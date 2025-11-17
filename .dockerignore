@@ -3,7 +3,6 @@ dist
 storage
 .git
 .gitignore
-.env
 db.sqlite*
 npm-debug.log*
 .DS_Store

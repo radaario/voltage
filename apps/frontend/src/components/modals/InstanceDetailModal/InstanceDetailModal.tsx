@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import { XMarkIcon, ServerIcon, UsersIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
+import { api, ApiResponse } from "@/utils";
 import type { Instance } from "@/interfaces/instance";
 import Label from "@/components/base/Label/Label";
 import { getInstanceName } from "@/utils/naming";
@@ -15,14 +16,10 @@ const InstanceDetailModal: React.FC = () => {
 	const [isAnimating, setIsAnimating] = useState(false);
 
 	// Fetch instances and find the specific one
-	const { data: instancesData, isLoading } = useQuery<{ data: Instance[] }>({
+	const { data: instancesData, isLoading } = useQuery<ApiResponse<Instance[]>>({
 		queryKey: ["instances", authToken],
 		queryFn: async () => {
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/instances?token=${authToken}`);
-			if (!response.ok) {
-				throw new Error("Failed to fetch instances");
-			}
-			return response.json();
+			return await api.get<Instance[]>("/instances", { token: authToken });
 		},
 		enabled: !!instanceKey && !!authToken
 	});

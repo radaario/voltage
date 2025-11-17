@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { api, ApiResponse } from "@/utils";
 import type { Worker } from "@/interfaces/instance";
 import { getWorkerName } from "@/utils/naming";
 import Label from "@/components/base/Label/Label";
@@ -16,25 +17,24 @@ const WorkerCard = ({ workerKey, onClick }: WorkerCardProps) => {
 	const { authToken } = useAuth();
 
 	// Fetch specific worker
-	const { data: workerResponse } = useQuery<{ data: Worker; metadata?: any }>({
+	const { data: workerResponse } = useQuery<ApiResponse<Worker>>({
 		queryKey: ["worker", workerKey, authToken],
 		queryFn: async () => {
-			const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/workers?worker_key=${workerKey}&token=${authToken}`);
-			if (!res.ok) throw new Error("Failed to fetch worker");
-			return res.json();
+			return await api.get<Worker>("/workers", { worker_key: workerKey, token: authToken });
 		},
 		enabled: !!workerKey && !!authToken
 	});
 
 	const worker = workerResponse?.data;
 
-	// Fetch all workers from the same instance for naming
-	const { data: instanceWorkersResponse } = useQuery<{ data: Worker[]; metadata?: any }>({
+	// Fetch all workers from same instance for naming context
+	const { data: instanceWorkersResponse } = useQuery<ApiResponse<Worker[]>>({
 		queryKey: ["instanceWorkers", worker?.instance_key, authToken],
 		queryFn: async () => {
-			const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/workers?instance_key=${worker?.instance_key}&token=${authToken}`);
-			if (!res.ok) throw new Error("Failed to fetch instance workers");
-			return res.json();
+			return await api.get<Worker[]>("/workers", {
+				instance_key: worker?.instance_key,
+				token: authToken
+			});
 		},
 		enabled: !!worker?.instance_key && !!authToken
 	});
