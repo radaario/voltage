@@ -15,6 +15,7 @@ export default defineConfig(({ command, mode }) => {
 	return {
 		plugins: [react(), tailwindcss()],
 		base: env.VITE_APP_BASE || "/",
+		envPrefix: ["VITE_", "APP_", "VOLTAGE_"],
 		mode: newMode,
 		server: {
 			port: frontendPort,

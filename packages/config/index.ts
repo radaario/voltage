@@ -34,6 +34,7 @@ export const config = {
 	env: (process.env.APP_ENV ?? "local") as "local" | "dev" | "test" | "prod",
 	port: Number(process.env.APP_PORT ?? 8080),
 	base_url: process.env.APP_BASE_URL ?? "",
+	base_path: process.env.APP_BASE_PATH ?? "",
 	timezone: process.env.APP_TIMEZONE ?? "UTC",
 	temp_folder: process.env.APP_TEMP_FOLDER ?? `${rootFolder}/storage/tmp`, // os.tmpdir(),
 	utils: {
