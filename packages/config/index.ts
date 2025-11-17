@@ -31,7 +31,7 @@ const rootFolder = path.resolve(__dir, "../..");
 
 export const config = {
 	name: process.env.APP_NAME ?? "VOLTAGE",
-	version: process.env.APP_VERSION ?? "0.0.3",
+	version: process.env.APP_VERSION ?? "0.0.5",
 	env: (process.env.APP_ENV ?? "local") as "local" | "dev" | "test" | "prod",
 	port: appPort,
 	base_url: process.env.APP_BASE_URL ?? `http://localhost:${appPort}`,

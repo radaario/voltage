@@ -13,7 +13,7 @@ export default defineConfig(({ command, mode }) => {
 
 	return {
 		plugins: [react(), tailwindcss()],
-		base: "./", // env.APP_BASE_PATH || "/"
+		base: env.APP_BASE_PATH || "/",
 		envPrefix: ["VITE_", "APP_", "VOLTAGE_"],
 		mode: newMode,
 		server: {
