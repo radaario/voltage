@@ -1,5 +1,7 @@
 FROM node:20.19.5
 
+ARG APP_DIR=/var/voltage
+
 ARG APP_PORT=8080
 ARG APP_BASE_URL=http://localhost:${APP_PORT}
 ARG APP_BASE_PATH=/
@@ -30,7 +32,7 @@ RUN python3 -m venv /opt/venv && \
     /opt/venv/bin/pip install whisper-cli
 
 # Set working directory
-WORKDIR /var/voltage
+WORKDIR ${APP_DIR}
 
 # Copy source code
 COPY ./ ./
@@ -55,7 +57,8 @@ RUN if [ "$VOLTAGE_FRONTEND_IS_DISABLED" != "false" ]; then npm run build:fronte
 
 # Setup nginx configuration
 COPY ./.deploy/nginx.conf /etc/nginx/nginx.conf
-RUN sed -i "s|\${APP_PORT}|${APP_PORT}|g" /etc/nginx/nginx.conf && \
+RUN sed -i "s|\${APP_DIR}|${APP_DIR}|g" /etc/nginx/nginx.conf && \
+    sed -i "s|\${APP_PORT}|${APP_PORT}|g" /etc/nginx/nginx.conf && \
     sed -i "s|\${VOLTAGE_API_PORT}|${VOLTAGE_API_PORT}|g" /etc/nginx/nginx.conf && \
     sed -i "s|\${VOLTAGE_FRONTEND_PORT}|${VOLTAGE_FRONTEND_PORT}|g" /etc/nginx/nginx.conf
 
