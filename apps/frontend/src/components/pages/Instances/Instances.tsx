@@ -24,11 +24,14 @@ const Instances: React.FC = () => {
 	const [searchInput, setSearchInput] = useState("");
 
 	// Fetch instances with React Query
-	const { data, isLoading, error, refetch } = useQuery<ApiResponse<Instance[]>>({
+	const {
+		data: instancesResponse,
+		isLoading,
+		error,
+		refetch
+	} = useQuery<ApiResponse<Instance[]>>({
 		queryKey: ["instances", authToken],
-		queryFn: async () => {
-			return await api.get<Instance[]>("/instances", { token: authToken });
-		},
+		queryFn: () => api.get<Instance[]>("/instances", { token: authToken }),
 		enabled: !!authToken,
 		refetchInterval: 5000 // Auto refresh every 5 seconds
 	});
@@ -50,7 +53,7 @@ const Instances: React.FC = () => {
 
 	// Filter instances by search query
 	const filteredInstances =
-		data?.data?.filter((instance) => {
+		instancesResponse?.data?.filter((instance) => {
 			if (!searchQuery) return true;
 			const query = searchQuery.toLowerCase();
 			return (
@@ -61,7 +64,7 @@ const Instances: React.FC = () => {
 		}) || [];
 
 	// renders
-	if (isLoading && !data) {
+	if (isLoading && !instancesResponse) {
 		return (
 			<div className="flex justify-center items-center min-h-[400px]">
 				<div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-500 dark:border-gray-400 border-t-transparent"></div>

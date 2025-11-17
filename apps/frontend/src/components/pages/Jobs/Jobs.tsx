@@ -38,29 +38,32 @@ const Jobs: React.FC = () => {
 	const [newJobKeys, setNewJobKeys] = useState<Set<string>>(new Set());
 
 	// Fetch jobs with React Query
-	const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<ApiResponse<Job[]>>({
+	const {
+		data: jobsResponse,
+		isLoading,
+		error,
+		refetch,
+		dataUpdatedAt
+	} = useQuery<ApiResponse<Job[]>>({
 		queryKey: ["jobs", currentPage, currentLimit, searchQuery, authToken],
-		queryFn: async () => {
-			return await api.get<Job[]>("/jobs", {
+		queryFn: () =>
+			api.get<Job[]>("/jobs", {
 				token: authToken || "",
 				page: currentPage,
 				limit: currentLimit,
 				...(searchQuery && { q: searchQuery })
-			});
-		},
+			}),
 		enabled: !!authToken,
 		refetchInterval: 5000 // 5 saniyede bir otomatik refresh
 	});
 
-	console.log("fav:2", data);
-
 	// Detect new jobs when data updates
 	useEffect(() => {
-		if (!data?.data || currentPage !== 1) {
+		if (!jobsResponse?.data || currentPage !== 1) {
 			return;
 		}
 
-		const currentJobs = data.data;
+		const currentJobs = jobsResponse.data;
 		const previousJobs = previousDataRef.current;
 
 		// Skip first load
@@ -87,7 +90,7 @@ const Jobs: React.FC = () => {
 		}
 
 		previousDataRef.current = currentJobs;
-	}, [dataUpdatedAt, data, currentPage]);
+	}, [dataUpdatedAt, jobsResponse, currentPage]);
 
 	// Create job mutation
 	const createJobMutation = useMutation({
@@ -243,17 +246,17 @@ const Jobs: React.FC = () => {
 
 	// Prepare pagination data
 	const pagination: PaginationInfo = {
-		total: data?.pagination?.total || 0,
-		page: data?.pagination?.page || 1,
-		limit: data?.pagination?.limit || 6,
-		totalPages: data?.pagination?.total_pages || 0,
-		has_more: data?.pagination?.has_more,
-		next_page: data?.pagination?.next_page,
-		prev_page: data?.pagination?.prev_page
+		total: jobsResponse?.pagination?.total || 0,
+		page: jobsResponse?.pagination?.page || 1,
+		limit: jobsResponse?.pagination?.limit || 6,
+		totalPages: jobsResponse?.pagination?.total_pages || 0,
+		has_more: jobsResponse?.pagination?.has_more,
+		next_page: jobsResponse?.pagination?.next_page,
+		prev_page: jobsResponse?.pagination?.prev_page
 	};
 
 	// renders
-	if (isLoading && !data) {
+	if (isLoading && !jobsResponse) {
 		return (
 			<div className="flex justify-center items-center h-64">
 				<div className="animate-spin rounded-full h-10 w-10 border-2 border-b-white border-gray-500 dark:border-gray-400"></div>
@@ -342,7 +345,7 @@ const Jobs: React.FC = () => {
 			{/* Table */}
 			<div className="bg-gray-100 dark:bg-gray-900 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 				<JobsTable
-					data={data?.data || []}
+					data={jobsResponse?.data || []}
 					loading={isLoading}
 					pagination={pagination}
 					onPageChange={handlePageChange}

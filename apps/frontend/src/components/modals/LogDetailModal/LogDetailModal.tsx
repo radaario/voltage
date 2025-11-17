@@ -17,12 +17,11 @@ const LogDetailModal: React.FC = () => {
 	// Fetch log details
 	const { data: logResponse, isLoading } = useQuery<ApiResponse<Log>>({
 		queryKey: ["log", logKey],
-		queryFn: async () => {
-			return await api.get<Log>("/logs", {
+		queryFn: () =>
+			api.get<Log>("/logs", {
 				token: authToken || "",
 				log_key: logKey || ""
-			});
-		},
+			}),
 		enabled: !!logKey && !!authToken
 	});
 
@@ -150,7 +149,7 @@ const LogDetailModal: React.FC = () => {
 								</button>
 							</div>
 						) : (
-							<Outlet context={{ log }} />
+							<Outlet context={{ log: log.data }} />
 						)}
 					</div>
 				</div>

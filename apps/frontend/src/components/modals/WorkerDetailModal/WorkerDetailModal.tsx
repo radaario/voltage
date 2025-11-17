@@ -15,22 +15,18 @@ const WorkerDetailModal = () => {
 	const { authToken } = useAuth();
 
 	// Fetch specific worker
-	const { data: worker, isLoading } = useQuery<ApiResponse<Worker>>({
+	const { data: workerResponse, isLoading } = useQuery<ApiResponse<Worker>>({
 		queryKey: ["worker", workerKey, authToken],
-		queryFn: async () => {
-			return await api.get<Worker>("/workers", { worker_key: workerKey, token: authToken });
-		},
+		queryFn: () => api.get<Worker>("/workers", { worker_key: workerKey, token: authToken }),
 		enabled: !!workerKey && !!authToken,
 		refetchInterval: 5000
 	});
 
 	// Fetch all workers from the same instance for naming
 	const { data: instanceWorkers } = useQuery<ApiResponse<Worker[]>>({
-		queryKey: ["instanceWorkers", worker?.data?.instance_key, authToken],
-		queryFn: async () => {
-			return await api.get<Worker[]>("/workers", { instance_key: worker?.data?.instance_key, token: authToken });
-		},
-		enabled: !!worker?.data?.instance_key && !!authToken
+		queryKey: ["instanceWorkers", workerResponse?.data?.instance_key, authToken],
+		queryFn: () => api.get<Worker[]>("/workers", { instance_key: workerResponse?.data?.instance_key, token: authToken }),
+		enabled: !!workerResponse?.data?.instance_key && !!authToken
 	});
 
 	const handleClose = () => {
@@ -62,13 +58,13 @@ const WorkerDetailModal = () => {
 				<div className="shrink-0 flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 					<div className="flex items-center gap-3">
 						<CpuChipIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-						{worker?.data && instanceWorkers?.data ? (
+						{workerResponse?.data && instanceWorkers?.data ? (
 							<>
 								<h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-									{getWorkerName(instanceWorkers.data, worker.data)}
+									{getWorkerName(instanceWorkers.data, workerResponse.data)}
 								</h2>
-								<Label size="md">{worker.data.status}</Label>
-								<span className="text-sm text-gray-500 dark:text-gray-400 font-mono">({worker.data.key})</span>
+								<Label size="md">{workerResponse.data.status}</Label>
+								<span className="text-sm text-gray-500 dark:text-gray-400 font-mono">({workerResponse.data.key})</span>
 							</>
 						) : (
 							<h2 className="text-xl font-semibold text-gray-900 dark:text-white">Worker Detail</h2>
@@ -113,8 +109,8 @@ const WorkerDetailModal = () => {
 						<div className="flex justify-center items-center py-12">
 							<div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent"></div>
 						</div>
-					) : worker ? (
-						<Outlet context={{ worker }} />
+					) : workerResponse ? (
+						<Outlet context={{ worker: workerResponse.data }} />
 					) : (
 						<div className="text-center py-12">
 							<p className="text-gray-500 dark:text-gray-400">Worker not found</p>

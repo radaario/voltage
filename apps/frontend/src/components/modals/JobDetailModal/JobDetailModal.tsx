@@ -23,14 +23,13 @@ const JobDetailModal: React.FC = () => {
 	const [isAnimating, setIsAnimating] = useState(false);
 
 	// Fetch job details
-	const { data: job, isLoading } = useQuery<ApiResponse<Job>>({
+	const { data: jobResponse, isLoading } = useQuery<ApiResponse<Job>>({
 		queryKey: ["job", jobKey],
-		queryFn: async () => {
-			return await api.get<Job>("/jobs", {
+		queryFn: () =>
+			api.get<Job>("/jobs", {
 				token: authToken || "",
 				job_key: jobKey || ""
-			});
-		},
+			}),
 		enabled: !!jobKey && !!authToken
 	});
 
@@ -100,10 +99,10 @@ const JobDetailModal: React.FC = () => {
 					<div className="shrink-0 flex items-start justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 						<div className="flex items-center gap-4">
 							{/* Preview Image */}
-							{job?.data && (
+							{jobResponse?.data && (
 								<div className="w-24 h-16 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden">
 									<img
-										src={api.getResourceUrl("/jobs/preview", { job_key: job.data.key, token: authToken })}
+										src={api.getResourceUrl("/jobs/preview", { job_key: jobResponse?.data?.key, token: authToken })}
 										alt="Preview"
 										className="w-full h-full object-cover"
 										onError={(e) => {
@@ -114,24 +113,26 @@ const JobDetailModal: React.FC = () => {
 								</div>
 							)}
 							<div>
-								{job?.data && (
+								{jobResponse?.data && (
 									<>
 										<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-											{job.data.input?.file_name || job.data.input?.url?.split("/").pop() || "Untitled Job"}
+											{jobResponse.data.input?.file_name ||
+												jobResponse.data.input?.url?.split("/").pop() ||
+												"Untitled Job"}
 										</h3>
-										<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">{job.data.key}</p>
+										<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">{jobResponse?.data?.key}</p>
 									</>
 								)}
-								{!job?.data && <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
+								{!jobResponse?.data && <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
 							</div>
 						</div>
 						<div className="flex items-center gap-3">
 							{/* Status Badge */}
-							{job?.data && (
+							{jobResponse?.data && (
 								<Label
-									status={job.data.status}
+									status={jobResponse.data.status}
 									size="lg">
-									{job.data.status}
+									{jobResponse.data.status}
 								</Label>
 							)}
 							<button
@@ -171,7 +172,7 @@ const JobDetailModal: React.FC = () => {
 								<div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-500 dark:border-gray-400 border-t-transparent"></div>
 							</div>
 						) : (
-							<Outlet context={{ job }} />
+							<Outlet context={{ job: jobResponse?.data }} />
 						)}
 					</div>
 				</div>

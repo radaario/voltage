@@ -54,9 +54,7 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 		refetch: refetchConfig
 	} = useQuery({
 		queryKey: ["config"],
-		queryFn: async () => {
-			return await api.get<Config>("/config");
-		},
+		queryFn: () => api.get<Config>("/config"),
 		staleTime: 5 * 60 * 1000, // Config 5 dakika boyunca fresh kabul edilir
 		refetchOnWindowFocus: false // Pencere focus olduğunda otomatik refetch etme
 	});

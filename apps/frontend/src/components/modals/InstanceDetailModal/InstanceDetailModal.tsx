@@ -16,15 +16,13 @@ const InstanceDetailModal: React.FC = () => {
 	const [isAnimating, setIsAnimating] = useState(false);
 
 	// Fetch instances and find the specific one
-	const { data: instancesData, isLoading } = useQuery<ApiResponse<Instance[]>>({
+	const { data: instancesResponse, isLoading } = useQuery<ApiResponse<Instance[]>>({
 		queryKey: ["instances", authToken],
-		queryFn: async () => {
-			return await api.get<Instance[]>("/instances", { token: authToken });
-		},
+		queryFn: () => api.get<Instance[]>("/instances", { token: authToken }),
 		enabled: !!instanceKey && !!authToken
 	});
 
-	const instance = instancesData?.data?.find((inst) => inst.key === instanceKey);
+	const instance = instancesResponse?.data?.find((inst) => inst.key === instanceKey);
 
 	useEffect(() => {
 		// Get scrollbar width before hiding
@@ -87,11 +85,11 @@ const InstanceDetailModal: React.FC = () => {
 						<div className="flex items-start gap-3">
 							<ServerIcon className="h-7 w-7 text-gray-600 dark:text-gray-400 mt-0.5" />
 							<div>
-								{instance && instancesData?.data ? (
+								{instance && instancesResponse?.data ? (
 									<>
 										<div className="flex items-center gap-3">
 											<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-												{getInstanceName(instancesData.data, instance)}
+												{getInstanceName(instancesResponse.data, instance)}
 											</h3>
 											<Label
 												size="md"
@@ -158,7 +156,7 @@ const InstanceDetailModal: React.FC = () => {
 								</button>
 							</div>
 						) : (
-							<Outlet context={{ instance }} />
+							<Outlet context={{ instance: instance }} />
 						)}
 					</div>
 				</div>

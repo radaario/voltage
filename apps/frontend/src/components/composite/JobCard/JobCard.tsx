@@ -17,9 +17,7 @@ const JobCard = ({ jobKey, title, onClick }: JobCardProps) => {
 	// Fetch job to get file name
 	const { data: jobResponse } = useQuery<ApiResponse<Job>>({
 		queryKey: ["job", jobKey, authToken],
-		queryFn: async () => {
-			return await api.get<Job>("/jobs", { job_key: jobKey, token: authToken });
-		},
+		queryFn: () => api.get<Job>("/jobs", { job_key: jobKey, token: authToken }),
 		enabled: !!jobKey && !!authToken
 	});
 
@@ -28,9 +26,7 @@ const JobCard = ({ jobKey, title, onClick }: JobCardProps) => {
 	// Fetch all jobs for count context
 	const { data: allJobsResponse } = useQuery<ApiResponse<Job[]>>({
 		queryKey: ["jobs", authToken],
-		queryFn: async () => {
-			return await api.get<Job[]>("/jobs", { token: authToken });
-		},
+		queryFn: () => api.get<Job[]>("/jobs", { token: authToken }),
 		enabled: !!authToken && !job?.input?.file_name
 	});
 

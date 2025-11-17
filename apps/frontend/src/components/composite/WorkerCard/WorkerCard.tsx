@@ -19,9 +19,7 @@ const WorkerCard = ({ workerKey, onClick }: WorkerCardProps) => {
 	// Fetch specific worker
 	const { data: workerResponse } = useQuery<ApiResponse<Worker>>({
 		queryKey: ["worker", workerKey, authToken],
-		queryFn: async () => {
-			return await api.get<Worker>("/workers", { worker_key: workerKey, token: authToken });
-		},
+		queryFn: () => api.get<Worker>("/workers", { worker_key: workerKey, token: authToken }),
 		enabled: !!workerKey && !!authToken
 	});
 
@@ -30,12 +28,11 @@ const WorkerCard = ({ workerKey, onClick }: WorkerCardProps) => {
 	// Fetch all workers from same instance for naming context
 	const { data: instanceWorkersResponse } = useQuery<ApiResponse<Worker[]>>({
 		queryKey: ["instanceWorkers", worker?.instance_key, authToken],
-		queryFn: async () => {
-			return await api.get<Worker[]>("/workers", {
+		queryFn: () =>
+			api.get<Worker[]>("/workers", {
 				instance_key: worker?.instance_key,
 				token: authToken
-			});
-		},
+			}),
 		enabled: !!worker?.instance_key && !!authToken
 	});
 

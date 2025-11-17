@@ -34,28 +34,32 @@ const Notifications: React.FC = () => {
 	const [newNotificationKeys, setNewNotificationKeys] = useState<Set<string>>(new Set());
 
 	// Fetch notifications with React Query
-	const { data, isLoading, error, dataUpdatedAt } = useQuery<ApiResponse<Notification[]>>({
+	const {
+		data: notificationsResponse,
+		isLoading,
+		error,
+		dataUpdatedAt
+	} = useQuery<ApiResponse<Notification[]>>({
 		queryKey: ["notifications", currentPage, currentLimit, searchQuery, statusFilter, authToken],
-		queryFn: async () => {
-			return await api.get<Notification[]>("/jobs/notifications", {
+		queryFn: () =>
+			api.get<Notification[]>("/jobs/notifications", {
 				token: authToken || "",
 				page: currentPage,
 				limit: currentLimit,
 				...(searchQuery && { q: searchQuery }),
 				...(statusFilter && { status: statusFilter })
-			});
-		},
+			}),
 		enabled: !!authToken,
 		refetchInterval: 5000 // 5 saniyede bir otomatik refresh
 	});
 
 	// Detect new notifications when data updates
 	useEffect(() => {
-		if (!data?.data || currentPage !== 1) {
+		if (!notificationsResponse?.data || currentPage !== 1) {
 			return;
 		}
 
-		const currentNotifications = data.data;
+		const currentNotifications = notificationsResponse.data;
 		const previousNotifications = previousDataRef.current;
 
 		// Skip first load
@@ -84,7 +88,7 @@ const Notifications: React.FC = () => {
 		}
 
 		previousDataRef.current = currentNotifications;
-	}, [dataUpdatedAt, data, currentPage]);
+	}, [dataUpdatedAt, notificationsResponse, currentPage]);
 
 	// actions
 	const handleSearch = (e: React.FormEvent) => {
@@ -119,17 +123,17 @@ const Notifications: React.FC = () => {
 
 	// Prepare pagination data
 	const pagination: PaginationInfo = {
-		total: data?.pagination?.total || 0,
-		page: data?.pagination?.page || 1,
-		limit: data?.pagination?.limit || 25,
-		totalPages: data?.pagination?.total_pages || 0,
-		has_more: data?.pagination?.has_more,
-		next_page: data?.pagination?.next_page,
-		prev_page: data?.pagination?.prev_page
+		total: notificationsResponse?.pagination?.total || 0,
+		page: notificationsResponse?.pagination?.page || 1,
+		limit: notificationsResponse?.pagination?.limit || 25,
+		totalPages: notificationsResponse?.pagination?.total_pages || 0,
+		has_more: notificationsResponse?.pagination?.has_more,
+		next_page: notificationsResponse?.pagination?.next_page,
+		prev_page: notificationsResponse?.pagination?.prev_page
 	};
 
 	// renders
-	if (isLoading && !data) {
+	if (isLoading && !notificationsResponse) {
 		return (
 			<div className="flex justify-center items-center h-64">
 				<div className="animate-spin rounded-full h-10 w-10 border-2 border-b-white border-gray-500 dark:border-gray-400"></div>
@@ -210,7 +214,7 @@ const Notifications: React.FC = () => {
 			{/* Table */}
 			<div className="bg-gray-100 dark:bg-gray-900 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 				<NotificationsTable
-					data={data?.data || []}
+					data={notificationsResponse?.data || []}
 					loading={isLoading}
 					pagination={{
 						total: pagination.total,

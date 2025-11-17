@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { api } from "@/utils";
+import { api, ApiResponse } from "@/utils";
 import type { Instance } from "@/interfaces/instance";
 import { getInstanceName } from "@/utils/naming";
 import { ServerIcon } from "@heroicons/react/24/outline";
@@ -16,11 +16,9 @@ const InstanceCard = ({ instanceKey, onClick }: InstanceCardProps) => {
 	const { authToken } = useAuth();
 
 	// Fetch all instances to get the name
-	const { data: instancesResponse } = useQuery<{ data: Instance[]; metadata?: any }>({
+	const { data: instancesResponse } = useQuery<ApiResponse<Instance[]>>({
 		queryKey: ["instances", authToken],
-		queryFn: async () => {
-			return await api.get<Instance[]>("/instances", { token: authToken });
-		},
+		queryFn: () => api.get<Instance[]>("/instances", { token: authToken }),
 		enabled: !!authToken
 	});
 

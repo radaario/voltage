@@ -21,12 +21,11 @@ const NotificationDetailModal: React.FC = () => {
 	// Fetch notification details
 	const { data: notificationResponse, isLoading } = useQuery<ApiResponse<Notification>>({
 		queryKey: ["notification", notificationKey],
-		queryFn: async () => {
-			return await api.get<Notification>("/jobs/notifications", {
+		queryFn: () =>
+			api.get<Notification>("/jobs/notifications", {
 				token: authToken || "",
 				notification_key: notificationKey || ""
-			});
-		},
+			}),
 		enabled: !!notificationKey && !!authToken
 	});
 
@@ -199,7 +198,7 @@ const NotificationDetailModal: React.FC = () => {
 								</Button>
 							</div>
 						) : (
-							<Outlet context={{ notification }} />
+							<Outlet context={{ notification: notification }} />
 						)}
 					</div>
 				</div>

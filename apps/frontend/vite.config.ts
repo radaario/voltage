@@ -16,8 +16,15 @@ export default defineConfig(({ command, mode }) => {
 		plugins: [react(), tailwindcss()],
 		base: env.VITE_APP_BASE || "/",
 		mode: newMode,
-		server: { port: frontendPort, host: env.NODE_ENV === "development" },
-		preview: { port: frontendPort, host: env.NODE_ENV === "development" },
+		server: {
+			port: frontendPort,
+			host: env.NODE_ENV === "development"
+		},
+		preview: {
+			allowedHosts: true,
+			port: frontendPort,
+			host: env.NODE_ENV === "development"
+		},
 		build: { outDir: "./dist", sourcemap: false },
 		resolve: { mainFields: [], alias: { "@": path.resolve(__dirname, "./src") } }
 	};

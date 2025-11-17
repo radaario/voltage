@@ -36,28 +36,33 @@ const Logs: React.FC = () => {
 	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
 	// Fetch logs with React Query
-	const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<ApiResponse<Log[]>>({
+	const {
+		data: logsResponse,
+		isLoading,
+		error,
+		refetch,
+		dataUpdatedAt
+	} = useQuery<ApiResponse<Log[]>>({
 		queryKey: ["logs", currentPage, currentLimit, searchQuery, typeFilter, authToken],
-		queryFn: async () => {
-			return await api.get<Log[]>("/logs", {
+		queryFn: () =>
+			api.get<Log[]>("/logs", {
 				token: authToken || "",
 				page: currentPage,
 				limit: currentLimit,
 				...(searchQuery && { q: searchQuery }),
 				...(typeFilter && { type: typeFilter })
-			});
-		},
+			}),
 		enabled: !!authToken,
 		refetchInterval: 5000 // 5 saniyede bir otomatik refresh
 	});
 
 	// Detect new logs when data updates
 	useEffect(() => {
-		if (!data?.data || currentPage !== 1) {
+		if (!logsResponse?.data || currentPage !== 1) {
 			return;
 		}
 
-		const currentLogs = data.data;
+		const currentLogs = logsResponse.data;
 		const previousLogs = previousDataRef.current;
 
 		// Skip first load
@@ -84,7 +89,7 @@ const Logs: React.FC = () => {
 		}
 
 		previousDataRef.current = currentLogs;
-	}, [dataUpdatedAt, data, currentPage]);
+	}, [dataUpdatedAt, logsResponse, currentPage]);
 
 	// Delete all logs mutation
 	const deleteAllLogsMutation = useMutation({
@@ -151,17 +156,17 @@ const Logs: React.FC = () => {
 
 	// Prepare pagination data
 	const pagination: PaginationInfo = {
-		total: data?.pagination?.total || 0,
-		page: data?.pagination?.page || 1,
-		limit: data?.pagination?.limit || 25,
-		totalPages: data?.pagination?.total_pages || 0,
-		has_more: data?.pagination?.has_more,
-		next_page: data?.pagination?.next_page,
-		prev_page: data?.pagination?.prev_page
+		total: logsResponse?.pagination?.total || 0,
+		page: logsResponse?.pagination?.page || 1,
+		limit: logsResponse?.pagination?.limit || 25,
+		totalPages: logsResponse?.pagination?.total_pages || 0,
+		has_more: logsResponse?.pagination?.has_more,
+		next_page: logsResponse?.pagination?.next_page,
+		prev_page: logsResponse?.pagination?.prev_page
 	};
 
 	// renders
-	if (isLoading && !data) {
+	if (isLoading && !logsResponse) {
 		return (
 			<div className="flex justify-center items-center h-64">
 				<div className="animate-spin rounded-full h-10 w-10 border-2 border-b-white border-gray-500 dark:border-gray-400"></div>
@@ -241,7 +246,7 @@ const Logs: React.FC = () => {
 							size="md"
 							iconOnly
 							onClick={handleDeleteAllLogs}
-							disabled={deleteAllLogsMutation.isPending || (data?.data?.length || 0) === 0}
+							disabled={deleteAllLogsMutation.isPending || (logsResponse?.data?.length || 0) === 0}
 							isLoading={deleteAllLogsMutation.isPending}>
 							<TrashIcon className="h-5 w-5 text-red-600" />
 						</Button>
@@ -272,7 +277,7 @@ const Logs: React.FC = () => {
 			{/* Table */}
 			<div className="bg-gray-100 dark:bg-gray-900 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 				<LogsTable
-					data={data?.data || []}
+					data={logsResponse?.data || []}
 					loading={isLoading}
 					pagination={pagination}
 					onPageChange={handlePageChange}

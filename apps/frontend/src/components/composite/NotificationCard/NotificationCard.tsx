@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { api } from "@/utils";
+import { api, ApiResponse } from "@/utils";
 import type { Notification } from "@/interfaces/notification";
 import Label from "@/components/base/Label/Label";
 
@@ -15,14 +15,13 @@ const NotificationCard = ({ notificationKey, onClick }: NotificationCardProps) =
 	const { authToken } = useAuth();
 
 	// Fetch notification details
-	const { data: notificationResponse } = useQuery<{ data: Notification[]; metadata?: any }>({
+	const { data: notificationResponse } = useQuery<ApiResponse<Notification[]>>({
 		queryKey: ["notification", notificationKey],
-		queryFn: async () => {
-			return await api.get<{ data: Notification[]; metadata?: any }>("/jobs/notifications", {
+		queryFn: () =>
+			api.get<Notification[]>("/jobs/notifications", {
 				token: authToken || "",
 				notification_key: notificationKey || ""
-			});
-		},
+			}),
 		enabled: !!notificationKey && !!authToken
 	});
 
