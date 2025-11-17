@@ -1,6 +1,8 @@
 import os from "os";
 import path from "path";
-import { fileURLToPath } from "url";
+// import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+import fs from "fs";
 
 // ES module ortamında __filename ve __dirname yerine:
 // const __file = fileURLToPath(import.meta.url);
@@ -15,6 +17,15 @@ const ffprobePathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffprobe" : "ffprobe";
 
 const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? "12345678";
 
+// Load environment specific .env files and override
+const envFiles = [".env", ".env.local", ".env.dev", ".env.test", ".env.prod"];
+for (const envFile of envFiles) {
+	const envPath = path.resolve(__dir, "../..", envFile);
+	if (fs.existsSync(envPath)) {
+		dotenv.config({ path: envPath, override: true });
+	}
+}
+
 const rootFolder = path.resolve(__dir, "../..");
 
 export const config = {
@@ -23,8 +34,8 @@ export const config = {
 	env: (process.env.APP_ENV ?? "local") as "local" | "dev" | "test" | "prod",
 	port: Number(process.env.APP_PORT ?? 8080),
 	base_url: process.env.APP_BASE_URL ?? "",
-	timezone: process.env.VOLTAGE_TIMEZONE ?? "UTC",
-	temp_folder: process.env.VOLTAGE_INSTANCES_TEMP_FOLDER ?? `${rootFolder}/storage/tmp`, // os.tmpdir(),
+	timezone: process.env.APP_TIMEZONE ?? "UTC",
+	temp_folder: process.env.APP_TEMP_FOLDER ?? `${rootFolder}/storage/tmp`, // os.tmpdir(),
 	utils: {
 		ffmpeg: {
 			path: process.env.FFMPEG_PATH ?? ffmpegPathDefault

@@ -20,8 +20,11 @@
 		"clean": "rm -rf ./dist"
 	},
 	"dependencies": {
-		"@types/node": "^20.10.6",
+		"dotenv": "^17.2.3",
 		"tsup": "^8.0.1",
 		"typescript": "^5.3.3"
+	},
+	"devDependencies": {
+		"@types/node": "^24.10.1"
 	}
 }
