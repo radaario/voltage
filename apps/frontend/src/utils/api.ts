@@ -4,17 +4,13 @@
 
 // Determine API base URL based on environment
 const getApiBaseUrl = (): string => {
-	const appBaseUrl = import.meta.env.APP_BASE_URL;
-	// const appBasePath = import.meta.env.APP_BASE_PATH || "";
-	const apiPort = import.meta.env.VOLTAGE_API_PORT || "4000";
-
-	if (appBaseUrl) {
-		return `${appBaseUrl}/api`; // ${appBasePath}
+	if (import.meta.env.VITE_API_URL) {
+		return import.meta.env.VITE_API_URL; // ${appBasePath}
 	}
 
 	// Get current host (protocol + hostname + port if exists)
 	const currentHost = `${window.location.protocol}//${window.location.hostname}`;
-	return `${currentHost}:${apiPort}`; // ${appBasePath}
+	return `${currentHost}:${import.meta.env.VITE_API_PORT || "4000"}`; // ${appBasePath}
 };
 
 export interface ApiRequestOptions {

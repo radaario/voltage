@@ -9,21 +9,18 @@ export default defineConfig(({ command, mode }) => {
 	// Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
 	const newMode = process.env.APP_ENV ? `${process.env.APP_ENV}`.trim() : mode;
 	const env = loadEnv(newMode, process.cwd(), ""); // test|prod
-	const port = Number(env.VOLTAGE_FRONTEND_PORT) || 3000;
+	const port = Number(process.env.VOLTAGE_FRONTEND_PORT) || 3000;
 
 	return {
 		plugins: [react(), tailwindcss()],
 		base: "/voltage/", // env.VITE_APP_BASE ? `${env.VITE_APP_BASE}/` : "",
-		envPrefix: ["VITE_"], // , "APP_", "VOLTAGE_"
 		mode: newMode,
 		server: {
-			port: port,
-			host: env.NODE_ENV === "development"
+			port: port
 		},
 		preview: {
 			allowedHosts: true,
-			port: port,
-			host: env.NODE_ENV === "development"
+			port: port
 		},
 		build: { outDir: "./dist", sourcemap: false },
 		resolve: { mainFields: [], alias: { "@": path.resolve(__dirname, "./src") } }
