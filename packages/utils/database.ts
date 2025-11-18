@@ -189,7 +189,7 @@ class Database {
 		switch (type) {
 			case "SQLITE":
 				knexConfig.connection = {
-					filename: this._config.file_name ?? "./db.sqlite"
+					filename: this._config.file_name ? `./${this._config.file_name}` : "./db.sqlite"
 				};
 				break;
 

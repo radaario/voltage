@@ -96,7 +96,7 @@ export const config = {
 		password: process.env.VOLTAGE_DATABASE_PASSWORD ?? "",
 		name: process.env.VOLTAGE_DATABASE_NAME ?? "voltage",
 		table_prefix: process.env.VOLTAGE_DATABASE_TABLE_PREFIX ?? "",
-		file_name: process.env.VOLTAGE_DATABASE_FILE_NAME ?? `${appDir}/db.sqlite`, // SQLite specific
+		file_name: process.env.VOLTAGE_DATABASE_FILE_NAME ?? "db.sqlite", // SQLite specific
 		cleanup_interval: Number(process.env.VOLTAGE_DATABASE_CLEANUP_INTERVAL ?? 60 * 60 * 1000) // in milliseconds, default 1 hour
 	},
 	runtime: {
