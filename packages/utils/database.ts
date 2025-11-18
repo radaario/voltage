@@ -19,7 +19,9 @@ class Database {
 		if (!this._config) throw new Error("Database not configured.");
 		const raw = this._config.table_prefix;
 		if (!raw) return "";
-		return raw.replace(/[-_]/g, "") + "_";
+		let transformed = raw.replace(/[- ]/g, "_");
+		if (transformed.endsWith("_")) transformed = transformed.slice(0, -1);
+		return transformed + "_";
 	}
 
 	table(tableName: string) {
