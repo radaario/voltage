@@ -3,7 +3,7 @@ import moment from "moment";
 // import "moment-timezone";
 import "moment/min/locales";
 
-// moment.tz.setDefault("UTC");
+// moment.tz.setDefault("+00:00");
 moment.defaultFormat = "YYYY-MM-DD HH:mm:ss";
 
 const MOMENT_REFERENCE = moment(); // fixed just for testing, use moment();

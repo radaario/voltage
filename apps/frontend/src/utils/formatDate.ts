@@ -5,10 +5,10 @@ import "moment-timezone";
  * Formats a date string to a readable format
  * Converts from server timezone to browser timezone
  * @param date - Date string or Date object
- * @param serverTimezone - Server timezone (from config), defaults to UTC
+ * @param serverTimezone - Server timezone (from config), defaults to +00:00
  * @returns Formatted date string
  */
-export function formatDate(date: string | Date, serverTimezone: string = "UTC"): string {
+export function formatDate(date: string | Date, serverTimezone: string = "+00:00"): string {
 	try {
 		// Parse the date assuming it's in the server's timezone
 		const momentDate = moment.tz(date, serverTimezone);
@@ -36,10 +36,10 @@ export function formatDate(date: string | Date, serverTimezone: string = "UTC"):
  * Converts a date from server timezone to browser timezone
  * Returns a Date object
  * @param date - Date string or Date object
- * @param serverTimezone - Server timezone (from config), defaults to UTC
+ * @param serverTimezone - Server timezone (from config), defaults to +00:00
  * @returns Date object in browser's local timezone
  */
-export function convertToLocalDate(date: string | Date, serverTimezone: string = "UTC"): Date {
+export function convertToLocalDate(date: string | Date, serverTimezone: string = "+00:00"): Date {
 	try {
 		// Parse the date assuming it's in the server's timezone
 		const momentDate = moment.tz(date, serverTimezone);

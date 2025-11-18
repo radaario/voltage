@@ -50,7 +50,7 @@ const NotificationTab: React.FC = () => {
 
 		// Format dates
 		if (key.includes("_at") && typeof value === "string") {
-			return formatDate(value, config?.timezone || "UTC");
+			return formatDate(value, config?.timezone || "+00:00");
 		}
 
 		// Format booleans

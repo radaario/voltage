@@ -45,7 +45,7 @@ export const config = {
 	host: appHost,
 	path: appPath,
 	port: appPort,
-	timezone: process.env.VOLTAGE_TIMEZONE ?? "UTC",
+	timezone: process.env.VOLTAGE_TIMEZONE ?? "+00:00",
 	dir: appDir,
 	temp_dir: process.env.VOLTAGE_TEMP_DIR ?? `${appDir}/storage/tmp`, // os.tmpdir(),
 	utils: {

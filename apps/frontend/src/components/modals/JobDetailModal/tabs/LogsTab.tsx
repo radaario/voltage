@@ -285,7 +285,7 @@ const LogsTab: React.FC = () => {
 										)}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-										{formatDate(log.created_at, config?.timezone || "UTC")}
+										{formatDate(log.created_at, config?.timezone || "+00:00")}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
 										<div className="flex items-center gap-2">

@@ -17,8 +17,8 @@ interface TimeAgoProps {
 const TimeAgo: React.FC<TimeAgoProps> = ({ datetime, locale = "en_US", live = true, className }) => {
 	const { config } = useGlobalStateContext();
 
-	// Get server timezone from config, default to UTC
-	const serverTimezone = config?.timezone || "UTC";
+	// Get server timezone from config, default to +00:00
+	const serverTimezone = config?.timezone || "+00:00";
 
 	// Convert date from server timezone to browser timezone
 	const localDate = convertToLocalDate(datetime, serverTimezone);

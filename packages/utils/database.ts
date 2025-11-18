@@ -201,7 +201,7 @@ class Database {
 					user: this._config.username,
 					password: this._config.password,
 					database: this._config.name,
-					timezone: this._config.timezone || "UTC"
+					timezone: this._config.timezone || "+00:00"
 				};
 				knexConfig.pool = { min: 0, max: 10 };
 				break;
