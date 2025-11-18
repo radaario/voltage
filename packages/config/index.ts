@@ -10,14 +10,12 @@ import fs from "fs";
 // const __dir = path.dirname(__file);
 const __dir = process.cwd();
 
-const VOLTAGE_PROTOCOL = process.env.VOLTAGE_PROTOCOL ? `${process.env.VOLTAGE_PROTOCOL}` : "http";
-const VOLTAGE_HOST = process.env.VOLTAGE_HOST ? `${VOLTAGE_PROTOCOL}://${process.env.VOLTAGE_HOST}` : `${VOLTAGE_PROTOCOL}://localhost`;
-
 const appDir = path.resolve(__dir, "../..");
-const appPort = Number(process.env.VOLTAGE_PORT) ?? 8080;
-const appHost = `${VOLTAGE_HOST}${appPort !== 80 ? `:${appPort}` : ""}`;
+const appProtocol = process.env.VOLTAGE_PROTOCOL ?? "http";
+const appHost = process.env.VOLTAGE_HOST ?? "localhost";
+const appPort = Number(process.env.VOLTAGE_PORT ?? 8080);
 const appPath = process.env.VOLTAGE_PATH ?? "/";
-const appUrl = `${appHost}${appPath}`;
+const appUrl = `${appProtocol}://${appHost}${appPort !== 80 ? `:${appPort}` : ""}${appPath}`;
 
 const isWindows = os.platform() === "win32";
 const cpuCoresCount = os.cpus().length;
@@ -25,7 +23,7 @@ const cpuCoresCount = os.cpus().length;
 const ffmpegPathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffmpeg" : "ffmpeg";
 const ffprobePathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffprobe" : "ffprobe";
 
-const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? "12345678";
+const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? null;
 
 // Load environment specific .env files and override
 let envFiles = [".env"];
@@ -41,8 +39,9 @@ export const config = {
 	name: process.env.VOLTAGE_NAME ?? "VOLTAGE",
 	version: process.env.VOLTAGE_VERSION ?? "1.0.1",
 	env: process.env.VOLTAGE_ENV ?? "local",
+	ngnix_port: Number(process.env.VOLTAGE_NGINX_PORT ?? 8080),
 	url: appUrl,
-	protocol: VOLTAGE_PROTOCOL,
+	protocol: appProtocol,
 	host: appHost,
 	path: appPath,
 	port: appPort,
@@ -115,15 +114,15 @@ export const config = {
 	},
 	api: {
 		is_disabled: process.env.VOLTAGE_API_IS_DISABLED === "true",
-		url: process.env.VOLTAGE_HOST ? `${appUrl}/api` : `http://localhost:${Number(process.env.VOLTAGE_API_NODE_PORT) ?? 4000}`,
-		node_port: Number(process.env.VOLTAGE_API_NODE_PORT) ?? 4000,
+		url: process.env.VOLTAGE_HOST ? `${appUrl}/api` : `http://localhost:${Number(process.env.VOLTAGE_API_NODE_PORT ?? 4000)}`,
+		node_port: Number(process.env.VOLTAGE_API_NODE_PORT ?? 4000),
 		key: process.env.VOLTAGE_API_KEY ?? "5ef438b9bd1e3f62d2e91385e72b2972",
 		request_body_limit: process.env.VOLTAGE_API_REQUEST_BODY_LIMIT ?? 0, // in MB, 0 means no limit
 		sensitive_fields: process.env.VOLTAGE_API_SENSITIVE_FIELDS ?? "password,access_secret"
 	},
 	frontend: {
 		is_disabled: process.env.VOLTAGE_FRONTEND_IS_DISABLED === "true",
-		url: process.env.VOLTAGE_HOST ? appUrl : `http://localhost:${Number(process.env.VOLTAGE_FRONTEND_NODE_PORT) ?? 3000}`,
+		url: process.env.VOLTAGE_HOST ? appUrl : `http://localhost:${Number(process.env.VOLTAGE_FRONTEND_NODE_PORT ?? 3000)}`,
 		node_port: Number(process.env.VOLTAGE_FRONTEND_NODE_PORT ?? 3000),
 		is_authentication_required: frontendPassword ? true : false,
 		password: frontendPassword
