@@ -156,7 +156,7 @@ const NotificationsTab: React.FC = () => {
 											})()}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-											{formatDate(notification.created_at, config?.timezone || "+00:00")}
+											{formatDate(notification.created_at, config?.timezone || "UTC")}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm">
 											<div className="flex items-center gap-2">

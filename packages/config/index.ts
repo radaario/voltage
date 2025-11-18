@@ -10,6 +10,16 @@ import fs from "fs";
 // const __dir = path.dirname(__file);
 const __dir = process.cwd();
 
+// Load environment specific .env files and override
+let envFiles = [".env", ".env.local"];
+if (process.env.VOLTAGE_ENV && !envFiles.includes(`.env.${process.env.VOLTAGE_ENV}`)) envFiles.push(`.env.${process.env.VOLTAGE_ENV}`);
+for (const envFile of envFiles) {
+	const envPath = path.resolve(__dir, "../..", envFile);
+	if (fs.existsSync(envPath)) {
+		dotenv.config({ path: envPath, override: true });
+	}
+}
+
 const appDir = path.resolve(__dir, "../..");
 const appProtocol = process.env.VOLTAGE_PROTOCOL ?? "http";
 const appHost = process.env.VOLTAGE_HOST ?? "localhost";
@@ -25,16 +35,6 @@ const ffprobePathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffprobe" : "ffprobe";
 
 const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? null;
 
-// Load environment specific .env files and override
-let envFiles = [".env"];
-if (process.env.VOLTAGE_ENV) envFiles.push(`.env.${process.env.VOLTAGE_ENV}`);
-for (const envFile of envFiles) {
-	const envPath = path.resolve(__dir, "../..", envFile);
-	if (fs.existsSync(envPath)) {
-		dotenv.config({ path: envPath, override: true });
-	}
-}
-
 export const config = {
 	name: process.env.VOLTAGE_NAME ?? "VOLTAGE",
 	version: process.env.VOLTAGE_VERSION ?? "1.0.1",
@@ -45,7 +45,7 @@ export const config = {
 	host: appHost,
 	path: appPath,
 	port: appPort,
-	timezone: process.env.VOLTAGE_TIMEZONE ?? "+00:00",
+	timezone: process.env.VOLTAGE_TIMEZONE ?? "UTC",
 	dir: appDir,
 	temp_dir: process.env.VOLTAGE_TEMP_DIR ?? `${appDir}/storage/tmp`, // os.tmpdir(),
 	utils: {
@@ -116,7 +116,7 @@ export const config = {
 		is_disabled: process.env.VOLTAGE_API_IS_DISABLED === "true",
 		url: process.env.VOLTAGE_HOST ? `${appUrl}/api` : `http://localhost:${Number(process.env.VOLTAGE_API_NODE_PORT ?? 4000)}`,
 		node_port: Number(process.env.VOLTAGE_API_NODE_PORT ?? 4000),
-		key: process.env.VOLTAGE_API_KEY ?? "5ef438b9bd1e3f62d2e91385e72b2972",
+		key: process.env.VOLTAGE_API_KEY ?? null,
 		request_body_limit: process.env.VOLTAGE_API_REQUEST_BODY_LIMIT ?? 0, // in MB, 0 means no limit
 		sensitive_fields: process.env.VOLTAGE_API_SENSITIVE_FIELDS ?? "password,access_secret"
 	},

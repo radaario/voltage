@@ -336,7 +336,7 @@ async function updateJob(job: any): Promise<void> {
 				updated_at: getNow()
 			});
 	} catch (error: Error | any) {
-		console.log("updateJob", "ERROR", error);
+		// console.log("updateJob", "ERROR", error);
 	}
 }
 

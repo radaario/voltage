@@ -516,9 +516,10 @@ async function cleanup() {
 				} catch (error: Error | any) {}
 			}
 
-			await database.table("jobs").whereIn("key", jobsKeys).del();
-			// await database.table('jobs_queue').whereIn('key', jobsKeys).del();
-			// await database.table('jobs_notifications').whereIn('job_key', jobsKeys).del();
+			await database.table("jobs").whereIn("key", jobsKeys).delete();
+			await database.table("jobs_queue").whereIn("key", jobsKeys).delete();
+			await database.table("jobs_notifications").whereIn("job_key", jobsKeys).delete();
+			await database.table("jobs_notifications_queue").whereIn("job_key", jobsKeys).delete();
 
 			logger.console("INFO", "Jobs cleaning completed!", { count: jobsKeys.length });
 		}
@@ -531,7 +532,7 @@ async function cleanup() {
 		await database
 			.table("logs")
 			.where("created_at", "<", subtractNow(config.logs.retention || 60 * 60 * 1000, "milliseconds"))
-			.del(); // in milliseconds, default 1 hour
+			.delete(); // in milliseconds, default 1 hour
 		logger.console("INFO", "Logs cleaning completed!");
 	}
 }
