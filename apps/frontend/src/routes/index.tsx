@@ -230,6 +230,6 @@ export const router = createBrowserRouter(
 		}
 	],
 	{
-		basename: import.meta.env.VITE_APP_BASE !== "/" ? import.meta.env.VITE_APP_BASE || "" : ""
+		basename: import.meta.env.VITE_PATH !== "/" ? import.meta.env.VITE_PATH || "" : ""
 	}
 );

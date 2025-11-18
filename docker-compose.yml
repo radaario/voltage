@@ -10,10 +10,9 @@ services:
             dockerfile: .deploy/Dockerfile
         image: voltage:latest
         environment:
-            - APP_ENV=prod
-            # - APP_PORT=${APP_PORT:-8080}
-            # - APP_BASE_URL=${APP_BASE_URL:""}
-            # - APP_BASE_PATH=${APP_BASE_PATH:"/"}
-            # - VOLTAGE_API_NODE_PORT=${VOLTAGE_API_NODE_PORT:-4000}
+            # - VOLTAGE_ENV=prod
+            # - VOLTAGE_PORT=${VOLTAGE_PORT:-8080}
+            # - VOLTAGE_HOST=${VOLTAGE_HOST:""}
+            # - VOLTAGE_PATH=${VOLTAGE_PATH:"/"}
         ports:
             - "8080:8080"
