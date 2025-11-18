@@ -27,7 +27,7 @@ for (const envFile of envFiles) {
 	}
 }
 
-const rootFolder = path.resolve(__dir, "../..");
+const rootDir = path.resolve(__dir, "../..");
 
 export const config = {
 	name: process.env.APP_NAME ?? "VOLTAGE",
@@ -37,7 +37,7 @@ export const config = {
 	base_url: process.env.APP_BASE_URL ?? `http://localhost:${appPort}`,
 	base_path: process.env.APP_BASE_PATH ?? "/",
 	timezone: process.env.APP_TIMEZONE ?? "UTC",
-	temp_folder: process.env.APP_TEMP_FOLDER ?? `${rootFolder}/storage/tmp`, // os.tmpdir(),
+	temp_dir: process.env.APP_TEMP_DIR ?? `${rootDir}/storage/tmp`, // os.tmpdir(),
 	utils: {
 		ffmpeg: {
 			path: process.env.FFMPEG_PATH ?? ffmpegPathDefault
@@ -69,7 +69,7 @@ export const config = {
 		username: process.env.VOLTAGE_STORAGE_USERNAME ?? "", // for FTP/SFTP
 		password: process.env.VOLTAGE_STORAGE_PASSWORD ?? "", // for FTP/SFTP
 		secure: process.env.VOLTAGE_STORAGE_SECURE === "true", // for FTP (FTPS with explicit TLS)
-		base_path: process.env.VOLTAGE_STORAGE_BASE_PATH ?? `${rootFolder}/storage`
+		base_path: process.env.VOLTAGE_STORAGE_BASE_PATH ?? `${rootDir}/storage`
 	},
 	database: {
 		type: (process.env.VOLTAGE_DATABASE_TYPE ?? "SQLITE") as
@@ -86,7 +86,7 @@ export const config = {
 		password: process.env.VOLTAGE_DATABASE_PASSWORD ?? "",
 		name: process.env.VOLTAGE_DATABASE_NAME ?? "voltage",
 		table_prefix: process.env.VOLTAGE_DATABASE_TABLE_PREFIX ?? "",
-		file_name: process.env.VOLTAGE_DATABASE_FILE_NAME ?? `${rootFolder}/db.sqlite`, // SQLite specific
+		file_name: process.env.VOLTAGE_DATABASE_FILE_NAME ?? `${rootDir}/db.sqlite`, // SQLite specific
 		cleanup_interval: Number(process.env.VOLTAGE_DATABASE_CLEANUP_INTERVAL ?? 60 * 60 * 1000) // in milliseconds, default 1 hour
 	},
 	runtime: {
@@ -104,14 +104,18 @@ export const config = {
 	},
 	api: {
 		is_disabled: process.env.VOLTAGE_API_IS_DISABLED === "true",
-		port: Number(process.env.VOLTAGE_API_PORT ?? 4000),
+		base_url: process.env.APP_BASE_URL
+			? `${process.env.APP_BASE_URL}/api`
+			: `http://localhost:${Number(process.env.VOLTAGE_API_NODE_PORT) ?? 4000}`,
+		node_port: Number(process.env.VOLTAGE_API_NODE_PORT) ?? 4000,
 		key: process.env.VOLTAGE_API_KEY ?? "5ef438b9bd1e3f62d2e91385e72b2972",
 		request_body_limit: process.env.VOLTAGE_API_REQUEST_BODY_LIMIT ?? 0, // in MB, 0 means no limit
 		sensitive_fields: process.env.VOLTAGE_API_SENSITIVE_FIELDS ?? "password,access_secret"
 	},
 	frontend: {
 		is_disabled: process.env.VOLTAGE_FRONTEND_IS_DISABLED === "true",
-		port: Number(process.env.VOLTAGE_FRONTEND_PORT ?? 3000),
+		base_url: process.env.APP_BASE_URL ?? `http://localhost:${Number(process.env.VOLTAGE_FRONTEND_NODE_PORT) ?? 3000}`,
+		node_port: Number(process.env.VOLTAGE_FRONTEND_NODE_PORT ?? 3000),
 		is_authentication_required: frontendPassword ? true : false,
 		password: frontendPassword
 	},

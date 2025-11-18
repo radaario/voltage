@@ -230,6 +230,6 @@ export const router = createBrowserRouter(
 		}
 	],
 	{
-		basename: "/voltage" // import.meta.env.VITE_APP_BASE
+		basename: import.meta.env.VITE_APP_BASE !== "/" ? import.meta.env.VITE_APP_BASE || "" : ""
 	}
 );

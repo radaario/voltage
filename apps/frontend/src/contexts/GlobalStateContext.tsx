@@ -13,7 +13,7 @@ interface Config {
 	env?: string;
 	port?: number;
 	timezone?: string;
-	temp_folder?: string;
+	temp_dir?: string;
 	storage?: any;
 	database?: any;
 	api?: any;

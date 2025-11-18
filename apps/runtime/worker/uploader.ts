@@ -1,67 +1,73 @@
-import { config } from '@voltage/config';
+import { config } from "@voltage/config";
 
-import { guessContentType } from '@voltage/utils';
-import { logger } from '@voltage/utils/logger';
-import { storage } from '@voltage/utils/storage';
+import { guessContentType } from "@voltage/utils";
+import { logger } from "@voltage/utils/logger";
+import { storage } from "@voltage/utils/storage";
 
-import path from 'path';
-import fs from 'fs/promises';
+import path from "path";
+import fs from "fs/promises";
 
-import axios from 'axios';
+import axios from "axios";
 
 export async function uploadOutput(job: any, output: any): Promise<Record<string, unknown>> {
-  logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
-  
-  const tempJobFolder = path.join(config.temp_folder, 'jobs', job.key);
-  const tempJobOutputFilePath = path.join(tempJobFolder, `output.${output.index}.${(output.specs.format || 'mp4').toLowerCase()}`);
+	logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
-  // Use output's destination if available, otherwise fall back to global destination
-  const destination = output?.specs?.destination || job?.destination;
+	const tempJobDir = path.join(config.temp_dir, "jobs", job.key);
+	const tempJobOutputFilePath = path.join(tempJobDir, `output.${output.index}.${(output.specs.format || "mp4").toLowerCase()}`);
 
-  if (!destination) {
-    throw new Error('No destination specified for job output!');
-  }
+	// Use output's destination if available, otherwise fall back to global destination
+	const destination = output?.specs?.destination || job?.destination;
 
-  if (!tempJobOutputFilePath) {
-    throw new Error('No local file path provided for upload!');
-  }
+	if (!destination) {
+		throw new Error("No destination specified for job output!");
+	}
 
-  // HTTP(S) direct push
-  if (destination.type === 'HTTP' || destination.type === 'HTTPS') {
-    const resp = await axios.request({
-      url: destination.url,
-      method: destination.method ?? 'POST',
-      headers: { 'Content-Type': 'application/octet-stream', ...(destination.headers ?? {}) },
-      data: await fs.readFile(tempJobOutputFilePath)
-    });
+	if (!tempJobOutputFilePath) {
+		throw new Error("No local file path provided for upload!");
+	}
 
-    return { status: resp.status, headers: resp.headers, body: resp.data };
-  }
+	// HTTP(S) direct push
+	if (destination.type === "HTTP" || destination.type === "HTTPS") {
+		const resp = await axios.request({
+			url: destination.url,
+			method: destination.method ?? "POST",
+			headers: { "Content-Type": "application/octet-stream", ...(destination.headers ?? {}) },
+			data: await fs.readFile(tempJobOutputFilePath)
+		});
 
-  // For remote destinations, we need a remote path from the output spec
-  if (!output?.specs?.path) {
-    throw new Error('Path is required in output.specs for remote upload destinations!');
-  }
+		return { status: resp.status, headers: resp.headers, body: resp.data };
+	}
 
-  // Initialize storage based on destination
-  const key = String(output.specs.path).replace(/^\/+/, '');
-  const contentType = guessContentType(key);
-  
-  try {
-    await storage.config(destination);
-    await storage.upload(tempJobOutputFilePath, key, contentType);
+	// For remote destinations, we need a remote path from the output spec
+	if (!output?.specs?.path) {
+		throw new Error("Path is required in output.specs for remote upload destinations!");
+	}
 
-    // Build a result similar to previous S3 uploader
-    const location = (destination as any).bucket ? `s3://${(destination as any).bucket}/${key}` : key;
-    const url = storage.getPublicUrl(key) || null;
+	// Initialize storage based on destination
+	const key = String(output.specs.path).replace(/^\/+/, "");
+	const contentType = guessContentType(key);
 
-    logger.console('INFO', 'Job output uploaded!', { output_key: output.key, output_index: output.index, destinationType: destination.type, bucket: (destination as any).bucket, path: key, url });
+	try {
+		await storage.config(destination);
+		await storage.upload(tempJobOutputFilePath, key, contentType);
 
-    return { path: `/${key}`, location, url };
-  } catch (error: Error | any) {
-    await logger.insert('ERROR', 'Failed to upload job output!', { output_key: output.key, output_index: output.index, error });
-    throw new Error((`Failed to upload job output! ${error.message || ''}`).trim());
-    // return { ...error || { message: 'Failed to upload job output!' } };
-  }
+		// Build a result similar to previous S3 uploader
+		const location = (destination as any).bucket ? `s3://${(destination as any).bucket}/${key}` : key;
+		const url = storage.getPublicUrl(key) || null;
+
+		logger.console("INFO", "Job output uploaded!", {
+			output_key: output.key,
+			output_index: output.index,
+			destinationType: destination.type,
+			bucket: (destination as any).bucket,
+			path: key,
+			url
+		});
+
+		return { path: `/${key}`, location, url };
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to upload job output!", { output_key: output.key, output_index: output.index, error });
+		throw new Error(`Failed to upload job output! ${error.message || ""}`.trim());
+		// return { ...error || { message: 'Failed to upload job output!' } };
+	}
 }
-

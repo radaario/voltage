@@ -703,7 +703,7 @@ app.use((error: any, req: any, res: any, _next: any) => {
 		.json({ metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: "An error occurred on API service!" } } });
 });
 
-logger.insert("INFO", "Starting API service on :port...", { instance_key, port: config.api.port });
+logger.insert("INFO", "Starting API service on :port...", { instance_key, port: config.api.node_port });
 
 (async () => {
 	logger.setMetadata({ instance_key });
@@ -711,8 +711,8 @@ logger.insert("INFO", "Starting API service on :port...", { instance_key, port: 
 	database.config(config.database);
 	await database.verifySchemaExists();
 
-	app.listen(config.api.port, () => {
-		logger.insert("INFO", "API service started successfully on :port!", { port: config.api.port });
+	app.listen(config.api.node_port, () => {
+		logger.insert("INFO", "API service started successfully on :port!", { port: config.api.node_port });
 	}).on("error", (error: Error | any) => {
 		logger.insert("ERROR", "Failed to start API service!", { error });
 	});

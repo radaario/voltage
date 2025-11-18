@@ -10,7 +10,7 @@ const getApiBaseUrl = (): string => {
 
 	// Get current host (protocol + hostname + port if exists)
 	const currentHost = `${window.location.protocol}//${window.location.hostname}`;
-	return `${currentHost}:${import.meta.env.VITE_API_PORT || "4000"}`; // ${appBasePath}
+	return `${currentHost}:${import.meta.env.VITE_API_NODE_PORT || "4000"}`; // ${appBasePath}
 };
 
 export interface ApiRequestOptions {

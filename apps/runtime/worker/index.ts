@@ -21,8 +21,8 @@ database.config(config.database);
 async function run() {
 	await logger.insert("INFO", "Worker starts running...");
 
-	const tempJobFolder = path.join(config.temp_folder, "jobs", job_key);
-	await fs.mkdir(tempJobFolder, { recursive: true }).catch(() => {});
+	const tempJobDir = path.join(config.temp_dir, "jobs", job_key);
+	await fs.mkdir(tempJobDir, { recursive: true }).catch(() => {});
 
 	const jobProgressForEachStep = 20.0; // Each step contributes 20% to the total progress
 
@@ -216,7 +216,7 @@ async function run() {
 			for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
 				if (job.outputs[index].status == "PROCESSED") {
 					const tempJobOutputFilePath = path.join(
-						tempJobFolder,
+						tempJobDir,
 						`output.${job.outputs[index].index}.${(job.outputs[index].specs.format || "mp4").toLowerCase()}`
 					);
 
@@ -302,7 +302,7 @@ async function run() {
 	job.progress = 100.0;
 	job.completed_at = getNow();
 
-	await fs.rm(tempJobFolder, { recursive: true }).catch(() => {});
+	await fs.rm(tempJobDir, { recursive: true }).catch(() => {});
 
 	await updateJob(job);
 	// await updateWorkerStatus('IDLE');
