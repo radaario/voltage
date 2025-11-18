@@ -59,8 +59,7 @@ RUN if [ "$VOLTAGE_FRONTEND_IS_DISABLED" != "false" ]; then npm run build:fronte
 COPY ./.deploy/nginx.conf /etc/nginx/nginx.conf
 RUN sed -i "s|\${APP_DIR}|${APP_DIR}|g" /etc/nginx/nginx.conf && \
     sed -i "s|\${APP_PORT}|${APP_PORT}|g" /etc/nginx/nginx.conf && \
-    sed -i "s|\${VOLTAGE_API_PORT}|${VOLTAGE_API_PORT}|g" /etc/nginx/nginx.conf && \
-    sed -i "s|\${VOLTAGE_FRONTEND_PORT}|${VOLTAGE_FRONTEND_PORT}|g" /etc/nginx/nginx.conf
+    sed -i "s|\${VOLTAGE_API_PORT}|${VOLTAGE_API_PORT}|g" /etc/nginx/nginx.conf
 
 # Create supervisor configuration
 COPY ./.deploy/supervisord.conf /etc/supervisord.conf
