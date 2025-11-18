@@ -15,15 +15,16 @@ const workersProcessMap = new Map<string, ChildProcess>();
 
 async function getMasterInstance(): Promise<any | null> {
 	try {
-		const activeInstances = await database.table("instances").where("status", "ONLINE").orderBy("created_at", "asc");
+		const instances = await database.table("instances").where("status", "ONLINE").orderBy("created_at", "asc");
+		const activeInstances = instances.filter((instance: any) => instance.status === "ONLINE");
 
 		if (!activeInstances.length) {
 			logger.console("ERROR", "No active instances found in database!");
 			return null;
 		}
 
-		const masterInstances = activeInstances.filter((instance: any) => instance.type === "MASTER");
-		let masterInstance = masterInstances.length ? masterInstances[0] : null;
+		const masterInstances = instances.filter((instance: any) => instance.type === "MASTER");
+		let masterInstance = masterInstances.length ? masterInstances.filter((instance: any) => instance.status === "ONLINE")[0] : null;
 
 		if (!masterInstance) {
 			masterInstance = activeInstances[0];
@@ -295,7 +296,7 @@ async function processJobs(): Promise<void> {
 						.table("jobs")
 						.where("key", pendingJob.key)
 						.update({ status: "QUEUED", updated_at: getNow(), locked_by: null });
-					
+
 					await createJobNotification(pendingJob, "QUEUED");
 					await logger.insert("INFO", "Job successfully queued!", { job_key: pendingJob.key });
 				})
@@ -305,7 +306,7 @@ async function processJobs(): Promise<void> {
 						.table("jobs")
 						.where("key", pendingJob.key)
 						.update({ status: "PENDING", updated_at: getNow(), locked_by: null });
-					
+
 					await logger.insert("ERROR", "Enqueuing job failed!", { job_key: pendingJob.key, error });
 				});
 		}
