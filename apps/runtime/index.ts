@@ -121,7 +121,6 @@ async function initInstance() {
 		await logger.insert("INFO", "Instance restarted!");
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Instance initialization failed!", { error });
-		throw error;
 	}
 }
 
