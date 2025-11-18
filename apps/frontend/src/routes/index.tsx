@@ -89,142 +89,147 @@ const AuthRedirect = () => {
 	return <Login />;
 };
 
-export const router = createBrowserRouter([
-	{ path: "/login", element: <AuthRedirect /> },
+export const router = createBrowserRouter(
+	[
+		{ path: "/login", element: <AuthRedirect /> },
+		{
+			path: "/",
+			element: <AuthSafeRoute />,
+			children: [
+				{
+					path: "/",
+					element: <Layout />,
+					children: [
+						{
+							path: "",
+							element: (
+								<Navigate
+									to="/jobs"
+									replace
+								/>
+							)
+						},
+						{
+							path: "jobs",
+							element: <Jobs />,
+							children: [
+								{
+									path: ":jobKey",
+									element: <JobDetailModal />,
+									children: [
+										{
+											path: "",
+											element: (
+												<Navigate
+													to="job"
+													replace
+												/>
+											)
+										},
+										{ path: "job", element: <JobTab /> },
+										{ path: "input", element: <InputTab /> },
+										{ path: "outputs", element: <OutputsTab /> },
+										{ path: "outcome", element: <OutcomeTab /> },
+										{ path: "logs", element: <LogsTab /> },
+										{ path: "notifications", element: <NotificationsTab /> }
+									]
+								}
+							]
+						},
+						{
+							path: "instances",
+							element: <Instances />,
+							children: [
+								{
+									path: ":instanceKey",
+									element: <InstanceDetailModal />,
+									children: [
+										{
+											path: "",
+											element: (
+												<Navigate
+													to="instance"
+													replace
+												/>
+											)
+										},
+										{ path: "instance", element: <InstanceTab /> },
+										{ path: "workers", element: <InstanceWorkersTab /> },
+										{ path: "specs", element: <InstanceOutcomeTab /> }
+									]
+								},
+								{
+									path: "workers/:workerKey",
+									element: <WorkerDetailModal />,
+									children: [
+										{
+											path: "",
+											element: (
+												<Navigate
+													to="worker"
+													replace
+												/>
+											)
+										},
+										{ path: "worker", element: <WorkerTab /> },
+										{ path: "outcome", element: <WorkerOutcomeTab /> }
+									]
+								}
+							]
+						},
+						{
+							path: "logs",
+							element: <Logs />,
+							children: [
+								{
+									path: ":logKey",
+									element: <LogDetailModal />,
+									children: [
+										{
+											path: "",
+											element: (
+												<Navigate
+													to="log"
+													replace
+												/>
+											)
+										},
+										{ path: "log", element: <LogTab /> },
+										{ path: "metadata", element: <MetadataTab /> }
+									]
+								}
+							]
+						},
+						{
+							path: "notifications",
+							element: <Notifications />,
+							children: [
+								{
+									path: ":notificationKey",
+									element: <NotificationDetailModal />,
+									children: [
+										{
+											path: "",
+											element: (
+												<Navigate
+													to="notification"
+													replace
+												/>
+											)
+										},
+										{ path: "notification", element: <NotificationTab /> },
+										{ path: "payload", element: <PayloadTab /> },
+										{ path: "outcome", element: <NotificationOutcomeTab /> }
+									]
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	],
 	{
-		path: "/",
-		element: <AuthSafeRoute />,
-		children: [
-			{
-				path: "/",
-				element: <Layout />,
-				children: [
-					{
-						path: "",
-						element: (
-							<Navigate
-								to="/jobs"
-								replace
-							/>
-						)
-					},
-					{
-						path: "jobs",
-						element: <Jobs />,
-						children: [
-							{
-								path: ":jobKey",
-								element: <JobDetailModal />,
-								children: [
-									{
-										path: "",
-										element: (
-											<Navigate
-												to="job"
-												replace
-											/>
-										)
-									},
-									{ path: "job", element: <JobTab /> },
-									{ path: "input", element: <InputTab /> },
-									{ path: "outputs", element: <OutputsTab /> },
-									{ path: "outcome", element: <OutcomeTab /> },
-									{ path: "logs", element: <LogsTab /> },
-									{ path: "notifications", element: <NotificationsTab /> }
-								]
-							}
-						]
-					},
-					{
-						path: "instances",
-						element: <Instances />,
-						children: [
-							{
-								path: ":instanceKey",
-								element: <InstanceDetailModal />,
-								children: [
-									{
-										path: "",
-										element: (
-											<Navigate
-												to="instance"
-												replace
-											/>
-										)
-									},
-									{ path: "instance", element: <InstanceTab /> },
-									{ path: "workers", element: <InstanceWorkersTab /> },
-									{ path: "specs", element: <InstanceOutcomeTab /> }
-								]
-							},
-							{
-								path: "workers/:workerKey",
-								element: <WorkerDetailModal />,
-								children: [
-									{
-										path: "",
-										element: (
-											<Navigate
-												to="worker"
-												replace
-											/>
-										)
-									},
-									{ path: "worker", element: <WorkerTab /> },
-									{ path: "outcome", element: <WorkerOutcomeTab /> }
-								]
-							}
-						]
-					},
-					{
-						path: "logs",
-						element: <Logs />,
-						children: [
-							{
-								path: ":logKey",
-								element: <LogDetailModal />,
-								children: [
-									{
-										path: "",
-										element: (
-											<Navigate
-												to="log"
-												replace
-											/>
-										)
-									},
-									{ path: "log", element: <LogTab /> },
-									{ path: "metadata", element: <MetadataTab /> }
-								]
-							}
-						]
-					},
-					{
-						path: "notifications",
-						element: <Notifications />,
-						children: [
-							{
-								path: ":notificationKey",
-								element: <NotificationDetailModal />,
-								children: [
-									{
-										path: "",
-										element: (
-											<Navigate
-												to="notification"
-												replace
-											/>
-										)
-									},
-									{ path: "notification", element: <NotificationTab /> },
-									{ path: "payload", element: <PayloadTab /> },
-									{ path: "outcome", element: <NotificationOutcomeTab /> }
-								]
-							}
-						]
-					}
-				]
-			}
-		]
+		basename: "/voltage" // import.meta.env.VITE_APP_BASE
 	}
-]);
+);
