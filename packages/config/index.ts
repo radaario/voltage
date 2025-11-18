@@ -3,16 +3,19 @@ import path from "path";
 // import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import fs from "fs";
-import { dir } from "console";
+// import { dir } from "console";
 
 // ES module ortamında __filename ve __dirname yerine:
 // const __file = fileURLToPath(import.meta.url);
 // const __dir = path.dirname(__file);
 const __dir = process.cwd();
 
+const VOLTAGE_PROTOCOL = process.env.VOLTAGE_PROTOCOL ? `${process.env.VOLTAGE_PROTOCOL}` : "http";
+const VOLTAGE_HOST = process.env.VOLTAGE_HOST ? `${VOLTAGE_PROTOCOL}://${process.env.VOLTAGE_HOST}` : `${VOLTAGE_PROTOCOL}://localhost`;
+
 const appDir = path.resolve(__dir, "../..");
 const appPort = Number(process.env.VOLTAGE_PORT) ?? 8080;
-const appHost = `${process.env.VOLTAGE_HOST ?? "http://localhost"}${appPort !== 80 ? `:${appPort}` : ""}`;
+const appHost = `${VOLTAGE_HOST}${appPort !== 80 ? `:${appPort}` : ""}`;
 const appPath = process.env.VOLTAGE_PATH ?? "/";
 const appUrl = `${appHost}${appPath}`;
 
@@ -39,6 +42,7 @@ export const config = {
 	version: process.env.VOLTAGE_VERSION ?? "1.0.1",
 	env: process.env.VOLTAGE_ENV ?? "local",
 	url: appUrl,
+	protocol: VOLTAGE_PROTOCOL,
 	host: appHost,
 	path: appPath,
 	port: appPort,
