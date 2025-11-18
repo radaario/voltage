@@ -28,7 +28,7 @@ const ffprobePathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffprobe" : "ffprobe";
 const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? "12345678";
 
 // Load environment specific .env files and override
-const envFiles = [".env"];
+let envFiles = [".env"];
 if (process.env.VOLTAGE_ENV) envFiles.push(`.env.${process.env.VOLTAGE_ENV}`);
 for (const envFile of envFiles) {
 	const envPath = path.resolve(__dir, "../..", envFile);
