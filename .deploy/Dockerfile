@@ -6,13 +6,11 @@ ARG APP_PORT=8080
 ARG APP_BASE_URL=http://localhost:${APP_PORT}
 ARG APP_BASE_PATH=/
 ARG VOLTAGE_API_PORT=4000
-ARG VOLTAGE_FRONTEND_PORT=8080
 
 ENV APP_PORT ${APP_PORT}
 ENV APP_BASE_URL ${APP_BASE_URL}
 ENV APP_BASE_PATH ${APP_BASE_PATH}
 ENV VOLTAGE_API_PORT ${VOLTAGE_API_PORT}
-ENV VOLTAGE_FRONTEND_PORT ${VOLTAGE_FRONTEND_PORT}
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -38,7 +36,7 @@ WORKDIR ${APP_DIR}
 COPY ./ ./
 
 # Download whisper models
-RUN npx nodejs-whisper download
+# RUN npx nodejs-whisper download
 
 # Install pnpm globally
 RUN corepack enable && corepack prepare pnpm@9.1.0 --activate

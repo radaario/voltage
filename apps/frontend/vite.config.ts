@@ -13,8 +13,8 @@ export default defineConfig(({ command, mode }) => {
 
 	return {
 		plugins: [react(), tailwindcss()],
-		base: env.VITE_APP_BASE || "/voltage",
-		envPrefix: ["VITE_", "APP_", "VOLTAGE_"],
+		base: "/voltage/", // env.VITE_APP_BASE ? `${env.VITE_APP_BASE}/` : "",
+		envPrefix: ["VITE_"], // , "APP_", "VOLTAGE_"
 		mode: newMode,
 		server: {
 			port: port,
