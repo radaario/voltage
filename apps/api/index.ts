@@ -528,7 +528,7 @@ app.delete("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 app.get("/jobs/preview", authMiddleware(), async (req: Request, res: Response) => {
 	const job_key = (req.query.job_key || req.body.job_key || "").trim();
 
-	const fallbackImagePath = path.join(".", "public", "assets", "images", "no-preview.webp");
+	const fallbackImagePath = path.join(".", "assets", "no-preview.webp");
 
 	const serveFallbackImage = () => {
 		res.setHeader("Content-Type", "image/webp");

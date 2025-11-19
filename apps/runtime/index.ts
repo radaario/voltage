@@ -114,8 +114,9 @@ async function initInstance() {
 			.update({
 				specs: JSON.stringify(specs),
 				status: "ONLINE",
-				restart_count: database.knex.raw("restart_count + 1"),
-				updated_at: now
+				outcome: null,
+				updated_at: now,
+				restart_count: database.knex.raw("restart_count + 1")
 			});
 
 		await logger.insert("INFO", "Instance restarted!");
