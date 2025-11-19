@@ -13,7 +13,7 @@ const workersProcessMap = new Map<string, ChildProcess>();
 
 async function getMasterInstance(): Promise<any | null> {
 	try {
-		const instances = await database.table("instances").where("status", "ONLINE").orderBy("created_at", "asc");
+		const instances = await database.table("instances").orderBy("created_at", "asc");
 		const activeInstances = instances.filter((instance: any) => instance.status === "ONLINE");
 
 		if (!activeInstances.length) {
@@ -153,7 +153,7 @@ async function maintainInstancesAndWorkers() {
 	const masterInstance = await getMasterInstance();
 
 	/* INSTANCEs & WORKERs: MAINTAINING */
-	if (!masterInstance || masterInstance.key !== instance_key) {
+	if (!masterInstance || masterInstance.key === instance_key) {
 		logger.console("INFO", "Maintaining workers...");
 
 		/* WORKERs: UPDATE: TIMEOUT */
@@ -668,7 +668,6 @@ async function bootstrap() {
 	await database.verifySchemaExists();
 
 	await logger.insert("INFO", "Starting runtime service...");
-	console.log("DATABASE: ", config.database);
 
 	try {
 		await initInstance();
