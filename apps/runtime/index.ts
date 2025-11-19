@@ -347,88 +347,20 @@ async function processJobs(): Promise<void> {
 				const queuedJob = queuedJobs[index];
 
 				try {
-					await logger.insert("INFO", "Assigning job to worker...", { worker_key: idleWorker.key, job_key: queuedJob.key });
+					await logger.insert("INFO", "Spawning worker for job...", { worker_key: idleWorker.key, job_key: queuedJob.key });
 
-					// WORKER & JOB: ATOMIC ASSIGNMENT
-					// Worker'ı BUSY yap ve job'ı ata (atomik olarak)
-					const workerUpdateResult = await database
-						.table("instances_workers")
-						.where("key", idleWorker.key)
-						.where("status", "IDLE") // Sadece hala IDLE ise güncelle
-						.where("job_key", null) // Ve job_key null ise
-						.update({
-							status: "BUSY",
-							job_key: queuedJob.key,
-							updated_at: getNow()
-						});
+					// WORKER: UPDATE: BUSY
+					await database.table("instances_workers").where("key", idleWorker.key).update({ status: "BUSY", updated_at: getNow() });
 
-					// Eğer worker başka bir process tarafından alınmışsa skip et
-					if (workerUpdateResult === 0) {
-						await logger.insert("WARN", "Worker already taken, skipping job assignment!", {
-							worker_key: idleWorker.key,
-							job_key: queuedJob.key
-						});
-						// Job'u unlock et, başka worker alsın
-						await database.table("jobs_queue").where("key", queuedJob.key).update({ locked_by: null });
-						continue;
-					}
-
-					// Job'u da ata (double-check için)
-					const jobUpdateResult = await database
-						.table("jobs")
-						.where("key", queuedJob.key)
-						.whereIn("status", ["QUEUED"]) // Sadece QUEUED ise
-						.where(function () {
-							this.whereNull("worker_key").orWhere("worker_key", idleWorker.key);
-						})
-						.update({
-							status: "PROCESSING",
-							worker_key: idleWorker.key,
-							instance_key: instance_key,
-							updated_at: getNow()
-						});
-
-					// Eğer job başka bir worker tarafından alınmışsa worker'ı geri al
-					if (jobUpdateResult === 0) {
-						await database.table("instances_workers").where("key", idleWorker.key).update({
-							status: "IDLE",
-							job_key: null,
-							updated_at: getNow()
-						});
-
-						await logger.insert("WARN", "Job already taken by another worker, reverting worker status!", {
-							worker_key: idleWorker.key,
-							job_key: queuedJob.key
-						});
-						continue;
-					}
-
-					// Her şey başarılı, worker'ı spawn et
 					await spawnWorkerForJob(idleWorker.key, queuedJob.key);
 
-					// JOB: QUEUE: DELETE (artık kuyruktan çıkar)
+					// JOB: QUEUE: DELETE
 					await database.table("jobs_queue").where("key", queuedJob.key).delete();
 
-					await logger.insert("INFO", "Successfully assigned and spawned worker for job!", {
-						worker_key: idleWorker.key,
-						job_key: queuedJob.key
-					});
+					await logger.insert("INFO", "Spawned worker for job...", { worker_key: idleWorker.key, job_key: queuedJob.key });
 				} catch (error: Error | any) {
-					// Hata durumunda hem worker'ı hem job'ı geri al
-					await database.table("instances_workers").where("key", idleWorker.key).update({
-						status: "IDLE",
-						job_key: null,
-						updated_at: getNow()
-					});
-
-					await database.table("jobs").where("key", queuedJob.key).update({
-						status: "QUEUED",
-						worker_key: null,
-						instance_key: null,
-						updated_at: getNow()
-					});
-
-					await database.table("jobs_queue").where("key", queuedJob.key).update({ locked_by: null });
+					// WORKER: UPDATE: BUSY
+					await database.table("instances_workers").where("key", idleWorker.key).update({ status: "IDLE", updated_at: getNow() });
 
 					await logger.insert("ERROR", "Failed to spawn worker for job!", {
 						worker_key: idleWorker.key,
@@ -438,8 +370,10 @@ async function processJobs(): Promise<void> {
 				}
 			}
 
-			// JOBs: QUEUEDs: RELEASE (kalan job'ları unlock et)
-			await database.table("jobs_queue").where("locked_by", instance_key).update({ locked_by: null });
+			// JOBs: QUEUEDs: RELEASE
+			if (queuedJobs.length > 0) {
+				await database.table("jobs_queue").where("locked_by", instance_key).update({ locked_by: null });
+			}
 		} catch (error: Error | any) {
 			await logger.insert("ERROR", "Failed to poll jobs!", { error });
 		}
