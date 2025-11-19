@@ -142,7 +142,7 @@ const InputTab: React.FC = () => {
 						<div className="flex items-center gap-3">
 							<div className="w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 rounded overflow-hidden">
 								<img
-									src={api.getResourceUrl("/jobs/preview", { job_key: job.key, token: authToken })}
+									src={api.getResourceUrl("/jobs/preview", { job_key: job.key, token: authToken, v: job?.updated_at })}
 									alt="Preview"
 									className="w-full h-full object-cover"
 									onError={(e) => {

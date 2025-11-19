@@ -102,7 +102,11 @@ const JobDetailModal: React.FC = () => {
 							{jobResponse?.data && (
 								<div className="w-24 h-16 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden">
 									<img
-										src={api.getResourceUrl("/jobs/preview", { job_key: jobResponse?.data?.key, token: authToken })}
+										src={api.getResourceUrl("/jobs/preview", {
+											job_key: jobResponse?.data?.key,
+											token: authToken,
+											v: jobResponse?.data?.updated_at
+										})}
 										alt="Preview"
 										className="w-full h-full object-cover"
 										onError={(e) => {

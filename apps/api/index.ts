@@ -127,7 +127,11 @@ app.get("/instances", authMiddleware(), async (req, res) => {
 			return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(result) });
 		}
 
-		const instances = await database.table("instances").orderBy("created_at", "desc");
+		const instances = await database
+			.table("instances")
+			.orderByRaw("CASE WHEN type = 'MASTER' THEN 0 ELSE 1 END")
+			.orderByRaw("CASE WHEN status = 'ONLINE' THEN 0 ELSE 1 END");
+		// .orderBy("created_at", "desc");
 
 		// If no instances, return empty array immediately
 		if (instances.length === 0) {

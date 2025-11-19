@@ -43,12 +43,12 @@ const columnHelper = createColumnHelper<Job>();
 
 // Memoized preview image component to prevent reloading on every render
 const JobPreviewImage = memo(
-	({ jobKey, authToken }: { jobKey: string; authToken: string | null }) => {
+	({ jobKey, authToken, version }: { jobKey: string; authToken: string | null; version: string | null }) => {
 		return (
 			<div className="w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 group-hover:bg-gray-200 dark:group-hover:bg-neutral-700 rounded overflow-hidden transition-colors">
 				<img
 					key={jobKey}
-					src={api.getResourceUrl("/jobs/preview", { job_key: jobKey, token: authToken })}
+					src={api.getResourceUrl("/jobs/preview", { job_key: jobKey, token: authToken, v: version })}
 					alt="Preview"
 					className="w-full h-full object-cover"
 					onError={(e) => {
@@ -165,6 +165,7 @@ const JobsTable = ({
 							<JobPreviewImage
 								jobKey={job.key}
 								authToken={authToken}
+								version={job.updated_at}
 							/>
 							<div className="flex flex-col min-w-0">
 								<div className="font-medium text-gray-900 dark:text-white truncate">{filename}</div>

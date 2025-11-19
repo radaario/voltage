@@ -53,7 +53,7 @@ const JobCard = ({ jobKey, title, onClick }: JobCardProps) => {
 			{/* Preview Image */}
 			<div className="w-12 h-9 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden">
 				<img
-					src={api.getResourceUrl("/jobs/preview", { job_key: jobKey, token: authToken })}
+					src={api.getResourceUrl("/jobs/preview", { job_key: jobKey, token: authToken, v: job?.updated_at })}
 					alt="Preview"
 					className="w-full h-full object-cover"
 					onError={(e) => {
