@@ -108,7 +108,7 @@ export function getNow(format: string = "YYYY-MM-DD HH:mm:ss.SSS"): string {
 		}
 	}
 
-	return m.format(format);
+	return m.format(format).toString();
 }
 
 export function addNow(amount: number, unit: moment.unitOfTime.DurationConstructor, format: string = "YYYY-MM-DD HH:mm:ss.SSS"): string {
@@ -121,7 +121,7 @@ export function addNow(amount: number, unit: moment.unitOfTime.DurationConstruct
 		}
 	}
 
-	return m.add(amount, unit).format(format);
+	return m.add(amount, unit).format(format).toString();
 }
 
 export function subtractNow(
@@ -139,7 +139,7 @@ export function subtractNow(
 		}
 	}
 
-	return m.subtract(amount, unit).format(format);
+	return m.subtract(amount, unit).format(format).toString();
 }
 
 // Sanitize sensitive fields from objects

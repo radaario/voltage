@@ -157,35 +157,39 @@ async function maintainInstancesAndWorkers() {
 		logger.console("INFO", "Maintaining workers...");
 
 		/* WORKERs: UPDATE: TIMEOUT */
-		const busyTimeout = config.runtime.workers.busy_timeout || 5 * 60 * 1000; // in milliseconds, default 5 minutes
+		try {
+			const busyTimeout = config.runtime.workers.busy_timeout || 5 * 60 * 1000; // in milliseconds, default 5 minutes
 
-		const timeoutedWorkers = await database
-			.table("instances_workers")
-			.where("status", "BUSY")
-			.where("updated_at", "<", subtractNow(busyTimeout, "milliseconds"));
-
-		if (timeoutedWorkers.length > 0) {
-			const timeoutedWorkerKeys = timeoutedWorkers.map((r: any) => r.key).filter(Boolean);
-
-			for (const timeoutedWorkerKey of timeoutedWorkerKeys) {
-				workersProcessMap.delete(timeoutedWorkerKey);
-			}
-
-			await database
+			const timeoutedWorkers = await database
 				.table("instances_workers")
-				.whereIn("key", timeoutedWorkerKeys)
-				.update({
-					job_key: null,
-					status: "TIMEOUT",
-					updated_at: getNow(),
-					outcome: JSON.stringify({ message: "Busy worker timed out!" })
-				});
+				.where("status", "BUSY")
+				.where("updated_at", "<", subtractNow(busyTimeout, "milliseconds"));
+
+			if (timeoutedWorkers.length > 0) {
+				const timeoutedWorkerKeys = timeoutedWorkers.map((r: any) => r.key).filter(Boolean);
+
+				for (const timeoutedWorkerKey of timeoutedWorkerKeys) {
+					workersProcessMap.delete(timeoutedWorkerKey);
+				}
+
+				await database
+					.table("instances_workers")
+					.whereIn("key", timeoutedWorkerKeys)
+					.update({
+						job_key: null,
+						status: "TIMEOUT",
+						updated_at: getNow(),
+						outcome: JSON.stringify({ message: "Busy worker timed out!" })
+					});
+			}
+		} catch (error: Error | any) {
+			await logger.insert("ERROR", "Timing out busy workers failed!", { error });
 		}
 
 		/* WORKERs: UPDATE: IDLE */
-		const idleAfter = config.runtime.workers.idle_after || 1 * 10 * 1000; // in milliseconds, default 10 seconds
-
 		try {
+			const idleAfter = config.runtime.workers.idle_after || 1 * 10 * 1000; // in milliseconds, default 10 seconds
+
 			await database
 				.table("instances_workers")
 				.where("status", "TIMEOUT")
@@ -203,9 +207,9 @@ async function maintainInstancesAndWorkers() {
 		logger.console("INFO", "Maintaining instances...");
 
 		/* INSTANCEs: UPDATE: OFFLINE */
-		const offlineTimeout = config.runtime.online_timeout || 1 * 60 * 1000; // in milliseconds, default 1 minute
-
 		try {
+			const offlineTimeout = config.runtime.online_timeout || 1 * 60 * 1000; // in milliseconds, default 1 minute
+
 			const inactiveInstances = await database
 				.table("instances")
 				.where("status", "ONLINE")
@@ -241,9 +245,9 @@ async function maintainInstancesAndWorkers() {
 		}
 
 		/* INSTANCEs: DELETE: PURGE */
-		const purgeAfter = config.runtime.purge_after || 1 * 60 * 1000; // in milliseconds, default 1 minute
-
 		try {
+			const purgeAfter = config.runtime.purge_after || 1 * 60 * 1000; // in milliseconds, default 1 minute
+
 			const offlineInstances = await database
 				.table("instances")
 				.where("status", "OFFLINE")
