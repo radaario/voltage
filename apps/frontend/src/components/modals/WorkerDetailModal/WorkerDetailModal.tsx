@@ -1,33 +1,31 @@
-import { useParams, useNavigate, NavLink, Outlet } from "react-router-dom";
+import { useParams, useNavigate, NavLink, Outlet, useOutletContext } from "react-router-dom";
 import { createPortal } from "react-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { XMarkIcon, CpuChipIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
-import { Worker } from "@/interfaces/instance";
-import { api, ApiResponse } from "@/utils";
+import { Instance } from "@/interfaces/instance";
 import Label from "@/components/base/Label/Label";
 import Button from "@/components/base/Button/Button";
-import { useAuth } from "@/hooks/useAuth";
 import { getWorkerName } from "@/utils/naming";
+
+interface OutletContext {
+	instances: Instance[];
+}
 
 const WorkerDetailModal = () => {
 	const { workerKey } = useParams<{ workerKey: string }>();
 	const navigate = useNavigate();
-	const { authToken } = useAuth();
+	const { instances } = useOutletContext<OutletContext>();
 
-	// Fetch specific worker
-	const { data: workerResponse, isLoading } = useQuery<ApiResponse<Worker>>({
-		queryKey: ["worker", workerKey, authToken],
-		queryFn: () => api.get<Worker>("/workers", { worker_key: workerKey, token: authToken }),
-		enabled: !!workerKey && !!authToken,
-		refetchInterval: 5000
-	});
-
-	// Fetch all workers from the same instance for naming
-	const { data: instanceWorkers } = useQuery<ApiResponse<Worker[]>>({
-		queryKey: ["instanceWorkers", workerResponse?.data?.instance_key, authToken],
-		queryFn: () => api.get<Worker[]>("/workers", { instance_key: workerResponse?.data?.instance_key, token: authToken }),
-		enabled: !!workerResponse?.data?.instance_key && !!authToken
-	});
+	// Find worker from instances data
+	const { worker, instanceWorkers } = useMemo(() => {
+		for (const instance of instances) {
+			const foundWorker = instance.workers.find((w) => w.key === workerKey);
+			if (foundWorker) {
+				return { worker: foundWorker, instanceWorkers: instance.workers };
+			}
+		}
+		return { worker: null, instanceWorkers: [] };
+	}, [instances, workerKey]);
 
 	const handleClose = () => {
 		navigate("/instances");
@@ -55,16 +53,16 @@ const WorkerDetailModal = () => {
 				className="relative w-full max-w-4xl h-[80vh] mx-4 bg-white dark:bg-neutral-800 rounded-lg shadow-xl flex flex-col"
 				onClick={(e) => e.stopPropagation()}>
 				{/* Header */}
-				<div className="shrink-0 flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
+				<div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 					<div className="flex items-center gap-3">
 						<CpuChipIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-						{workerResponse?.data && instanceWorkers?.data ? (
+						{worker ? (
 							<>
 								<h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-									{getWorkerName(instanceWorkers.data, workerResponse.data)}
+									{getWorkerName(instanceWorkers, worker)}
 								</h2>
-								<Label size="md">{workerResponse.data.status}</Label>
-								<span className="text-sm text-gray-500 dark:text-gray-400 font-mono">({workerResponse.data.key})</span>
+								<Label size="md">{worker.status}</Label>
+								<span className="text-sm text-gray-500 dark:text-gray-400 font-mono">({worker.key})</span>
 							</>
 						) : (
 							<h2 className="text-xl font-semibold text-gray-900 dark:text-white">Worker Detail</h2>
@@ -105,12 +103,8 @@ const WorkerDetailModal = () => {
 
 				{/* Content */}
 				<div className="flex-1 overflow-y-auto p-6">
-					{isLoading ? (
-						<div className="flex justify-center items-center py-12">
-							<div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent"></div>
-						</div>
-					) : workerResponse ? (
-						<Outlet context={{ worker: workerResponse.data }} />
+					{worker ? (
+						<Outlet context={{ worker }} />
 					) : (
 						<div className="text-center py-12">
 							<p className="text-gray-500 dark:text-gray-400">Worker not found</p>

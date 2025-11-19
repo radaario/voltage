@@ -11,7 +11,7 @@ import { dir } from "console";
 const __dir = process.cwd();
 
 const appDir = path.resolve(__dir, "../..");
-const appPort = Number(process.env.VOLTAGE_PORT) ?? 8080;
+const appPort = Number(process.env.VOLTAGE_PORT ?? 8080);
 const appHost = `${process.env.VOLTAGE_HOST ?? "http://localhost"}${appPort !== 80 ? `:${appPort}` : ""}`;
 const appPath = process.env.VOLTAGE_PATH ?? "/";
 const appUrl = `${appHost}${appPath}`;
@@ -111,15 +111,15 @@ export const config = {
 	},
 	api: {
 		is_disabled: process.env.VOLTAGE_API_IS_DISABLED === "true",
-		url: process.env.VOLTAGE_HOST ? `${appUrl}/api` : `http://localhost:${Number(process.env.VOLTAGE_API_NODE_PORT) ?? 4000}`,
-		node_port: Number(process.env.VOLTAGE_API_NODE_PORT) ?? 4000,
+		url: process.env.VOLTAGE_HOST ? `${appUrl}/api` : `http://localhost:${Number(process.env.VOLTAGE_API_NODE_PORT ?? 4000)}`,
+		node_port: Number(process.env.VOLTAGE_API_NODE_PORT ?? 4000),
 		key: process.env.VOLTAGE_API_KEY ?? "5ef438b9bd1e3f62d2e91385e72b2972",
 		request_body_limit: process.env.VOLTAGE_API_REQUEST_BODY_LIMIT ?? 0, // in MB, 0 means no limit
 		sensitive_fields: process.env.VOLTAGE_API_SENSITIVE_FIELDS ?? "password,access_secret"
 	},
 	frontend: {
 		is_disabled: process.env.VOLTAGE_FRONTEND_IS_DISABLED === "true",
-		url: process.env.VOLTAGE_HOST ? appUrl : `http://localhost:${Number(process.env.VOLTAGE_FRONTEND_NODE_PORT) ?? 3000}`,
+		url: process.env.VOLTAGE_HOST ? appUrl : `http://localhost:${Number(process.env.VOLTAGE_FRONTEND_NODE_PORT ?? 3000)}`,
 		node_port: Number(process.env.VOLTAGE_FRONTEND_NODE_PORT ?? 3000),
 		is_authentication_required: frontendPassword ? true : false,
 		password: frontendPassword

@@ -9,13 +9,6 @@ import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/
 import Tooltip from "@/components/base/Tooltip/Tooltip";
 import Button from "@/components/base/Button/Button";
 
-interface InstancesResponse {
-	data: Instance[];
-	metadata: {
-		status: boolean;
-	};
-}
-
 const Instances: React.FC = () => {
 	const { authToken } = useAuth();
 
@@ -144,7 +137,7 @@ const Instances: React.FC = () => {
 			</div>
 
 			{/* Route-based Instance Detail Modal */}
-			<Outlet />
+			<Outlet context={{ instances: instancesResponse?.data || [] }} />
 		</div>
 	);
 };
