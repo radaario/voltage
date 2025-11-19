@@ -5,7 +5,7 @@
 // Determine API base URL based on environment
 const getApiBaseUrl = (): string => {
 	if (import.meta.env.VITE_API_URL) {
-		return import.meta.env.VITE_API_URL; // ${appBasePath}
+		return import.meta.env.VITE_API_URL.replace(":80/", "/");
 	}
 
 	// Get current host (protocol + hostname + port if exists)

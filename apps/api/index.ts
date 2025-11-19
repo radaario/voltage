@@ -26,12 +26,21 @@ app.use(express.json(...expressOptions));
 app.use(cors());
 
 // Authentication middleware factory
-const authMiddleware = (options: { forceAuth?: boolean } = {}) => {
+const authMiddleware = (options: {} = {}) => {
 	return (req: Request, res: Response, next: any) => {
-		// Check if authentication is required
-		const requireAuth = options.forceAuth || config.frontend.is_authentication_required;
+		// Expected tokens
+		const apiToken = config.api.key;
+		const frontendToken = hash(config.frontend.password || uuid());
 
-		if (!requireAuth) {
+		if (!apiToken && !config.frontend.is_authentication_required) {
+			return next();
+		}
+
+		if (req.query.client?.toString().toUpperCase() === "FRONTEND" && !config.frontend.is_authentication_required) {
+			return next();
+		}
+
+		if (req.query.client?.toString().toUpperCase() !== "FRONTEND" && !apiToken) {
 			return next();
 		}
 
@@ -51,10 +60,6 @@ const authMiddleware = (options: { forceAuth?: boolean } = {}) => {
 				.status(401)
 				.json({ metadata: { status: "ERROR", error: { code: "AUTH_TOKEN_REQUIRED", message: "Authentication token required!" } } });
 		}
-
-		// Expected tokens
-		const frontendToken = hash(config.frontend.password || uuid());
-		const apiToken = config.api.key;
 
 		// Check if token matches either frontend token or API key
 		if (token !== frontendToken && token !== apiToken) {
@@ -126,7 +131,7 @@ app.get("/instances", authMiddleware(), async (req, res) => {
 
 		// If no instances, return empty array immediately
 		if (instances.length === 0) {
-			return res.json([]);
+			return res.json({ metadata: { status: "SUCCESSFUL" }, data: [] });
 		}
 
 		// Collect instance keys and fetch workers for those instances in one query
@@ -279,7 +284,7 @@ app.get("/logs", authMiddleware(), async (req, res) => {
 
 app.delete("/logs/all", authMiddleware(), async (req, res) => {
 	try {
-		await database.table("logs").del();
+		await database.table("logs").delete();
 		return res.json({ metadata: { status: "SUCCESSFUL" }, message: "All logs deleted successfully!" });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to delete logs!", { error });
@@ -372,7 +377,7 @@ app.get("/jobs", authMiddleware(), async (req, res) => {
 	}
 });
 
-app.put("/jobs", authMiddleware({ forceAuth: !!config.api.key }), async (req: Request, res: Response) => {
+app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 	const body = req.body as JobRequest;
 
 	if (!body || !body.input || !Array.isArray(body.outputs) || body.outputs.length === 0) {
@@ -510,7 +515,7 @@ app.put("/jobs", authMiddleware({ forceAuth: !!config.api.key }), async (req: Re
 	}
 });
 
-app.delete("/jobs", authMiddleware({ forceAuth: !!config.api.key }), async (req: Request, res: Response) => {
+app.delete("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 	const job_key = (req.query.job_key || req.body.job_key || "").trim();
 
 	if (job_key) {

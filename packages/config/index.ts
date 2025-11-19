@@ -3,30 +3,16 @@ import path from "path";
 // import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import fs from "fs";
-import { dir } from "console";
+// import { dir } from "console";
 
 // ES module ortamında __filename ve __dirname yerine:
 // const __file = fileURLToPath(import.meta.url);
 // const __dir = path.dirname(__file);
 const __dir = process.cwd();
 
-const appDir = path.resolve(__dir, "../..");
-const appPort = Number(process.env.VOLTAGE_PORT ?? 8080);
-const appHost = `${process.env.VOLTAGE_HOST ?? "http://localhost"}${appPort !== 80 ? `:${appPort}` : ""}`;
-const appPath = process.env.VOLTAGE_PATH ?? "/";
-const appUrl = `${appHost}${appPath}`;
-
-const isWindows = os.platform() === "win32";
-const cpuCoresCount = os.cpus().length;
-
-const ffmpegPathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffmpeg" : "ffmpeg";
-const ffprobePathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffprobe" : "ffprobe";
-
-const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? "12345678";
-
 // Load environment specific .env files and override
-const envFiles = [".env"];
-if (process.env.VOLTAGE_ENV) envFiles.push(`.env.${process.env.VOLTAGE_ENV}`);
+let envFiles = [".env", ".env.local"];
+if (process.env.VOLTAGE_ENV && !envFiles.includes(`.env.${process.env.VOLTAGE_ENV}`)) envFiles.push(`.env.${process.env.VOLTAGE_ENV}`);
 for (const envFile of envFiles) {
 	const envPath = path.resolve(__dir, "../..", envFile);
 	if (fs.existsSync(envPath)) {
@@ -34,11 +20,28 @@ for (const envFile of envFiles) {
 	}
 }
 
+const appDir = path.resolve(__dir, "../..");
+const appProtocol = process.env.VOLTAGE_PROTOCOL ?? "http";
+const appHost = process.env.VOLTAGE_HOST ?? "localhost";
+const appPort = Number(process.env.VOLTAGE_PORT ?? 8080);
+const appPath = process.env.VOLTAGE_PATH ?? "/";
+const appUrl = `${appProtocol}://${appHost}${appPort !== 80 ? `:${appPort}` : ""}${appPath}`;
+
+const isWindows = os.platform() === "win32";
+const cpuCoresCount = os.cpus().length;
+
+const ffmpegPathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffmpeg" : "ffmpeg";
+const ffprobePathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffprobe" : "ffprobe";
+
+const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? null;
+
 export const config = {
 	name: process.env.VOLTAGE_NAME ?? "VOLTAGE",
 	version: process.env.VOLTAGE_VERSION ?? "1.0.1",
 	env: process.env.VOLTAGE_ENV ?? "local",
+	ngnix_port: Number(process.env.VOLTAGE_NGINX_PORT ?? 8080),
 	url: appUrl,
+	protocol: appProtocol,
 	host: appHost,
 	path: appPath,
 	port: appPort,
@@ -93,7 +96,7 @@ export const config = {
 		password: process.env.VOLTAGE_DATABASE_PASSWORD ?? "",
 		name: process.env.VOLTAGE_DATABASE_NAME ?? "voltage",
 		table_prefix: process.env.VOLTAGE_DATABASE_TABLE_PREFIX ?? "",
-		file_name: process.env.VOLTAGE_DATABASE_FILE_NAME ?? `${appDir}/db.sqlite`, // SQLite specific
+		file_name: process.env.VOLTAGE_DATABASE_FILE_NAME ?? "db.sqlite", // SQLite specific
 		cleanup_interval: Number(process.env.VOLTAGE_DATABASE_CLEANUP_INTERVAL ?? 60 * 60 * 1000) // in milliseconds, default 1 hour
 	},
 	runtime: {
@@ -113,7 +116,7 @@ export const config = {
 		is_disabled: process.env.VOLTAGE_API_IS_DISABLED === "true",
 		url: process.env.VOLTAGE_HOST ? `${appUrl}/api` : `http://localhost:${Number(process.env.VOLTAGE_API_NODE_PORT ?? 4000)}`,
 		node_port: Number(process.env.VOLTAGE_API_NODE_PORT ?? 4000),
-		key: process.env.VOLTAGE_API_KEY ?? "5ef438b9bd1e3f62d2e91385e72b2972",
+		key: process.env.VOLTAGE_API_KEY ?? null,
 		request_body_limit: process.env.VOLTAGE_API_REQUEST_BODY_LIMIT ?? 0, // in MB, 0 means no limit
 		sensitive_fields: process.env.VOLTAGE_API_SENSITIVE_FIELDS ?? "password,access_secret"
 	},

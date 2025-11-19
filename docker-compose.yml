@@ -11,8 +11,10 @@ services:
         image: voltage:latest
         environment:
             # - VOLTAGE_ENV=prod
-            # - VOLTAGE_PORT=${VOLTAGE_PORT:-8080}
-            # - VOLTAGE_HOST=${VOLTAGE_HOST:""}
+            # - VOLTAGE_NGINX_PORT=${VOLTAGE_NGINX_PORT:-8080}
+            # - VOLTAGE_PROTOCOL=${VOLTAGE_PROTOCOL:"http"}
+            # - VOLTAGE_HOST=${VOLTAGE_HOST:"localhost"}
+            # - VOLTAGE_PORT=${VOLTAGE_PORT:-80}
             # - VOLTAGE_PATH=${VOLTAGE_PATH:"/"}
         ports:
             - "8080:8080"

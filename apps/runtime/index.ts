@@ -15,15 +15,16 @@ const workersProcessMap = new Map<string, ChildProcess>();
 
 async function getMasterInstance(): Promise<any | null> {
 	try {
-		const activeInstances = await database.table("instances").where("status", "ONLINE").orderBy("created_at", "asc");
+		const instances = await database.table("instances").where("status", "ONLINE").orderBy("created_at", "asc");
+		const activeInstances = instances.filter((instance: any) => instance.status === "ONLINE");
 
 		if (!activeInstances.length) {
 			logger.console("ERROR", "No active instances found in database!");
 			return null;
 		}
 
-		const masterInstances = activeInstances.filter((instance: any) => instance.type === "MASTER");
-		let masterInstance = masterInstances.length ? masterInstances[0] : null;
+		const masterInstances = instances.filter((instance: any) => instance.type === "MASTER");
+		let masterInstance = masterInstances.length ? masterInstances.filter((instance: any) => instance.status === "ONLINE")[0] : null;
 
 		if (!masterInstance) {
 			masterInstance = activeInstances[0];
@@ -120,7 +121,6 @@ async function initInstance() {
 		await logger.insert("INFO", "Instance restarted!");
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Instance initialization failed!", { error });
-		throw error;
 	}
 }
 
@@ -723,9 +723,10 @@ async function cleanup() {
 				} catch (error: Error | any) {}
 			}
 
-			await database.table("jobs").whereIn("key", jobsKeys).del();
-			// await database.table('jobs_queue').whereIn('key', jobsKeys).del();
-			// await database.table('jobs_notifications').whereIn('job_key', jobsKeys).del();
+			await database.table("jobs").whereIn("key", jobsKeys).delete();
+			await database.table("jobs_queue").whereIn("key", jobsKeys).delete();
+			await database.table("jobs_notifications").whereIn("job_key", jobsKeys).delete();
+			await database.table("jobs_notifications_queue").whereIn("job_key", jobsKeys).delete();
 
 			logger.console("INFO", "Jobs cleaning completed!", { count: jobsKeys.length });
 		}
@@ -738,7 +739,7 @@ async function cleanup() {
 		await database
 			.table("logs")
 			.where("created_at", "<", subtractNow(config.logs.retention || 60 * 60 * 1000, "milliseconds"))
-			.del(); // in milliseconds, default 1 hour
+			.delete(); // in milliseconds, default 1 hour
 		logger.console("INFO", "Logs cleaning completed!");
 	}
 }

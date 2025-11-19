@@ -19,7 +19,9 @@ class Database {
 		if (!this._config) throw new Error("Database not configured.");
 		const raw = this._config.table_prefix;
 		if (!raw) return "";
-		return raw.replace(/[-_]/g, "") + "_";
+		let transformed = raw.replace(/[- ]/g, "_");
+		if (transformed.endsWith("_")) transformed = transformed.slice(0, -1);
+		return transformed + "_";
 	}
 
 	table(tableName: string) {
@@ -41,8 +43,8 @@ class Database {
 					table.text("specs").notNullable();
 					table.text("outcome").nullable();
 					table.enum("status", ["ONLINE", "OFFLINE"]).notNullable().defaultTo("ONLINE");
-					table.timestamp("updated_at").notNullable().defaultTo(this.knex.fn.now());
-					table.timestamp("created_at").notNullable().defaultTo(this.knex.fn.now());
+					table.datetime("updated_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
+					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 					table.integer("restart_count").notNullable().defaultTo(0);
 				});
 			}
@@ -57,8 +59,8 @@ class Database {
 					table.string("job_key", 40).nullable();
 					table.text("outcome").nullable();
 					table.enum("status", ["IDLE", "BUSY", "TIMEOUT", "TERMINATED"]).notNullable().defaultTo("IDLE");
-					table.timestamp("updated_at").notNullable().defaultTo(this.knex.fn.now());
-					table.timestamp("created_at").notNullable().defaultTo(this.knex.fn.now());
+					table.datetime("updated_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
+					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 				});
 			}
 
@@ -75,7 +77,7 @@ class Database {
 					table.string("notification_key", 40).nullable();
 					table.string("message", 1024).notNullable();
 					table.text("metadata").notNullable();
-					table.timestamp("created_at").notNullable().defaultTo(this.knex.fn.now());
+					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 				});
 			}
 
@@ -117,15 +119,15 @@ class Database {
 						.notNullable()
 						.defaultTo("RECEIVED");
 					table.decimal("progress", 10, 2).notNullable().defaultTo(0.0);
-					table.timestamp("started_at").nullable();
-					table.timestamp("completed_at").nullable();
-					table.timestamp("updated_at").notNullable().defaultTo(this.knex.fn.now());
-					table.timestamp("created_at").notNullable().defaultTo(this.knex.fn.now());
+					table.datetime("started_at", { precision: 3 }).nullable();
+					table.datetime("completed_at", { precision: 3 }).nullable();
+					table.datetime("updated_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
+					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 					table.string("locked_by", 40).nullable();
 					table.integer("try_max").notNullable().defaultTo(0);
 					table.integer("try_count").notNullable().defaultTo(0);
 					table.integer("retry_in").nullable();
-					table.timestamp("retry_at").nullable();
+					table.datetime("retry_at", { precision: 3 }).nullable();
 				});
 			}
 
@@ -135,10 +137,10 @@ class Database {
 				await this.knex.schema.createTable(`${prefix}jobs_queue`, (table) => {
 					table.string("key", 40).primary();
 					table.integer("priority").notNullable().defaultTo(1000);
-					table.timestamp("created_at").notNullable().defaultTo(this.knex.fn.now());
+					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 					table.string("locked_by", 40).nullable();
 					// table.index(['priority']);
-					table.foreign("key").references("key").inTable(`${prefix}jobs`).onDelete("CASCADE");
+					// table.foreign("key").references("key").inTable(`${prefix}jobs`).onDelete("CASCADE");
 				});
 			}
 
@@ -159,14 +161,14 @@ class Database {
 							.enum("status", ["PENDING", "RETRYING", "QUEUED", "SUCCESSFUL", "SKIPPED", "FAILED"])
 							.notNullable()
 							.defaultTo("PENDING");
-						table.timestamp("updated_at").notNullable().defaultTo(this.knex.fn.now());
-						table.timestamp("created_at").notNullable().defaultTo(this.knex.fn.now());
+						table.datetime("updated_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
+						table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 						table.string("locked_by", 40).nullable();
 						table.integer("try_max").notNullable().defaultTo(1);
 						table.integer("try_count").notNullable().defaultTo(1);
 						table.integer("retry_in").nullable();
-						table.timestamp("retry_at").nullable();
-						table.foreign("job_key").references("key").inTable(`${prefix}jobs`).onDelete("CASCADE");
+						table.datetime("retry_at", { precision: 3 }).nullable();
+						// table.foreign("job_key").references("key").inTable(`${prefix}jobs`).onDelete("CASCADE");
 					});
 				}
 			}
@@ -189,7 +191,7 @@ class Database {
 		switch (type) {
 			case "SQLITE":
 				knexConfig.connection = {
-					filename: this._config.file_name ?? "./db.sqlite"
+					filename: this._config.file_name ? `./${this._config.file_name}` : "./db.sqlite"
 				};
 				break;
 
@@ -201,7 +203,8 @@ class Database {
 					user: this._config.username,
 					password: this._config.password,
 					database: this._config.name,
-					timezone: this._config.timezone || "UTC"
+					timezone: this._config.timezone ? this._config.timezone.replace("UTC", "+00:00") : "+00:00",
+					dateStrings: true
 				};
 				knexConfig.pool = { min: 0, max: 10 };
 				break;

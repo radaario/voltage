@@ -2,23 +2,25 @@ FROM node:20.19.5
 
 ARG VOLTAGE_DIR=/var/voltage
 
+ARG VOLTAGE_NGINX_PORT=8080
+ARG VOLTAGE_PROTOCOL=http
+ARG VOLTAGE_HOST=localhost
 ARG VOLTAGE_PORT=8080
-ARG VOLTAGE_HOST=http://localhost
 ARG VOLTAGE_PATH=
 
-ARG VOLTAGE_API_URL=${VOLTAGE_HOST}:${VOLTAGE_PORT}${VOLTAGE_PATH}/api
 ARG VOLTAGE_API_NODE_PORT=4000
 
-ENV VOLTAGE_PORT ${VOLTAGE_PORT}
+ENV VOLTAGE_NGINX_PORT ${VOLTAGE_NGINX_PORT}
+ENV VOLTAGE_PROTOCOL ${VOLTAGE_PROTOCOL}
 ENV VOLTAGE_HOST ${VOLTAGE_HOST}
+ENV VOLTAGE_PORT ${VOLTAGE_PORT}
 ENV VOLTAGE_PATH ${VOLTAGE_PATH}
 
 ENV VOLTAGE_API_NODE_PORT ${VOLTAGE_API_NODE_PORT}
-ENV VOLTAGE_API_URL ${VOLTAGE_API_URL}
 
 ENV VITE_PATH=${VOLTAGE_PATH}
+ENV VITE_API_URL ${VOLTAGE_PROTOCOL}://${VOLTAGE_HOST}:${VOLTAGE_PORT}${VOLTAGE_PATH}/api
 ENV VITE_API_NODE_PORT ${VOLTAGE_API_NODE_PORT}
-ENV VITE_API_URL ${VOLTAGE_API_URL}
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -64,7 +66,7 @@ RUN if [ "$VOLTAGE_FRONTEND_IS_DISABLED" != "false" ]; then npm run build:fronte
 # Setup nginx configuration
 COPY ./.deploy/nginx.conf /etc/nginx/nginx.conf
 RUN sed -i "s|\${VOLTAGE_DIR}|${VOLTAGE_DIR}|g" /etc/nginx/nginx.conf && \
-    sed -i "s|\${VOLTAGE_PORT}|${VOLTAGE_PORT}|g" /etc/nginx/nginx.conf && \
+    sed -i "s|\${VOLTAGE_NGINX_PORT}|${VOLTAGE_NGINX_PORT}|g" /etc/nginx/nginx.conf && \
     sed -i "s|\${VOLTAGE_API_NODE_PORT}|${VOLTAGE_API_NODE_PORT}|g" /etc/nginx/nginx.conf
 
 # Create supervisor configuration
@@ -72,7 +74,7 @@ COPY ./.deploy/supervisord.conf /etc/supervisord.conf
 RUN sed -i "s|\${VOLTAGE_DIR}|${VOLTAGE_DIR}|g" /etc/supervisord.conf
 
 # Expose the main port
-EXPOSE ${VOLTAGE_PORT}
+EXPOSE ${VOLTAGE_NGINX_PORT}
 
 # Start supervisor
 CMD ["supervisord", "--nodaemon"]
