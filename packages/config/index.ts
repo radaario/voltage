@@ -37,7 +37,7 @@ const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? null;
 
 export const config = {
 	name: process.env.VOLTAGE_NAME ?? "VOLTAGE",
-	version: process.env.VOLTAGE_VERSION ?? "1.0.1",
+	version: process.env.VOLTAGE_VERSION ?? "1.0.2",
 	env: process.env.VOLTAGE_ENV ?? "local",
 	ngnix_port: Number(process.env.VOLTAGE_NGINX_PORT ?? 8080),
 	url: appUrl,
