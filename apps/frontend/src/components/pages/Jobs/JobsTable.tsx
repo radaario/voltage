@@ -4,9 +4,9 @@ import { Job } from "@/interfaces/job";
 import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
 import Label from "@/components/base/Label/Label";
 import { useAuth } from "@/hooks/useAuth";
-import { api } from "@/utils";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
 import Button from "@/components/base/Button/Button";
+import { JobPreviewImage } from "@/components/composite/JobPreviewImage";
 import {
 	ChevronDoubleLeftIcon,
 	ChevronLeftIcon,
@@ -40,32 +40,6 @@ interface JobsTableProps {
 }
 
 const columnHelper = createColumnHelper<Job>();
-
-// Memoized preview image component to prevent reloading on every render
-const JobPreviewImage = memo(
-	({ jobKey, authToken, version }: { jobKey: string; authToken: string | null; version: string | null }) => {
-		return (
-			<div className="w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 group-hover:bg-gray-200 dark:group-hover:bg-neutral-700 rounded overflow-hidden transition-colors">
-				<img
-					key={jobKey}
-					src={api.getResourceUrl("/jobs/preview", { job_key: jobKey, token: authToken, v: version })}
-					alt="Preview"
-					className="w-full h-full object-cover"
-					onError={(e) => {
-						const target = e.target as HTMLImageElement;
-						target.style.display = "none";
-					}}
-				/>
-			</div>
-		);
-	},
-	(prevProps, nextProps) => {
-		// Custom comparison: only re-render if jobKey changes
-		return prevProps.jobKey === nextProps.jobKey && prevProps.authToken === nextProps.authToken;
-	}
-);
-
-JobPreviewImage.displayName = "JobPreviewImage";
 
 // Memoized table row to prevent unnecessary re-renders
 const TableRow = memo(
@@ -160,19 +134,126 @@ const JobsTable = ({
 					const job = info.row.original;
 					const filename = job.input?.file_name || job.input?.url?.split("/").pop() || "Unknown";
 
+					const specs: string[] = [];
+
+					// Resolution
+					const width = job.input?.video_width;
+					const height = job.input?.video_height;
+					if (width && height) {
+						specs.push(`${width}x${height}px`);
+					}
+
+					// Size
+					const size = job.input?.file_size;
+					if (size) {
+						const sizeInMB = (size / (1024 * 1024)).toFixed(1);
+						specs.push(`${sizeInMB}mb`);
+					}
+
 					return (
 						<div className="flex items-center gap-3">
 							<JobPreviewImage
 								jobKey={job.key}
 								authToken={authToken}
+								duration={job?.input?.duration}
 								version={job.updated_at}
 							/>
 							<div className="flex flex-col min-w-0">
 								<div className="font-medium text-gray-900 dark:text-white truncate">{filename}</div>
 								<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{job.key}</div>
+								{specs.length > 0 && (
+									<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{specs.join(", ")}</span>
+								)}
 							</div>
 						</div>
 					);
+				}
+			}),
+			columnHelper.accessor("priority", {
+				header: "Priority",
+				cell: (info) => {
+					const priority = info.getValue();
+					return <span className="font-mono text-gray-700 dark:text-gray-300">{priority}</span>;
+				}
+			}),
+			columnHelper.display({
+				id: "outputs",
+				header: "Outputs",
+				cell: () => {
+					// Backend'de outputs bilgisi metadata içinde olabilir veya ayrı bir field olarak
+					// Şimdilik 1 gösterelim, gerekirse backend'den outputs sayısını alabiliriz
+					return <span>1</span>;
+				}
+			}),
+			columnHelper.display({
+				id: "try",
+				header: "Try",
+				cell: (info) => {
+					const job = info.row.original;
+					const tryCount = job.try_count || 0;
+					const tryMax = job.try_max;
+
+					// If try_max is not set or is 0, just show the count
+					if (!tryMax || tryMax === 0) {
+						return <span className="text-gray-600 dark:text-gray-400">{tryCount}</span>;
+					}
+
+					return (
+						<span className="text-gray-600 dark:text-gray-400">
+							{tryCount} / {tryMax}
+						</span>
+					);
+				}
+			}),
+			columnHelper.display({
+				id: "duration",
+				header: "Duration",
+				cell: (info) => {
+					const job = info.row.original;
+
+					// Job henüz başlamadıysa
+					if (!job.started_at || !job.completed_at) return <span className="text-gray-400">-</span>;
+
+					// Her iki tarih de varsa süreyi hesapla
+					try {
+						const started_at = new Date(job.started_at).getTime();
+						const completed_at = new Date(job.completed_at).getTime();
+
+						// Geçersiz tarih kontrolü
+						if (isNaN(started_at) || isNaN(completed_at)) {
+							return <span className="text-gray-400">-</span>;
+						}
+
+						// Negatif veya çok büyük değer kontrolü
+						const duration = (completed_at - started_at) / 1000; // saniye cinsinden
+						if (duration < 0 || duration > 86400) {
+							// 24 saatten fazla ise
+							return <span className="text-gray-400">Invalid</span>;
+						}
+
+						// Süreyi formatla
+						if (duration < 60) {
+							return <span>{Math.round(duration)}s</span>;
+						} else if (duration < 3600) {
+							const minutes = Math.floor(duration / 60);
+							const seconds = Math.round(duration % 60);
+							return (
+								<span>
+									{minutes}m {seconds}s
+								</span>
+							);
+						} else {
+							const hours = Math.floor(duration / 3600);
+							const minutes = Math.floor((duration % 3600) / 60);
+							return (
+								<span>
+									{hours}h {minutes}m
+								</span>
+							);
+						}
+					} catch (error) {
+						return <span className="text-gray-400">-</span>;
+					}
 				}
 			}),
 			columnHelper.accessor("status", {
@@ -218,132 +299,14 @@ const JobsTable = ({
 					);
 				}
 			}),
-			columnHelper.display({
-				id: "duration",
-				header: "Duration",
-				cell: (info) => {
-					const job = info.row.original;
-					const duration = job.input?.duration;
-
-					if (!duration) return <span className="text-gray-400">-</span>;
-
-					return <span>{Math.round(duration)}s</span>;
-				}
-			}),
-			columnHelper.display({
-				id: "resolution",
-				header: "Resolution",
-				cell: (info) => {
-					const job = info.row.original;
-					const width = job.input?.video_width;
-					const height = job.input?.video_height;
-
-					if (!width || !height) return <span className="text-gray-400">-</span>;
-
-					return (
-						<span>
-							{width}x{height}
-						</span>
-					);
-				}
-			}),
-			columnHelper.display({
-				id: "size",
-				header: "Size",
-				cell: (info) => {
-					const job = info.row.original;
-					const size = job.input?.file_size;
-
-					if (!size) return <span className="text-gray-400">-</span>;
-
-					const sizeInMB = (size / (1024 * 1024)).toFixed(1);
-					return <span>{sizeInMB}MB</span>;
-				}
-			}),
-			columnHelper.accessor("priority", {
-				header: "Priority",
-				cell: (info) => {
-					const priority = info.getValue();
-					return <span className="font-mono text-gray-700 dark:text-gray-300">{priority}</span>;
-				}
-			}),
-			columnHelper.display({
-				id: "outputs",
-				header: "Outputs",
-				cell: () => {
-					// Backend'de outputs bilgisi metadata içinde olabilir veya ayrı bir field olarak
-					// Şimdilik 1 gösterelim, gerekirse backend'den outputs sayısını alabiliriz
-					return <span>1</span>;
-				}
-			}),
-			columnHelper.accessor("created_at", {
-				header: "Created",
+			columnHelper.accessor("updated_at", {
+				header: "Updated At",
 				cell: (info) => (
 					<TimeAgo
 						datetime={info.getValue()}
 						locale="en_US"
 					/>
 				)
-			}),
-			columnHelper.display({
-				id: "time",
-				header: "Time",
-				cell: (info) => {
-					const job = info.row.original;
-
-					// Job henüz başlamadıysa
-					if (!job.started_at) return <span className="text-gray-400">-</span>;
-
-					// Job devam ediyorsa
-					if (!job.completed_at) {
-						if (["COMPLETED", "FAILED", "CANCELLED", "TIMEOUT"].includes(job.status)) {
-							// Status tamamlanmış ama completed_at yok, bu bir veri tutarsızlığı
-							return <span className="text-gray-400">-</span>;
-						}
-						return <span className="text-blue-600 dark:text-blue-400">In progress</span>;
-					}
-
-					// Her iki tarih de varsa süreyi hesapla
-					try {
-						const start = new Date(job.started_at).getTime();
-						const end = new Date(job.completed_at).getTime();
-
-						// Geçersiz tarih kontrolü
-						if (isNaN(start) || isNaN(end)) {
-							return <span className="text-gray-400">-</span>;
-						}
-
-						// Negatif veya çok büyük değer kontrolü
-						const duration = (end - start) / 1000; // saniye cinsinden
-						if (duration < 0 || duration > 86400) {
-							// 24 saatten fazla ise
-							return <span className="text-gray-400">Invalid</span>;
-						}
-
-						// Süreyi formatla
-						if (duration < 60) {
-							return <span>{Math.round(duration)}s</span>;
-						} else if (duration < 3600) {
-							const minutes = Math.floor(duration / 60);
-							const seconds = Math.round(duration % 60);
-							return (
-								<span>
-									{minutes}m {seconds}s
-								</span>
-							);
-						} else {
-							const hours = Math.floor(duration / 3600);
-							const minutes = Math.floor((duration % 3600) / 60);
-							return (
-								<span>
-									{hours}h {minutes}m
-								</span>
-							);
-						}
-					} catch (error) {
-						return <span className="text-gray-400">-</span>;
-					}
-				}
 			}),
 			columnHelper.display({
 				id: "actions",

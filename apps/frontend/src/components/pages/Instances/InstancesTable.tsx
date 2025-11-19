@@ -287,7 +287,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 									iconOnly
 									onClick={(e) => {
 										e.stopPropagation();
-										navigate(`/instances/${instance.key}`);
+										navigate(`/instances/${instance.key}/info`);
 									}}>
 									<EyeIcon className="h-5 w-5" />
 								</Button>
@@ -344,7 +344,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 						<Fragment key={row.id}>
 							{/* Main Instance Row */}
 							<tr
-								onClick={() => navigate(`/instances/${row.original.key}`)}
+								onClick={() => navigate(`/instances/${row.original.key}/info`)}
 								className="group hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer">
 								{row.getVisibleCells().map((cell) => (
 									<td
@@ -421,7 +421,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 																	iconOnly
 																	onClick={(e) => {
 																		e.stopPropagation();
-																		navigate(`/instances/workers/${worker.key}`);
+																		navigate(`/instances/workers/${worker.key}/info`);
 																	}}>
 																	<EyeIcon className="h-4 w-4" />
 																</Button>

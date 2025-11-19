@@ -2,15 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
 import Button from "@/components/base/Button/Button";
-import { EyeIcon } from "@heroicons/react/24/outline";
+import { EyeIcon, ChevronDoubleLeftIcon, ChevronLeftIcon, ChevronRightIcon, ChevronDoubleRightIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import type { Job } from "@/interfaces/job";
-import type { Log, LogsResponse } from "@/interfaces/log";
+import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { formatDate } from "@/utils";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { WorkerCard } from "@/components/composite/WorkerCard";
 
 interface OutletContext {
 	job: Job;
@@ -41,10 +42,10 @@ const LogsTab: React.FC = () => {
 	const [newLogKeys, setNewLogKeys] = useState<Set<string>>(new Set());
 
 	// Fetch logs with React Query
-	const { data: logsResponse, isLoading } = useQuery<ApiResponse<LogsResponse>>({
+	const { data: logsResponse, isLoading } = useQuery<ApiResponse<Log[]>>({
 		queryKey: ["job-logs", job.key, currentPage, currentLimit, searchQuery, typeFilter, authToken],
 		queryFn: async () => {
-			return await api.get<LogsResponse>("/logs", {
+			return await api.get<Log[]>("/logs", {
 				token: authToken || "",
 				job_key: job.key,
 				page: currentPage,
@@ -59,19 +60,19 @@ const LogsTab: React.FC = () => {
 
 	// Detect new logs when data updates
 	useEffect(() => {
-		const logs = logsResponse?.data?.data;
+		const logs = logsResponse?.data;
 		if (!logs || currentPage !== 1) {
 			return;
 		}
 
 		// İlk yükleme: sadece ref'i set et, animasyon gösterme
 		if (previousDataRef.current.length === 0) {
-			previousDataRef.current = logs;
+			previousDataRef.current = logs || [];
 			return;
 		}
 
-		const currentLogKeys = new Set(logs.map((log) => log.key));
-		const previousLogKeys = new Set(previousDataRef.current.map((log) => log.key));
+		const currentLogKeys = new Set((logs || []).map((log: Log) => log.key));
+		const previousLogKeys = new Set(previousDataRef.current.map((log: Log) => log.key));
 
 		const newKeys = [...currentLogKeys].filter((key) => !previousLogKeys.has(key));
 
@@ -82,11 +83,11 @@ const LogsTab: React.FC = () => {
 			}, 2000);
 		}
 
-		previousDataRef.current = logs;
-	}, [logsResponse?.data?.data, currentPage]);
+		previousDataRef.current = logs || [];
+	}, [logsResponse?.data, currentPage]);
 
-	const logs = logsResponse?.data?.data || [];
-	const pagination: PaginationInfo | undefined = logsResponse?.data?.pagination;
+	const logs = logsResponse?.data || [];
+	const pagination: PaginationInfo | undefined = logsResponse?.pagination;
 
 	const handleSearch = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -115,70 +116,44 @@ const LogsTab: React.FC = () => {
 		}
 	};
 
-	const renderPagination = () => {
-		if (!pagination || pagination.total_pages <= 1) return null;
+	const getPageNumbers = () => {
+		if (!pagination) return [];
+		const pages: (number | string)[] = [];
+		const maxVisible = 5;
+		const totalPages = pagination.total_pages;
 
-		const pages = [];
-		const maxVisiblePages = 5;
-		let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-		let endPage = Math.min(pagination.total_pages, startPage + maxVisiblePages - 1);
+		if (totalPages <= maxVisible + 2) {
+			// Show all pages if total is small
+			for (let i = 1; i <= totalPages; i++) {
+				pages.push(i);
+			}
+		} else {
+			// Always show first page
+			pages.push(1);
 
-		if (endPage - startPage + 1 < maxVisiblePages) {
-			startPage = Math.max(1, endPage - maxVisiblePages + 1);
+			if (currentPage > 3) {
+				pages.push("...");
+			}
+
+			// Show pages around current page
+			const start = Math.max(2, currentPage - 1);
+			const end = Math.min(totalPages - 1, currentPage + 1);
+
+			for (let i = start; i <= end; i++) {
+				pages.push(i);
+			}
+
+			if (currentPage < totalPages - 2) {
+				pages.push("...");
+			}
+
+			// Always show last page
+			if (totalPages > 1) {
+				pages.push(totalPages);
+			}
 		}
 
-		for (let i = startPage; i <= endPage; i++) {
-			pages.push(i);
-		}
-
-		return (
-			<div className="flex items-center justify-between mt-4 text-sm">
-				<div className="text-gray-600 dark:text-gray-400">
-					Showing {(currentPage - 1) * currentLimit + 1} to {Math.min(currentPage * currentLimit, pagination.total)} of{" "}
-					{pagination.total} logs
-				</div>
-				<div className="flex gap-1">
-					<button
-						onClick={() => setCurrentPage(1)}
-						disabled={currentPage === 1}
-						className="px-3 py-1.5 text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 rounded hover:bg-gray-50 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-						First
-					</button>
-					<button
-						onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-						disabled={currentPage === 1}
-						className="px-3 py-1.5 text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 rounded hover:bg-gray-50 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-						Prev
-					</button>
-
-					{pages.map((page) => (
-						<button
-							key={page}
-							onClick={() => setCurrentPage(page)}
-							className={`px-3 py-1.5 border rounded transition-colors ${
-								currentPage === page
-									? "bg-neutral-700 dark:bg-neutral-600 text-white border-neutral-700 dark:border-neutral-600"
-									: "text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800 border-gray-300 dark:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-700"
-							}`}>
-							{page}
-						</button>
-					))}
-
-					<button
-						onClick={() => setCurrentPage((p) => Math.min(pagination.total_pages, p + 1))}
-						disabled={currentPage === pagination.total_pages}
-						className="px-3 py-1.5 text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 rounded hover:bg-gray-50 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-						Next
-					</button>
-					<button
-						onClick={() => setCurrentPage(pagination.total_pages)}
-						disabled={currentPage === pagination.total_pages}
-						className="px-3 py-1.5 text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 rounded hover:bg-gray-50 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-						Last
-					</button>
-				</div>
-			</div>
-		);
+		return pages;
 	};
 
 	return (
@@ -194,10 +169,10 @@ const LogsTab: React.FC = () => {
 					}}
 					className="px-3 py-2 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-neutral-500">
 					<option value="">All Types</option>
-					<option value="ERROR">Error</option>
-					<option value="WARNING">Warning</option>
 					<option value="INFO">Info</option>
-					<option value="DEBUG">Debug</option>
+					<option value="WARNING">Warning</option>
+					<option value="ERROR">Error</option>
+					{/* <option value="DEBUG">Debug</option> */}
 				</select>
 
 				{/* Search Bar */}
@@ -255,7 +230,10 @@ const LogsTab: React.FC = () => {
 									Message
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Created
+									Worker
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+									Created At
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
@@ -263,7 +241,7 @@ const LogsTab: React.FC = () => {
 							</tr>
 						</thead>
 						<tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
-							{logs.map((log) => (
+							{logs.map((log: Log) => (
 								<tr
 									key={log.key}
 									className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors ${
@@ -284,6 +262,9 @@ const LogsTab: React.FC = () => {
 											</div>
 										)}
 									</td>
+									<td className="px-6 py-4 whitespace-nowrap text-sm">
+										{log.worker_key ? <WorkerCard workerKey={log.worker_key} /> : "-"}
+									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
 										{formatDate(log.created_at, config?.timezone || "UTC")}
 									</td>
@@ -291,7 +272,7 @@ const LogsTab: React.FC = () => {
 										<div className="flex items-center gap-2">
 											<Tooltip content="View Log">
 												<button
-													onClick={() => navigate(`/logs/${log.key}`)}
+													onClick={() => navigate(`/logs/${log.key}/info`)}
 													className="p-1.5 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400">
 													<EyeIcon className="w-4 h-4" />
 												</button>
@@ -306,7 +287,79 @@ const LogsTab: React.FC = () => {
 			)}
 
 			{/* Pagination */}
-			{renderPagination()}
+			{pagination && pagination.total_pages > 1 && (
+				<div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700 pt-4">
+					<div className="flex items-center gap-1">
+						{/* First Page Button */}
+						<button
+							className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
+							onClick={() => setCurrentPage(1)}
+							disabled={currentPage === 1 || pagination.total_pages === 0}
+							title="First page">
+							<ChevronDoubleLeftIcon className="w-4 h-4" />
+						</button>
+
+						{/* Previous Page Button */}
+						<button
+							className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
+							onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+							disabled={currentPage === 1 || pagination.total_pages === 0}
+							title="Previous page">
+							<ChevronLeftIcon className="w-4 h-4" />
+						</button>
+
+						{/* Page Numbers */}
+						{getPageNumbers().map((pageNum, idx) => {
+							if (pageNum === "...") {
+								return (
+									<span
+										key={`ellipsis-${idx}`}
+										className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400">
+										...
+									</span>
+								);
+							}
+
+							const isActive = pageNum === currentPage;
+							return (
+								<button
+									key={pageNum}
+									className={`px-3 py-1.5 text-sm border rounded-md transition-colors font-medium ${
+										isActive
+											? "bg-gray-700 border-gray-700 text-white hover:bg-gray-800 dark:bg-neutral-600 dark:border-neutral-600 dark:hover:bg-neutral-700"
+											: "bg-white dark:bg-neutral-800 border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700"
+									} disabled:opacity-50 disabled:cursor-not-allowed`}
+									onClick={() => setCurrentPage(pageNum as number)}
+									disabled={pagination.total_pages === 0}>
+									{pageNum}
+								</button>
+							);
+						})}
+
+						{/* Next Page Button */}
+						<button
+							className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
+							onClick={() => setCurrentPage((p) => Math.min(pagination.total_pages, p + 1))}
+							disabled={currentPage === pagination.total_pages || pagination.total_pages === 0}
+							title="Next page">
+							<ChevronRightIcon className="w-4 h-4" />
+						</button>
+
+						{/* Last Page Button */}
+						<button
+							className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
+							onClick={() => setCurrentPage(pagination.total_pages)}
+							disabled={currentPage === pagination.total_pages || pagination.total_pages === 0}
+							title="Last page">
+							<ChevronDoubleRightIcon className="w-4 h-4" />
+						</button>
+					</div>
+
+					<div className="text-sm text-gray-700 dark:text-gray-300">
+						<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total logs
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };

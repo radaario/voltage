@@ -13,8 +13,12 @@ const workersProcessMap = new Map<string, ChildProcess>();
 
 async function getMasterInstance(): Promise<any | null> {
 	try {
+		const offlineTimeout = config.runtime.online_timeout || 1 * 60 * 1000; // in milliseconds, default 1 minute
+
 		const instances = await database.table("instances").orderBy("created_at", "asc");
-		const activeInstances = instances.filter((instance: any) => instance.status === "ONLINE");
+		const activeInstances = instances.filter(
+			(instance: any) => instance.status === "ONLINE" && instance.updated_at > subtractNow(offlineTimeout, "milliseconds")
+		);
 
 		if (!activeInstances.length) {
 			logger.console("ERROR", "No active instances found in database!");
@@ -22,7 +26,11 @@ async function getMasterInstance(): Promise<any | null> {
 		}
 
 		const masterInstances = instances.filter((instance: any) => instance.type === "MASTER");
-		let masterInstance = masterInstances.length ? masterInstances.filter((instance: any) => instance.status === "ONLINE")[0] : null;
+		let masterInstance = masterInstances.length
+			? masterInstances.filter(
+					(instance: any) => instance.status === "ONLINE" && instance.updated_at > subtractNow(offlineTimeout, "milliseconds")
+				)[0]
+			: null;
 
 		if (!masterInstance) {
 			masterInstance = activeInstances[0];
@@ -84,6 +92,7 @@ async function initInstance() {
 			.where("instance_key", instance_key)
 			.update({
 				job_key: null,
+				outcome: null,
 				status: database.knex.raw(`CASE WHEN \`index\` < ? THEN 'IDLE' ELSE 'TERMINATED' END`, [config.runtime.workers.max]),
 				updated_at: now
 			});
@@ -292,17 +301,14 @@ async function processJobs(): Promise<void> {
 		const pendingJobs = await database.table("jobs").where("locked_by", instance_key);
 
 		for (const pendingJob of pendingJobs) {
+			// JOB: UPDATE: QUEUED
+			await database.table("jobs").where("key", pendingJob.key).update({ status: "QUEUED", updated_at: getNow(), locked_by: null });
+
 			// JOB: QUEUE: INSERT
 			await database
 				.table("jobs_queue")
 				.insert({ key: pendingJob.key, priority: pendingJob.priority, created_at: pendingJob.created_at })
 				.then(async (result) => {
-					// JOB: UPDATE: QUEUED
-					await database
-						.table("jobs")
-						.where("key", pendingJob.key)
-						.update({ status: "QUEUED", updated_at: getNow(), locked_by: null });
-
 					await createJobNotification(pendingJob, "QUEUED");
 					await logger.insert("INFO", "Job successfully queued!", { job_key: pendingJob.key });
 				})

@@ -51,3 +51,31 @@ export function convertToLocalDate(date: string | Date, serverTimezone: string =
 		return new Date(date);
 	}
 }
+
+/**
+ * Formats a duration in seconds to a time string (MM:SS or HH:MM:SS)
+ * @param seconds - Duration in seconds
+ * @returns Formatted time string (00:05 for 5s, 02:30 for 2m30s, 01:20:00 for 1h20m)
+ */
+export const formatDuration = (seconds: number) => {
+	const totalSeconds = Math.floor(seconds);
+	const hrs = Math.floor(totalSeconds / 3600);
+	const mins = Math.floor((totalSeconds % 3600) / 60);
+	const secs = totalSeconds % 60;
+
+	// Pad with zeros
+	const pad = (num: number) => String(num).padStart(2, "0");
+
+	// If less than 1 minute, show MM:SS
+	if (hrs === 0 && mins === 0) {
+		return `00:${pad(secs)}`;
+	}
+	// If less than 1 hour, show MM:SS
+	else if (hrs === 0) {
+		return `${pad(mins)}:${pad(secs)}`;
+	}
+	// If 1 hour or more, show HH:MM:SS
+	else {
+		return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+	}
+};

@@ -31,7 +31,7 @@ const getCountryFromIP = async (ip: string): Promise<string> => {
 	}
 };
 
-const InstanceTab: React.FC = () => {
+const InfoTab: React.FC = () => {
 	const { instance } = useOutletContext<OutletContext>();
 	const [countryCode, setCountryCode] = useState<string>("");
 
@@ -218,4 +218,4 @@ const InstanceTab: React.FC = () => {
 	);
 };
 
-export default InstanceTab;
+export default InfoTab;

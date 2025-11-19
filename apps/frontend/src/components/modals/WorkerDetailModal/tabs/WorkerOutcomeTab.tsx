@@ -16,9 +16,11 @@ const WorkerOutcomeTab = () => {
 
 	return (
 		<div className="space-y-4">
+			{/*
 			<div className="flex items-center justify-between">
 				<h3 className="text-lg font-semibold text-gray-900 dark:text-white">Worker Outcome</h3>
 			</div>
+			*/}
 			{hasOutcome ? (
 				<div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-4 overflow-auto max-h-[500px]">
 					<pre className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap wrap-break-word">
@@ -27,7 +29,7 @@ const WorkerOutcomeTab = () => {
 				</div>
 			) : (
 				<div className="text-center py-12 bg-gray-50 dark:bg-neutral-900 rounded-lg">
-					<p className="text-gray-500 dark:text-gray-400">No outcome data available</p>
+					<p className="text-gray-500 dark:text-gray-400">No outcome data available!</p>
 				</div>
 			)}
 		</div>

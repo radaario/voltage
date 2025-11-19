@@ -5,26 +5,27 @@ import Jobs from "@/components/pages/Jobs/Jobs";
 import Instances from "@/components/pages/Instances/Instances";
 import Logs from "@/components/pages/Logs/Logs";
 import LogDetailModal from "@/components/modals/LogDetailModal/LogDetailModal";
-import LogTab from "@/components/modals/LogDetailModal/tabs/LogTab";
+import LogInfoTab from "@/components/modals/LogDetailModal/tabs/InfoTab";
 import MetadataTab from "@/components/modals/LogDetailModal/tabs/MetadataTab";
 import Notifications from "@/components/pages/Notifications/Notifications";
 import JobDetailModal from "@/components/modals/JobDetailModal/JobDetailModal";
 import InstanceDetailModal from "@/components/modals/InstanceDetailModal/InstanceDetailModal";
-import InstanceTab from "@/components/modals/InstanceDetailModal/tabs/InstanceTab";
+import InstanceInfoTab from "@/components/modals/InstanceDetailModal/tabs/InfoTab";
 import InstanceWorkersTab from "@/components/modals/InstanceDetailModal/tabs/WorkersTab";
 import InstanceOutcomeTab from "@/components/modals/InstanceDetailModal/tabs/InstanceOutcomeTab";
 import WorkerDetailModal from "@/components/modals/WorkerDetailModal/WorkerDetailModal";
-import WorkerTab from "@/components/modals/WorkerDetailModal/tabs/WorkerTab";
+import WorkerInfoTab from "@/components/modals/WorkerDetailModal/tabs/InfoTab";
 import WorkerOutcomeTab from "@/components/modals/WorkerDetailModal/tabs/WorkerOutcomeTab";
 import NotificationDetailModal from "@/components/modals/NotificationDetailModal/NotificationDetailModal";
-import JobTab from "@/components/modals/JobDetailModal/tabs/JobTab";
-import InputTab from "@/components/modals/JobDetailModal/tabs/InputTab";
-import OutputsTab from "@/components/modals/JobDetailModal/tabs/OutputsTab";
-import OutcomeTab from "@/components/modals/JobDetailModal/tabs/OutcomeTab";
-import LogsTab from "@/components/modals/JobDetailModal/tabs/LogsTab";
+import JobInfoTab from "@/components/modals/JobDetailModal/tabs/InfoTab";
+import JobInputTab from "@/components/modals/JobDetailModal/tabs/InputTab";
+import JobOutputsTab from "@/components/modals/JobDetailModal/tabs/OutputsTab";
+import JobOutcomeTab from "@/components/modals/JobDetailModal/tabs/OutcomeTab";
+import JobLogsTab from "@/components/modals/JobDetailModal/tabs/LogsTab";
 import NotificationsTab from "@/components/modals/JobDetailModal/tabs/NotificationsTab";
 import NotificationTab from "@/components/modals/NotificationDetailModal/tabs/NotificationTab";
-import PayloadTab from "@/components/modals/NotificationDetailModal/tabs/PayloadTab";
+import NotificationSpecsTab from "@/components/modals/NotificationDetailModal/tabs/SpecsTab";
+import NotificationPayloadTab from "@/components/modals/NotificationDetailModal/tabs/PayloadTab";
 import NotificationOutcomeTab from "@/components/modals/NotificationDetailModal/tabs/NotificationOutcomeTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
@@ -121,16 +122,16 @@ export const router = createBrowserRouter(
 											path: "",
 											element: (
 												<Navigate
-													to="job"
+													to="info"
 													replace
 												/>
 											)
 										},
-										{ path: "job", element: <JobTab /> },
-										{ path: "input", element: <InputTab /> },
-										{ path: "outputs", element: <OutputsTab /> },
-										{ path: "outcome", element: <OutcomeTab /> },
-										{ path: "logs", element: <LogsTab /> },
+										{ path: "info", element: <JobInfoTab /> },
+										{ path: "input", element: <JobInputTab /> },
+										{ path: "outputs", element: <JobOutputsTab /> },
+										{ path: "outcome", element: <JobOutcomeTab /> },
+										{ path: "logs", element: <JobLogsTab /> },
 										{ path: "notifications", element: <NotificationsTab /> }
 									]
 								}
@@ -148,12 +149,12 @@ export const router = createBrowserRouter(
 											path: "",
 											element: (
 												<Navigate
-													to="instance"
+													to="info"
 													replace
 												/>
 											)
 										},
-										{ path: "instance", element: <InstanceTab /> },
+										{ path: "info", element: <InstanceInfoTab /> },
 										{ path: "workers", element: <InstanceWorkersTab /> },
 										{ path: "specs", element: <InstanceOutcomeTab /> }
 									]
@@ -166,12 +167,12 @@ export const router = createBrowserRouter(
 											path: "",
 											element: (
 												<Navigate
-													to="worker"
+													to="info"
 													replace
 												/>
 											)
 										},
-										{ path: "worker", element: <WorkerTab /> },
+										{ path: "info", element: <WorkerInfoTab /> },
 										{ path: "outcome", element: <WorkerOutcomeTab /> }
 									]
 								}
@@ -189,12 +190,12 @@ export const router = createBrowserRouter(
 											path: "",
 											element: (
 												<Navigate
-													to="log"
+													to="info"
 													replace
 												/>
 											)
 										},
-										{ path: "log", element: <LogTab /> },
+										{ path: "info", element: <LogInfoTab /> },
 										{ path: "metadata", element: <MetadataTab /> }
 									]
 								}
@@ -212,13 +213,14 @@ export const router = createBrowserRouter(
 											path: "",
 											element: (
 												<Navigate
-													to="notification"
+													to="info"
 													replace
 												/>
 											)
 										},
-										{ path: "notification", element: <NotificationTab /> },
-										{ path: "payload", element: <PayloadTab /> },
+										{ path: "info", element: <NotificationTab /> },
+										{ path: "specs", element: <NotificationSpecsTab /> },
+										{ path: "payload", element: <NotificationPayloadTab /> },
 										{ path: "outcome", element: <NotificationOutcomeTab /> }
 									]
 								}

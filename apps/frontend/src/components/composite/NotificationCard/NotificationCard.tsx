@@ -32,7 +32,7 @@ const NotificationCard = ({ notificationKey, onClick }: NotificationCardProps) =
 		if (onClick) {
 			onClick();
 		} else {
-			navigate(`/notifications/${notificationKey}`);
+			navigate(`/notifications/${notificationKey}/info`);
 		}
 	};
 

@@ -2,14 +2,13 @@ import { useOutletContext } from "react-router-dom";
 import type { Notification } from "@/interfaces/notification";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { formatDate } from "@/utils";
-import { JobCard, WorkerCard, InstanceCard } from "@/components";
 import Label from "@/components/base/Label/Label";
 
 interface OutletContext {
 	notification: Notification;
 }
 
-const NotificationTab: React.FC = () => {
+const SpecsTab: React.FC = () => {
 	const { notification } = useOutletContext<OutletContext>();
 	const { config } = useGlobalStateContext();
 
@@ -23,31 +22,9 @@ const NotificationTab: React.FC = () => {
 	}
 
 	// Convert notification object to key-value pairs
-	const notificationEntries = Object.entries(notification).filter(
-		([key, value]) => value !== undefined && value !== null && !["payload", "outcome", "specs"].includes(key) // Exclude these as they have their own tabs
-	);
+	const notificationEntries = Object.entries(notification.specs);
 
 	const formatValue = (key: string, value: unknown) => {
-		// Handle job_key with JobCard
-		if (key === "job_key" && typeof value === "string") {
-			return <JobCard jobKey={value} />;
-		}
-
-		// Handle worker_key with WorkerCard
-		if (key === "worker_key" && typeof value === "string") {
-			return (
-				<WorkerCard
-					workerKey={value}
-					instanceKey={notification.instance_key}
-				/>
-			);
-		}
-
-		// Handle instance_key with InstanceCard
-		if (key === "instance_key" && typeof value === "string") {
-			return <InstanceCard instanceKey={value} />;
-		}
-
 		// Handle status with Label
 		if (key === "status" && typeof value === "string") {
 			return <Label status={value}>{value}</Label>;
@@ -126,4 +103,4 @@ const NotificationTab: React.FC = () => {
 	);
 };
 
-export default NotificationTab;
+export default SpecsTab;

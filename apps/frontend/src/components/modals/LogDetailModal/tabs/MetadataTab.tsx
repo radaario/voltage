@@ -74,7 +74,10 @@ const MetadataTab: React.FC = () => {
 									) : key === "instance_key" && typeof value === "string" ? (
 										<InstanceCard instanceKey={value} />
 									) : key === "worker_key" && typeof value === "string" ? (
-										<WorkerCard workerKey={value} />
+										<WorkerCard
+											workerKey={value}
+											instanceKey={log.instance_key}
+										/>
 									) : key === "notification_key" && typeof value === "string" ? (
 										<NotificationCard notificationKey={value} />
 									) : key.endsWith("_key") ? (

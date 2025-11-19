@@ -88,7 +88,7 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 			<div className="flex min-h-full items-end sm:items-center justify-center p-4">
 				{/* Modal Panel */}
 				<div
-					className={`relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 z-10 transition-all duration-300 ${
+					className={`relative w-full max-w-lg bg-white dark:bg-neutral-800 rounded-2xl shadow-xl p-6 z-10 transition-all duration-300 ${
 						isAnimating ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 					}`}>
 					<div className="flex items-start gap-4">
@@ -120,7 +120,7 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 							type="button"
 							onClick={handleClose}
 							disabled={isDeleting}
-							className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+							className="px-4 py-2 bg-gray-100 dark:bg-neutral-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
 							Cancel
 						</button>
 						<button

@@ -16,6 +16,7 @@ export default defineConfig(({ command, mode }) => {
 		base: process.env.VITE_PATH || "/",
 		// mode: newMode,
 		server: {
+			host: true,
 			port: port
 		},
 		preview: {

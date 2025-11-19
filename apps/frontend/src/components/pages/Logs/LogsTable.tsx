@@ -135,20 +135,19 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 					);
 				}
 			}),
-			columnHelper.accessor("instance_key", {
-				header: "Instance",
-				cell: (info) => {
-					const instanceKey = info.getValue();
-					if (!instanceKey) return <span className="text-gray-400">-</span>;
-					return <InstanceCard instanceKey={instanceKey} />;
-				}
-			}),
 			columnHelper.accessor("worker_key", {
 				header: "Worker",
 				cell: (info) => {
+					const log = info.row.original;
 					const workerKey = info.getValue();
+					const instanceKey = log?.instance_key;
 					if (!workerKey) return <span className="text-gray-400">-</span>;
-					return <WorkerCard workerKey={workerKey} />;
+					return (
+						<WorkerCard
+							workerKey={workerKey}
+							instanceKey={instanceKey}
+						/>
+					);
 				}
 			}),
 			columnHelper.accessor("job_key", {
@@ -180,7 +179,7 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 									variant="ghost"
 									size="md"
 									iconOnly
-									onClick={() => navigate(`/logs/${log.key}`)}>
+									onClick={() => navigate(`/logs/${log.key}/info`)}>
 									<EyeIcon className="h-5 w-5" />
 								</Button>
 							</Tooltip>
@@ -243,7 +242,7 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 										key={row.id}
 										row={row}
 										isNew={isNew}
-										onViewLog={(log) => navigate(`/logs/${log.key}`)}
+										onViewLog={(log) => navigate(`/logs/${log.key}/info`)}
 									/>
 								);
 							})

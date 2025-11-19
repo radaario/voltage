@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, NavLink, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
-import { XMarkIcon, DocumentTextIcon, CircleStackIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, InformationCircleIcon, CircleStackIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import type { Log } from "@/interfaces/log";
 import Label from "@/components/base/Label/Label";
@@ -58,7 +58,7 @@ const LogDetailModal: React.FC = () => {
 	};
 
 	const tabs = [
-		{ path: "log", label: "Log", icon: DocumentTextIcon },
+		{ path: "info", label: "Info", icon: InformationCircleIcon },
 		{ path: "metadata", label: "Metadata", icon: CircleStackIcon }
 	];
 
@@ -83,7 +83,7 @@ const LogDetailModal: React.FC = () => {
 					{/* Header */}
 					<div className="shrink-0 flex items-start justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 						<div className="flex items-start gap-3">
-							<DocumentTextIcon className="h-7 w-7 text-gray-600 dark:text-gray-400 mt-0.5" />
+							<InformationCircleIcon className="h-7 w-7 text-gray-600 dark:text-gray-400 mt-0.5" />
 							<div>
 								{log ? (
 									<>
@@ -149,7 +149,7 @@ const LogDetailModal: React.FC = () => {
 								</button>
 							</div>
 						) : (
-							<Outlet context={{ log: log.data }} />
+							<Outlet context={{ log: log }} />
 						)}
 					</div>
 				</div>

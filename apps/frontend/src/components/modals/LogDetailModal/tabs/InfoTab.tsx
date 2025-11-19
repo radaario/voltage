@@ -5,7 +5,7 @@ interface OutletContext {
 	log: Log;
 }
 
-const LogTab: React.FC = () => {
+const InfoTab: React.FC = () => {
 	const { log } = useOutletContext<OutletContext>();
 
 	if (!log) {
@@ -28,4 +28,4 @@ const LogTab: React.FC = () => {
 	);
 };
 
-export default LogTab;
+export default InfoTab;

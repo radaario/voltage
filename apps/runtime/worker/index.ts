@@ -273,17 +273,17 @@ async function run() {
 			}
 
 			/*
-      for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
-        if (job.outputs[index].status === 'FAILED') {
-          throw new Error('Some outputs failed!');
-          break;
-        }
-      }
-      */
+			for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
+				if (job.outputs[index].status === 'FAILED') {
+				throw new Error('Some outputs failed!');
+				break;
+				}
+			}
+			*/
 		}
 
 		// JOB: OUTPUTs: CHECK FAILED
-		if (jobOutputsProcessedCount === job.outputs?.length || jobOutputsUploadedCount === job.outputs?.length) {
+		if (jobOutputsProcessedCount !== job.outputs?.length || jobOutputsUploadedCount !== job.outputs?.length) {
 			throw new Error("Some outputs failed!");
 		}
 

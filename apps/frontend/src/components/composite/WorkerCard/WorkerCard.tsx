@@ -1,68 +1,95 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { api, ApiResponse } from "@/utils";
-import type { Worker } from "@/interfaces/instance";
-import { getWorkerName } from "@/utils/naming";
-import Label from "@/components/base/Label/Label";
+import { api, ApiResponse, clsx } from "@/utils";
+import type { Worker, Instance } from "@/interfaces/instance";
+import { getWorkerName, getInstanceName } from "@/utils/naming";
 import { CpuChipIcon } from "@heroicons/react/24/outline";
 
 interface WorkerCardProps {
-	workerKey: string;
+	workerKey?: string | null | undefined;
+	instanceKey?: string | null | undefined;
 	onClick?: () => void;
+	className?: string;
 }
 
-const WorkerCard = ({ workerKey, onClick }: WorkerCardProps) => {
+const WorkerCard = ({ workerKey, instanceKey, onClick, className }: WorkerCardProps) => {
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
 
-	// Fetch specific worker
-	const { data: workerResponse } = useQuery<ApiResponse<Worker>>({
-		queryKey: ["worker", workerKey, authToken],
-		queryFn: () => api.get<Worker>("/instancess/workers", { worker_key: workerKey, token: authToken }),
-		enabled: !!workerKey && !!authToken
+	// Fetch all instances (which include workers array)
+	const { data: instancesResponse } = useQuery<ApiResponse<Instance[]>>({
+		queryKey: ["instances", authToken],
+		queryFn: () => api.get<Instance[]>("/instances", { token: authToken }),
+		enabled: !!authToken
 	});
 
-	const worker = workerResponse?.data;
+	// Find the worker from all instances' workers arrays
+	const worker = (() => {
+		if (!instancesResponse?.data) return undefined;
 
-	// Fetch all workers from same instance for naming context
-	const { data: instanceWorkersResponse } = useQuery<ApiResponse<Worker[]>>({
-		queryKey: ["instanceWorkers", worker?.instance_key, authToken],
-		queryFn: () =>
-			api.get<Worker[]>("/instances/workers", {
-				instance_key: worker?.instance_key,
-				token: authToken
-			}),
-		enabled: !!worker?.instance_key && !!authToken
-	});
+		for (const instance of instancesResponse.data) {
+			if (instance.workers) {
+				const foundWorker = instance.workers.find((w: Worker) => w.key === workerKey);
+				if (foundWorker) return foundWorker;
+			}
+		}
+		return undefined;
+	})();
 
-	const workerName = worker && instanceWorkersResponse?.data ? getWorkerName(instanceWorkersResponse.data, worker) : null;
+	// Find the instance that contains this worker
+	const workerInstance = instancesResponse?.data?.find((instance) => instance.workers?.some((w: Worker) => w.key === workerKey));
 
-	// Extract worker index number if available (e.g., "Worker #2" -> 2)
+	// Collect all workers for naming context
+	const allWorkers = instancesResponse?.data?.flatMap((instance) => instance.workers || []) || [];
+
+	const workerName = worker && allWorkers.length > 0 ? getWorkerName(allWorkers, worker) : null;
+
+	// Get instance name or key
+	const instanceDisplayName = (() => {
+		if (!workerInstance) return instanceKey;
+
+		// Try to get instance name using naming utility
+		if (instancesResponse?.data) {
+			const name = getInstanceName(instancesResponse.data, workerInstance);
+			if (name) return name;
+		}
+
+		// Fallback to instance key
+		return workerInstance.key;
+	})(); // Extract worker index number if available (e.g., "Worker #2" -> 2)
 	const workerIndex = workerName ? workerName.match(/#(\d+)/)?.[1] : null;
-	const displayText = workerName || (workerIndex ? `Worker #${workerIndex}` : "Worker");
+	const displayText = workerName || (workerIndex ? `Worker #${workerIndex}` : `Worker`);
 
 	const handleClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
 		if (onClick) {
 			onClick();
 		} else {
-			navigate(`/instances/workers/${workerKey}`);
+			navigate(`/instances/workers/${workerKey}/info`);
 		}
 	};
 
 	return (
 		<button
 			onClick={handleClick}
-			className="flex items-center gap-2 p-2 rounded-md border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600 transition-colors text-left group min-w-0">
+			disabled={!worker}
+			className={clsx(
+				"flex items-center gap-2 p-2 rounded-md border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800  transition-colors text-left group min-w-0",
+				{
+					"hover:bg-gray-50 dark:hover:bg-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600": !!worker
+				},
+				className
+			)}>
 			{/* Content */}
 			<div className="flex-1 min-w-0">
-				<div className="flex items-center gap-2">
+				<div className="flex gap-2">
 					<CpuChipIcon className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" />
-					<span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-						{displayText}
-					</span>
-					{worker?.status && <Label size="sm">{worker.status}</Label>}
+					<div>
+						<div className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">{instanceDisplayName}</div>
+						<div className="text-sm font-medium text-gray-900 dark:text-white transition-colors">{displayText}</div>
+						<div className="text-[10px] text-gray-500 dark:text-white transition-colors">{worker?.key || workerKey}</div>
+					</div>
 				</div>
 			</div>
 		</button>

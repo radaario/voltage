@@ -4,17 +4,21 @@ import { useQuery } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import {
 	XMarkIcon,
-	BriefcaseIcon,
+	InformationCircleIcon,
 	ArrowDownTrayIcon,
 	ArrowUpTrayIcon,
 	DocumentTextIcon,
 	BellIcon,
-	ClipboardDocumentCheckIcon
+	BellAlertIcon,
+	ClipboardDocumentCheckIcon,
+	FolderArrowDownIcon,
+	DocumentChartBarIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import Label from "@/components/base/Label/Label";
 import type { Job } from "@/interfaces/job";
+import { JobPreviewImage } from "@/components/composite/JobPreviewImage";
 
 const JobDetailModal: React.FC = () => {
 	const { jobKey } = useParams<{ jobKey: string }>();
@@ -32,6 +36,24 @@ const JobDetailModal: React.FC = () => {
 			}),
 		enabled: !!jobKey && !!authToken
 	});
+
+	const job = jobResponse?.data;
+	const filename = job?.input?.file_name || job?.input?.url?.split("/").pop() || "Unknown";
+	const specs: string[] = [];
+
+	// Resolution
+	const width = job?.input?.video_width;
+	const height = job?.input?.video_height;
+	if (width && height) {
+		specs.push(`${width}x${height}px`);
+	}
+
+	// Size
+	const size = job?.input?.file_size;
+	if (size) {
+		const sizeInMB = (size / (1024 * 1024)).toFixed(1);
+		specs.push(`${sizeInMB}mb`);
+	}
 
 	useEffect(() => {
 		// Get scrollbar width before hiding
@@ -69,7 +91,7 @@ const JobDetailModal: React.FC = () => {
 	};
 
 	const tabs = [
-		{ path: "job", label: "Job", icon: BriefcaseIcon },
+		{ path: "info", label: "Info", icon: InformationCircleIcon },
 		{ path: "input", label: "Input", icon: ArrowDownTrayIcon },
 		{ path: "outputs", label: "Outputs", icon: ArrowUpTrayIcon },
 		{ path: "outcome", label: "Outcome", icon: ClipboardDocumentCheckIcon },
@@ -99,44 +121,36 @@ const JobDetailModal: React.FC = () => {
 					<div className="shrink-0 flex items-start justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 						<div className="flex items-center gap-4">
 							{/* Preview Image */}
-							{jobResponse?.data && (
-								<div className="w-24 h-16 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden">
-									<img
-										src={api.getResourceUrl("/jobs/preview", {
-											job_key: jobResponse?.data?.key,
-											token: authToken,
-											v: jobResponse?.data?.updated_at
-										})}
-										alt="Preview"
-										className="w-full h-full object-cover"
-										onError={(e) => {
-											const target = e.target as HTMLImageElement;
-											target.style.display = "none";
-										}}
-									/>
-								</div>
+							{job && (
+								<JobPreviewImage
+									className="w-24 h-16 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden"
+									jobKey={job.key}
+									authToken={authToken}
+									duration={job?.input?.duration}
+									version={job.updated_at}
+								/>
 							)}
-							<div>
-								{jobResponse?.data && (
-									<>
-										<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-											{jobResponse.data.input?.file_name ||
-												jobResponse.data.input?.url?.split("/").pop() ||
-												"Untitled Job"}
-										</h3>
-										<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">{jobResponse?.data?.key}</p>
-									</>
+							<div className="flex flex-col min-w-0">
+								{job ? (
+									<div className="flex flex-col min-w-0">
+										<h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">{filename}</h3>
+										<p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{job?.key}</p>
+										{specs.length > 0 && (
+											<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{specs.join(", ")}</span>
+										)}
+									</div>
+								) : (
+									<h3 className="text-xl font-bold text-gray-900 dark:text-white">Loading...</h3>
 								)}
-								{!jobResponse?.data && <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
 							</div>
 						</div>
 						<div className="flex items-center gap-3">
 							{/* Status Badge */}
-							{jobResponse?.data && (
+							{job && (
 								<Label
-									status={jobResponse.data.status}
+									status={job.status}
 									size="lg">
-									{jobResponse.data.status}
+									{job.status}
 								</Label>
 							)}
 							<button
@@ -155,7 +169,7 @@ const JobDetailModal: React.FC = () => {
 								<NavLink
 									key={tab.path}
 									to={tab.path}
-									className={({ isActive }) =>
+									className={({ isActive }: { isActive: boolean }) =>
 										`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
 											isActive
 												? "border-neutral-700 text-gray-900 dark:border-neutral-400 dark:text-white"
@@ -176,7 +190,7 @@ const JobDetailModal: React.FC = () => {
 								<div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-500 dark:border-gray-400 border-t-transparent"></div>
 							</div>
 						) : (
-							<Outlet context={{ job: jobResponse?.data }} />
+							<Outlet context={{ job: job }} />
 						)}
 					</div>
 				</div>

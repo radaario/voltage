@@ -130,16 +130,21 @@ const OutputsTab: React.FC = () => {
 									#
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Status
+									Type
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Specs
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Result
+									Status
 								</th>
+								{/*
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Time
+									Outcome
+								</th>
+								*/}
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+									Updated At
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
@@ -154,6 +159,17 @@ const OutputsTab: React.FC = () => {
 									<td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-400">
 										{output.index + 1}
 									</td>
+									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+										{output.specs?.type || "UNKNOWN"}
+									</td>
+									<td className="px-6 py-4 text-sm">
+										{output.specs?.path && (
+											<div className="text-gray-500 dark:text-gray-400 text-xs mt-1">{output.specs.path}</div>
+										)}
+										{output.specs?.format && (
+											<div className="text-gray-500 dark:text-gray-400 text-xs mt-1">{output.specs.format}</div>
+										)}
+									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
 										<div className="flex items-center gap-2">
 											<span
@@ -163,18 +179,11 @@ const OutputsTab: React.FC = () => {
 											</span>
 										</div>
 									</td>
-									<td className="px-6 py-4 text-sm">
-										<div className="text-gray-900 dark:text-gray-100 font-mono text-xs">
-											{formatSpecs(output.specs)}
-										</div>
-										{output.specs?.path && (
-											<div className="text-gray-500 dark:text-gray-400 text-xs mt-1">Path: {output.specs.path}</div>
-										)}
-									</td>
+									{/*
 									<td className="px-6 py-4 text-sm max-w-xs">
-										{output.result ? (
+										{output.outcome ? (
 											<div className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">
-												{formatResult(output.result)}
+												{formatResult(output.outcome)}
 											</div>
 										) : output.error ? (
 											<div className="text-red-600 dark:text-red-400 text-xs">
@@ -184,6 +193,7 @@ const OutputsTab: React.FC = () => {
 											<span className="text-gray-400 dark:text-gray-500 text-xs">-</span>
 										)}
 									</td>
+									*/}
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
 										{formatDate(output.updated_at, config?.timezone || "UTC")}
 									</td>
@@ -207,19 +217,19 @@ const OutputsTab: React.FC = () => {
 			)}
 
 			{/* Show errors if any */}
-			{outputs.some((o) => o.error) && (
+			{outputs.some((o) => o.status === "FAILED") && (
 				<div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
 					<h5 className="text-sm font-semibold text-red-900 dark:text-red-400 mb-2">Errors</h5>
 					<div className="space-y-2">
 						{outputs
-							.filter((o) => o.error)
+							.filter((o) => o.status === "FAILED")
 							.map((output) => (
 								<div
 									key={output.key}
 									className="text-xs">
 									<span className="font-mono text-red-700 dark:text-red-300">Output #{output.index + 1}:</span>{" "}
 									<span className="text-red-600 dark:text-red-400">
-										{output.error?.message || JSON.stringify(output.error)}
+										{output?.outcome?.message || JSON.stringify(output.outcome)}
 									</span>
 								</div>
 							))}

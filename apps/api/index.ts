@@ -398,16 +398,17 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 		// OUTPUTs: VALIDATE
 		const outputs = [];
 		for (let index = 0; index < body.outputs.length; index++) {
-			const output: OutputSpecs = body.outputs[index];
+			const specs: OutputSpecs = body.outputs[index];
+
 			outputs.push({
 				key: uukey(),
 				job_key,
 				index,
-				specs: output,
+				specs,
+				outcome: null,
 				status: "PENDING",
 				updated_at: now,
-				created_at: now,
-				outcome: null
+				created_at: now
 			});
 		}
 
@@ -473,29 +474,30 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 				await logger.insert("INFO", "Job successfully created!", { job_key });
 
 				if (config.jobs.enqueue_on_receive) {
+					// JOB: UPDATE: QUEUED
+					job.status = "QUEUED";
+					await database
+						.table("jobs")
+						.where("key", job_key)
+						.update({ status: job.status, updated_at: getNow(), locked_by: null });
+
 					// JOB: QUEUE: INSERT
 					await database
 						.table("jobs_queue")
 						.insert({ key: job.key, priority: job.priority, created_at: job.created_at })
 						.then(async (result) => {
-							// JOB: UPDATE: QUEUED
-							job.status = "QUEUED";
-							await database
-								.table("jobs")
-								.where("key", job_key)
-								.update({ status: job.status, updated_at: getNow(), locked_by: null });
-
 							await createJobNotification(job, "QUEUED");
-
 							await logger.insert("INFO", "Job successfully queued!", { job_key });
 						})
 						.catch(async (error) => {
 							// JOB: UPDATE: PENDING
 							job.status = "PENDING";
+
 							await database
 								.table("jobs")
 								.where("key", job_key)
 								.update({ status: job.status, updated_at: getNow(), locked_by: null });
+
 							await logger.insert("ERROR", "Enqueuing job failed!", { job_key, error });
 						});
 				}
@@ -529,7 +531,7 @@ app.delete("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 	return res.status(204).json({ metadata: { status: "SUCCESSFUL" } });
 });
 
-app.get("/jobs/preview", authMiddleware(), async (req: Request, res: Response) => {
+app.get("/jobs/preview", async (req: Request, res: Response) => {
 	const job_key = (req.query.job_key || req.body.job_key || "").trim();
 
 	const fallbackImagePath = path.join(".", "assets", "no-preview.webp");

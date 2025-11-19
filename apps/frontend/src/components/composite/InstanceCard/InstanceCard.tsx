@@ -31,7 +31,7 @@ const InstanceCard = ({ instanceKey, onClick }: InstanceCardProps) => {
 		if (onClick) {
 			onClick();
 		} else {
-			navigate(`/instances/${instanceKey}`);
+			navigate(`/instances/${instanceKey}/info`);
 		}
 	};
 

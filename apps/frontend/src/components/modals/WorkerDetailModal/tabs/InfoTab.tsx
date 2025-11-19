@@ -3,7 +3,7 @@ import { Worker } from "@/interfaces/instance";
 import Label from "@/components/base/Label/Label";
 import { JobCard, InstanceCard } from "@/components";
 
-const WorkerTab = () => {
+const InfoTab = () => {
 	const { worker } = useOutletContext<{ worker: Worker }>();
 
 	if (!worker) {
@@ -25,49 +25,31 @@ const WorkerTab = () => {
 					<tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
 						<tr>
 							<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400 w-1/4">
-								<span className="font-mono">key</span>
+								<span className="font-mono">Key</span>
 							</td>
 							<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-mono">{worker.key}</td>
 						</tr>
 						<tr>
 							<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
-								<span className="font-mono">status</span>
-							</td>
-							<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-								<Label size="md">{worker.status}</Label>
-							</td>
-						</tr>
-						<tr>
-							<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
-								<span className="font-mono">pid</span>
-							</td>
-							<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-mono">
-								{worker.pid ?? "N/A"}
-							</td>
-						</tr>
-						<tr>
-							<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
-								<span className="font-mono">instance_key</span>
+								<span className="font-mono">Instance</span>
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
 								<InstanceCard instanceKey={worker.instance_key} />
 							</td>
 						</tr>
-						<tr>
-							<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
-								<span className="font-mono">job_key</span>
-							</td>
-							<td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-								{worker.job_key ? (
+						{worker.job_key && (
+							<tr>
+								<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
+									<span className="font-mono">Job</span>
+								</td>
+								<td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
 									<JobCard jobKey={worker.job_key} />
-								) : (
-									<span className="text-gray-400 dark:text-gray-500">N/A</span>
-								)}
-							</td>
-						</tr>
+								</td>
+							</tr>
+						)}
 						<tr>
 							<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
-								<span className="font-mono">created_at</span>
+								<span className="font-mono">Created At</span>
 							</td>
 							<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
 								{formatDate(worker.created_at)}
@@ -75,10 +57,18 @@ const WorkerTab = () => {
 						</tr>
 						<tr>
 							<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
-								<span className="font-mono">updated_at</span>
+								<span className="font-mono">Updated At</span>
 							</td>
 							<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
 								{formatDate(worker.updated_at)}
+							</td>
+						</tr>
+						<tr>
+							<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
+								<span className="font-mono">Status</span>
+							</td>
+							<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+								<Label size="md">{worker.status}</Label>
 							</td>
 						</tr>
 					</tbody>
@@ -88,4 +78,4 @@ const WorkerTab = () => {
 	);
 };
 
-export default WorkerTab;
+export default InfoTab;

@@ -3,7 +3,21 @@ const Footer: React.FC = () => {
 		<footer className="layout-footer">
 			<div className="container mx-auto px-4 py-4">
 				<div className="flex justify-center text-sm text-gray-600 dark:text-gray-400">
-					<p>@ {new Date().getFullYear()} Voltage Video Decoder. All rights reserved.</p>
+					<p>
+						{new Date().getFullYear()},{" "}
+						<a
+							href="https://github.com/radaario/voltage"
+							target="_blank">
+							Voltage Video Encoder
+						</a>
+						. MIT License. Developed by{" "}
+						<a
+							href="https://www.radaar.io/"
+							target="_blank">
+							RADAAR
+						</a>
+						.
+					</p>
 				</div>
 			</div>
 		</footer>

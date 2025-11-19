@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, NavLink, Outlet } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
-import { XMarkIcon, BellIcon, DocumentTextIcon, ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, InformationCircleIcon, DocumentTextIcon, ClipboardDocumentCheckIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import Label from "@/components/base/Label/Label";
@@ -92,7 +92,8 @@ const NotificationDetailModal: React.FC = () => {
 	};
 
 	const tabs = [
-		{ path: "notification", label: "Notification", icon: BellIcon },
+		{ path: "info", label: "Info", icon: InformationCircleIcon },
+		{ path: "specs", label: "Specs", icon: Cog6ToothIcon },
 		{ path: "payload", label: "Payload", icon: DocumentTextIcon },
 		{ path: "outcome", label: "Outcome", icon: ClipboardDocumentCheckIcon }
 	];
@@ -118,12 +119,12 @@ const NotificationDetailModal: React.FC = () => {
 					{/* Header */}
 					<div className="shrink-0 flex items-start justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 						<div className="flex items-start gap-3">
-							<BellIcon className="h-7 w-7 text-gray-600 dark:text-gray-400 mt-0.5" />
+							<InformationCircleIcon className="h-7 w-7 text-gray-600 dark:text-gray-400 mt-0.5" />
 							<div>
 								{notification && (
 									<>
 										<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-											{notification.event || "Notification"}
+											{notification.status || "Notification"}
 										</h3>
 										<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">{notification.key}</p>
 									</>
@@ -218,7 +219,7 @@ const NotificationDetailModal: React.FC = () => {
 					title="Retry Notification"
 					message={
 						<>
-							Are you sure you want to retry notification <strong>{notification.event}</strong>?
+							Are you sure you want to retry notification <strong>{notification.status}</strong>?
 							<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({notification.key})</div>
 						</>
 					}

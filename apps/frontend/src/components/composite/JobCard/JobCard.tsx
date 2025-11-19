@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { api, ApiResponse } from "@/utils";
+import { api, ApiResponse, formatDuration } from "@/utils";
 import type { Job } from "@/interfaces/job";
+import { JobPreviewImage } from "@/components/composite/JobPreviewImage";
 
 interface JobCardProps {
 	jobKey: string;
@@ -37,12 +38,34 @@ const JobCard = ({ jobKey, title, onClick }: JobCardProps) => {
 	// Use title prop first, then file_name, then fallback to "Job #X" or "Job"
 	const displayTitle = title || job?.input?.file_name || (jobNumber ? `Job ${jobNumber}` : "Job");
 
+	const specs: string[] = [];
+
+	// Duration
+	const duration = job?.input?.duration;
+	if (duration) {
+		specs.push(formatDuration(duration));
+	}
+
+	// Resolution
+	const width = job?.input?.video_width;
+	const height = job?.input?.video_height;
+	if (width && height) {
+		specs.push(`${width}x${height}px`);
+	}
+
+	// Size
+	const size = job?.input?.file_size;
+	if (size) {
+		const sizeInMB = (size / (1024 * 1024)).toFixed(1);
+		specs.push(`${sizeInMB}mb`);
+	}
+
 	const handleClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
 		if (onClick) {
 			onClick();
 		} else {
-			navigate(`/jobs/${jobKey}`);
+			navigate(`/jobs/${jobKey}/info`);
 		}
 	};
 
@@ -51,23 +74,19 @@ const JobCard = ({ jobKey, title, onClick }: JobCardProps) => {
 			onClick={handleClick}
 			className="flex items-center gap-2 p-2 rounded-md border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600 transition-colors text-left group">
 			{/* Preview Image */}
-			<div className="w-12 h-9 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden">
-				<img
-					src={api.getResourceUrl("/jobs/preview", { job_key: jobKey, token: authToken, v: job?.updated_at })}
-					alt="Preview"
-					className="w-full h-full object-cover"
-					onError={(e) => {
-						const target = e.target as HTMLImageElement;
-						target.style.display = "none";
-					}}
-				/>
-			</div>
-
+			<JobPreviewImage
+				jobKey={jobKey}
+				authToken={authToken}
+				version={job?.updated_at ?? null}
+				className="w-12 h-9 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden"
+			/>
 			{/* Content */}
 			<div className="flex-1 min-w-0">
 				<div className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
 					{displayTitle}
 				</div>
+				<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{jobKey}</div>
+				{specs.length > 0 && <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{specs.join(", ")}</div>}
 			</div>
 		</button>
 	);

@@ -6,10 +6,16 @@ import { api, ApiResponse } from "@/utils";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { formatDate } from "@/utils";
 import type { Job } from "@/interfaces/job";
-import type { NotificationsResponse } from "@/interfaces/notification";
 import type { Notification } from "@/interfaces/notification";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
-import { ArrowUturnLeftIcon, EyeIcon } from "@heroicons/react/24/outline";
+import {
+	ArrowUturnLeftIcon,
+	EyeIcon,
+	ChevronDoubleLeftIcon,
+	ChevronLeftIcon,
+	ChevronRightIcon,
+	ChevronDoubleRightIcon
+} from "@heroicons/react/24/outline";
 import { ConfirmModal } from "@/components";
 
 interface OutletContext {
@@ -27,10 +33,10 @@ const NotificationsTab: React.FC = () => {
 	const [notificationToRetry, setNotificationToRetry] = useState<Notification | null>(null);
 
 	// Fetch notifications
-	const { data: notificationsResponse, isLoading } = useQuery<ApiResponse<NotificationsResponse>>({
+	const { data: notificationsResponse, isLoading } = useQuery<ApiResponse<Notification[]>>({
 		queryKey: ["notifications", job.key, currentPage, currentLimit],
 		queryFn: async () => {
-			return await api.get<NotificationsResponse>("/jobs/notifications", {
+			return await api.get<Notification[]>("/jobs/notifications", {
 				token: authToken || "",
 				job_key: job.key,
 				page: currentPage,
@@ -69,8 +75,48 @@ const NotificationsTab: React.FC = () => {
 		}
 	};
 
-	const notifications = notificationsResponse?.data?.data || [];
-	const pagination = notificationsResponse?.data?.pagination;
+	const notifications = notificationsResponse?.data || [];
+	const pagination = notificationsResponse?.pagination;
+
+	const getPageNumbers = () => {
+		if (!pagination) return [];
+		const pages: (number | string)[] = [];
+		const maxVisible = 5;
+		const totalPages = pagination.total_pages;
+
+		if (totalPages <= maxVisible + 2) {
+			// Show all pages if total is small
+			for (let i = 1; i <= totalPages; i++) {
+				pages.push(i);
+			}
+		} else {
+			// Always show first page
+			pages.push(1);
+
+			if (currentPage > 3) {
+				pages.push("...");
+			}
+
+			// Show pages around current page
+			const start = Math.max(2, currentPage - 1);
+			const end = Math.min(totalPages - 1, currentPage + 1);
+
+			for (let i = start; i <= end; i++) {
+				pages.push(i);
+			}
+
+			if (currentPage < totalPages - 2) {
+				pages.push("...");
+			}
+
+			// Always show last page
+			if (totalPages > 1) {
+				pages.push(totalPages);
+			}
+		}
+
+		return pages;
+	};
 
 	const getStatusColor = (status?: string) => {
 		switch (status) {
@@ -113,13 +159,16 @@ const NotificationsTab: React.FC = () => {
 										Event
 									</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Priority
+									</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Try
+									</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Status
 									</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Retry
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Time
+										Updated At
 									</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
@@ -133,8 +182,24 @@ const NotificationsTab: React.FC = () => {
 										className="hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors">
 										<td className="px-6 py-4 text-sm">
 											<span className="font-medium text-gray-900 dark:text-gray-100">
-												{notification.event || "UNKNOWN"}
+												{notification.payload.status || "UNKNOWN"}
 											</span>
+										</td>
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+											{notification.priority || "N/A"}
+										</td>
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+											{(() => {
+												const tryCount = notification.try_count || 0;
+												const tryMax = notification.try_max;
+
+												// If retry_max is not set or is 0, just show the count
+												if (!tryMax || tryMax === 0) {
+													return tryCount;
+												}
+
+												return `${tryCount} / ${tryMax}`;
+											})()}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm">
 											<span
@@ -143,37 +208,26 @@ const NotificationsTab: React.FC = () => {
 											</span>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-											{(() => {
-												const retryCount = notification.retry_count || 0;
-												const retryMax = notification.retry_max;
-
-												// If retry_max is not set or is 0, just show the count
-												if (!retryMax || retryMax === 0) {
-													return retryCount;
-												}
-
-												return `${retryCount} / ${retryMax}`;
-											})()}
-										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-											{formatDate(notification.created_at, config?.timezone || "UTC")}
+											{formatDate(notification.updated_at, config?.timezone || "UTC")}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm">
 											<div className="flex items-center gap-2">
-												<Tooltip content="Retry Notification">
-													<button
-														onClick={() => handleRetryNotification(notification)}
-														disabled={retryNotificationMutation.isPending}
-														className="p-1.5 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed">
-														<ArrowUturnLeftIcon className="w-4 h-4" />
-													</button>
-												</Tooltip>
+												{notification.status === "FAILED" && (
+													<Tooltip content="Retry">
+														<button
+															onClick={() => handleRetryNotification(notification)}
+															disabled={retryNotificationMutation.isPending}
+															className="p-1.5 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed">
+															<ArrowUturnLeftIcon className="w-4 h-4" />
+														</button>
+													</Tooltip>
+												)}
 												{/* View Button (right) */}
-												<Tooltip content="View Notification">
+												<Tooltip content="View">
 													<button
 														onClick={() => {
 															// Close job modal and navigate to notification
-															navigate(`/notifications/${notification.key}`);
+															navigate(`/notifications/${notification.key}/info`);
 														}}
 														className="p-1.5 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400">
 														<EyeIcon className="w-4 h-4" />
@@ -189,23 +243,76 @@ const NotificationsTab: React.FC = () => {
 
 					{/* Pagination */}
 					{pagination && pagination.total_pages > 1 && (
-						<div className="flex items-center justify-between border-t border-gray-200 dark:border-neutral-700 pt-4">
-							<div className="text-sm text-gray-700 dark:text-gray-300">
-								Page {pagination.page} of {pagination.total_pages} ({pagination.total} total)
-							</div>
-							<div className="flex gap-2">
+						<div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700 pt-4">
+							<div className="flex items-center gap-1">
+								{/* First Page Button */}
 								<button
+									className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
+									onClick={() => setCurrentPage(1)}
+									disabled={currentPage === 1 || pagination.total_pages === 0}
+									title="First page">
+									<ChevronDoubleLeftIcon className="w-4 h-4" />
+								</button>
+
+								{/* Previous Page Button */}
+								<button
+									className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
 									onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-									disabled={currentPage === 1}
-									className="px-3 py-1 bg-gray-200 dark:bg-neutral-700 text-gray-700 dark:text-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-neutral-600 transition-colors">
-									Previous
+									disabled={currentPage === 1 || pagination.total_pages === 0}
+									title="Previous page">
+									<ChevronLeftIcon className="w-4 h-4" />
 								</button>
+
+								{/* Page Numbers */}
+								{getPageNumbers().map((pageNum, idx) => {
+									if (pageNum === "...") {
+										return (
+											<span
+												key={`ellipsis-${idx}`}
+												className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400">
+												...
+											</span>
+										);
+									}
+
+									const isActive = pageNum === currentPage;
+									return (
+										<button
+											key={pageNum}
+											className={`px-3 py-1.5 text-sm border rounded-md transition-colors font-medium ${
+												isActive
+													? "bg-gray-700 border-gray-700 text-white hover:bg-gray-800 dark:bg-neutral-600 dark:border-neutral-600 dark:hover:bg-neutral-700"
+													: "bg-white dark:bg-neutral-800 border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700"
+											} disabled:opacity-50 disabled:cursor-not-allowed`}
+											onClick={() => setCurrentPage(pageNum as number)}
+											disabled={pagination.total_pages === 0}>
+											{pageNum}
+										</button>
+									);
+								})}
+
+								{/* Next Page Button */}
 								<button
+									className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
 									onClick={() => setCurrentPage((p) => Math.min(pagination.total_pages, p + 1))}
-									disabled={currentPage === pagination.total_pages}
-									className="px-3 py-1 bg-gray-200 dark:bg-neutral-700 text-gray-700 dark:text-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-neutral-600 transition-colors">
-									Next
+									disabled={currentPage === pagination.total_pages || pagination.total_pages === 0}
+									title="Next page">
+									<ChevronRightIcon className="w-4 h-4" />
 								</button>
+
+								{/* Last Page Button */}
+								<button
+									className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
+									onClick={() => setCurrentPage(pagination.total_pages)}
+									disabled={currentPage === pagination.total_pages || pagination.total_pages === 0}
+									title="Last page">
+									<ChevronDoubleRightIcon className="w-4 h-4" />
+								</button>
+							</div>
+
+							<div className="text-sm text-gray-700 dark:text-gray-300">
+								<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total
+								notifications
 							</div>
 						</div>
 					)}
@@ -221,7 +328,7 @@ const NotificationsTab: React.FC = () => {
 					title="Retry Notification"
 					message={
 						<>
-							Are you sure you want to retry notification <strong>{notificationToRetry.event}</strong>?
+							Are you sure you want to retry notification <strong>{notificationToRetry.status}</strong>?
 							<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({notificationToRetry.key})</div>
 						</>
 					}

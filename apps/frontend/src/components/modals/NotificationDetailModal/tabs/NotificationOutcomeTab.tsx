@@ -19,7 +19,7 @@ const NotificationOutcomeTab: React.FC = () => {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Outcome</h4>
+				{/* <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Outcome</h4> */}
 
 				{notification.outcome ? (
 					<div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-4 overflow-auto">

@@ -207,7 +207,7 @@ const Jobs: React.FC = () => {
 	};
 
 	const handleViewJob = (job: Job) => {
-		navigate(`/jobs/${job.key}/job`);
+		navigate(`/jobs/${job.key}/info`);
 	};
 
 	const handleDeleteJob = (job: Job) => {
@@ -269,7 +269,7 @@ const Jobs: React.FC = () => {
 			{/* Header with Search */}
 			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 				<div className="flex items-center gap-3">
-					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Latest jobs</h3>
+					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Jobs</h3>
 					<Tooltip content="Refresh jobs">
 						<Button
 							variant="ghost"

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, NavLink, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
-import { XMarkIcon, ServerIcon, UsersIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, InformationCircleIcon, ServerIcon, UsersIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import type { Instance } from "@/interfaces/instance";
@@ -57,7 +57,7 @@ const InstanceDetailModal: React.FC = () => {
 	};
 
 	const tabs = [
-		{ path: "instance", label: "Instance", icon: ServerIcon },
+		{ path: "info", label: "Info", icon: InformationCircleIcon },
 		{ path: "workers", label: "Workers", icon: UsersIcon },
 		{ path: "specs", label: "Specs", icon: DocumentChartBarIcon }
 	];

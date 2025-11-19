@@ -1,7 +1,7 @@
 import { useParams, useNavigate, NavLink, Outlet, useOutletContext } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useMemo } from "react";
-import { XMarkIcon, CpuChipIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, InformationCircleIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
 import { Instance } from "@/interfaces/instance";
 import Label from "@/components/base/Label/Label";
 import Button from "@/components/base/Button/Button";
@@ -40,7 +40,7 @@ const WorkerDetailModal = () => {
 	if (!workerKey) return null;
 
 	const tabs = [
-		{ path: "worker", label: "Worker", icon: CpuChipIcon },
+		{ path: "info", label: "Info", icon: InformationCircleIcon },
 		{ path: "outcome", label: "Outcome", icon: DocumentChartBarIcon }
 	];
 
@@ -55,7 +55,7 @@ const WorkerDetailModal = () => {
 				{/* Header */}
 				<div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
 					<div className="flex items-center gap-3">
-						<CpuChipIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+						<InformationCircleIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
 						{worker ? (
 							<>
 								<h2 className="text-2xl font-bold text-gray-900 dark:text-white">

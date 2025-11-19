@@ -179,7 +179,7 @@ const Logs: React.FC = () => {
 			{/* Header with Search */}
 			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 				<div className="flex items-center gap-3">
-					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">System Logs</h3>
+					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Logs</h3>
 					<Tooltip content="Refresh logs">
 						<Button
 							variant="ghost"
@@ -198,10 +198,10 @@ const Logs: React.FC = () => {
 						onChange={(e) => handleTypeFilterChange(e.target.value)}
 						className="h-[38px] px-3 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm">
 						<option value="">All Types</option>
-						<option value="INFO">INFO</option>
-						<option value="WARNING">WARNING</option>
-						<option value="ERROR">ERROR</option>
-						<option value="DEBUG">DEBUG</option>
+						<option value="INFO">Info</option>
+						<option value="WARNING">Warning</option>
+						<option value="ERROR">Error</option>
+						{/* <option value="DEBUG">Debug</option> */}
 					</select>
 
 					{/* Search Box */}
@@ -248,7 +248,7 @@ const Logs: React.FC = () => {
 							onClick={handleDeleteAllLogs}
 							disabled={deleteAllLogsMutation.isPending || (logsResponse?.data?.length || 0) === 0}
 							isLoading={deleteAllLogsMutation.isPending}>
-							<TrashIcon className="h-5 w-5 text-red-600" />
+							<TrashIcon className="h-5 w-5 text-red-600 dark:text-white" />
 						</Button>
 					</Tooltip>
 				</div>

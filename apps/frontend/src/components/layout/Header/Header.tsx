@@ -32,7 +32,7 @@ function Header() {
 				<nav className="hidden md:flex items-center gap-3">
 					<NavLink
 						to="/jobs"
-						className={({ isActive }) =>
+						className={({ isActive }: { isActive: boolean }) =>
 							`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
 								isActive
 									? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md"
@@ -44,7 +44,7 @@ function Header() {
 					</NavLink>
 					<NavLink
 						to="/notifications"
-						className={({ isActive }) =>
+						className={({ isActive }: { isActive: boolean }) =>
 							`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
 								isActive
 									? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md"
@@ -56,7 +56,7 @@ function Header() {
 					</NavLink>
 					<NavLink
 						to="/instances"
-						className={({ isActive }) =>
+						className={({ isActive }: { isActive: boolean }) =>
 							`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
 								isActive
 									? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md"
@@ -68,7 +68,7 @@ function Header() {
 					</NavLink>
 					<NavLink
 						to="/logs"
-						className={({ isActive }) =>
+						className={({ isActive }: { isActive: boolean }) =>
 							`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
 								isActive
 									? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md"
@@ -108,7 +108,7 @@ function Header() {
 				</Tooltip>
 				{showLogout && (
 					<>
-						<div className="h-6 w-px bg-gray-200 dark:bg-gray-600 mx-2"></div>
+						<div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2"></div>
 						<Tooltip content="Sign Out">
 							<Button
 								variant="soft"

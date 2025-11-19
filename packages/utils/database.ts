@@ -150,9 +150,9 @@ class Database {
 				if (!hasJobsNotifications) {
 					await this.knex.schema.createTable(`${prefix}${jobsNotificationsTable}`, (table) => {
 						table.string("key", 40).primary();
+						table.string("job_key", 40).notNullable();
 						table.string("instance_key", 40).nullable();
 						table.string("worker_key", 40).nullable();
-						table.string("job_key", 40).notNullable();
 						table.integer("priority").notNullable().defaultTo(1000);
 						table.text("specs").notNullable();
 						table.text("payload").notNullable();

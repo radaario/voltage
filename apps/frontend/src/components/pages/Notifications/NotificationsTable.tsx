@@ -140,7 +140,15 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 
 	const columns = useMemo(
 		() => [
-			columnHelper.accessor("event", {
+			columnHelper.accessor("job_key", {
+				header: "Job",
+				cell: (info) => {
+					const jobKey = info.getValue();
+					if (!jobKey) return <span className="text-gray-400">-</span>;
+					return <JobCard jobKey={jobKey} />;
+				}
+			}),
+			columnHelper.accessor("payload.status", {
 				header: "Event",
 				cell: (info) => {
 					const event = info.getValue();
@@ -151,12 +159,31 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 					);
 				}
 			}),
-			columnHelper.accessor("job_key", {
-				header: "Job",
+			columnHelper.accessor("priority", {
+				header: "Priority",
 				cell: (info) => {
-					const jobKey = info.getValue();
-					if (!jobKey) return <span className="text-gray-400">-</span>;
-					return <JobCard jobKey={jobKey} />;
+					const priority = info.getValue();
+					return <span className="font-mono text-gray-700 dark:text-gray-300">{priority || "N/A"}</span>;
+				}
+			}),
+			columnHelper.display({
+				id: "try",
+				header: "Try",
+				cell: (info) => {
+					const notification = info.row.original;
+					const tryCount = notification.try_count || 0;
+					const tryMax = notification.try_max;
+
+					// If try_max is not set or is 0, just show the count
+					if (!tryMax || tryMax === 0) {
+						return <span className="text-gray-600 dark:text-gray-400">{tryCount}</span>;
+					}
+
+					return (
+						<span className="text-gray-600 dark:text-gray-400">
+							{tryCount} / {tryMax}
+						</span>
+					);
 				}
 			}),
 			columnHelper.accessor("status", {
@@ -186,35 +213,8 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 					);
 				}
 			}),
-			columnHelper.display({
-				id: "retry",
-				header: "Retry",
-				cell: (info) => {
-					const notification = info.row.original;
-					const retryCount = notification.retry_count || 0;
-					const retryMax = notification.retry_max;
-
-					// If retry_max is not set or is 0, just show the count
-					if (!retryMax || retryMax === 0) {
-						return <span className="text-gray-600 dark:text-gray-400">{retryCount}</span>;
-					}
-
-					return (
-						<span className="text-gray-600 dark:text-gray-400">
-							{retryCount} / {retryMax}
-						</span>
-					);
-				}
-			}),
-			columnHelper.accessor("priority", {
-				header: "Priority",
-				cell: (info) => {
-					const priority = info.getValue();
-					return <span className="font-mono text-gray-700 dark:text-gray-300">{priority || 1000}</span>;
-				}
-			}),
-			columnHelper.accessor("created_at", {
-				header: "Created",
+			columnHelper.accessor("updated_at", {
+				header: "Updated At",
 				cell: (info) => (
 					<TimeAgo
 						datetime={info.getValue()}
@@ -230,30 +230,31 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 
 					return (
 						<div className="flex items-center gap-2">
-							{/* Retry Button (left) */}
-							<Tooltip content="Retry Notification">
-								<Button
-									variant="ghost"
-									size="md"
-									iconOnly
-									onClick={(e) => {
-										e.stopPropagation();
-										handleRetryNotification(notification);
-									}}
-									disabled={retryNotificationMutation.isPending}>
-									<ArrowUturnLeftIcon className="h-5 w-5" />
-								</Button>
-							</Tooltip>
+							{notification.status === "FAILED" && (
+								<Tooltip content="Retry">
+									<Button
+										variant="ghost"
+										size="md"
+										iconOnly
+										onClick={(e) => {
+											e.stopPropagation();
+											handleRetryNotification(notification);
+										}}
+										disabled={retryNotificationMutation.isPending}>
+										<ArrowUturnLeftIcon className="h-5 w-5" />
+									</Button>
+								</Tooltip>
+							)}
 
 							{/* View Button (right) */}
-							<Tooltip content="View Notification">
+							<Tooltip content="View">
 								<Button
 									variant="ghost"
 									size="md"
 									iconOnly
 									onClick={(e) => {
 										e.stopPropagation();
-										navigate(`/notifications/${notification.key}`);
+										navigate(`/notifications/${notification.key}/info`);
 									}}>
 									<EyeIcon className="h-5 w-5" />
 								</Button>
@@ -317,7 +318,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 										key={row.id}
 										row={row}
 										isNew={isNew}
-										onViewNotification={(notification) => navigate(`/notifications/${notification.key}`)}
+										onViewNotification={(notification) => navigate(`/notifications/${notification.key}/info`)}
 									/>
 								);
 							})
@@ -423,7 +424,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 					title="Retry Notification"
 					message={
 						<>
-							Are you sure you want to retry notification <strong>{notificationToRetry.event}</strong>?
+							Are you sure you want to retry notification <strong>{notificationToRetry.status}</strong>?
 							<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({notificationToRetry.key})</div>
 						</>
 					}
