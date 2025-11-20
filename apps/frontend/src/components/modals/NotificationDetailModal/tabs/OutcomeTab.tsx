@@ -29,7 +29,7 @@ const OutcomeTab: React.FC = () => {
 					</div>
 				) : (
 					<div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-8 text-center">
-						<p className="text-gray-500 dark:text-gray-400">No outcome available</p>
+						<p className="text-gray-500 dark:text-gray-400">There is no outcome yet!</p>
 					</div>
 				)}
 			</div>

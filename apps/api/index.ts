@@ -521,25 +521,90 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 	}
 });
 
+app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) => {
+	const job_key = (req.query.job_key || req.body.job_key || "").trim();
+	const output_key = (req.query.output_key || req.body.output_key || "").trim();
+
+	if (!job_key) {
+		return res.status(400).json({ metadata: { status: "ERROR", error: { code: "KEY_REQUIRED", message: "Job key required!" } } });
+	}
+
+	const job = await database.table("jobs").where("key", job_key).first();
+
+	if (!job) {
+		return res.status(404).json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Job not found!" } } });
+	}
+
+	if (!["CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(job.status)) {
+		return res.status(405).json({
+			metadata: { status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be deleted!" } }
+		});
+	}
+
+	let jobOutputsUpdatedCount = 0;
+	job.outputs = job.outputs ? JSON.parse(job.outputs as string) : null;
+
+	if (job.outputs) {
+		for (let index = 0; index < job.outputs.length; index++) {
+			if ((!output_key || output_key == job.outputs[index].key) && !["COMPLETED"].includes(job.outputs[index].status)) {
+				job.outputs[index].status = "PENDING";
+				jobOutputsUpdatedCount++;
+			}
+		}
+	}
+
+	if (jobOutputsUpdatedCount <= 0) {
+		return res.status(405).json({
+			metadata: { status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be deleted!" } }
+		});
+	}
+
+	await database
+		.table("jobs")
+		.where("key", job_key)
+		.update({
+			outputs: job.outputs ? JSON.stringify(job.outputs) : null,
+			status: "PENDING" // RETRYING
+			// retry_at: getNow()
+		});
+
+	await logger.insert("INFO", "Retrying job!", { job_key, output_key });
+
+	return res.json({ metadata: { status: "SUCCESSFUL" } });
+});
+
 app.delete("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 	const job_key = (req.query.job_key || req.body.job_key || "").trim();
 
-	if (job_key) {
-		await database.table("jobs").where("key", job_key).update({ status: "DELETED" });
+	if (!job_key) {
+		return res.status(400).json({ metadata: { status: "ERROR", error: { code: "KEY_REQUIRED", message: "Job key required!" } } });
 	}
 
-	return res.status(204).json({ metadata: { status: "SUCCESSFUL" } });
+	const job = await database.table("jobs").where("key", job_key).select("key", "status").first();
+
+	if (!job) {
+		return res.status(404).json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Job not found!" } } });
+	}
+
+	if (!["RECEIVED", "PENDING", "RETRYING"].includes(job.status)) {
+		return res.status(405).json({
+			metadata: { status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be deleted!" } }
+		});
+	}
+
+	await database.table("jobs").where("key", job_key).update({ status: "DELETED" });
+	await logger.insert("INFO", "Job deleted!", { job_key });
+
+	return res.json({ metadata: { status: "SUCCESSFUL" } });
 });
 
 app.get("/jobs/preview", async (req: Request, res: Response) => {
 	const job_key = (req.query.job_key || req.body.job_key || "").trim();
 
-	const fallbackImagePath = path.join(".", "assets", "no-preview.webp");
-
 	const serveFallbackImage = () => {
 		res.setHeader("Content-Type", "image/webp");
 		res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-		res.sendFile(path.resolve(fallbackImagePath));
+		res.sendFile(path.resolve(path.join(".", "assets", "no-preview.webp")));
 	};
 
 	try {
@@ -561,14 +626,9 @@ app.get("/jobs/preview", async (req: Request, res: Response) => {
 				return res.send(buffer);
 			} catch (error: Error | any) {}
 		}
+	} catch (error: Error | any) {}
 
-		return serveFallbackImage();
-	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Error serving preview image!", { job_key, error });
-		return res.status(500).json({
-			metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Error serving preview image!" } }
-		});
-	}
+	return serveFallbackImage();
 });
 
 app.get("/jobs/notifications", authMiddleware(), async (req, res) => {
@@ -665,16 +725,16 @@ app.post("/jobs/notifications/retry", authMiddleware(), async (req, res) => {
 
 		if (!notification_key) {
 			return res.status(400).json({
-				metadata: { status: "ERROR", error: { code: "NOTIFICATION_KEY_REQUIRED", message: "Notification key required!" } }
+				metadata: { status: "ERROR", error: { code: "KEY_REQUIRED", message: "Notification key required!" } }
 			});
 		}
 
 		const notification = await database.table("jobs_notifications").where("key", notification_key).first();
 
 		if (!notification) {
-			return res
-				.status(404)
-				.json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Notification not found!" } } });
+			return res.status(404).json({
+				metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Notification not found!" } }
+			});
 		}
 
 		// Reset notification status to PENDING for retry

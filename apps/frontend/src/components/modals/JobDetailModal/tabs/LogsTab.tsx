@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
-import Tooltip from "@/components/base/Tooltip/Tooltip";
-import Button from "@/components/base/Button/Button";
-import { EyeIcon, ChevronDoubleLeftIcon, ChevronLeftIcon, ChevronRightIcon, ChevronDoubleRightIcon } from "@heroicons/react/24/outline";
+import { Label, Tooltip, Button, Pagination } from "@/components";
+import { EyeIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import type { Job } from "@/interfaces/job";
 import type { Log } from "@/interfaces/log";
@@ -101,61 +100,6 @@ const LogsTab: React.FC = () => {
 		setCurrentPage(1);
 	};
 
-	const getTypeColor = (type: string) => {
-		switch (type?.toUpperCase()) {
-			case "ERROR":
-				return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-			case "WARNING":
-				return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
-			case "INFO":
-				return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
-			case "DEBUG":
-				return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
-			default:
-				return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
-		}
-	};
-
-	const getPageNumbers = () => {
-		if (!pagination) return [];
-		const pages: (number | string)[] = [];
-		const maxVisible = 5;
-		const totalPages = pagination.total_pages;
-
-		if (totalPages <= maxVisible + 2) {
-			// Show all pages if total is small
-			for (let i = 1; i <= totalPages; i++) {
-				pages.push(i);
-			}
-		} else {
-			// Always show first page
-			pages.push(1);
-
-			if (currentPage > 3) {
-				pages.push("...");
-			}
-
-			// Show pages around current page
-			const start = Math.max(2, currentPage - 1);
-			const end = Math.min(totalPages - 1, currentPage + 1);
-
-			for (let i = start; i <= end; i++) {
-				pages.push(i);
-			}
-
-			if (currentPage < totalPages - 2) {
-				pages.push("...");
-			}
-
-			// Always show last page
-			if (totalPages > 1) {
-				pages.push(totalPages);
-			}
-		}
-
-		return pages;
-	};
-
 	return (
 		<div className="space-y-4">
 			{/* Filters */}
@@ -244,14 +188,16 @@ const LogsTab: React.FC = () => {
 							{logs.map((log: Log) => (
 								<tr
 									key={log.key}
-									className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors ${
+									onClick={() => navigate(`/logs/${log.key}/info`)}
+									className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors cursor-pointer ${
 										newLogKeys.has(log.key) ? "animate-pulse bg-green-50 dark:bg-green-900/20" : ""
 									}`}>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										<span
-											className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(log.type || "INFO")}`}>
+										<Label
+											status={log.type as any}
+											size="sm">
 											{log.type || "INFO"}
-										</span>
+										</Label>
 									</td>
 									<td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
 										{log.message || "-"}
@@ -263,21 +209,31 @@ const LogsTab: React.FC = () => {
 										)}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										{log.worker_key ? <WorkerCard workerKey={log.worker_key} /> : "-"}
+										{log.worker_key ? (
+											<WorkerCard
+												workerKey={log.worker_key}
+												short={true}
+											/>
+										) : (
+											"-"
+										)}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
 										{formatDate(log.created_at, config?.timezone || "UTC")}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										<div className="flex items-center gap-2">
-											<Tooltip content="View Log">
-												<button
-													onClick={() => navigate(`/logs/${log.key}/info`)}
-													className="p-1.5 rounded-md transition-colors bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400">
-													<EyeIcon className="w-4 h-4" />
-												</button>
-											</Tooltip>
-										</div>
+										<Tooltip content="View">
+											<Button
+												variant="soft"
+												size="sm"
+												iconOnly
+												onClick={(e) => {
+													e.stopPropagation();
+													navigate(`/logs/${log.key}/info`);
+												}}>
+												<EyeIcon className="w-4 h-4" />
+											</Button>
+										</Tooltip>
 									</td>
 								</tr>
 							))}
@@ -288,77 +244,15 @@ const LogsTab: React.FC = () => {
 
 			{/* Pagination */}
 			{pagination && pagination.total_pages > 1 && (
-				<div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700 pt-4">
-					<div className="flex items-center gap-1">
-						{/* First Page Button */}
-						<button
-							className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
-							onClick={() => setCurrentPage(1)}
-							disabled={currentPage === 1 || pagination.total_pages === 0}
-							title="First page">
-							<ChevronDoubleLeftIcon className="w-4 h-4" />
-						</button>
-
-						{/* Previous Page Button */}
-						<button
-							className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
-							onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-							disabled={currentPage === 1 || pagination.total_pages === 0}
-							title="Previous page">
-							<ChevronLeftIcon className="w-4 h-4" />
-						</button>
-
-						{/* Page Numbers */}
-						{getPageNumbers().map((pageNum, idx) => {
-							if (pageNum === "...") {
-								return (
-									<span
-										key={`ellipsis-${idx}`}
-										className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400">
-										...
-									</span>
-								);
-							}
-
-							const isActive = pageNum === currentPage;
-							return (
-								<button
-									key={pageNum}
-									className={`px-3 py-1.5 text-sm border rounded-md transition-colors font-medium ${
-										isActive
-											? "bg-gray-700 border-gray-700 text-white hover:bg-gray-800 dark:bg-neutral-600 dark:border-neutral-600 dark:hover:bg-neutral-700"
-											: "bg-white dark:bg-neutral-800 border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700"
-									} disabled:opacity-50 disabled:cursor-not-allowed`}
-									onClick={() => setCurrentPage(pageNum as number)}
-									disabled={pagination.total_pages === 0}>
-									{pageNum}
-								</button>
-							);
-						})}
-
-						{/* Next Page Button */}
-						<button
-							className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
-							onClick={() => setCurrentPage((p) => Math.min(pagination.total_pages, p + 1))}
-							disabled={currentPage === pagination.total_pages || pagination.total_pages === 0}
-							title="Next page">
-							<ChevronRightIcon className="w-4 h-4" />
-						</button>
-
-						{/* Last Page Button */}
-						<button
-							className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
-							onClick={() => setCurrentPage(pagination.total_pages)}
-							disabled={currentPage === pagination.total_pages || pagination.total_pages === 0}
-							title="Last page">
-							<ChevronDoubleRightIcon className="w-4 h-4" />
-						</button>
-					</div>
-
-					<div className="text-sm text-gray-700 dark:text-gray-300">
-						<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total logs
-					</div>
-				</div>
+				<Pagination
+					currentPage={currentPage}
+					totalPages={pagination.total_pages}
+					totalItems={pagination.total}
+					itemsPerPage={currentLimit}
+					hasNextPage={currentPage < pagination.total_pages}
+					hasPrevPage={currentPage > 1}
+					onPageChange={setCurrentPage}
+				/>
 			)}
 		</div>
 	);

@@ -1,4 +1,4 @@
-import { useMemo, memo } from "react";
+import { useMemo } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Job } from "@/interfaces/job";
 import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
@@ -7,15 +7,11 @@ import { useAuth } from "@/hooks/useAuth";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
 import Button from "@/components/base/Button/Button";
 import { JobPreviewImage } from "@/components/composite/JobPreviewImage";
-import {
-	ChevronDoubleLeftIcon,
-	ChevronLeftIcon,
-	ChevronRightIcon,
-	ChevronDoubleRightIcon,
-	EyeIcon,
-	TrashIcon,
-	ArrowUturnLeftIcon
-} from "@heroicons/react/24/outline";
+import Pagination from "@/components/base/Pagination";
+import LoadingOverlay from "@/components/base/LoadingOverlay";
+import EmptyState from "@/components/base/EmptyState";
+import { MemoizedTableRow } from "@/components/base/MemoizedTableRow";
+import { EyeIcon, TrashIcon, ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
 	total: number;
@@ -41,37 +37,6 @@ interface JobsTableProps {
 
 const columnHelper = createColumnHelper<Job>();
 
-// Memoized table row to prevent unnecessary re-renders
-const TableRow = memo(
-	({ row, onViewJob, isNew }: { row: any; onViewJob: (job: Job) => void; isNew: boolean }) => {
-		return (
-			<tr
-				onClick={() => onViewJob(row.original)}
-				className={`group hover:bg-gray-50 dark:hover:bg-neutral-800 transition-all cursor-pointer ${
-					isNew ? "animate-slide-in-highlight" : ""
-				}`}>
-				{row.getVisibleCells().map((cell: any) => (
-					<td
-						key={cell.id}
-						className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-						{flexRender(cell.column.columnDef.cell, cell.getContext())}
-					</td>
-				))}
-			</tr>
-		);
-	},
-	(prevProps, nextProps) => {
-		// Only re-render if the row data actually changed or isNew status changed
-		return (
-			prevProps.row.id === nextProps.row.id &&
-			prevProps.row.original === nextProps.row.original &&
-			prevProps.isNew === nextProps.isNew
-		);
-	}
-);
-
-TableRow.displayName = "TableRow";
-
 const JobsTable = ({
 	data,
 	loading,
@@ -84,46 +49,6 @@ const JobsTable = ({
 	newJobKeys
 }: JobsTableProps) => {
 	const { authToken } = useAuth();
-
-	// Generate page numbers to display
-	const getPageNumbers = () => {
-		const { page, totalPages } = pagination;
-		const pages: (number | string)[] = [];
-		const maxVisible = 5;
-
-		if (totalPages <= maxVisible + 2) {
-			// Show all pages if total is small
-			for (let i = 1; i <= totalPages; i++) {
-				pages.push(i);
-			}
-		} else {
-			// Always show first page
-			pages.push(1);
-
-			if (page > 3) {
-				pages.push("...");
-			}
-
-			// Show pages around current page
-			const start = Math.max(2, page - 1);
-			const end = Math.min(totalPages - 1, page + 1);
-
-			for (let i = start; i <= end; i++) {
-				pages.push(i);
-			}
-
-			if (page < totalPages - 2) {
-				pages.push("...");
-			}
-
-			// Always show last page
-			if (totalPages > 1) {
-				pages.push(totalPages);
-			}
-		}
-
-		return pages;
-	};
 
 	const columns = useMemo(
 		() => [
@@ -283,11 +208,7 @@ const JobsTable = ({
 
 					return (
 						<div className="relative inline-flex rounded overflow-hidden">
-							<Label
-								status={status}
-								size="md">
-								{status}
-							</Label>
+							<Label status={status}>{status}</Label>
 							{/* Progress Bar Overlay */}
 							{progress > 0 && progress < 100 && (
 								<span
@@ -315,7 +236,33 @@ const JobsTable = ({
 					const job = info.row.original;
 					return (
 						<div className="flex items-center gap-1">
-							<Tooltip content="View Details">
+							<Tooltip content="Retry">
+								<Button
+									variant="ghost"
+									size="md"
+									iconOnly
+									disabled={!["CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(job?.status as string)}
+									onClick={(e) => {
+										e.stopPropagation();
+										onRetryJob(job);
+									}}>
+									<ArrowUturnLeftIcon className="h-5 w-5" />
+								</Button>
+							</Tooltip>
+							<Tooltip content="Delete">
+								<Button
+									variant="ghost"
+									size="md"
+									iconOnly
+									disabled={!["RECEIVED", "PENDING", "RETRYING"].includes(job?.status as string)}
+									onClick={(e) => {
+										e.stopPropagation();
+										onDeleteJob(job);
+									}}>
+									<TrashIcon className="h-5 w-5" />
+								</Button>
+							</Tooltip>
+							<Tooltip content="View">
 								<Button
 									variant="ghost"
 									size="md"
@@ -325,30 +272,6 @@ const JobsTable = ({
 										onViewJob(job);
 									}}>
 									<EyeIcon className="h-5 w-5" />
-								</Button>
-							</Tooltip>
-							<Tooltip content="Retry Job">
-								<Button
-									variant="ghost"
-									size="md"
-									iconOnly
-									onClick={(e) => {
-										e.stopPropagation();
-										onRetryJob(job);
-									}}>
-									<ArrowUturnLeftIcon className="h-5 w-5" />
-								</Button>
-							</Tooltip>
-							<Tooltip content="Delete Job">
-								<Button
-									variant="ghost"
-									size="md"
-									iconOnly
-									onClick={(e) => {
-										e.stopPropagation();
-										onDeleteJob(job);
-									}}>
-									<TrashIcon className="h-5 w-5" />
 								</Button>
 							</Tooltip>
 						</div>
@@ -370,11 +293,7 @@ const JobsTable = ({
 	return (
 		<div className="w-full relative">
 			{/* Loading Overlay */}
-			{loading && (
-				<div className="absolute inset-0 bg-white/50 dark:bg-neutral-900/50 flex items-center justify-center z-10 rounded-lg">
-					<div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-500 dark:border-gray-400 border-t-transparent"></div>
-				</div>
-			)}
+			<LoadingOverlay show={loading} />
 
 			<div className="overflow-x-auto">
 				<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
@@ -396,23 +315,21 @@ const JobsTable = ({
 					</thead>
 					<tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-800">
 						{table.getRowModel().rows.length === 0 ? (
-							<tr>
-								<td
-									colSpan={columns.length}
-									className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-									No jobs found
-								</td>
-							</tr>
+							<EmptyState
+								message="No jobs found"
+								colSpan={columns.length}
+							/>
 						) : (
 							table.getRowModel().rows.map((row) => {
 								const job = row.original;
 								const isNew = newJobKeys.has(job.key);
 								return (
-									<TableRow
+									<MemoizedTableRow
 										key={row.id}
 										row={row}
-										onViewJob={onViewJob}
 										isNew={isNew}
+										onClick={onViewJob}
+										className="whitespace-nowrap"
 									/>
 								);
 							})
@@ -422,91 +339,34 @@ const JobsTable = ({
 			</div>
 
 			{/* Pagination Controls */}
-			<div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
-				<div className="flex items-center gap-1">
-					{/* First Page Button */}
-					<button
-						className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
-						onClick={() => onPageChange(1)}
-						disabled={!pagination.prev_page || pagination.totalPages === 0}
-						title="First page">
-						<ChevronDoubleLeftIcon className="w-4 h-4" />
-					</button>
+			<Pagination
+				currentPage={pagination.page}
+				totalPages={pagination.totalPages}
+				totalItems={pagination.total}
+				itemsPerPage={pagination.limit}
+				hasNextPage={!!pagination.next_page}
+				hasPrevPage={!!pagination.prev_page}
+				onPageChange={onPageChange}
+			/>
 
-					{/* Previous Page Button */}
-					<button
-						className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
-						onClick={() => onPageChange(pagination.prev_page!)}
-						disabled={!pagination.prev_page || pagination.totalPages === 0}
-						title="Previous page">
-						<ChevronLeftIcon className="w-4 h-4" />
-					</button>
+			{/* Items per page selector */}
+			<div className="px-6 py-3 flex items-center justify-end gap-4 border-t border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
+				<span className="text-sm text-gray-700 dark:text-gray-300">
+					<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total jobs
+				</span>
 
-					{/* Page Numbers */}
-					{getPageNumbers().map((pageNum, idx) => {
-						if (pageNum === "...") {
-							return (
-								<span
-									key={`ellipsis-${idx}`}
-									className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400">
-									...
-								</span>
-							);
-						}
-
-						const isActive = pageNum === pagination.page;
-						return (
-							<button
-								key={pageNum}
-								className={`px-3 py-1.5 text-sm border rounded-md transition-colors font-medium ${
-									isActive
-										? "bg-gray-700 border-gray-700 text-white hover:bg-gray-800 dark:bg-neutral-600 dark:border-neutral-600 dark:hover:bg-neutral-700"
-										: "bg-white dark:bg-neutral-800 border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700"
-								} disabled:opacity-50 disabled:cursor-not-allowed`}
-								onClick={() => onPageChange(pageNum as number)}
-								disabled={pagination.totalPages === 0}>
-								{pageNum}
-							</button>
-						);
-					})}
-
-					{/* Next Page Button */}
-					<button
-						className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
-						onClick={() => onPageChange(pagination.next_page!)}
-						disabled={!pagination.has_more || !pagination.next_page || pagination.totalPages === 0}
-						title="Next page">
-						<ChevronRightIcon className="w-4 h-4" />
-					</button>
-
-					{/* Last Page Button */}
-					<button
-						className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:dark:hover:bg-neutral-800 transition-colors font-medium text-gray-700 dark:text-gray-200"
-						onClick={() => onPageChange(pagination.totalPages)}
-						disabled={!pagination.has_more || !pagination.next_page || pagination.totalPages === 0}
-						title="Last page">
-						<ChevronDoubleRightIcon className="w-4 h-4" />
-					</button>
-				</div>
-
-				<div className="flex items-center gap-4">
-					<span className="text-sm text-gray-700 dark:text-gray-300">
-						<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total jobs
-					</span>
-
-					<select
-						value={pagination.limit}
-						onChange={(e) => onLimitChange(Number(e.target.value))}
-						className="px-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500">
-						{[6, 10, 25, 50].map((pageSize) => (
-							<option
-								key={pageSize}
-								value={pageSize}>
-								{pageSize} per page
-							</option>
-						))}
-					</select>
-				</div>
+				<select
+					value={pagination.limit}
+					onChange={(e) => onLimitChange(Number(e.target.value))}
+					className="px-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500">
+					{[6, 10, 25, 50].map((pageSize) => (
+						<option
+							key={pageSize}
+							value={pageSize}>
+							{pageSize} per page
+						</option>
+					))}
+				</select>
 			</div>
 		</div>
 	);

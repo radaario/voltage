@@ -2,12 +2,9 @@ import { useMemo, useState, useEffect, Fragment } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, getExpandedRowModel } from "@tanstack/react-table";
 import { useNavigate } from "react-router-dom";
 import { Instance } from "@/interfaces/instance";
-import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
-import Tooltip from "@/components/base/Tooltip/Tooltip";
-import Button from "@/components/base/Button/Button";
+import { JobCard, TimeAgo, Tooltip, Button, Label } from "@/components";
 import { ChevronDownIcon, ChevronRightIcon, EyeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
 import { getInstanceName, getWorkerName } from "@/utils/naming";
-import { JobCard } from "@/components";
 
 interface InstancesTableProps {
 	data: Instance[];
@@ -404,14 +401,11 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 															)}
 
 															{/* Status */}
-															<span
-																className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${
-																	worker.status === "RUNNING"
-																		? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-																		: "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800"
-																}`}>
+															<Label
+																status={worker.status}
+																size="sm">
 																{worker.status}
-															</span>
+															</Label>
 
 															{/* View Worker Button */}
 															<Tooltip content="View Worker">

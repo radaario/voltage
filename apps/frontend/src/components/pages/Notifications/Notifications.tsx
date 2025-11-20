@@ -212,7 +212,7 @@ const Notifications: React.FC = () => {
 			{error && <Alert variant="error">{error instanceof Error ? error.message : "An error occurred"}</Alert>}
 
 			{/* Table */}
-			<div className="bg-gray-100 dark:bg-gray-900 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+			<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 				<NotificationsTable
 					data={notificationsResponse?.data || []}
 					loading={isLoading}

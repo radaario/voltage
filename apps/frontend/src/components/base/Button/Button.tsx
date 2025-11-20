@@ -1,12 +1,4 @@
-import { ButtonHTMLAttributes, ReactNode } from "react";
-
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-	variant?: "primary" | "secondary" | "danger" | "ghost" | "soft" | "outline-primary" | "outline-secondary" | "outline-danger";
-	size?: "sm" | "md" | "lg";
-	isLoading?: boolean;
-	iconOnly?: boolean;
-	children: ReactNode;
-}
+import type { ButtonProps } from "@/types";
 
 const variantClasses = {
 	primary: "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100 hover:shadow-lg",
@@ -23,12 +15,14 @@ const variantClasses = {
 };
 
 const sizeClasses = {
+	xs: "py-[5px] px-2 text-xs",
 	sm: "py-2 px-4 text-sm",
 	md: "py-3 px-6 text-base",
 	lg: "py-4 px-8 text-lg"
 };
 
 const iconOnlySizeClasses = {
+	xs: "p-1",
 	sm: "p-1.5",
 	md: "p-2",
 	lg: "p-3"
@@ -39,19 +33,20 @@ function Button({
 	size = "md",
 	isLoading = false,
 	iconOnly = false,
+	rounded = "md",
 	disabled,
 	children,
 	className = "",
 	...props
 }: ButtonProps) {
 	const baseClasses =
-		"rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-2";
+		"font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-2";
 
 	const sizeClass = iconOnly ? iconOnlySizeClasses[size] : sizeClasses[size];
 
 	return (
 		<button
-			className={`${baseClasses} ${variantClasses[variant]} ${sizeClass} ${className}`}
+			className={`${baseClasses} ${variantClasses[variant]} ${sizeClass} ${className} rounded-${rounded}`}
 			disabled={disabled || isLoading}
 			{...props}>
 			{isLoading && <div className="animate-spin rounded-full h-5 w-5 border-2 border-current border-t-transparent" />}

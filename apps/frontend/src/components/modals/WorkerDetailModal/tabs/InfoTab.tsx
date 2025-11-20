@@ -68,7 +68,7 @@ const InfoTab = () => {
 								<span className="font-mono">Status</span>
 							</td>
 							<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-								<Label size="md">{worker.status}</Label>
+								<Label status={worker.status}>{worker.status}</Label>
 							</td>
 						</tr>
 					</tbody>

@@ -40,13 +40,7 @@ const InfoTab: React.FC = () => {
 
 		// Status Label
 		if (key === "Status" && typeof value === "string") {
-			return (
-				<Label
-					status={value}
-					size="lg">
-					{value}
-				</Label>
-			);
+			return <Label status={value}>{value}</Label>;
 		}
 
 		// Numbers
@@ -128,11 +122,13 @@ const InfoTab: React.FC = () => {
 				</table>
 			</div>
 			{/* Worker */}
-			<WorkerCard
-				workerKey={job.worker_key}
-				instanceKey={job.instance_key}
-				className="w-full"
-			/>
+			{job.worker_key && (
+				<WorkerCard
+					workerKey={job.worker_key}
+					instanceKey={job.instance_key}
+					className="w-full"
+				/>
+			)}
 
 			{/* Destination */}
 			{renderJsonSection("Destination", job.destination)}
