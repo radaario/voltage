@@ -111,24 +111,8 @@ const InfoTab: React.FC = () => {
 	return (
 		<div className="space-y-6">
 			{/* Info Table */}
-			<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg">
+			<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
 				<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
-					{/*
-					<thead className="bg-gray-50 dark:bg-neutral-900">
-						<tr>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-								Key
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-								Value
-							</th>
-						</tr>
-					</thead>
-					*/}
 					<tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
 						{infoEntries.map(({ key, value }) => (
 							<tr

@@ -23,7 +23,7 @@ import JobOutputsTab from "@/components/modals/JobDetailModal/tabs/OutputsTab";
 import JobOutcomeTab from "@/components/modals/JobDetailModal/tabs/OutcomeTab";
 import JobLogsTab from "@/components/modals/JobDetailModal/tabs/LogsTab";
 import NotificationsTab from "@/components/modals/JobDetailModal/tabs/NotificationsTab";
-import NotificationTab from "@/components/modals/NotificationDetailModal/tabs/NotificationTab";
+import NotificationInfoTab from "@/components/modals/NotificationDetailModal/tabs/InfoTab";
 import NotificationSpecsTab from "@/components/modals/NotificationDetailModal/tabs/SpecsTab";
 import NotificationPayloadTab from "@/components/modals/NotificationDetailModal/tabs/PayloadTab";
 import NotificationOutcomeTab from "@/components/modals/NotificationDetailModal/tabs/NotificationOutcomeTab";
@@ -218,7 +218,7 @@ export const router = createBrowserRouter(
 												/>
 											)
 										},
-										{ path: "info", element: <NotificationTab /> },
+										{ path: "info", element: <NotificationInfoTab /> },
 										{ path: "specs", element: <NotificationSpecsTab /> },
 										{ path: "payload", element: <NotificationPayloadTab /> },
 										{ path: "outcome", element: <NotificationOutcomeTab /> }

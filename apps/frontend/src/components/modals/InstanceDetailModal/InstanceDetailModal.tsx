@@ -121,7 +121,7 @@ const InstanceDetailModal: React.FC = () => {
 
 					{/* Tabs */}
 					<div className="shrink-0 border-b border-gray-200 dark:border-neutral-700">
-						<nav className="flex px-6 gap-8">
+						<nav className="flex px-6 gap-8 overflow-x-auto">
 							{tabs.map((tab) => (
 								<NavLink
 									key={tab.path}

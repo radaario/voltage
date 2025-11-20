@@ -219,7 +219,7 @@ const LogsTab: React.FC = () => {
 					<p className="text-sm text-gray-600 dark:text-gray-400">No logs found for this job.</p>
 				</div>
 			) : (
-				<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg">
+				<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
 					<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
 						<thead className="bg-gray-50 dark:bg-neutral-900">
 							<tr>

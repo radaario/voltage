@@ -1,3 +1,4 @@
+import { clsx } from "@/utils";
 import React from "react";
 
 export type LabelSize = "sm" | "md" | "lg";
@@ -8,10 +9,11 @@ interface LabelProps {
 	size?: LabelSize;
 	variant?: LabelVariant;
 	status?: string; // If provided, will override variant based on status
+	hidden?: string;
 	className?: string;
 }
 
-const Label: React.FC<LabelProps> = ({ children, size = "md", variant = "gray", status, className = "" }) => {
+const Label: React.FC<LabelProps> = ({ children, size = "md", variant = "gray", status, hidden = "", className = "" }) => {
 	// Determine variant from status if provided
 	const finalVariant = status ? getVariantFromStatus(status) : variant;
 
@@ -38,7 +40,16 @@ const Label: React.FC<LabelProps> = ({ children, size = "md", variant = "gray", 
 
 	return (
 		<span
-			className={`inline-flex items-center font-semibold rounded border ${sizeClasses[size]} ${variantClasses[finalVariant]} ${className}`}>
+			className={clsx(
+				`items-center font-semibold rounded border`,
+				{
+					"inline-flex": !hidden,
+					[`hidden ${hidden}:inline-flex`]: hidden
+				},
+				sizeClasses[size],
+				variantClasses[finalVariant],
+				className
+			)}>
 			{children}
 		</span>
 	);

@@ -54,16 +54,18 @@ const WorkerDetailModal = () => {
 				onClick={(e) => e.stopPropagation()}>
 				{/* Header */}
 				<div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
-					<div className="flex items-center gap-3">
-						<InformationCircleIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+					<div className="flex gap-3">
+						<InformationCircleIcon className="h-6 w-6 text-gray-600 dark:text-gray-400 mt-1.5" />
 						{worker ? (
-							<>
-								<h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-									{getWorkerName(instanceWorkers, worker)}
-								</h2>
-								<Label size="md">{worker.status}</Label>
-								<span className="text-sm text-gray-500 dark:text-gray-400 font-mono">({worker.key})</span>
-							</>
+							<div className="flex flex-col">
+								<div className="flex items-center">
+									<h2 className="text-2xl font-bold text-gray-900 dark:text-white mr-2">
+										{getWorkerName(instanceWorkers, worker)}
+									</h2>
+									<Label size="md">{worker.status}</Label>
+								</div>
+								<div className="text-sm text-gray-500 dark:text-gray-400 font-mono">{worker.key}</div>
+							</div>
 						) : (
 							<h2 className="text-xl font-semibold text-gray-900 dark:text-white">Worker Detail</h2>
 						)}
@@ -79,7 +81,7 @@ const WorkerDetailModal = () => {
 
 				{/* Tabs Navigation */}
 				<div className="shrink-0 border-b border-gray-200 dark:border-neutral-700">
-					<nav className="flex -mb-px px-6">
+					<nav className="flex -mb-px px-6 overflow-x-auto">
 						{tabs.map((tab) => {
 							const Icon = tab.icon;
 							return (

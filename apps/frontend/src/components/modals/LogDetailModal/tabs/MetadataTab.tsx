@@ -39,7 +39,7 @@ const MetadataTab: React.FC = () => {
 	return (
 		<div className="space-y-6">
 			{/* Log fields */}
-			<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg">
+			<div className="border border-gray-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
 				<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
 					<thead className="bg-gray-50 dark:bg-neutral-900">
 						<tr>
@@ -96,11 +96,11 @@ const MetadataTab: React.FC = () => {
 			<div>
 				<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Data</h4>
 				{dataEntries.length === 0 ? (
-					<div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-8 text-center">
+					<div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-8 text-center overflow-x-auto">
 						<p className="text-gray-500 dark:text-gray-400">No data</p>
 					</div>
 				) : (
-					<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg">
+					<div className="border border-gray-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
 						<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
 							<thead className="bg-gray-50 dark:bg-neutral-900">
 								<tr>

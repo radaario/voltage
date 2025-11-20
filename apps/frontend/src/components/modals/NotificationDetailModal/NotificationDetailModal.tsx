@@ -118,7 +118,7 @@ const NotificationDetailModal: React.FC = () => {
 					onClick={(e) => e.stopPropagation()}>
 					{/* Header */}
 					<div className="shrink-0 flex items-start justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
-						<div className="flex items-start gap-3">
+						<div className="flex items-start gap-3 overflow-hidden">
 							<InformationCircleIcon className="h-7 w-7 text-gray-600 dark:text-gray-400 mt-0.5" />
 							<div>
 								{notification && (
@@ -137,7 +137,8 @@ const NotificationDetailModal: React.FC = () => {
 							{notification && (
 								<Label
 									status={notification.status || "PENDING"}
-									size="lg">
+									size="lg"
+									hidden="sm">
 									{notification.status || "PENDING"}
 								</Label>
 							)}
@@ -163,7 +164,7 @@ const NotificationDetailModal: React.FC = () => {
 
 					{/* Tabs */}
 					<div className="shrink-0 border-b border-gray-200 dark:border-neutral-700">
-						<nav className="flex px-6 gap-8">
+						<nav className="flex px-6 gap-8 overflow-x-auto">
 							{tabs.map((tab) => (
 								<NavLink
 									key={tab.path}

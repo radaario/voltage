@@ -119,7 +119,7 @@ const JobDetailModal: React.FC = () => {
 					onClick={(e) => e.stopPropagation()}>
 					{/* Header */}
 					<div className="shrink-0 flex items-start justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
-						<div className="flex items-center gap-4">
+						<div className="flex items-center gap-4 mr-3 overflow-hidden">
 							{/* Preview Image */}
 							{job && (
 								<JobPreviewImage
@@ -149,7 +149,8 @@ const JobDetailModal: React.FC = () => {
 							{job && (
 								<Label
 									status={job.status}
-									size="lg">
+									size="lg"
+									hidden="sm">
 									{job.status}
 								</Label>
 							)}
@@ -164,7 +165,7 @@ const JobDetailModal: React.FC = () => {
 
 					{/* Tabs */}
 					<div className="shrink-0 border-b border-gray-200 dark:border-neutral-700">
-						<nav className="flex px-6 gap-8">
+						<nav className="flex px-6 gap-8 overflow-x-auto">
 							{tabs.map((tab) => (
 								<NavLink
 									key={tab.path}
