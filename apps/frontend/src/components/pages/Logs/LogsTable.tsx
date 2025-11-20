@@ -116,7 +116,7 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 						<div className="flex items-center gap-2">
 							<Tooltip content="View">
 								<Button
-									variant="ghost"
+									variant="soft"
 									size="md"
 									iconOnly
 									onClick={() => navigate(`/logs/${log.key}/info`)}>

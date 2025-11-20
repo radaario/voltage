@@ -165,7 +165,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 						<div className="flex items-center gap-2">
 							<Tooltip content="Retry">
 								<Button
-									variant="ghost"
+									variant="soft"
 									size="md"
 									iconOnly
 									disabled={!["FAILED"].includes(notification?.status as string) || retryNotificationMutation.isPending}
@@ -180,7 +180,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 							{/* View Button (right) */}
 							<Tooltip content="View">
 								<Button
-									variant="ghost"
+									variant="soft"
 									size="md"
 									iconOnly
 									onClick={(e) => {

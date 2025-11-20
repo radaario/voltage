@@ -8,9 +8,12 @@ import { Modal, Label, Button } from "@/components";
 import { api, ApiResponse } from "@/utils";
 
 const LogDetailModal: React.FC = () => {
-	const { logKey } = useParams<{ logKey: string }>();
+	const { jobKey, logKey } = useParams<{ logKey: string; jobKey?: string }>();
 	const { authToken } = useAuth();
-	const modalProps = useRouteModal({ navigateBackTo: "/logs", id: "LogDetailModal" });
+	const navigateBackTo = jobKey ? `/jobs/${jobKey}/logs` : "/logs";
+	const modalProps = useRouteModal({ navigateBackTo: navigateBackTo, id: "LogDetailModal" });
+
+	console.log("modalProps:", modalProps);
 
 	// Fetch log details
 	const { data: logResponse, isLoading } = useQuery<ApiResponse<Log>>({
@@ -33,8 +36,8 @@ const LogDetailModal: React.FC = () => {
 	return (
 		<Modal
 			{...modalProps}
-			height="xl"
-			size="5xl">
+			height={modalProps.stackPosition === 0 ? "xl" : "lg"}
+			size={modalProps.stackPosition === 0 ? "5xl" : "4xl"}>
 			{/* Header */}
 			<Modal.Header
 				onClose={modalProps.handleClose}

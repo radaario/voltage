@@ -95,8 +95,8 @@ const JobDetailModal: React.FC = () => {
 		<>
 			<Modal
 				{...modalProps}
-				height="xl"
-				size="5xl">
+				height={modalProps.stackPosition === 0 ? "xl" : "lg"}
+				size={modalProps.stackPosition === 0 ? "5xl" : "4xl"}>
 				{/* Header */}
 				<Modal.Header
 					onClose={modalProps.handleClose}

@@ -279,7 +279,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 						<div className="flex items-center gap-2">
 							<Tooltip content="View Instance">
 								<Button
-									variant="ghost"
+									variant="soft"
 									size="md"
 									iconOnly
 									onClick={(e) => {
@@ -410,7 +410,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 															{/* View Worker Button */}
 															<Tooltip content="View Worker">
 																<Button
-																	variant="ghost"
+																	variant="soft"
 																	size="sm"
 																	iconOnly
 																	onClick={(e) => {

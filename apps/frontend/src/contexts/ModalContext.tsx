@@ -9,6 +9,7 @@ interface ModalContextType {
 	registerModal: (id: string) => number;
 	unregisterModal: (id: string) => void;
 	getModalIndex: (id: string) => number;
+	getModalStackPosition: (id: string) => number;
 	isTopModal: (id: string) => boolean;
 	hasOpenModals: boolean;
 	modalCount: number;
@@ -60,6 +61,15 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 		[modalStack]
 	);
 
+	// Get the stack position (0 = first, 1 = second, etc.)
+	const getModalStackPosition = useCallback(
+		(id: string): number => {
+			const index = modalStack.findIndex((m) => m.id === id);
+			return index >= 0 ? index : 0;
+		},
+		[modalStack]
+	);
+
 	// Check if a modal is the topmost modal
 	const isTopModal = useCallback(
 		(id: string): boolean => {
@@ -91,6 +101,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 		registerModal,
 		unregisterModal,
 		getModalIndex,
+		getModalStackPosition,
 		isTopModal,
 		hasOpenModals: modalStack.length > 0,
 		modalCount: modalStack.length

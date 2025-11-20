@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useOutletContext, useNavigate } from "react-router-dom";
+import { useOutletContext, useNavigate, Outlet } from "react-router-dom";
 import { Label, Tooltip, Button, Pagination } from "@/components";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
@@ -188,7 +188,7 @@ const LogsTab: React.FC = () => {
 							{logs.map((log: Log) => (
 								<tr
 									key={log.key}
-									onClick={() => navigate(`/logs/${log.key}/info`)}
+									onClick={() => navigate(`/jobs/${job.key}/logs/${log.key}/info`)}
 									className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors cursor-pointer ${
 										newLogKeys.has(log.key) ? "animate-pulse bg-green-50 dark:bg-green-900/20" : ""
 									}`}>
@@ -229,7 +229,7 @@ const LogsTab: React.FC = () => {
 												iconOnly
 												onClick={(e) => {
 													e.stopPropagation();
-													navigate(`/logs/${log.key}/info`);
+													navigate(`/jobs/${job.key}/logs/${log.key}/info`);
 												}}>
 												<EyeIcon className="w-4 h-4" />
 											</Button>
@@ -254,6 +254,9 @@ const LogsTab: React.FC = () => {
 					onPageChange={setCurrentPage}
 				/>
 			)}
+
+			{/* Outlet for nested modals */}
+			<Outlet />
 		</div>
 	);
 };

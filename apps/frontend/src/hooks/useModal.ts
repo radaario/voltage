@@ -10,12 +10,13 @@ interface UseModalOptions {
 export function useModal({ isOpen, onClose, id }: UseModalOptions) {
 	const autoId = useId();
 	const modalId = id || autoId;
-	const { registerModal, unregisterModal, getModalIndex, isTopModal } = useModalContext();
-	const [zIndex, setZIndex] = useState(50);
+	const { registerModal, unregisterModal, getModalIndex, getModalStackPosition, isTopModal } = useModalContext();
+	const [zIndex, setZIndex] = useState<number>(50);
+	const [stackPosition, setStackPosition] = useState<number>(0);
 	const [isAnimating, setIsAnimating] = useState(false);
 	const [shouldRender, setShouldRender] = useState(false);
 
-	// Register/unregister modal based on isOpen state
+	// Register modal on mount and handle open/close animations
 	useEffect(() => {
 		if (isOpen) {
 			setShouldRender(true);
@@ -29,14 +30,10 @@ export function useModal({ isOpen, onClose, id }: UseModalOptions) {
 				});
 			});
 
-			// Cleanup: unregister when component unmounts or isOpen changes to false
 			return () => {
 				cancelAnimationFrame(timer);
-				unregisterModal(modalId);
 			};
 		} else {
-			// When isOpen becomes false, immediately unregister
-			unregisterModal(modalId);
 			setIsAnimating(false);
 			// Wait for animation to complete before unmounting
 			const timeout = setTimeout(() => {
@@ -45,15 +42,24 @@ export function useModal({ isOpen, onClose, id }: UseModalOptions) {
 
 			return () => clearTimeout(timeout);
 		}
-	}, [isOpen, modalId, registerModal, unregisterModal]);
+	}, [isOpen, modalId, registerModal]);
+
+	// Unregister modal only on unmount
+	useEffect(() => {
+		return () => {
+			unregisterModal(modalId);
+		};
+	}, [modalId, unregisterModal]);
 
 	// Update z-index when it changes in context
 	useEffect(() => {
 		if (isOpen) {
 			const currentIndex = getModalIndex(modalId);
+			const currentPosition = getModalStackPosition(modalId);
 			setZIndex(currentIndex);
+			setStackPosition(currentPosition);
 		}
-	}, [isOpen, modalId, getModalIndex]);
+	}, [isOpen, modalId, getModalIndex, getModalStackPosition]);
 
 	// Handle close - trigger animation first, then call onClose after delay
 	const handleClose = useCallback(() => {
@@ -95,6 +101,7 @@ export function useModal({ isOpen, onClose, id }: UseModalOptions) {
 	return {
 		modalId,
 		zIndex,
+		stackPosition,
 		isAnimating,
 		shouldRender,
 		isTopModal: isTopModal(modalId),

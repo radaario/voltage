@@ -238,7 +238,7 @@ const JobsTable = ({
 						<div className="flex items-center gap-1">
 							<Tooltip content="Retry">
 								<Button
-									variant="ghost"
+									variant="soft"
 									size="md"
 									iconOnly
 									disabled={!["CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(job?.status as string)}
@@ -251,7 +251,7 @@ const JobsTable = ({
 							</Tooltip>
 							<Tooltip content="Delete">
 								<Button
-									variant="ghost"
+									variant="soft"
 									size="md"
 									iconOnly
 									disabled={!["RECEIVED", "PENDING", "RETRYING"].includes(job?.status as string)}
@@ -264,7 +264,7 @@ const JobsTable = ({
 							</Tooltip>
 							<Tooltip content="View">
 								<Button
-									variant="ghost"
+									variant="soft"
 									size="md"
 									iconOnly
 									onClick={(e) => {

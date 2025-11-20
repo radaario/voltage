@@ -158,7 +158,29 @@ export const router = createBrowserRouter(
 											]
 										},
 										{ path: "outcome", element: <JobOutcomeTab /> },
-										{ path: "logs", element: <JobLogsTab /> },
+										{
+											path: "logs",
+											element: <JobLogsTab />,
+											children: [
+												{
+													path: ":logKey",
+													element: <LogDetailModal />,
+													children: [
+														{
+															path: "",
+															element: (
+																<Navigate
+																	to="info"
+																	replace
+																/>
+															)
+														},
+														{ path: "info", element: <LogInfoTab /> },
+														{ path: "metadata", element: <MetadataTab /> }
+													]
+												}
+											]
+										},
 										{
 											path: "notifications",
 											element: <NotificationsTab />,
