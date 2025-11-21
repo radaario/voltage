@@ -438,9 +438,10 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 			destination: body.destination ? body.destination : null,
 			notification: body.notification ? body.notification : null,
 			metadata: body.metadata ? body.metadata : null,
-			status: "RECEIVED",
+			status: config.jobs.enqueue_on_receive ? "QUEUED" : "PENDING", // "RECEIVED"
 			updated_at: now,
 			created_at: now,
+			locked_by: null,
 			try_max: body.try_max ? body.try_max : config.jobs.try_count || 3,
 			try_count: 0,
 			retry_in: body.retry_in ? body.retry_in : config.jobs.retry_in || 60 * 1000,
@@ -453,8 +454,6 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 		if ((job.retry_in || 0) < config.jobs.retry_in_min) job.retry_in = config.jobs.retry_in_min;
 		if ((job.retry_in || 0) > config.jobs.retry_in_max) job.retry_in = config.jobs.retry_in_max;
 
-		logger.insert("INFO", "Job request received!", { job_key });
-
 		await database
 			.table("jobs")
 			.insert({
@@ -463,61 +462,40 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 				outputs: JSON.stringify(job.outputs),
 				destination: job.destination ? JSON.stringify(job.destination) : null,
 				notification: job.notification ? JSON.stringify(job.notification) : null,
-				metadata: job.metadata ? JSON.stringify(job.metadata) : null,
-				status: "PENDING",
-				locked_by: config.jobs.enqueue_on_receive ? instance_key : null
+				metadata: job.metadata ? JSON.stringify(job.metadata) : null
 			})
 			.then(async (result) => {
-				job.status = "PENDING";
 				await createJobNotification(job, "RECEIVED");
+				await logger.insert("INFO", "Job request received!", { job_key });
+				// await logger.insert("INFO", "Job successfully created!", { job_key });
 
-				await logger.insert("INFO", "Job successfully created!", { job_key });
-
-				if (config.jobs.enqueue_on_receive) {
-					// JOB: UPDATE: QUEUED
-					job.status = "QUEUED";
-					await database
-						.table("jobs")
-						.where("key", job_key)
-						.update({ status: job.status, updated_at: getNow(), locked_by: null });
-
+				if (job.status === "QUEUED") {
 					// JOB: QUEUE: INSERT
 					await database
 						.table("jobs_queue")
 						.insert({ key: job.key, priority: job.priority, created_at: job.created_at })
 						.then(async (result) => {
-							await createJobNotification(job, "QUEUED");
-							await logger.insert("INFO", "Job successfully queued!", { job_key });
+							await logger.insert("INFO", "Job successfully queued! (#API)", { job_key });
 						})
 						.catch(async (error) => {
 							// JOB: UPDATE: PENDING
 							job.status = "PENDING";
-
-							await database
-								.table("jobs")
-								.where("key", job_key)
-								.update({ status: job.status, updated_at: getNow(), locked_by: null });
-
+							await database.table("jobs").where("key", job_key).update({ status: job.status, updated_at: getNow() });
 							await logger.insert("ERROR", "Enqueuing job failed!", { job_key, error });
 						});
 				}
+
+				await createJobNotification(job, job.status);
 			})
 			.catch(async (error) => {
-				await logger.insert("ERROR", "Job creation failed!", { job_key, error });
+				await createJobNotification(job, "FAILED");
+				throw error;
 			});
-
-		if (job.status === "RECEIVED") {
-			return res
-				.status(500)
-				.json({ metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: "Job creation failed!" } } });
-		}
 
 		return res.status(202).json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(job) });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Create job failed!", { error });
-		return res.status(500).json({
-			metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Unknown error occurred!" } }
-		});
+		return res.status(500).json({ metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: "Job creation failed!" } } });
 	}
 });
 

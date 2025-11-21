@@ -297,7 +297,12 @@ async function processJobs(): Promise<void> {
 			.orderBy("created_at", "asc")
 			.limit(config.jobs.enqueue_limit || 10) // default 10
 			.update({ updated_at: getNow(), locked_by: instance_key });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to select pending jobs!", { error });
+	}
 
+	try {
+		// JOBs: PENDINGs: SELECT LOCKEDs
 		const pendingJobs = await database.table("jobs").where("locked_by", instance_key);
 
 		for (const pendingJob of pendingJobs) {
@@ -310,7 +315,7 @@ async function processJobs(): Promise<void> {
 				.insert({ key: pendingJob.key, priority: pendingJob.priority, created_at: pendingJob.created_at })
 				.then(async (result) => {
 					await createJobNotification(pendingJob, "QUEUED");
-					await logger.insert("INFO", "Job successfully queued!", { job_key: pendingJob.key });
+					await logger.insert("INFO", "Job successfully queued! (#RUNTIME)", { job_key: pendingJob.key });
 				})
 				.catch(async (error) => {
 					// JOB: UPDATE: PENDING
@@ -319,14 +324,14 @@ async function processJobs(): Promise<void> {
 						.where("key", pendingJob.key)
 						.update({ status: "PENDING", updated_at: getNow(), locked_by: null });
 
-					await logger.insert("ERROR", "Enqueuing job failed!", { job_key: pendingJob.key, error });
+					await logger.insert("ERROR", "Enqueuing pending job failed!", { job_key: pendingJob.key, error });
 				});
 		}
 
 		// JOBs: PENDINGs: RELEASE
 		await database.table("jobs").where("locked_by", instance_key).update({ updated_at: getNow(), locked_by: null });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to maintain pending jobs!", { error });
+		await logger.insert("ERROR", "Failed to enqueuing pending jobs!", { error });
 	}
 
 	// JOBs: QUEUEDs: PROCESSING
