@@ -84,12 +84,12 @@ async function run() {
 		await createJobNotification(job, job.status);
 		await updateWorkerStatus("BUSY");
 
-		const tempJobInputFilePath = await downloadInput(job);
+		const jobInput = await downloadInput(job);
 
 		try {
-			await fs.access(tempJobInputFilePath);
-		} catch {
-			throw new Error("Input couldn't be downloaded!");
+			await fs.access(jobInput.path);
+		} catch (error: Error | any) {
+			throw new Error(`Job input couldn't be downloaded! ${error.message || ""}`.trim());
 		}
 
 		// JOB: INPUT: DOWNLOADED
@@ -111,7 +111,7 @@ async function run() {
 		await updateWorkerStatus("BUSY");
 
 		const jobInputMetadata = await analyzeInputMetadata(job);
-		if (!jobInputMetadata) throw new Error("Input metadata couldn't be extracted!");
+		if (!jobInputMetadata) throw new Error("Job input couldn't be analyzed!");
 
 		job.input = { ...job.input, ...jobInputMetadata };
 
@@ -127,27 +127,27 @@ async function run() {
 		// JOB: INPUT: PREVIEW GENERATING
 		await logger.insert("INFO", "Generating job input preview...");
 
-		const jobTempInputPreviewFilePath = await generateInputPreview(job, config.jobs.preview);
+		const jobInputPreview = await generateInputPreview(job, config.jobs.preview);
 
 		try {
-			await fs.access(jobTempInputPreviewFilePath);
+			await fs.access(jobInputPreview.path);
 			await logger.insert("INFO", "Job input preview successfully generated!");
 
 			/*
-      async function fn() {
-        const nsfwjs = await import('nsfwjs');
-        const model = await nsfwjs.load();
-        const img = await fs.readFile(jobTempInputPreviewFilePath);
-        const image = await tf.node.decodeImage(img, 3) as tf.Tensor3D;
-        const predictions = await model.classify(image);
-        image.dispose(); // Tensor memory must be managed explicitly (it is not sufficient to let a tf.Tensor go out of scope for its memory to be released).
-        console.log("predictions", predictions);
-      }
+			async function fn() {
+				const nsfwjs = await import('nsfwjs');
+				const model = await nsfwjs.load();
+				const img = await fs.readFile(jobInputPreview);
+				const image = await tf.node.decodeImage(img, 3) as tf.Tensor3D;
+				const predictions = await model.classify(image);
+				image.dispose(); // Tensor memory must be managed explicitly (it is not sufficient to let a tf.Tensor go out of scope for its memory to be released).
+				console.log("predictions", predictions);
+			}
 
-      fn();
-      */
+			fn();
+			*/
 		} catch (error: Error | any) {
-			throw new Error("Input preview couldn't be generated!");
+			throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
 		}
 
 		// JOB: PROCESSING
@@ -172,16 +172,19 @@ async function run() {
 			await updateJob(job);
 
 			try {
-				jobOutputsProcessedCount++;
 				job.outputs[index].outcome = await processOutput(job, job.outputs[index]);
 				job.outputs[index].status = "PROCESSED";
+
 				await logger.insert("INFO", "Job output successfully processed!", {
 					output_key: job.outputs[index].key,
 					output_index: job.outputs[index].index
 				});
+
+				jobOutputsProcessedCount++;
 			} catch (error: Error | any) {
 				job.outputs[index].status = "FAILED";
 				job.outputs[index].outcome = { message: error.message || "Couldn't be processed!" };
+
 				await logger.insert("ERROR", "Failed to process job output!", {
 					output_key: job.outputs[index].key,
 					output_index: job.outputs[index].index,
@@ -241,15 +244,18 @@ async function run() {
 				try {
 					job.outputs[index].outcome = await uploadOutput(job, job.outputs[index]);
 					job.outputs[index].status = "COMPLETED";
+
 					await logger.insert("INFO", "Job output successfully uploaded!", {
 						output_key: job.outputs[index].key,
 						output_index: job.outputs[index].index
 					});
+
 					jobOutputsUploadedCount++;
 				} catch (error: Error | any) {
 					job.outputs[index].status = "FAILED";
 					job.outputs[index].outcome = { message: error.message || "Couldn't be uploaded!" };
-					await logger.insert("ERROR", "Failed to upload job output!", {
+
+					await logger.insert("ERROR", "Job output couldn't be uploaded!", {
 						output_key: job.outputs[index].key,
 						output_index: job.outputs[index].index,
 						error: error.message
@@ -284,7 +290,7 @@ async function run() {
 
 		// JOB: OUTPUTs: CHECK FAILED
 		if (jobOutputsProcessedCount !== job.outputs?.length || jobOutputsUploadedCount !== job.outputs?.length) {
-			throw new Error("Some outputs failed!");
+			throw new Error("Some job outputs failed!");
 		}
 
 		job.status = "COMPLETED";
@@ -308,7 +314,7 @@ async function run() {
 	// await updateWorkerStatus('IDLE');
 
 	if (job.status === "COMPLETED") {
-		await logger.insert("INFO", "Job completed successfully!");
+		await logger.insert("INFO", "Job successfully completed!");
 		await createJobNotification(job, job.status);
 		process.exit(0);
 	} else {

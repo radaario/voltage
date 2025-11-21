@@ -1,7 +1,7 @@
 import { config } from "@voltage/config";
 
 import { guessContentType } from "@voltage/utils";
-import { logger } from "@voltage/utils/logger";
+// import { logger } from "@voltage/utils/logger";
 
 import { spawn } from "child_process";
 import fs from "fs/promises";
@@ -9,12 +9,12 @@ import path from "path";
 
 export async function analyzeInputMetadata(job: any): Promise<any[]> {
 	try {
-		logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
+		// logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
 		const tempJobDir = path.join(config.temp_dir, "jobs", job.key);
 		const tempJobInputFilePath = path.join(tempJobDir, "input");
 
-		logger.console("INFO", "Extracting metadata from job input...");
+		// logger.console("INFO", "Analyzing from job input file...");
 
 		/* FILE: INFO: EXTRACT */
 		const fileName = path.basename(job.input?.url || job.input?.path || "unknown");
@@ -33,11 +33,11 @@ export async function analyzeInputMetadata(job: any): Promise<any[]> {
 			file_size: fileStats.size
 		});
 
-		logger.console("INFO", "Metadata successfully extracted from job input!");
+		// logger.console("INFO", "Job input successfully analyzed!");
 		return metadata;
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to extract metadata from job input!", { error });
-		throw new Error(`Failed to extract metadata from job input! ${error.message || ""}`.trim());
+		// await logger.insert("ERROR", "Job input couldn't be analyzed!", { error });
+		throw new Error(`Job input couldn't be analyzed! ${error.message || ""}`.trim());
 	}
 }
 

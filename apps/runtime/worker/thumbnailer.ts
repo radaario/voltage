@@ -1,20 +1,20 @@
 import { config } from "@voltage/config";
 
-import { logger } from "@voltage/utils/logger";
+// import { logger } from "@voltage/utils/logger";
 import { storage } from "@voltage/utils/storage";
 
 import { spawn } from "child_process";
 import path from "path";
 
-export async function generateInputPreview(job: any, options: any): Promise<string> {
+export async function generateInputPreview(job: any, options: any): Promise<any> {
 	try {
-		logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
+		// logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
 		const tempJobDir = path.join(config.temp_dir, "jobs", job.key);
 		const tempJobInputFilePath = path.join(tempJobDir, "input");
 		const tempJobInputPreviewFilePath = path.join(tempJobDir, `preview.${(options.format || "webp").toLowerCase()}`);
 
-		logger.console("INFO", "Generating preview from job input...");
+		// logger.console("INFO", "Generating preview from job input...");
 
 		// Calculate the middle timestamp of the video
 		let offset = (job.input.duration || 0) / 2;
@@ -48,11 +48,11 @@ export async function generateInputPreview(job: any, options: any): Promise<stri
 		storage.config(config.storage);
 		await storage.upload(tempJobInputPreviewFilePath, `/jobs/${job.key}/preview.${(options.format || "webp").toLowerCase()}`);
 
-		logger.console("INFO", "Preview generated from job input!");
-		return tempJobInputPreviewFilePath;
+		// logger.console("INFO", "Preview generated from job input!");
+		return { path: tempJobInputPreviewFilePath };
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to generate preview from job input!", { error });
-		throw new Error(`Failed to generate preview from job input! ${error.message || ""}`.trim());
-		// return { ...error || { message: 'Failed to generate preview from job input!' } };
+		// await logger.insert("ERROR", "Job input preview couldn't be generated!", { error });
+		throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
+		// return { ...error || { message: 'Job input preview couldn't be generated!' } };
 	}
 }

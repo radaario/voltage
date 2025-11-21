@@ -315,7 +315,7 @@ async function processJobs(): Promise<void> {
 				.insert({ key: pendingJob.key, priority: pendingJob.priority, created_at: pendingJob.created_at })
 				.then(async (result) => {
 					await createJobNotification(pendingJob, "QUEUED");
-					await logger.insert("INFO", "Job successfully queued! (#RUNTIME)", { job_key: pendingJob.key });
+					await logger.insert("INFO", "Job successfully queued!", { job_key: pendingJob.key });
 				})
 				.catch(async (error) => {
 					// JOB: UPDATE: PENDING

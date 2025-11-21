@@ -475,7 +475,7 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 						.table("jobs_queue")
 						.insert({ key: job.key, priority: job.priority, created_at: job.created_at })
 						.then(async (result) => {
-							await logger.insert("INFO", "Job successfully queued! (#API)", { job_key });
+							await logger.insert("INFO", "Job successfully queued!", { job_key });
 						})
 						.catch(async (error) => {
 							// JOB: UPDATE: PENDING
@@ -485,7 +485,7 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 						});
 				}
 
-				await createJobNotification(job, job.status);
+				await createJobNotification(job, job.status as string);
 			})
 			.catch(async (error) => {
 				await createJobNotification(job, "FAILED");
