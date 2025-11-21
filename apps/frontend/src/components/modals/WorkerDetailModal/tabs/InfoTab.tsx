@@ -20,7 +20,7 @@ const InfoTab = () => {
 
 	return (
 		<div className="space-y-6">
-			<div className="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700">
+			<div className="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700 overflow-x-auto">
 				<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
 					<tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
 						<tr>
@@ -68,7 +68,7 @@ const InfoTab = () => {
 								<span className="font-mono">Status</span>
 							</td>
 							<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-								<Label size="md">{worker.status}</Label>
+								<Label status={worker.status}>{worker.status}</Label>
 							</td>
 						</tr>
 					</tbody>

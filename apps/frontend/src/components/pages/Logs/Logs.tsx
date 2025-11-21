@@ -275,7 +275,7 @@ const Logs: React.FC = () => {
 			)}
 
 			{/* Table */}
-			<div className="bg-gray-100 dark:bg-gray-900 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+			<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 				<LogsTable
 					data={logsResponse?.data || []}
 					loading={isLoading}

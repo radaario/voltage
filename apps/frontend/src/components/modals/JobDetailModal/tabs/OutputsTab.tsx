@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate, useParams, Outlet } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Job } from "@/interfaces/job";
 import { formatDate } from "@/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/utils";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
-import { CheckCircleIcon, XCircleIcon, ClockIcon, ArrowUturnLeftIcon, ArrowPathIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
+import { ArrowUturnLeftIcon, EyeIcon, VideoCameraIcon, PhotoIcon, MusicalNoteIcon, LanguageIcon } from "@heroicons/react/24/outline";
 import { ConfirmModal } from "@/components";
 import Tooltip from "@/components/base/Tooltip/Tooltip";
+import Label from "@/components/base/Label/Label";
 
 interface OutletContext {
 	job: Job;
@@ -16,6 +17,8 @@ interface OutletContext {
 
 const OutputsTab: React.FC = () => {
 	const { job } = useOutletContext<OutletContext>();
+	const { jobKey } = useParams<{ jobKey: string }>();
+	const navigate = useNavigate();
 	const { authToken } = useAuth();
 	const { config } = useGlobalStateContext();
 	const queryClient = useQueryClient();
@@ -50,63 +53,23 @@ const OutputsTab: React.FC = () => {
 		}
 	};
 
+	const getOutputTypeIcon = (type: string) => {
+		const iconClass = "w-4 h-4";
+		switch (type?.toUpperCase()) {
+			case "VIDEO":
+				return <VideoCameraIcon className={iconClass} />;
+			case "THUMBNAIL":
+				return <PhotoIcon className={iconClass} />;
+			case "AUDIO":
+				return <MusicalNoteIcon className={iconClass} />;
+			case "SUBTITLE":
+				return <LanguageIcon className={iconClass} />;
+			default:
+				return null;
+		}
+	};
+
 	const outputs = job.outputs || [];
-
-	const getStatusColor = (status: string) => {
-		switch (status) {
-			case "COMPLETED":
-				return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
-			case "FAILED":
-			case "CANCELLED":
-				return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-			case "ENCODING":
-				return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
-			case "UPLOADING":
-				return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
-			case "PENDING":
-				return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
-			default:
-				return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
-		}
-	};
-
-	const getStatusIcon = (status: string) => {
-		switch (status) {
-			case "COMPLETED":
-				return <CheckCircleIcon className="w-4 h-4" />;
-			case "FAILED":
-			case "CANCELLED":
-				return <XCircleIcon className="w-4 h-4" />;
-			case "ENCODING":
-				return <ArrowPathIcon className="w-4 h-4 animate-spin" />;
-			case "UPLOADING":
-				return <ArrowUpTrayIcon className="w-4 h-4" />;
-			case "PENDING":
-				return <ClockIcon className="w-4 h-4" />;
-			default:
-				return <ClockIcon className="w-4 h-4" />;
-		}
-	};
-
-	const formatSpecs = (specs: any) => {
-		if (!specs) return "-";
-		const parts = [];
-		if (specs.container) parts.push(specs.container.toUpperCase());
-		if (specs.videoCodec) parts.push(specs.videoCodec);
-		if (specs.width && specs.height) parts.push(`${specs.width}x${specs.height}`);
-		if (specs.videoBitrate) parts.push(specs.videoBitrate);
-		if (specs.audioCodec) parts.push(specs.audioCodec);
-		if (specs.audioBitrate) parts.push(specs.audioBitrate);
-		return parts.length > 0 ? parts.join(" • ") : "-";
-	};
-
-	const formatResult = (result: any) => {
-		if (!result) return "-";
-		if (result.url) return result.url;
-		if (result.file_name) return result.file_name;
-		if (result.path) return result.path;
-		return JSON.stringify(result);
-	};
 
 	return (
 		<div className="space-y-4">
@@ -122,7 +85,7 @@ const OutputsTab: React.FC = () => {
 					<p className="text-sm text-gray-600 dark:text-gray-400">No outputs configured for this job.</p>
 				</div>
 			) : (
-				<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg">
+				<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
 					<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
 						<thead className="bg-gray-50 dark:bg-neutral-900">
 							<tr>
@@ -155,12 +118,16 @@ const OutputsTab: React.FC = () => {
 							{outputs.map((output) => (
 								<tr
 									key={output.key}
-									className="hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors">
+									onClick={() => navigate(`/jobs/${jobKey}/outputs/${output.key}/info`)}
+									className="hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors cursor-pointer">
 									<td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-400">
 										{output.index + 1}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-										{output.specs?.type || "UNKNOWN"}
+										<div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded border bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800">
+											{getOutputTypeIcon(output.specs?.type)}
+											{output.specs?.type || "UNKNOWN"}
+										</div>
 									</td>
 									<td className="px-6 py-4 text-sm">
 										{output.specs?.path && (
@@ -171,13 +138,7 @@ const OutputsTab: React.FC = () => {
 										)}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										<div className="flex items-center gap-2">
-											<span
-												className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(output.status)}`}>
-												{getStatusIcon(output.status)}
-												{output.status}
-											</span>
-										</div>
+										<Label status={output.status}>{output.status}</Label>
 									</td>
 									{/*
 									<td className="px-6 py-4 text-sm max-w-xs">
@@ -198,42 +159,38 @@ const OutputsTab: React.FC = () => {
 										{formatDate(output.updated_at, config?.timezone || "UTC")}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										<Tooltip content="Retry Output">
-											<button
-												onClick={() => handleRetryOutput(output.key, output.index)}
-												disabled={retryOutputMutation.isPending}
-												className="p-1.5 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-												<ArrowUturnLeftIcon
-													className={`w-4 h-4 ${retryOutputMutation.isPending ? "animate-spin" : ""}`}
-												/>
-											</button>
-										</Tooltip>
+										<div className="flex items-center gap-1">
+											<Tooltip content="Retry">
+												<button
+													onClick={(e) => {
+														e.stopPropagation();
+														handleRetryOutput(output.key, output.index);
+													}}
+													disabled={
+														!["FAILED"].includes(output?.status as string) || retryOutputMutation.isPending
+													}
+													className="p-1.5 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+													<ArrowUturnLeftIcon
+														className={`w-4 h-4 ${retryOutputMutation.isPending ? "animate-spin" : ""}`}
+													/>
+												</button>
+											</Tooltip>
+											<Tooltip content="View">
+												<button
+													onClick={(e) => {
+														e.stopPropagation();
+														navigate(`/jobs/${jobKey}/outputs/${output.key}/info`);
+													}}
+													className="p-1.5 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors">
+													<EyeIcon className="w-4 h-4" />
+												</button>
+											</Tooltip>
+										</div>
 									</td>
 								</tr>
 							))}
 						</tbody>
 					</table>
-				</div>
-			)}
-
-			{/* Show errors if any */}
-			{outputs.some((o) => o.status === "FAILED") && (
-				<div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-					<h5 className="text-sm font-semibold text-red-900 dark:text-red-400 mb-2">Errors</h5>
-					<div className="space-y-2">
-						{outputs
-							.filter((o) => o.status === "FAILED")
-							.map((output) => (
-								<div
-									key={output.key}
-									className="text-xs">
-									<span className="font-mono text-red-700 dark:text-red-300">Output #{output.index + 1}:</span>{" "}
-									<span className="text-red-600 dark:text-red-400">
-										{output?.outcome?.message || JSON.stringify(output.outcome)}
-									</span>
-								</div>
-							))}
-					</div>
 				</div>
 			)}
 
@@ -255,6 +212,9 @@ const OutputsTab: React.FC = () => {
 					loadingText="Retrying"
 				/>
 			)}
+
+			{/* Nested Outlet for OutputDetailModal */}
+			<Outlet context={{ job }} />
 		</div>
 	);
 };

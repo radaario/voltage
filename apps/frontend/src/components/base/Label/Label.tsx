@@ -1,19 +1,29 @@
+import { clsx } from "@/utils";
 import React from "react";
+import {
+	CheckIcon,
+	XMarkIcon,
+	ClockIcon,
+	ArrowPathIcon,
+	ArrowUpTrayIcon,
+	ArrowDownTrayIcon,
+	ArrowDownOnSquareIcon,
+	ChartBarIcon
+} from "@heroicons/react/24/outline";
+import type { LabelProps, LabelVariant } from "@/types";
 
-export type LabelSize = "sm" | "md" | "lg";
-export type LabelVariant = "success" | "error" | "warning" | "info" | "gray" | "blue" | "purple" | "green" | "red" | "yellow";
-
-interface LabelProps {
-	children: React.ReactNode;
-	size?: LabelSize;
-	variant?: LabelVariant;
-	status?: string; // If provided, will override variant based on status
-	className?: string;
-}
-
-const Label: React.FC<LabelProps> = ({ children, size = "md", variant = "gray", status, className = "" }) => {
+const Label: React.FC<LabelProps> = ({
+	children,
+	size = "md",
+	variant = "gray",
+	status,
+	statusColor = true,
+	hidden = "",
+	className = "",
+	icon = true
+}) => {
 	// Determine variant from status if provided
-	const finalVariant = status ? getVariantFromStatus(status) : variant;
+	const finalVariant = status && statusColor ? getVariantFromStatus(status) : variant;
 
 	// Size classes
 	const sizeClasses = {
@@ -26,6 +36,7 @@ const Label: React.FC<LabelProps> = ({ children, size = "md", variant = "gray", 
 	const variantClasses = {
 		success: "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800",
 		error: "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
+		deleted: "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
 		warning: "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800",
 		info: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
 		gray: "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800",
@@ -36,9 +47,75 @@ const Label: React.FC<LabelProps> = ({ children, size = "md", variant = "gray", 
 		yellow: "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800"
 	};
 
+	// Get icon component based on status
+	const getStatusIcon = () => {
+		if (!icon || !status) return null;
+
+		const upperStatus = status.toUpperCase();
+		const iconClass = "w-4 h-4";
+
+		// '++RECEIVED','++PENDING','++RETRYING','++QUEUED','++STARTED','++DOWNLOADING','++DOWNLOADED','++ANALYZING','++ANALYZED','++PROCESSING','++PROCESSED','++UPLOADING','++UPLOADED','++COMPLETED','++CANCELLED','++DELETED','++FAILED','++TIMEOUT'
+		// '++PENDING','++RETRYING','++QUEUED','++SUCCESSFUL','++SKIPPED','++FAILED'
+		// '+ONLINE','+OFFLINE'
+		// '++IDLE','++BUSY','++TIMEOUT','++TERMINATED'
+
+		switch (upperStatus) {
+			case "RECEIVED":
+				return <ArrowDownOnSquareIcon className={iconClass} />;
+			case "IDLE":
+			case "PENDING":
+			case "QUEUED":
+				return <ClockIcon className={iconClass} />;
+			case "RETRYING":
+				return <ArrowPathIcon className={iconClass} />;
+			case "SUCCESS":
+			case "SUCCESSFUL":
+			case "ONLINE":
+			case "COMPLETED":
+				return <CheckIcon className={iconClass} />;
+			case "OFFLINE":
+			case "SKIPPED":
+			case "ERROR":
+			case "CANCELLED":
+			case "DELETED":
+			case "FAILED":
+			case "TIMEOUT":
+			case "TERMINATED":
+				return <XMarkIcon className={iconClass} />;
+			case "STARTED":
+			case "BUSY":
+				return <ArrowPathIcon className={`${iconClass} animate-spin`} />;
+			case "DOWNLOADING":
+			case "DOWNLOADED":
+				return <ArrowDownTrayIcon className={iconClass} />;
+			case "ANALYZING":
+			case "ANALYZED":
+				return <ChartBarIcon className={iconClass} />;
+			case "PROCESSING":
+			case "PROCESSED":
+				return <ChartBarIcon className={iconClass} />;
+			case "UPLOADING":
+			case "UPLOADED":
+				return <ArrowUpTrayIcon className={iconClass} />;
+		}
+	};
+
+	const StatusIcon = getStatusIcon();
+
 	return (
 		<span
-			className={`inline-flex items-center font-semibold rounded border ${sizeClasses[size]} ${variantClasses[finalVariant]} ${className}`}>
+			className={clsx(
+				`items-center font-semibold rounded border`,
+				{
+					"inline-flex": hidden === "",
+					[`hidden ${hidden}:inline-flex`]: hidden !== ""
+				},
+				StatusIcon ? "gap-1" : "",
+				sizeClasses[size],
+				variantClasses[finalVariant],
+				className
+			)}>
+			{StatusIcon}
 			{children}
 		</span>
 	);
@@ -48,34 +125,47 @@ const Label: React.FC<LabelProps> = ({ children, size = "md", variant = "gray", 
 function getVariantFromStatus(status: string): LabelVariant {
 	const upperStatus = status.toUpperCase();
 
+	// '+RECEIVED','+PENDING','+RETRYING','+QUEUED','+STARTED','+DOWNLOADING','+DOWNLOADED','+ANALYZING','+ANALYZED','+PROCESSING','+PROCESSED','+UPLOADING','+UPLOADED','+COMPLETED','+CANCELLED','+DELETED','+FAILED','+TIMEOUT'
+	// '+PENDING','+RETRYING','+QUEUED','+SUCCESSFUL','+SKIPPED','+FAILED'
+	// '+ONLINE','+OFFLINE'
+	// '+IDLE','+BUSY','+TIMEOUT','+TERMINATED'
+
 	// Success statuses
-	if (upperStatus === "COMPLETED" || upperStatus === "SUCCESS" || upperStatus === "SUCCESSFUL" || upperStatus === "ACTIVE") {
+	if (["SUCCESS", "SUCCESSFUL", "ONLINE", "BUSY", "COMPLETED"].includes(upperStatus)) {
 		return "success";
 	}
 
 	// Error statuses
-	if (upperStatus === "FAILED" || upperStatus === "ERROR") {
+	if (["ERROR", "OFFLINE", "FAILED", "TERMINATED"].includes(upperStatus)) {
+		// , "CANCELLED", "DELETED", "TIMEOUT"
 		return "error";
 	}
 
 	// Warning/Pending statuses
-	if (
-		upperStatus === "PENDING" ||
-		upperStatus === "QUEUED" ||
-		upperStatus === "WARNING" ||
-		upperStatus === "DOWNLOADING" ||
-		upperStatus === "ANALYZING"
-	) {
+	if (["WARNING", "PENDING", "RETRYING", "QUEUED"].includes(upperStatus)) {
 		return "warning";
 	}
 
 	// Info/Running statuses
-	if (upperStatus === "RUNNING" || upperStatus === "ENCODING" || upperStatus === "UPLOADING" || upperStatus === "INFO") {
+	if (
+		[
+			"INFO",
+			"STARTED",
+			"DOWNLOADING",
+			"DOWNLOADED",
+			"ANALYZING",
+			"ANALYZED",
+			"PROCESSING",
+			"PROCESSED",
+			"UPLOADING",
+			"UPLOADED"
+		].includes(upperStatus)
+	) {
 		return "info";
 	}
 
 	// Cancelled/Debug/Unknown statuses
-	if (upperStatus === "CANCELLED" || upperStatus === "DEBUG" || upperStatus === "UNKNOWN") {
+	if (["GRAY", "DEBUG", "UNKNOWN"].includes(upperStatus)) {
 		return "gray";
 	}
 

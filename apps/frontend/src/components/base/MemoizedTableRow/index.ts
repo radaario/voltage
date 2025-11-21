@@ -1,0 +1,1 @@
+export { MemoizedTableRow } from "./MemoizedTableRow";

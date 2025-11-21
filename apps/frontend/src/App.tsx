@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { router } from "@/routes";
 import { GlobalStateProvider } from "@/contexts/GlobalStateContext";
+import { ModalProvider } from "@/contexts/ModalContext";
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -19,10 +20,12 @@ function App() {
 		<QueryClientProvider client={queryClient}>
 			<GlobalStateProvider>
 				<ThemeProvider>
-					<RouterProvider
-						router={router}
-						future={{ v7_startTransition: true }}
-					/>
+					<ModalProvider>
+						<RouterProvider
+							router={router}
+							future={{ v7_startTransition: true }}
+						/>
+					</ModalProvider>
 				</ThemeProvider>
 			</GlobalStateProvider>
 		</QueryClientProvider>

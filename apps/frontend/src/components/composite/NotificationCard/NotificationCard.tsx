@@ -48,13 +48,7 @@ const NotificationCard = ({ notificationKey, onClick }: NotificationCardProps) =
 							{notification.event}
 						</span>
 					)}
-					{notification?.status && (
-						<Label
-							size="sm"
-							status={notification.status}>
-							{notification.status}
-						</Label>
-					)}
+					{notification?.status && <Label status={notification.status}>{notification.status}</Label>}
 				</div>
 				<div className="text-xs font-mono text-gray-500 dark:text-gray-400 truncate">{notificationKey.slice(0, 8)}...</div>
 			</div>

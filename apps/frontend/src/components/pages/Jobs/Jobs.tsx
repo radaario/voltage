@@ -102,28 +102,19 @@ const Jobs: React.FC = () => {
 				},
 				outputs: [
 					{
-						container: "mp4",
-						videoCodec: "libx264",
-						audioCodec: "aac",
-						videoBitrate: "2000k",
-						audioBitrate: "128k",
-						resolution: "1280x720"
+						type: "VIDEO",
+						format: "MP4",
+						path: "Big_Buck_Bunny_1080_10s_20MB.mp4"
 					},
 					{
-						container: "mp4",
-						videoCodec: "libx264",
-						audioCodec: "aac",
-						videoBitrate: "1000k",
-						audioBitrate: "96k",
-						resolution: "854x480"
+						type: "AUDIO",
+						format: "MP3",
+						path: "Big_Buck_Bunny_1080_10s_20MB.mp3"
 					},
 					{
-						container: "webm",
-						videoCodec: "libvpx-vp9",
-						audioCodec: "libopus",
-						videoBitrate: "1500k",
-						audioBitrate: "128k",
-						resolution: "1280x720"
+						type: "THUMBNAIL",
+						format: "PNG",
+						path: "Big_Buck_Bunny_1080_10s_20MB.png"
 					}
 				],
 				destination: {
@@ -138,7 +129,7 @@ const Jobs: React.FC = () => {
 					type: "HTTP",
 					url: "https://httpbin.org/post"
 				},
-				metadata: { from: "dashboard", example: true, timestamp: new Date().toISOString() }
+				metadata: { client: "FRONTEND", example: true, timestamp: new Date().toISOString() }
 			};
 
 			return await api.put("/jobs", payload, { params: { token: authToken } });
@@ -343,7 +334,7 @@ const Jobs: React.FC = () => {
 			)}
 
 			{/* Table */}
-			<div className="bg-gray-100 dark:bg-gray-900 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+			<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 				<JobsTable
 					data={jobsResponse?.data || []}
 					loading={isLoading}

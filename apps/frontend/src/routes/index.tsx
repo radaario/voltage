@@ -23,7 +23,11 @@ import JobOutputsTab from "@/components/modals/JobDetailModal/tabs/OutputsTab";
 import JobOutcomeTab from "@/components/modals/JobDetailModal/tabs/OutcomeTab";
 import JobLogsTab from "@/components/modals/JobDetailModal/tabs/LogsTab";
 import NotificationsTab from "@/components/modals/JobDetailModal/tabs/NotificationsTab";
-import NotificationTab from "@/components/modals/NotificationDetailModal/tabs/NotificationTab";
+import OutputDetailModal from "@/components/modals/OutputDetailModal/OutputDetailModal";
+import OutputInfoTab from "@/components/modals/OutputDetailModal/tabs/InfoTab";
+import OutputSpecsTab from "@/components/modals/OutputDetailModal/tabs/SpecsTab";
+import OutputOutcomeTab from "@/components/modals/OutputDetailModal/tabs/OutcomeTab";
+import NotificationInfoTab from "@/components/modals/NotificationDetailModal/tabs/InfoTab";
 import NotificationSpecsTab from "@/components/modals/NotificationDetailModal/tabs/SpecsTab";
 import NotificationPayloadTab from "@/components/modals/NotificationDetailModal/tabs/PayloadTab";
 import NotificationOutcomeTab from "@/components/modals/NotificationDetailModal/tabs/NotificationOutcomeTab";
@@ -115,7 +119,7 @@ export const router = createBrowserRouter(
 							element: <Jobs />,
 							children: [
 								{
-									path: ":jobKey",
+									path: ":jobKey/*",
 									element: <JobDetailModal />,
 									children: [
 										{
@@ -129,10 +133,79 @@ export const router = createBrowserRouter(
 										},
 										{ path: "info", element: <JobInfoTab /> },
 										{ path: "input", element: <JobInputTab /> },
-										{ path: "outputs", element: <JobOutputsTab /> },
+										{
+											path: "outputs",
+											element: <JobOutputsTab />,
+											children: [
+												{
+													path: ":outputKey",
+													element: <OutputDetailModal />,
+													children: [
+														{
+															path: "",
+															element: (
+																<Navigate
+																	to="info"
+																	replace
+																/>
+															)
+														},
+														{ path: "info", element: <OutputInfoTab /> },
+														{ path: "specs", element: <OutputSpecsTab /> },
+														{ path: "outcome", element: <OutputOutcomeTab /> }
+													]
+												}
+											]
+										},
 										{ path: "outcome", element: <JobOutcomeTab /> },
-										{ path: "logs", element: <JobLogsTab /> },
-										{ path: "notifications", element: <NotificationsTab /> }
+										{
+											path: "logs",
+											element: <JobLogsTab />,
+											children: [
+												{
+													path: ":logKey",
+													element: <LogDetailModal />,
+													children: [
+														{
+															path: "",
+															element: (
+																<Navigate
+																	to="info"
+																	replace
+																/>
+															)
+														},
+														{ path: "info", element: <LogInfoTab /> },
+														{ path: "metadata", element: <MetadataTab /> }
+													]
+												}
+											]
+										},
+										{
+											path: "notifications",
+											element: <NotificationsTab />,
+											children: [
+												{
+													path: ":notificationKey",
+													element: <NotificationDetailModal />,
+													children: [
+														{
+															path: "",
+															element: (
+																<Navigate
+																	to="info"
+																	replace
+																/>
+															)
+														},
+														{ path: "info", element: <NotificationInfoTab /> },
+														{ path: "specs", element: <NotificationSpecsTab /> },
+														{ path: "payload", element: <NotificationPayloadTab /> },
+														{ path: "outcome", element: <NotificationOutcomeTab /> }
+													]
+												}
+											]
+										}
 									]
 								}
 							]
@@ -218,7 +291,7 @@ export const router = createBrowserRouter(
 												/>
 											)
 										},
-										{ path: "info", element: <NotificationTab /> },
+										{ path: "info", element: <NotificationInfoTab /> },
 										{ path: "specs", element: <NotificationSpecsTab /> },
 										{ path: "payload", element: <NotificationPayloadTab /> },
 										{ path: "outcome", element: <NotificationOutcomeTab /> }

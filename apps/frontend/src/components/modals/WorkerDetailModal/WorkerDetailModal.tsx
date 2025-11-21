@@ -1,10 +1,9 @@
-import { useParams, useNavigate, NavLink, Outlet, useOutletContext } from "react-router-dom";
-import { createPortal } from "react-dom";
+import { useParams, NavLink, Outlet, useOutletContext } from "react-router-dom";
 import { useMemo } from "react";
-import { XMarkIcon, InformationCircleIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import { InformationCircleIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import { useRouteModal } from "@/hooks/useRouteModal";
 import { Instance } from "@/interfaces/instance";
-import Label from "@/components/base/Label/Label";
-import Button from "@/components/base/Button/Button";
+import { Modal, Label, Button } from "@/components";
 import { getWorkerName } from "@/utils/naming";
 
 interface OutletContext {
@@ -13,8 +12,8 @@ interface OutletContext {
 
 const WorkerDetailModal = () => {
 	const { workerKey } = useParams<{ workerKey: string }>();
-	const navigate = useNavigate();
 	const { instances } = useOutletContext<OutletContext>();
+	const modalProps = useRouteModal({ navigateBackTo: "/instances" });
 
 	// Find worker from instances data
 	const { worker, instanceWorkers } = useMemo(() => {
@@ -27,16 +26,6 @@ const WorkerDetailModal = () => {
 		return { worker: null, instanceWorkers: [] };
 	}, [instances, workerKey]);
 
-	const handleClose = () => {
-		navigate("/instances");
-	};
-
-	const handleEscape = (e: React.KeyboardEvent) => {
-		if (e.key === "Escape") {
-			handleClose();
-		}
-	};
-
 	if (!workerKey) return null;
 
 	const tabs = [
@@ -44,65 +33,84 @@ const WorkerDetailModal = () => {
 		{ path: "outcome", label: "Outcome", icon: DocumentChartBarIcon }
 	];
 
-	return createPortal(
-		<div
-			className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-			onClick={handleClose}
-			onKeyDown={handleEscape}>
-			<div
-				className="relative w-full max-w-4xl h-[80vh] mx-4 bg-white dark:bg-neutral-800 rounded-lg shadow-xl flex flex-col"
-				onClick={(e) => e.stopPropagation()}>
-				{/* Header */}
-				<div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
-					<div className="flex items-center gap-3">
-						<InformationCircleIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+	return (
+		<Modal
+			{...modalProps}
+			height="xl"
+			size="4xl">
+			{/* Header */}
+			<Modal.Header
+				onClose={modalProps.handleClose}
+				showCloseButton={false}>
+				<div className="flex items-start justify-between w-full">
+					<div className="flex gap-3 overflow-hidden min-w-0">
+						<InformationCircleIcon className="h-6 w-6 text-gray-600 dark:text-gray-400 mt-1.5 shrink-0" />
 						{worker ? (
-							<>
-								<h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-									{getWorkerName(instanceWorkers, worker)}
-								</h2>
-								<Label size="md">{worker.status}</Label>
-								<span className="text-sm text-gray-500 dark:text-gray-400 font-mono">({worker.key})</span>
-							</>
+							<div className="flex flex-col min-w-0">
+								<div className="flex items-center gap-2">
+									<h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+										{getWorkerName(instanceWorkers, worker)}
+									</h2>
+									<Label status={worker.status}>{worker.status}</Label>
+								</div>
+								<div className="text-sm text-gray-500 dark:text-gray-400 font-mono truncate">{worker.key}</div>
+							</div>
 						) : (
 							<h2 className="text-xl font-semibold text-gray-900 dark:text-white">Worker Detail</h2>
 						)}
 					</div>
-					<Button
-						variant="ghost"
-						size="md"
-						iconOnly
-						onClick={handleClose}>
-						<XMarkIcon className="h-6 w-6" />
-					</Button>
+					<div className="flex items-center gap-3 shrink-0 ml-4">
+						<Button
+							variant="ghost"
+							size="md"
+							iconOnly
+							onClick={modalProps.handleClose}>
+							<svg
+								className="h-6 w-6"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor">
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M6 18L18 6M6 6l12 12"
+								/>
+							</svg>
+						</Button>
+					</div>
 				</div>
+			</Modal.Header>
 
-				{/* Tabs Navigation */}
-				<div className="shrink-0 border-b border-gray-200 dark:border-neutral-700">
-					<nav className="flex -mb-px px-6">
-						{tabs.map((tab) => {
-							const Icon = tab.icon;
-							return (
-								<NavLink
-									key={tab.path}
-									to={tab.path}
-									className={({ isActive }) =>
-										`flex items-center gap-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors ${
-											isActive
-												? "border-blue-500 text-blue-600 dark:text-blue-400"
-												: "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-neutral-600"
-										}`
-									}>
-									<Icon className="h-5 w-5" />
-									{tab.label}
-								</NavLink>
-							);
-						})}
-					</nav>
-				</div>
+			{/* Tabs Navigation */}
+			<div className="shrink-0 border-b border-gray-200 dark:border-neutral-700">
+				<nav className="flex px-6 overflow-x-auto">
+					{tabs.map((tab) => {
+						const Icon = tab.icon;
+						return (
+							<NavLink
+								key={tab.path}
+								to={tab.path}
+								className={({ isActive }) =>
+									`flex items-center gap-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors ${
+										isActive
+											? "border-neutral-700 text-gray-900 dark:border-neutral-400 dark:text-white"
+											: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+									}`
+								}>
+								<Icon className="h-5 w-5" />
+								{tab.label}
+							</NavLink>
+						);
+					})}
+				</nav>
+			</div>
 
-				{/* Content */}
-				<div className="flex-1 overflow-y-auto p-6">
+			{/* Content */}
+			<Modal.Content
+				noPadding
+				className="h-[60vh]">
+				<div className="p-6 h-full overflow-y-auto">
 					{worker ? (
 						<Outlet context={{ worker }} />
 					) : (
@@ -111,9 +119,8 @@ const WorkerDetailModal = () => {
 						</div>
 					)}
 				</div>
-			</div>
-		</div>,
-		document.body
+			</Modal.Content>
+		</Modal>
 	);
 };
 

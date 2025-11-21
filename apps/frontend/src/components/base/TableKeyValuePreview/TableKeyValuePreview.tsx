@@ -1,0 +1,188 @@
+import { CalendarIcon, ChartBarIcon } from "@heroicons/react/24/outline";
+import { JobCard, WorkerCard, InstanceCard, Label } from "@/components";
+import { formatDate as utilFormatDate } from "@/utils";
+import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
+import { useState, useEffect } from "react";
+
+interface TableKeyValuePreviewProps {
+	data: Record<string, any>;
+	excludedKeys?: string[];
+	langMap?: Record<string, string>;
+}
+
+const getCountryFromIP = async (ip: string): Promise<string> => {
+	try {
+		const response = await fetch(`http://ip-api.com/json/${ip}`);
+		const data = await response.json();
+		return data.countryCode || "";
+	} catch {
+		return "";
+	}
+};
+
+// Default language map for common keys
+const DEFAULT_LANG_MAP: Record<string, string> = {
+	job_key: "Job",
+	instance_key: "Instance",
+	worker_key: "Worker",
+	created_at: "Created",
+	updated_at: "Updated",
+	started_at: "Started",
+	completed_at: "Completed"
+};
+
+const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, excludedKeys = [], langMap = {} }) => {
+	const { config } = useGlobalStateContext();
+	const [countryCode, setCountryCode] = useState<string>("");
+
+	// Merge default and custom lang maps
+	const finalLangMap = { ...DEFAULT_LANG_MAP, ...langMap };
+
+	useEffect(() => {
+		if (data.ip_address && typeof data.ip_address === "string") {
+			getCountryFromIP(data.ip_address).then(setCountryCode);
+		}
+	}, [data.ip_address]);
+
+	const formatDate = (dateStr: string) => {
+		if (!dateStr) return "N/A";
+		try {
+			return utilFormatDate(dateStr, config?.timezone || "UTC");
+		} catch {
+			return dateStr;
+		}
+	};
+
+	const formatKey = (key: string) => {
+		// Check if there's a custom translation in langMap
+		if (finalLangMap[key]) {
+			return finalLangMap[key];
+		}
+
+		// Otherwise, use the default formatting
+		return key
+			.split("_")
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+			.join(" ");
+	};
+
+	const isDateKey = (key: string) => {
+		return key.includes("_at") || key.toLowerCase().includes("date");
+	};
+
+	const renderValue = (key: string, value: unknown, fullData: Record<string, any>) => {
+		// JobCard for job_key
+		if (key === "job_key" && typeof value === "string") {
+			return <JobCard jobKey={value} />;
+		}
+
+		// WorkerCard for worker_key
+		if (key === "worker_key" && typeof value === "string") {
+			return (
+				<WorkerCard
+					workerKey={value}
+					instanceKey={fullData.instance_key}
+				/>
+			);
+		}
+
+		// InstanceCard for instance_key
+		if (key === "instance_key" && typeof value === "string") {
+			return <InstanceCard instanceKey={value} />;
+		}
+
+		// Label for status
+		if (key === "status" && typeof value === "string") {
+			return <Label status={value}>{value}</Label>;
+		}
+
+		// IP Address with country flag
+		if (key === "ip_address" && typeof value === "string") {
+			return (
+				<div className="flex items-center gap-2">
+					{countryCode && (
+						<img
+							src={`https://flagcdn.com/w20/${countryCode.toLowerCase()}.png`}
+							alt={countryCode}
+							className="w-4 h-auto rounded shadow-sm"
+						/>
+					)}
+					<span className="font-mono">{value}</span>
+				</div>
+			);
+		}
+
+		// Numbers with icon
+		if (typeof value === "number") {
+			return (
+				<span className="inline-flex items-center gap-1">
+					<ChartBarIcon className="h-4 w-4 text-gray-400" />
+					<span className="font-medium text-gray-800 dark:text-gray-200">{value}</span>
+				</span>
+			);
+		}
+
+		// Dates with icon
+		if (isDateKey(key) && typeof value === "string") {
+			return (
+				<span className="inline-flex items-center gap-1">
+					<CalendarIcon className="h-4 w-4 text-gray-400" />
+					<span className="font-medium text-gray-800 dark:text-gray-200">{formatDate(value)}</span>
+				</span>
+			);
+		}
+
+		// Booleans
+		if (typeof value === "boolean") {
+			return value ? "Yes" : "No";
+		}
+
+		// Strings
+		if (typeof value === "string") {
+			// If it's a key field, use mono font
+			if (key.includes("_key") || key === "key") {
+				return <span className="font-mono text-xs text-gray-800 dark:text-gray-200">{value}</span>;
+			}
+			return <span className="font-mono text-gray-800 dark:text-gray-200">{value}</span>;
+		}
+
+		// Objects/Arrays
+		if (typeof value === "object" && value !== null) {
+			return <span className="text-xs text-gray-500 dark:text-gray-400">{JSON.stringify(value, null, 2)}</span>;
+		}
+
+		return <span className="text-gray-500 dark:text-gray-400">N/A</span>;
+	};
+
+	// Filter out excluded keys and null/undefined values
+	const entries = Object.entries(data).filter(([key, value]) => !excludedKeys.includes(key) && value !== undefined && value !== null);
+
+	if (entries.length === 0) {
+		return (
+			<div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-8 text-center">
+				<p className="text-gray-500 dark:text-gray-400">No data available</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
+			<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+				<tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
+					{entries.map(([key, value]) => (
+						<tr
+							key={key}
+							className="hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors">
+							<td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 dark:text-white uppercase">
+								{formatKey(key)}
+							</td>
+							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{renderValue(key, value, data)}</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	);
+};
+
+export default TableKeyValuePreview;
