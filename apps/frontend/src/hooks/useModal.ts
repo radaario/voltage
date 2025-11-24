@@ -38,7 +38,7 @@ export function useModal({ isOpen, onClose, id }: UseModalOptions) {
 			// Wait for animation to complete before unmounting
 			const timeout = setTimeout(() => {
 				setShouldRender(false);
-			}, 200); // Match transition duration
+			}, 100); // Match transition duration
 
 			return () => clearTimeout(timeout);
 		}
@@ -70,7 +70,7 @@ export function useModal({ isOpen, onClose, id }: UseModalOptions) {
 			if (onClose) {
 				setTimeout(() => {
 					onClose();
-				}, 200);
+				}, 100);
 			}
 		}
 	}, [modalId, isTopModal, onClose]);
@@ -99,7 +99,7 @@ export function useModal({ isOpen, onClose, id }: UseModalOptions) {
 	}, [isOpen, modalId, isTopModal, handleClose]);
 
 	return {
-		modalId,
+		id: modalId,
 		zIndex,
 		stackPosition,
 		isAnimating,

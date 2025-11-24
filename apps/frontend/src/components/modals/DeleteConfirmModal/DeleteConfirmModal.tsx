@@ -1,6 +1,6 @@
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useModal } from "@/hooks/useModal";
-import { Modal, Button } from "@/components";
+import { Modal, Button, Tooltip } from "@/components";
 
 interface DeleteConfirmModalProps {
 	isOpen: boolean;
@@ -27,7 +27,7 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 		}
 	};
 
-	useModal({ isOpen, onClose: handleClose });
+	useModal({ isOpen, onClose: handleClose, id: "DeleteConfirmModal" });
 
 	if (!isOpen) return null;
 
@@ -48,25 +48,16 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 						<div className="flex items-start justify-between">
 							<h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
 							{!isDeleting && (
-								<Button
-									variant="ghost"
-									size="sm"
-									iconOnly
-									onClick={handleClose}
-									className="ml-2">
-									<svg
-										className="h-5 w-5"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke="currentColor">
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M6 18L18 6M6 6l12 12"
-										/>
-									</svg>
-								</Button>
+								<Tooltip content="Close">
+									<Button
+										variant="ghost"
+										size="sm"
+										iconOnly
+										onClick={handleClose}
+										className="ml-2">
+										<XMarkIcon className="h-6 w-6" />
+									</Button>
+								</Tooltip>
 							)}
 						</div>
 						<div className="mt-2 text-sm text-gray-600 dark:text-gray-400">{message}</div>

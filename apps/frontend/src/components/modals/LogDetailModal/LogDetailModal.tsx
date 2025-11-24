@@ -1,22 +1,54 @@
-import { NavLink, Outlet, useParams } from "react-router-dom";
+import { Outlet, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { InformationCircleIcon, CircleStackIcon } from "@heroicons/react/24/outline";
+import { DocumentTextIcon, InformationCircleIcon, CircleStackIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouteModal } from "@/hooks/useRouteModal";
 import type { Log } from "@/interfaces/log";
-import { Modal, Label, Button } from "@/components";
+import { Modal, Label, Button, Tooltip, TabsNavigation } from "@/components";
 import { api, ApiResponse } from "@/utils";
+import { useMemo } from "react";
 
 const LogDetailModal: React.FC = () => {
-	const { jobKey, logKey } = useParams<{ logKey: string; jobKey?: string }>();
+	const { jobKey, logKey, instanceKey, workerKey } = useParams<{
+		logKey: string;
+		jobKey?: string;
+		instanceKey?: string;
+		workerKey?: string;
+	}>();
 	const { authToken } = useAuth();
-	const navigateBackTo = jobKey ? `/jobs/${jobKey}/logs` : "/logs";
-	const modalProps = useRouteModal({ navigateBackTo: navigateBackTo, id: "LogDetailModal" });
 
-	console.log("modalProps:", modalProps);
+	// Determine navigateBackTo based on context
+	const navigateBackTo = useMemo(() => {
+		if (instanceKey && workerKey) {
+			return `/instances/${instanceKey}/workers/${workerKey}/logs`;
+		}
+
+		if (workerKey) {
+			return `/instances/workers/${workerKey}/logs`;
+		}
+
+		if (instanceKey) {
+			return `/instances/${instanceKey}/logs`;
+		}
+
+		if (jobKey) {
+			return `/jobs/${jobKey}/logs`;
+		}
+
+		return "/logs";
+	}, [instanceKey, workerKey, jobKey]);
+
+	// Determine modal ID based on context to prevent closing parent modals
+	const modalId = instanceKey ? "InstanceLogDetailModal" : jobKey ? "JobLogDetailModal" : "LogDetailModal";
+
+	const modalProps = useRouteModal({ navigateBackTo: navigateBackTo, id: modalId });
 
 	// Fetch log details
-	const { data: logResponse, isLoading } = useQuery<ApiResponse<Log>>({
+	const {
+		data: logResponse,
+		isLoading,
+		isError
+	} = useQuery<ApiResponse<Log>>({
 		queryKey: ["log", logKey],
 		queryFn: () =>
 			api.get<Log>("/logs", {
@@ -36,72 +68,47 @@ const LogDetailModal: React.FC = () => {
 	return (
 		<Modal
 			{...modalProps}
-			height={modalProps.stackPosition === 0 ? "xl" : "lg"}
-			size={modalProps.stackPosition === 0 ? "5xl" : "4xl"}>
+			height="xl"
+			size="5xl">
 			{/* Header */}
 			<Modal.Header
 				onClose={modalProps.handleClose}
 				showCloseButton={false}>
 				<div className="flex items-start justify-between w-full">
 					<div className="flex items-start gap-3 overflow-hidden min-w-0">
-						<InformationCircleIcon className="h-7 w-7 text-gray-600 dark:text-gray-400 mt-0.5 shrink-0" />
+						<DocumentTextIcon className="h-7 w-7 text-gray-600 dark:text-gray-400 mt-0.5 shrink-0" />
 						<div className="min-w-0">
 							{log ? (
 								<>
 									<div className="flex items-center gap-3">
-										<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Log Detail</h3>
+										<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Log</h3>
 										<Label status={log.type}>{log.type || "UNKNOWN"}</Label>
 									</div>
 									<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono truncate">{log.key}</p>
 								</>
 							) : (
-								<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>
+								<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+									{isError ? "Failed to load log. The log may not exist." : "Loading..."}
+								</h3>
 							)}
 						</div>
 					</div>
 					<div className="flex items-center gap-3 shrink-0 ml-4">
-						<Button
-							variant="ghost"
-							size="md"
-							iconOnly
-							onClick={modalProps.handleClose}>
-							<svg
-								className="h-6 w-6"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor">
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
-						</Button>
+						<Tooltip content="Close">
+							<Button
+								variant="ghost"
+								size="md"
+								iconOnly
+								onClick={modalProps.handleClose}>
+								<XMarkIcon className="h-6 w-6" />
+							</Button>
+						</Tooltip>
 					</div>
 				</div>
 			</Modal.Header>
 
 			{/* Tabs Navigation */}
-			<div className="shrink-0 border-b border-gray-200 dark:border-neutral-700">
-				<nav className="flex px-6 gap-8">
-					{tabs.map((tab) => (
-						<NavLink
-							key={tab.path}
-							to={tab.path}
-							className={({ isActive }) =>
-								`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
-									isActive
-										? "border-neutral-700 text-gray-900 dark:border-neutral-400 dark:text-white"
-										: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
-								}`
-							}>
-							<tab.icon className="h-4 w-4" />
-							{tab.label}
-						</NavLink>
-					))}
-				</nav>
-			</div>
+			<TabsNavigation tabs={tabs} />
 
 			{/* Tab Content */}
 			<Modal.Content
@@ -112,9 +119,11 @@ const LogDetailModal: React.FC = () => {
 						<div className="flex justify-center items-center py-12">
 							<div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-500 dark:border-gray-400 border-t-transparent"></div>
 						</div>
-					) : !log ? (
+					) : isError || !log ? (
 						<div className="flex flex-col justify-center items-center py-12 gap-3">
-							<p className="text-sm text-gray-600 dark:text-gray-400">Log not found.</p>
+							<p className="text-sm text-gray-600 dark:text-gray-400">
+								{isError ? "Failed to load log. The log may not exist." : "Log not found."}
+							</p>
 							<Button
 								variant="secondary"
 								size="sm"

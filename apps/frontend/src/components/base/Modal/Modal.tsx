@@ -1,7 +1,8 @@
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useModal } from "@/hooks/useModal";
+import { useModalContext } from "@/contexts/ModalContext";
 
 interface ModalProps {
 	isOpen?: boolean;
@@ -49,10 +50,32 @@ const sizeClasses = {
 };
 
 const heightClasses = {
-	sm: "h-[40vh]",
-	md: "h-[55vh]",
+	sm: "h-[50vh]",
+	md: "h-[59vh]",
 	lg: "h-[70vh]",
 	xl: "h-[85vh]"
+};
+
+// Size downgrade mapping for stacked modals
+const sizeDowngradeMap: Record<string, Array<"sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full">> = {
+	"5xl": ["5xl", "4xl", "3xl", "2xl"],
+	"4xl": ["4xl", "3xl", "2xl", "xl"],
+	"3xl": ["3xl", "2xl", "xl", "lg"],
+	"2xl": ["2xl", "xl", "lg", "md"],
+	xl: ["xl", "lg", "md", "sm"],
+	lg: ["lg", "md", "sm", "sm"],
+	md: ["md", "sm", "sm", "sm"],
+	sm: ["sm", "sm", "sm", "sm"],
+	full: ["full", "5xl", "4xl", "3xl"]
+};
+
+// Height downgrade mapping for stacked modals
+const heightDowngradeMap: Record<string, Array<"" | "sm" | "md" | "lg" | "xl">> = {
+	xl: ["xl", "lg", "md", "sm"],
+	lg: ["lg", "md", "sm", "sm"],
+	md: ["md", "sm", "sm", "sm"],
+	sm: ["sm", "sm", "sm", "sm"],
+	"": ["", "", "", ""]
 };
 
 function Modal({
@@ -84,6 +107,23 @@ function Modal({
 	const shouldRender = shouldUseExternal ? externalShouldRender : internalModalProps.shouldRender;
 	const handleBackdropClick = shouldUseExternal ? externalHandleBackdropClick : internalModalProps.handleBackdropClick;
 
+	// Get modal stack position for auto-sizing
+	const { getModalStackPosition } = useModalContext();
+	const stackPosition = id ? getModalStackPosition(id) : 0;
+
+	// Calculate adjusted size and height based on stack position
+	const adjustedSize = useMemo(() => {
+		const sizeMap = sizeDowngradeMap[size] || [size];
+		const index = Math.min(stackPosition, sizeMap.length - 1);
+		return sizeMap[index];
+	}, [size, stackPosition]);
+
+	const adjustedHeight = useMemo(() => {
+		const heightMap = heightDowngradeMap[height] || [height];
+		const index = Math.min(stackPosition, heightMap.length - 1);
+		return heightMap[index];
+	}, [height, stackPosition]);
+
 	if (!shouldRender) return null;
 
 	const handleBackdropClickInternal = () => {
@@ -94,6 +134,7 @@ function Modal({
 
 	const ModalContent = (
 		<div
+			data-modal-id={id}
 			className="fixed inset-0 overflow-y-auto"
 			style={{ zIndex }}>
 			{/* Backdrop */}
@@ -108,7 +149,7 @@ function Modal({
 			<div className="flex min-h-full items-center justify-center p-4">
 				{/* Modal Panel */}
 				<div
-					className={`relative w-full ${sizeClasses[size]} ${height ? heightClasses[height] : ""} flex flex-col bg-white dark:bg-neutral-800 rounded-2xl shadow-xl transition-all duration-300 ${
+					className={`relative w-full ${sizeClasses[adjustedSize]} ${adjustedHeight ? heightClasses[adjustedHeight] : ""} flex flex-col bg-white dark:bg-neutral-800 rounded-2xl shadow-xl transition-all duration-300 ${
 						isAnimating ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 					}`}
 					onClick={(e) => e.stopPropagation()}

@@ -1,16 +1,9 @@
 import { useMemo } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Job } from "@/interfaces/job";
-import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
-import Label from "@/components/base/Label/Label";
 import { useAuth } from "@/hooks/useAuth";
-import Tooltip from "@/components/base/Tooltip/Tooltip";
-import Button from "@/components/base/Button/Button";
+import { Label, Button, Tooltip, TimeAgo, MemoizedTableRow, Pagination, LoadingOverlay, EmptyState } from "@/components";
 import { JobPreviewImage } from "@/components/composite/JobPreviewImage";
-import Pagination from "@/components/base/Pagination";
-import LoadingOverlay from "@/components/base/LoadingOverlay";
-import EmptyState from "@/components/base/EmptyState";
-import { MemoizedTableRow } from "@/components/base/MemoizedTableRow";
 import { EyeIcon, TrashIcon, ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {

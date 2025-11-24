@@ -5,10 +5,7 @@ import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import LogsTable from "./LogsTable.tsx";
-import { ConfirmModal } from "@/components";
-import Tooltip from "@/components/base/Tooltip/Tooltip";
-import Button from "@/components/base/Button/Button";
-import Alert from "@/components/base/Alert/Alert";
+import { ConfirmModal, Alert, Button, Tooltip } from "@/components";
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon, TrashIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
@@ -53,10 +50,9 @@ const Logs: React.FC = () => {
 				...(typeFilter && { type: typeFilter })
 			}),
 		enabled: !!authToken,
-		refetchInterval: 5000 // 5 saniyede bir otomatik refresh
-	});
-
-	// Detect new logs when data updates
+		refetchInterval: 5000, // 5 saniyede bir otomatik refresh
+		placeholderData: (previousData) => previousData
+	}); // Detect new logs when data updates
 	useEffect(() => {
 		if (!logsResponse?.data || currentPage !== 1) {
 			return;
@@ -91,6 +87,22 @@ const Logs: React.FC = () => {
 		previousDataRef.current = currentLogs;
 	}, [dataUpdatedAt, logsResponse, currentPage]);
 
+	// Debounce search input (500ms)
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setSearchQuery(searchInput);
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, [searchInput]);
+
+	// Reset to page 1 when search query changes
+	useEffect(() => {
+		if (searchQuery !== "") {
+			setCurrentPage(1);
+		}
+	}, [searchQuery]);
+
 	// Delete all logs mutation
 	const deleteAllLogsMutation = useMutation({
 		mutationFn: async () => {
@@ -110,16 +122,8 @@ const Logs: React.FC = () => {
 	});
 
 	// actions
-	const handleSearch = (e: React.FormEvent) => {
-		e.preventDefault();
-		setSearchQuery(searchInput);
-		setCurrentPage(1);
-	};
-
 	const handleClearSearch = () => {
 		setSearchInput("");
-		setSearchQuery("");
-		setCurrentPage(1);
 	};
 
 	const handlePageChange = (newPage: number) => {
@@ -180,7 +184,7 @@ const Logs: React.FC = () => {
 			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 				<div className="flex items-center gap-3">
 					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Logs</h3>
-					<Tooltip content="Refresh logs">
+					<Tooltip content="Reload">
 						<Button
 							variant="ghost"
 							size="md"
@@ -205,39 +209,26 @@ const Logs: React.FC = () => {
 					</select>
 
 					{/* Search Box */}
-					<form
-						onSubmit={handleSearch}
-						className="flex gap-2 flex-1 sm:flex-initial">
-						<div className="relative flex-1 sm:w-64">
-							<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-								<MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-							</div>
-							<input
-								type="text"
-								value={searchInput}
-								onChange={(e) => setSearchInput(e.target.value)}
-								placeholder="Search logs..."
-								className="block w-full h-[38px] pl-10 pr-10 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
-							/>
-							{searchInput && (
-								<button
-									type="button"
-									onClick={handleClearSearch}
-									className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-									<XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
-								</button>
-							)}
+					<div className="relative flex-1 sm:w-64">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
 						</div>
-						<Tooltip content="Search logs">
-							<Button
-								variant="soft"
-								size="md"
-								iconOnly
-								type="submit">
-								<MagnifyingGlassIcon className="h-5 w-5" />
-							</Button>
-						</Tooltip>
-					</form>
+						<input
+							type="text"
+							value={searchInput}
+							onChange={(e) => setSearchInput(e.target.value)}
+							placeholder="Search logs..."
+							className="block w-full h-[38px] pl-10 pr-10 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
+						/>
+						{searchInput && (
+							<button
+								type="button"
+								onClick={handleClearSearch}
+								className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+								<XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+							</button>
+						)}
+					</div>
 
 					{/* Delete All Button */}
 					<Tooltip content="Delete all logs">

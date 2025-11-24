@@ -1,7 +1,8 @@
 import "dotenv/config";
 import { config } from "@voltage/config";
 
-import { getInstanceKey, getInstanceSpecs, hash, getNow, subtractNow, logger, storage, database } from "@voltage/utils";
+import { storage, database, logger } from "@voltage/utils";
+import { getInstanceKey, getInstanceSpecs, hash, getNow, subtractNow } from "@voltage/utils";
 
 import path from "path";
 import { spawn, ChildProcess } from "child_process";
@@ -337,7 +338,11 @@ async function processJobs(): Promise<void> {
 	// JOBs: QUEUEDs: PROCESSING
 	logger.console("INFO", "Processing jobs queue...");
 
-	const idleWorkers = await database.table("instances_workers").where("instance_key", instance_key).where("status", "IDLE");
+	const idleWorkers = await database
+		.table("instances_workers")
+		.where("instance_key", instance_key)
+		.where("status", "IDLE")
+		.orderBy("index", "asc");
 
 	if (idleWorkers.length > 0) {
 		try {

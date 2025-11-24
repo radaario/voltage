@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, Fragment } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, getExpandedRowModel } from "@tanstack/react-table";
 import { useNavigate } from "react-router-dom";
 import { Instance } from "@/interfaces/instance";
-import { JobCard, TimeAgo, Tooltip, Button, Label } from "@/components";
+import { JobCard, TimeAgo, Tooltip, Button, Label, EmptyState, LoadingOverlay } from "@/components";
 import { ChevronDownIcon, ChevronRightIcon, EyeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
 import { getInstanceName, getWorkerName } from "@/utils/naming";
 
@@ -102,16 +102,11 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 									<span className="text-sm font-bold text-gray-900 dark:text-white">
 										{getInstanceName(data, instance)}
 									</span>
-									{instance.type && (
-										<span
-											className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-												instance.type === "MASTER"
-													? "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800"
-													: "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
-											}`}>
-											{instance.type}
-										</span>
-									)}
+									<Label
+										status={instance.type}
+										size="sm">
+										{instance.type}
+									</Label>
 								</div>
 
 								{/* Instance Key */}
@@ -219,23 +214,12 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 				header: "Status",
 				cell: (info) => {
 					const status = info.getValue();
-					let colorClass =
-						"bg-gray-100 text-gray-800 border-gray-300 dark:bg-neutral-800 dark:text-gray-300 dark:border-neutral-700";
-
-					if (status === "ACTIVE" || status === "ONLINE" || status === "RUNNING") {
-						colorClass =
-							"bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
-					} else if (status === "INACTIVE" || status === "OFFLINE" || status === "STOPPED" || status === "EXITED") {
-						colorClass = "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
-					} else if (status === "IDLE") {
-						colorClass =
-							"bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800";
-					}
-
 					return (
-						<span className={`inline-flex items-center px-3 py-1 rounded border text-sm font-medium ${colorClass}`}>
+						<Label
+							status={status}
+							size="sm">
 							{status}
-						</span>
+						</Label>
 					);
 				}
 			}),
@@ -247,7 +231,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 				}
 			}),
 			columnHelper.accessor("updated_at", {
-				header: "Updated",
+				header: "Updated At",
 				cell: (info) => {
 					const date = info.getValue();
 					return (
@@ -258,8 +242,9 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 					);
 				}
 			}),
+			/*
 			columnHelper.accessor("created_at", {
-				header: "Created",
+				header: "Created At",
 				cell: (info) => {
 					const date = info.getValue();
 					return (
@@ -270,6 +255,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 					);
 				}
 			}),
+			*/
 			columnHelper.display({
 				id: "actions",
 				header: "Actions",
@@ -277,7 +263,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 					const instance = info.row.original;
 					return (
 						<div className="flex items-center gap-2">
-							<Tooltip content="View Instance">
+							<Tooltip content="View">
 								<Button
 									variant="soft"
 									size="md"
@@ -304,134 +290,129 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 		getExpandedRowModel: getExpandedRowModel()
 	});
 
-	if (loading && data.length === 0) {
-		return (
-			<div className="flex justify-center items-center py-12">
-				<div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent"></div>
-			</div>
-		);
-	}
-
-	if (!data || data.length === 0) {
-		return (
-			<div className="text-center py-12">
-				<p className="text-gray-500 dark:text-gray-400">No instances found</p>
-			</div>
-		);
-	}
-
 	return (
-		<div className="overflow-x-auto">
-			<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
-				<thead className="bg-gray-50 dark:bg-neutral-900">
-					{table.getHeaderGroups().map((headerGroup) => (
-						<tr key={headerGroup.id}>
-							{headerGroup.headers.map((header) => (
-								<th
-									key={header.id}
-									className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-								</th>
-							))}
-						</tr>
-					))}
-				</thead>
-				<tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
-					{table.getRowModel().rows.map((row) => (
-						<Fragment key={row.id}>
-							{/* Main Instance Row */}
-							<tr
-								onClick={() => navigate(`/instances/${row.original.key}/info`)}
-								className="group hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer">
-								{row.getVisibleCells().map((cell) => (
-									<td
-										key={cell.id}
-										className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-										{flexRender(cell.column.columnDef.cell, cell.getContext())}
-									</td>
+		<div className="w-full relative">
+			{/* Loading Overlay */}
+			<LoadingOverlay show={loading} />
+
+			<div className="overflow-x-auto">
+				<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+					<thead className="bg-gray-50 dark:bg-neutral-900">
+						{table.getHeaderGroups().map((headerGroup) => (
+							<tr key={headerGroup.id}>
+								{headerGroup.headers.map((header) => (
+									<th
+										key={header.id}
+										className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+									</th>
 								))}
 							</tr>
+						))}
+					</thead>
+					<tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
+						{table.getRowModel().rows.length === 0 ? (
+							<EmptyState
+								message="No instances found"
+								colSpan={columns.length}
+							/>
+						) : (
+							table.getRowModel().rows.map((row) => (
+								<Fragment key={row.id}>
+									{/* Main Instance Row */}
+									<tr
+										onClick={() => navigate(`/instances/${row.original.key}/info`)}
+										className="group hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer">
+										{row.getVisibleCells().map((cell) => (
+											<td
+												key={cell.id}
+												className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+												{flexRender(cell.column.columnDef.cell, cell.getContext())}
+											</td>
+										))}
+									</tr>
 
-							{/* Expanded Workers Rows */}
-							{!collapsed[row.id] && row.original.workers && row.original.workers.length > 0 && (
-								<tr key={`${row.id}-workers`}>
-									<td
-										colSpan={8}
-										className="px-6 py-0 bg-gray-50 dark:bg-neutral-900/50">
-										<div className="py-3 pl-12">
-											<div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-												Workers
-											</div>
-											<div className="space-y-1">
-												{row.original.workers.map((worker) => (
-													<div
-														key={worker.key}
-														className="flex items-center justify-between gap-3 py-2 px-3 bg-white dark:bg-neutral-800 rounded border border-gray-200 dark:border-neutral-700">
-														{/* Worker Name & Key with Icon */}
-														<div className="flex items-start gap-2 min-w-[120px] shrink-0">
-															<CpuChipIcon className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0 mt-0.5" />
-															<div>
-																<div className="text-sm text-gray-900 dark:text-white font-bold">
-																	{getWorkerName(row.original.workers, worker)}
+									{/* Expanded Workers Rows */}
+									{!collapsed[row.id] && row.original.workers && row.original.workers.length > 0 && (
+										<tr key={`${row.id}-workers`}>
+											<td
+												colSpan={8}
+												className="px-6 py-0 bg-gray-50 dark:bg-neutral-900/50">
+												<div className="py-3 pl-12">
+													<div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+														Workers
+													</div>
+													<div className="space-y-1">
+														{row.original.workers.map((worker) => (
+															<div
+																key={worker.key}
+																onClick={() => navigate(`/instances/workers/${worker.key}/info`)}
+																className="flex items-center justify-between gap-3 py-2 px-3 bg-white dark:bg-neutral-800 rounded border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors cursor-pointer">
+																{/* Worker Name & Key with Icon */}
+																<div className="flex items-start gap-2 min-w-[120px] shrink-0">
+																	<CpuChipIcon className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0 mt-0.5" />
+																	<div>
+																		<div className="text-sm text-gray-900 dark:text-white font-bold">
+																			{getWorkerName(row.original.workers, worker)}
+																		</div>
+																		<div className="font-mono text-xs text-gray-500 dark:text-gray-400 truncate">
+																			{worker.key}
+																		</div>
+																	</div>
 																</div>
-																<div className="font-mono text-xs text-gray-500 dark:text-gray-400 truncate">
-																	{worker.key}
+
+																{/* Job Card - centered with flex-1 */}
+																<div className="flex-1 flex justify-center">
+																	{worker.job_key ? (
+																		<div className="max-w-[300px]">
+																			<JobCard jobKey={worker.job_key} />
+																		</div>
+																	) : (
+																		<span className="text-xs text-gray-400">No Job</span>
+																	)}
+																</div>
+
+																{/* Right side items */}
+																<div className="flex items-center gap-3 shrink-0">
+																	{/* Status */}
+																	<Label
+																		status={worker.status}
+																		size="sm">
+																		{worker.status}
+																	</Label>
+
+																	<TimeAgo
+																		datetime={worker.updated_at}
+																		className="text-sm text-gray-500 dark:text-gray-400"
+																	/>
+
+																	{/* View Worker Button */}
+																	<Tooltip content="View">
+																		<Button
+																			variant="soft"
+																			size="sm"
+																			iconOnly
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				navigate(`/instances/workers/${worker.key}/info`);
+																			}}>
+																			<EyeIcon className="h-4 w-4" />
+																		</Button>
+																	</Tooltip>
 																</div>
 															</div>
-														</div>
-
-														{/* Job Card - centered with flex-1 */}
-														<div className="flex-1 flex justify-center">
-															{worker.job_key ? (
-																<div className="max-w-[300px]">
-																	<JobCard jobKey={worker.job_key} />
-																</div>
-															) : (
-																<span className="text-xs text-gray-400">No Job</span>
-															)}
-														</div>
-
-														{/* Right side items */}
-														<div className="flex items-center gap-3 shrink-0">
-															{/* PID */}
-															{worker.pid && (
-																<span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-																	PID: {worker.pid}
-																</span>
-															)}
-
-															{/* Status */}
-															<Label
-																status={worker.status}
-																size="sm">
-																{worker.status}
-															</Label>
-
-															{/* View Worker Button */}
-															<Tooltip content="View Worker">
-																<Button
-																	variant="soft"
-																	size="sm"
-																	iconOnly
-																	onClick={(e) => {
-																		e.stopPropagation();
-																		navigate(`/instances/workers/${worker.key}/info`);
-																	}}>
-																	<EyeIcon className="h-4 w-4" />
-																</Button>
-															</Tooltip>
-														</div>
+														))}
 													</div>
-												))}
-											</div>
-										</div>
-									</td>
-								</tr>
-							)}
-						</Fragment>
-					))}
-				</tbody>
-			</table>
+												</div>
+											</td>
+										</tr>
+									)}
+								</Fragment>
+							))
+						)}
+					</tbody>
+				</table>
+			</div>
 		</div>
 	);
 };

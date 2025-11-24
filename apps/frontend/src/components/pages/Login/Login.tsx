@@ -4,9 +4,7 @@ import { useNavigate } from "react-router-dom";
 import ScreenLoading from "@/components/composite/ScreenLoading/ScreenLoading";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/Header/Header";
-import Logo from "@/components/base/Logo/Logo";
-import Button from "@/components/base/Button/Button";
-import Input from "@/components/base/Input/Input";
+import { Logo, Button, Input } from "@/components";
 import { LockClosedIcon } from "@heroicons/react/24/outline";
 
 function Login() {

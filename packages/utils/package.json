@@ -12,11 +12,6 @@
 			"require": "./dist/index.cjs",
 			"import": "./dist/index.js"
 		},
-		"./logger": {
-			"types": "./dist/logger.d.ts",
-			"require": "./dist/logger.cjs",
-			"import": "./dist/logger.js"
-		},
 		"./storage": {
 			"types": "./dist/storage.d.ts",
 			"require": "./dist/storage.cjs",
@@ -26,6 +21,16 @@
 			"types": "./dist/database.d.ts",
 			"require": "./dist/database.cjs",
 			"import": "./dist/database.js"
+		},
+		"./logger": {
+			"types": "./dist/logger.d.ts",
+			"require": "./dist/logger.cjs",
+			"import": "./dist/logger.js"
+		},
+		"./stats": {
+			"types": "./dist/stats.d.ts",
+			"require": "./dist/stats.cjs",
+			"import": "./dist/stats.js"
 		}
 	},
 	"scripts": {

@@ -1,7 +1,6 @@
 import { config } from "@voltage/config";
 
-// import { logger } from "@voltage/utils/logger";
-import { storage } from "@voltage/utils/storage";
+import { storage } from "@voltage/utils"; // logger
 
 import path from "path";
 import fs from "fs/promises";

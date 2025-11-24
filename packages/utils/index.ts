@@ -97,6 +97,11 @@ export function hash(data: string, algorithm: "MD5" | "SHA1" | "SHA256" | "SHA51
 	return crypto.createHash(algorithm).update(data).digest("hex");
 }
 
+export function getDate(date: string, format: string = "YYYY-MM-DD HH:mm:ss.SSS"): string {
+	let m = moment(date);
+	return m.format(format).toString();
+}
+
 export function getNow(format: string = "YYYY-MM-DD HH:mm:ss.SSS"): string {
 	let m = moment();
 
@@ -224,6 +229,7 @@ export function guessContentType(filename: string): string {
 }
 
 // Re-exports for convenience so consumers can import from '@voltage/utils'
+export { stats } from "./stats";
 export { logger } from "./logger";
 export { storage } from "./storage";
 export { database } from "./database";

@@ -108,7 +108,7 @@ const Label: React.FC<LabelProps> = ({
 				`items-center font-semibold rounded border`,
 				{
 					"inline-flex": hidden === "",
-					[`hidden ${hidden}:inline-flex`]: hidden !== ""
+					[`hidden ${hidden}:flex`]: hidden !== ""
 				},
 				StatusIcon ? "gap-1" : "",
 				sizeClasses[size],
@@ -162,6 +162,14 @@ function getVariantFromStatus(status: string): LabelVariant {
 		].includes(upperStatus)
 	) {
 		return "info";
+	}
+
+	if (["PURPLE", "MASTER"].includes(upperStatus)) {
+		return "purple";
+	}
+
+	if (["BLUE", "SLAVE"].includes(upperStatus)) {
+		return "blue";
 	}
 
 	// Cancelled/Debug/Unknown statuses

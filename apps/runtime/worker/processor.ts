@@ -1,6 +1,6 @@
 import { config } from "@voltage/config";
 
-// import { logger } from "@voltage/utils/logger";
+// import { logger } from "@voltage/utils";
 
 import { spawn } from "child_process";
 import path from "path";

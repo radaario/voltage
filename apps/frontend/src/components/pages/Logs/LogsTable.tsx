@@ -1,16 +1,20 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import Tooltip from "@/components/base/Tooltip/Tooltip";
-import Button from "@/components/base/Button/Button";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Log } from "@/interfaces/log";
-import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
-import Pagination from "@/components/base/Pagination";
-import LoadingOverlay from "@/components/base/LoadingOverlay";
-import EmptyState from "@/components/base/EmptyState";
-import { MemoizedTableRow } from "@/components/base/MemoizedTableRow";
-import { JobCard, WorkerCard } from "@/components";
+import {
+	Label,
+	Button,
+	Tooltip,
+	TimeAgo,
+	Pagination,
+	MemoizedTableRow,
+	LoadingOverlay,
+	EmptyState,
+	JobCard,
+	WorkerCard
+} from "@/components";
 
 interface PaginationInfo {
 	total: number;
@@ -39,39 +43,19 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 	const columns = useMemo(
 		() => [
 			columnHelper.accessor("type", {
-				header: "Type",
+				header: "Log",
 				cell: (info) => {
-					const type = info.getValue();
-					let colorClass =
-						"bg-gray-100 text-gray-800 border-gray-300 dark:bg-neutral-800 dark:text-gray-300 dark:border-neutral-700";
-
-					if (type === "ERROR") {
-						colorClass = "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
-					} else if (type === "WARNING") {
-						colorClass =
-							"bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800";
-					} else if (type === "INFO") {
-						colorClass = "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800";
-					} else if (type === "DEBUG") {
-						colorClass =
-							"bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800";
-					}
-
+					const log = info.row.original;
 					return (
-						<span className={`inline-flex items-center px-2.5 py-0.5 rounded border text-xs font-medium ${colorClass}`}>
-							{type}
-						</span>
-					);
-				}
-			}),
-			columnHelper.accessor("message", {
-				header: "Message",
-				cell: (info) => {
-					const message = info.getValue();
-					return (
-						<div className="max-w-md">
-							<span className="text-gray-900 dark:text-white line-clamp-2">{message || "-"}</span>
-						</div>
+						<>
+							<Label
+								status={log.type}
+								size="sm">
+								{log.type || "UNKNOWN"}
+							</Label>
+							<div className="font-medium text-gray-900 dark:text-white truncate">{log.message || "-"}</div>
+							<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{log.key}</span>
+						</>
 					);
 				}
 			}),
@@ -86,6 +70,7 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 						<WorkerCard
 							workerKey={workerKey}
 							instanceKey={instanceKey}
+							short={true}
 						/>
 					);
 				}
@@ -99,7 +84,7 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 				}
 			}),
 			columnHelper.accessor("created_at", {
-				header: "Created",
+				header: "Created At",
 				cell: (info) => (
 					<TimeAgo
 						datetime={info.getValue()}

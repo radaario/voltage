@@ -1,9 +1,8 @@
 import { config } from "@voltage/config";
 import { DestinationSpecs } from "@voltage/config/types";
 
+import { storage } from "@voltage/utils"; // logger
 import { guessContentType } from "@voltage/utils";
-// import { logger } from "@voltage/utils/logger";
-import { storage } from "@voltage/utils/storage";
 
 import path from "path";
 import fs from "fs/promises";

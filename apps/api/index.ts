@@ -2,7 +2,8 @@ import "dotenv/config";
 import { config } from "@voltage/config";
 import { JobRequest, JobRow, OutputSpecs } from "@voltage/config/types";
 
-import { getInstanceKey, sanitizeData, uuid, uukey, hash, getNow, logger, storage, database } from "@voltage/utils";
+import { storage, database, logger, stats } from "@voltage/utils";
+import { getInstanceKey, sanitizeData, uuid, uukey, hash, getNow } from "@voltage/utils";
 
 import path from "path";
 import "express-async-errors";
@@ -105,97 +106,6 @@ app.post("/auth", async (req, res) => {
 	}
 });
 
-// Instance status endpoint - list all instances
-app.get("/instances", authMiddleware(), async (req, res) => {
-	try {
-		const instance_key = (req.query.instance_key || req.body.instance_key || "").trim();
-
-		// If instance_key provided, fetch only that instance and return as object (not array)
-		if (instance_key) {
-			const instance = await database.table("instances").where("key", instance_key).first();
-
-			if (!instance) {
-				return res
-					.status(404)
-					.json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Instance not found!" } } });
-			}
-
-			const workers = await database.table("instances_workers").where("instance_key", instance_key).orderBy("created_at", "desc");
-
-			const result = { ...instance, specs: instance.specs ? JSON.parse(instance.specs) : "{}", workers };
-
-			return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(result) });
-		}
-
-		const instances = await database
-			.table("instances")
-			.orderByRaw("CASE WHEN type = 'MASTER' THEN 0 ELSE 1 END")
-			.orderByRaw("CASE WHEN status = 'ONLINE' THEN 0 ELSE 1 END");
-		// .orderBy("created_at", "desc");
-
-		// If no instances, return empty array immediately
-		if (instances.length === 0) {
-			return res.json({ metadata: { status: "SUCCESSFUL" }, data: [] });
-		}
-
-		// Collect instance keys and fetch workers for those instances in one query
-		const workers = await database.table("instances_workers").orderBy("created_at", "desc");
-
-		const workersByInstance: Record<string, any[]> = {};
-		for (const worker of workers) {
-			if (!workersByInstance[worker.instance_key]) workersByInstance[worker.instance_key] = [];
-			workersByInstance[worker.instance_key].push(worker);
-		}
-
-		// Parse instance.system JSON and attach workers array to each instance
-		const result = instances.map((instance) => {
-			return {
-				...instance,
-				specs: instance.specs ? JSON.parse(instance.specs) : "{}",
-				workers: workersByInstance[instance.key] || []
-			};
-		});
-
-		return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(result) });
-	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch instances!", { error });
-		res.status(500).json({
-			metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch instances!" } }
-		});
-	}
-});
-
-// Worker status endpoint - read persisted worker metadata and enrich with in-memory process state
-app.get("/instances/workers", authMiddleware(), async (req, res) => {
-	try {
-		const worker_key = (req.query.worker_key || req.body.worker_key || "").trim();
-
-		// If worker_key provided, fetch only that worker and return as object (not array)
-		if (worker_key) {
-			const worker = await database.table("instances_workers").where("key", worker_key).first();
-
-			if (!worker) {
-				return res.status(404).json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Worker not found!" } } });
-			}
-
-			return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(worker) });
-		}
-
-		const instance_key = (req.query.instance_key || req.body.instance_key || "").trim();
-
-		const query = database.table("instances_workers");
-		if (instance_key) query.where("instance_key", instance_key);
-		const workers = await query.orderBy("created_at", "desc");
-
-		return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(workers) });
-	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch workers!", { error });
-		return res.status(500).json({
-			metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch workers!" } }
-		});
-	}
-});
-
 app.get("/logs", authMiddleware(), async (req, res) => {
 	try {
 		const log_key = (req.query.log_key || req.body.log_key || "").trim();
@@ -244,9 +154,12 @@ app.get("/logs", authMiddleware(), async (req, res) => {
 			const searchPattern = `%${q}%`;
 			query = query.where(function () {
 				this.where("key", "like", searchPattern)
+					.orWhere("type", "like", searchPattern)
 					.orWhere("instance_key", "like", searchPattern)
 					.orWhere("worker_key", "like", searchPattern)
 					.orWhere("job_key", "like", searchPattern)
+					.orWhere("output_key", "like", searchPattern)
+					.orWhere("notification_key", "like", searchPattern)
 					.orWhere("message", "like", searchPattern)
 					.orWhere("metadata", "like", searchPattern);
 			});
@@ -283,6 +196,110 @@ app.get("/logs", authMiddleware(), async (req, res) => {
 		return res
 			.status(500)
 			.json({ metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch logs!" } } });
+	}
+});
+
+// Instance status endpoint - list all instances
+app.get("/instances", authMiddleware(), async (req, res) => {
+	try {
+		const instance_key = (req.query.instance_key || req.body.instance_key || "").trim();
+		const q = req.query.q ? String(req.query.q).trim() : "";
+
+		// If instance_key provided, fetch only that instance and return as object (not array)
+		if (instance_key) {
+			const instance = await database.table("instances").where("key", instance_key).first();
+
+			if (!instance) {
+				return res
+					.status(404)
+					.json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Instance not found!" } } });
+			}
+
+			const workers = await database.table("instances_workers").where("instance_key", instance_key).orderBy("index", "asc");
+
+			const result = { ...instance, specs: instance.specs ? JSON.parse(instance.specs) : "{}", workers };
+
+			return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(result) });
+		}
+
+		let query = database.table("instances");
+
+		if (q) {
+			const searchPattern = `%${q}%`;
+			query = query.where(function () {
+				this.where("key", "like", searchPattern)
+					.orWhere("type", "like", searchPattern)
+					.orWhere("specs", "like", searchPattern)
+					.orWhere("outcome", "like", searchPattern)
+					.orWhere("status", "like", searchPattern);
+			});
+		}
+
+		const instances = await query
+			.orderByRaw("CASE WHEN type = 'MASTER' THEN 0 ELSE 1 END")
+			.orderByRaw("CASE WHEN status = 'ONLINE' THEN 0 ELSE 1 END");
+		// .orderBy("created_at", "desc");
+
+		// If no instances, return empty array immediately
+		if (instances.length === 0) {
+			return res.json({ metadata: { status: "SUCCESSFUL" }, data: [] });
+		}
+
+		// Collect instance keys and fetch workers for those instances in one query
+		const workers = await database.table("instances_workers").orderBy("index", "asc");
+
+		const workersByInstance: Record<string, any[]> = {};
+		for (const worker of workers) {
+			if (!workersByInstance[worker.instance_key]) workersByInstance[worker.instance_key] = [];
+			workersByInstance[worker.instance_key].push(worker);
+		}
+
+		// Parse instance.system JSON and attach workers array to each instance
+		const result = instances.map((instance) => {
+			return {
+				...instance,
+				specs: instance.specs ? JSON.parse(instance.specs) : "{}",
+				workers: workersByInstance[instance.key] || []
+			};
+		});
+
+		return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(result) });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to fetch instances!", { error });
+		res.status(500).json({
+			metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch instances!" } }
+		});
+	}
+});
+
+// Worker status endpoint - read persisted worker metadata and enrich with in-memory process state
+app.get("/instances/workers", authMiddleware(), async (req, res) => {
+	try {
+		const worker_key = (req.query.worker_key || req.body.worker_key || "").trim();
+
+		// If worker_key provided, fetch only that worker and return as object (not array)
+		if (worker_key) {
+			const worker = await database.table("instances_workers").where("key", worker_key).first();
+
+			if (!worker) {
+				return res.status(404).json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Worker not found!" } } });
+			}
+
+			return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(worker) });
+		}
+
+		const instance_key = (req.query.instance_key || req.body.instance_key || "").trim();
+
+		const query = database.table("instances_workers");
+		if (instance_key) query.where("instance_key", instance_key);
+		const workers = await query.orderBy("index", "asc");
+
+		return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(workers) });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to fetch workers!", { error });
+		return res.status(500).json({
+			metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch workers!" } }
+		});
 	}
 });
 
@@ -340,10 +357,15 @@ app.get("/jobs", authMiddleware(), async (req, res) => {
 			const searchPattern = `%${q}%`;
 			query = query.where(function () {
 				this.where("key", "like", searchPattern)
+					.orWhere("instance_key", "like", searchPattern)
+					.orWhere("worker_key", "like", searchPattern)
 					.orWhere("input", "like", searchPattern)
+					.orWhere("outputs", "like", searchPattern)
 					.orWhere("destination", "like", searchPattern)
 					.orWhere("notification", "like", searchPattern)
-					.orWhere("metadata", "like", searchPattern);
+					.orWhere("metadata", "like", searchPattern)
+					.orWhere("outcome", "like", searchPattern)
+					.orWhere("status", "like", searchPattern);
 			});
 		}
 
@@ -466,6 +488,7 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 			})
 			.then(async (result) => {
 				await createJobNotification(job, "RECEIVED");
+				await stats.update({ jobs_recieved: 1 });
 				await logger.insert("INFO", "Job request received!", { job_key });
 				// await logger.insert("INFO", "Job successfully created!", { job_key });
 
@@ -475,6 +498,7 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 						.table("jobs_queue")
 						.insert({ key: job.key, priority: job.priority, created_at: job.created_at })
 						.then(async (result) => {
+							// await stats.update({ jobs_queued: 1 });
 							await logger.insert("INFO", "Job successfully queued!", { job_key });
 						})
 						.catch(async (error) => {
@@ -515,7 +539,7 @@ app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) =>
 
 	if (!["CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(job.status)) {
 		return res.status(405).json({
-			metadata: { status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be deleted!" } }
+			metadata: { status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be reprocessed!" } }
 		});
 	}
 
@@ -533,7 +557,7 @@ app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) =>
 
 	if (jobOutputsUpdatedCount <= 0) {
 		return res.status(405).json({
-			metadata: { status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be deleted!" } }
+			metadata: { status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be reprocessed!" } }
 		});
 	}
 
@@ -542,7 +566,8 @@ app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) =>
 		.where("key", job_key)
 		.update({
 			outputs: job.outputs ? JSON.stringify(job.outputs) : null,
-			status: "PENDING" // RETRYING
+			status: "PENDING", // RETRYING
+			try_count: 0
 			// retry_at: getNow()
 		});
 
@@ -655,8 +680,13 @@ app.get("/jobs/notifications", authMiddleware(), async (req, res) => {
 			const searchPattern = `%${q}%`;
 			query = query.where(function () {
 				this.where("key", "like", searchPattern)
+					.orWhere("job_key", "like", searchPattern)
+					.orWhere("instance_key", "like", searchPattern)
+					.orWhere("worker_key", "like", searchPattern)
+					.orWhere("specs", "like", searchPattern)
 					.orWhere("payload", "like", searchPattern)
-					.orWhere("outcome", "like", searchPattern);
+					.orWhere("outcome", "like", searchPattern)
+					.orWhere("status", "like", searchPattern);
 			});
 		}
 

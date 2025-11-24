@@ -6,10 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import JobsTable from "./JobsTable";
 import DeleteConfirmModal from "@/components/modals/DeleteConfirmModal/DeleteConfirmModal";
-import { ConfirmModal } from "@/components";
-import Tooltip from "@/components/base/Tooltip/Tooltip";
-import Button from "@/components/base/Button/Button";
-import Alert from "@/components/base/Alert/Alert";
+import { ConfirmModal, Alert, Button, Tooltip } from "@/components";
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
@@ -54,10 +51,9 @@ const Jobs: React.FC = () => {
 				...(searchQuery && { q: searchQuery })
 			}),
 		enabled: !!authToken,
-		refetchInterval: 5000 // 5 saniyede bir otomatik refresh
-	});
-
-	// Detect new jobs when data updates
+		refetchInterval: 5000, // 5 saniyede bir otomatik refresh
+		placeholderData: (previousData) => previousData
+	}); // Detect new jobs when data updates
 	useEffect(() => {
 		if (!jobsResponse?.data || currentPage !== 1) {
 			return;
@@ -91,6 +87,18 @@ const Jobs: React.FC = () => {
 
 		previousDataRef.current = currentJobs;
 	}, [dataUpdatedAt, jobsResponse, currentPage]);
+
+	// Debounce search input (500ms)
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setSearchQuery(searchInput);
+			if (searchInput !== "") {
+				setCurrentPage(1);
+			}
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, [searchInput]);
 
 	// Create job mutation
 	const createJobMutation = useMutation({
@@ -168,16 +176,8 @@ const Jobs: React.FC = () => {
 	});
 
 	// actions
-	const handleSearch = (e: React.FormEvent) => {
-		e.preventDefault();
-		setSearchQuery(searchInput);
-		setCurrentPage(1);
-	};
-
 	const handleClearSearch = () => {
 		setSearchInput("");
-		setSearchQuery("");
-		setCurrentPage(1);
 	};
 
 	const handlePageChange = (newPage: number) => {
@@ -261,7 +261,7 @@ const Jobs: React.FC = () => {
 			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 				<div className="flex items-center gap-3">
 					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Jobs</h3>
-					<Tooltip content="Refresh jobs">
+					<Tooltip content="Reload">
 						<Button
 							variant="ghost"
 							size="md"
@@ -274,39 +274,26 @@ const Jobs: React.FC = () => {
 				</div>
 				<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
 					{/* Search Box */}
-					<form
-						onSubmit={handleSearch}
-						className="flex gap-2 flex-1 sm:flex-initial">
-						<div className="relative flex-1 sm:w-64">
-							<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-								<MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-							</div>
-							<input
-								type="text"
-								value={searchInput}
-								onChange={(e) => setSearchInput(e.target.value)}
-								placeholder="Search jobs..."
-								className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-neutral-600 rounded-md leading-5 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
-							/>
-							{searchInput && (
-								<button
-									type="button"
-									onClick={handleClearSearch}
-									className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-									<XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
-								</button>
-							)}
+					<div className="relative flex-1 sm:w-64">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
 						</div>
-						<Tooltip content="Search jobs">
-							<Button
-								variant="soft"
-								size="md"
-								iconOnly
-								type="submit">
-								<MagnifyingGlassIcon className="h-5 w-5" />
-							</Button>
-						</Tooltip>
-					</form>
+						<input
+							type="text"
+							value={searchInput}
+							onChange={(e) => setSearchInput(e.target.value)}
+							placeholder="Search jobs..."
+							className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-neutral-600 rounded-md leading-5 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
+						/>
+						{searchInput && (
+							<button
+								type="button"
+								onClick={handleClearSearch}
+								className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+								<XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+							</button>
+						)}
+					</div>
 
 					{/* Create Button */}
 					<Button

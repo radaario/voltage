@@ -7,9 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/utils";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { ArrowUturnLeftIcon, EyeIcon, VideoCameraIcon, PhotoIcon, MusicalNoteIcon, LanguageIcon } from "@heroicons/react/24/outline";
-import { ConfirmModal } from "@/components";
-import Tooltip from "@/components/base/Tooltip/Tooltip";
-import Label from "@/components/base/Label/Label";
+import { ConfirmModal, Label, Tooltip } from "@/components";
 
 interface OutletContext {
 	job: Job;
@@ -28,7 +26,7 @@ const OutputsTab: React.FC = () => {
 	const retryOutputMutation = useMutation({
 		mutationFn: async (outputKey: string) => {
 			return await api.post("/jobs/retry", null, {
-				params: { token: authToken, output_key: outputKey }
+				params: { token: authToken, output_key: outputKey, job_key: jobKey }
 			});
 		},
 		onSuccess: () => {

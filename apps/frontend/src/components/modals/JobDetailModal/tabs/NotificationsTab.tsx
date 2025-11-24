@@ -93,7 +93,7 @@ const NotificationsTab: React.FC = () => {
 							<thead className="bg-gray-50 dark:bg-neutral-900">
 								<tr>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Event
+										Notification
 									</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Priority
@@ -125,6 +125,7 @@ const NotificationsTab: React.FC = () => {
 												size="sm">
 												{notification.payload.status || "UNKNOWN"}
 											</Label>
+											<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{notification.key}</span>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
 											{notification.priority || "N/A"}

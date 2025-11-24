@@ -14,9 +14,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { NavLink } from "react-router-dom";
-import Logo from "@/components/base/Logo/Logo";
-import Button from "@/components/base/Button/Button";
-import Tooltip from "@/components/base/Tooltip/Tooltip";
+import { Logo, Button, Tooltip } from "@/components";
 import { useState } from "react";
 
 function Header() {

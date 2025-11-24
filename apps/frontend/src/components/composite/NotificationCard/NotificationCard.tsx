@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import type { Notification } from "@/interfaces/notification";
-import Label from "@/components/base/Label/Label";
+import { Label } from "@/components";
 
 interface NotificationCardProps {
 	notificationKey: string;
@@ -43,9 +43,9 @@ const NotificationCard = ({ notificationKey, onClick }: NotificationCardProps) =
 			{/* Content */}
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center gap-2">
-					{notification?.event && (
+					{notification?.payload?.status && (
 						<span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-							{notification.event}
+							{notification?.payload?.status}
 						</span>
 					)}
 					{notification?.status && <Label status={notification.status}>{notification.status}</Label>}

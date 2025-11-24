@@ -1,6 +1,6 @@
 import { useOutletContext } from "react-router-dom";
 import type { Notification } from "@/interfaces/notification";
-import JsonViewer from "@/components/base/JsonViewer";
+import { JsonViewer } from "@/components";
 
 interface OutletContext {
 	notification: Notification;

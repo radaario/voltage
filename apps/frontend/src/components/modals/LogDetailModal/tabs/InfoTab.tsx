@@ -1,6 +1,6 @@
 import { useOutletContext } from "react-router-dom";
 import type { Log } from "@/interfaces/log";
-import { TableKeyValuePreview } from "@/components/base/TableKeyValuePreview";
+import { TableKeyValuePreview } from "@/components";
 
 interface OutletContext {
 	log: Log;
@@ -13,7 +13,7 @@ const InfoTab: React.FC = () => {
 		<div className="space-y-6">
 			<TableKeyValuePreview
 				data={log}
-				excludedKeys={["metadata"]}
+				excludedKeys={["metadata", "instance_key"]}
 			/>
 		</div>
 	);

@@ -12,10 +12,13 @@ import JobDetailModal from "@/components/modals/JobDetailModal/JobDetailModal";
 import InstanceDetailModal from "@/components/modals/InstanceDetailModal/InstanceDetailModal";
 import InstanceInfoTab from "@/components/modals/InstanceDetailModal/tabs/InfoTab";
 import InstanceWorkersTab from "@/components/modals/InstanceDetailModal/tabs/WorkersTab";
-import InstanceOutcomeTab from "@/components/modals/InstanceDetailModal/tabs/InstanceOutcomeTab";
+import InstanceLogsTab from "@/components/modals/InstanceDetailModal/tabs/LogsTab";
+import InstanceSpecsTab from "@/components/modals/InstanceDetailModal/tabs/InstanceOutcomeTab";
+import InstanceOutcomeTab from "@/components/modals/InstanceDetailModal/tabs/OutcomeTab";
 import WorkerDetailModal from "@/components/modals/WorkerDetailModal/WorkerDetailModal";
 import WorkerInfoTab from "@/components/modals/WorkerDetailModal/tabs/InfoTab";
 import WorkerOutcomeTab from "@/components/modals/WorkerDetailModal/tabs/WorkerOutcomeTab";
+import WorkerLogsTab from "@/components/modals/WorkerDetailModal/tabs/LogsTab";
 import NotificationDetailModal from "@/components/modals/NotificationDetailModal/NotificationDetailModal";
 import JobInfoTab from "@/components/modals/JobDetailModal/tabs/InfoTab";
 import JobInputTab from "@/components/modals/JobDetailModal/tabs/InputTab";
@@ -214,24 +217,7 @@ export const router = createBrowserRouter(
 							path: "instances",
 							element: <Instances />,
 							children: [
-								{
-									path: ":instanceKey",
-									element: <InstanceDetailModal />,
-									children: [
-										{
-											path: "",
-											element: (
-												<Navigate
-													to="info"
-													replace
-												/>
-											)
-										},
-										{ path: "info", element: <InstanceInfoTab /> },
-										{ path: "workers", element: <InstanceWorkersTab /> },
-										{ path: "specs", element: <InstanceOutcomeTab /> }
-									]
-								},
+								// Standalone worker route (without instance modal)
 								{
 									path: "workers/:workerKey",
 									element: <WorkerDetailModal />,
@@ -246,7 +232,117 @@ export const router = createBrowserRouter(
 											)
 										},
 										{ path: "info", element: <WorkerInfoTab /> },
-										{ path: "outcome", element: <WorkerOutcomeTab /> }
+										{ path: "outcome", element: <WorkerOutcomeTab /> },
+										{
+											path: "logs",
+											element: <WorkerLogsTab />,
+											children: [
+												{
+													path: ":logKey",
+													element: <LogDetailModal />,
+													children: [
+														{
+															path: "",
+															element: (
+																<Navigate
+																	to="info"
+																	replace
+																/>
+															)
+														},
+														{ path: "info", element: <LogInfoTab /> },
+														{ path: "metadata", element: <MetadataTab /> }
+													]
+												}
+											]
+										}
+									]
+								},
+								{
+									path: ":instanceKey",
+									element: <InstanceDetailModal />,
+									children: [
+										{
+											path: "",
+											element: (
+												<Navigate
+													to="info"
+													replace
+												/>
+											)
+										},
+										{ path: "info", element: <InstanceInfoTab /> },
+										{
+											path: "workers",
+											element: <InstanceWorkersTab />,
+											children: [
+												{
+													path: ":workerKey",
+													element: <WorkerDetailModal />,
+													children: [
+														{
+															path: "",
+															element: (
+																<Navigate
+																	to="info"
+																	replace
+																/>
+															)
+														},
+														{ path: "info", element: <WorkerInfoTab /> },
+														{ path: "outcome", element: <WorkerOutcomeTab /> },
+														{
+															path: "logs",
+															element: <WorkerLogsTab />,
+															children: [
+																{
+																	path: ":logKey",
+																	element: <LogDetailModal />,
+																	children: [
+																		{
+																			path: "",
+																			element: (
+																				<Navigate
+																					to="info"
+																					replace
+																				/>
+																			)
+																		},
+																		{ path: "info", element: <LogInfoTab /> },
+																		{ path: "metadata", element: <MetadataTab /> }
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										},
+										{
+											path: "logs",
+											element: <InstanceLogsTab />,
+											children: [
+												{
+													path: ":logKey",
+													element: <LogDetailModal />,
+													children: [
+														{
+															path: "",
+															element: (
+																<Navigate
+																	to="info"
+																	replace
+																/>
+															)
+														},
+														{ path: "info", element: <LogInfoTab /> },
+														{ path: "metadata", element: <MetadataTab /> }
+													]
+												}
+											]
+										},
+										{ path: "specs", element: <InstanceSpecsTab /> },
+										{ path: "outcome", element: <InstanceOutcomeTab /> }
 									]
 								}
 							]
@@ -298,6 +394,16 @@ export const router = createBrowserRouter(
 									]
 								}
 							]
+						},
+						// Catch-all route for 404s
+						{
+							path: "*",
+							element: (
+								<Navigate
+									to="/"
+									replace
+								/>
+							)
 						}
 					]
 				}

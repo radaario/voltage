@@ -1,10 +1,11 @@
 import { config } from "@voltage/config";
+
+import { database, logger } from "@voltage/utils";
 import { uukey, getNow, addNow, sanitizeData } from "@voltage/utils";
-import { logger } from "@voltage/utils/logger";
-import { database } from "@voltage/utils/database";
+
 import axios from "axios";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
-database.config(config.database);
+// database.config(config.database);
 export async function createJobNotification(job, jobStatus) {
 	if (!job.notification || !job.notification.type) {
 		return { status: "SKIPPED" };

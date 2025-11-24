@@ -1,9 +1,9 @@
 export interface Worker {
 	id: number;
 	key: string;
+	index: number;
 	instance_key: string;
 	job_key?: string;
-	pid: number | null;
 	status: string;
 	outcome?: any;
 	created_at: string;
@@ -31,6 +31,7 @@ export interface Instance {
 	key: string;
 	type: "MASTER" | "SLAVE";
 	status: string;
+	outcome: any | null;
 	system: any;
 	specs: InstanceSpecs | null;
 	workers: Worker[];

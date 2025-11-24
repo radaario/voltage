@@ -34,6 +34,33 @@ class Database {
 		try {
 			const prefix = this.getTablePrefix();
 
+			// Create logs table
+			const hasStats = await this.knex.schema.hasTable(`${prefix}stats`);
+			if (!hasStats) {
+				await this.knex.schema.createTable(`${prefix}stats`, (table) => {
+					table.string("key", 40).primary();
+					table.date("date").notNullable().defaultTo(this.knex.fn.now());
+					table.text("data").notNullable();
+				});
+			}
+
+			// Create logs table
+			const hasLogs = await this.knex.schema.hasTable(`${prefix}logs`);
+			if (!hasLogs) {
+				await this.knex.schema.createTable(`${prefix}logs`, (table) => {
+					table.string("key", 40).primary();
+					table.string("type", 255).notNullable();
+					table.string("instance_key", 40).nullable();
+					table.string("worker_key", 40).nullable();
+					table.string("job_key", 40).nullable();
+					table.string("output_key", 40).nullable();
+					table.string("notification_key", 40).nullable();
+					table.string("message", 1024).notNullable();
+					table.text("metadata").notNullable();
+					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
+				});
+			}
+
 			// Create instances table
 			const hasInstances = await this.knex.schema.hasTable(`${prefix}instances`);
 			if (!hasInstances) {
@@ -60,23 +87,6 @@ class Database {
 					table.text("outcome").nullable();
 					table.enum("status", ["IDLE", "BUSY", "TIMEOUT", "TERMINATED"]).notNullable().defaultTo("IDLE");
 					table.datetime("updated_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
-					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
-				});
-			}
-
-			// Create logs table
-			const hasLogs = await this.knex.schema.hasTable(`${prefix}logs`);
-			if (!hasLogs) {
-				await this.knex.schema.createTable(`${prefix}logs`, (table) => {
-					table.string("key", 40).primary();
-					table.string("type", 255).notNullable();
-					table.string("instance_key", 40).nullable();
-					table.string("worker_key", 40).nullable();
-					table.string("job_key", 40).nullable();
-					table.string("output_key", 40).nullable();
-					table.string("notification_key", 40).nullable();
-					table.string("message", 1024).notNullable();
-					table.text("metadata").notNullable();
 					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 				});
 			}

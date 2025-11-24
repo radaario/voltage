@@ -1,6 +1,6 @@
-import { CalendarIcon, ChartBarIcon } from "@heroicons/react/24/outline";
+import { CalendarIcon, ChartBarIcon, KeyIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline";
 import { JobCard, WorkerCard, InstanceCard, Label } from "@/components";
-import { formatDate as utilFormatDate } from "@/utils";
+import { formatDate as utilFormatDate, copyToClipboard } from "@/utils";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { useState, useEffect } from "react";
 
@@ -25,15 +25,16 @@ const DEFAULT_LANG_MAP: Record<string, string> = {
 	job_key: "Job",
 	instance_key: "Instance",
 	worker_key: "Worker",
-	created_at: "Created",
-	updated_at: "Updated",
-	started_at: "Started",
-	completed_at: "Completed"
+	created_at: "Created At",
+	updated_at: "Updated At",
+	started_at: "Started At",
+	completed_at: "Completed At"
 };
 
 const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, excludedKeys = [], langMap = {} }) => {
 	const { config } = useGlobalStateContext();
 	const [countryCode, setCountryCode] = useState<string>("");
+	const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
 	// Merge default and custom lang maps
 	const finalLangMap = { ...DEFAULT_LANG_MAP, ...langMap };
@@ -91,8 +92,8 @@ const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, exclu
 			return <InstanceCard instanceKey={value} />;
 		}
 
-		// Label for status
-		if (key === "status" && typeof value === "string") {
+		// Label for status or type fields
+		if (["status", "type"].includes(key) && typeof value === "string") {
 			return <Label status={value}>{value}</Label>;
 		}
 
@@ -112,7 +113,33 @@ const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, exclu
 			);
 		}
 
-		// Numbers with icon
+		// Key visualization with icon and copy button
+		if (key === "key" && typeof value === "string") {
+			const handleCopy = async () => {
+				const success = await copyToClipboard(value);
+				if (success) {
+					setCopiedKey(value);
+					setTimeout(() => setCopiedKey(null), 2000);
+				}
+			};
+
+			return (
+				<div className="flex items-center gap-2">
+					<KeyIcon className="h-4 w-4 text-gray-400" />
+					<span className="font-mono text-sm text-gray-800 dark:text-gray-200">{value}</span>
+					<button
+						onClick={handleCopy}
+						className="ml-auto p-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+						title="Copy key">
+						<ClipboardDocumentIcon
+							className={`h-4 w-4 ${
+								copiedKey === value ? "text-green-500" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+							}`}
+						/>
+					</button>
+				</div>
+			);
+		} // Numbers with icon
 		if (typeof value === "number") {
 			return (
 				<span className="inline-flex items-center gap-1">

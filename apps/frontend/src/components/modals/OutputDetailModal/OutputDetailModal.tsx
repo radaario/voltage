@@ -1,11 +1,18 @@
 import { useState, useMemo } from "react";
-import { NavLink, Outlet, useParams } from "react-router-dom";
+import { Outlet, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { InformationCircleIcon, DocumentChartBarIcon, ClipboardDocumentCheckIcon, ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
+import {
+	ArrowUpTrayIcon,
+	InformationCircleIcon,
+	DocumentChartBarIcon,
+	ClipboardDocumentCheckIcon,
+	ArrowUturnLeftIcon,
+	XMarkIcon
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouteModal } from "@/hooks/useRouteModal";
 import { api, ApiResponse } from "@/utils";
-import { Modal, Label, Button, ConfirmModal } from "@/components";
+import { Modal, ConfirmModal, Label, Button, Tooltip, TabsNavigation } from "@/components";
 import type { Job } from "@/interfaces/job";
 
 const OutputDetailModal: React.FC = () => {
@@ -38,7 +45,7 @@ const OutputDetailModal: React.FC = () => {
 	const retryOutputMutation = useMutation({
 		mutationFn: async () => {
 			return await api.post("/jobs/retry", null, {
-				params: { token: authToken, output_key: outputKey }
+				params: { token: authToken, output_key: outputKey, job_key: jobKey }
 			});
 		},
 		onSuccess: () => {
@@ -76,28 +83,29 @@ const OutputDetailModal: React.FC = () => {
 		<>
 			<Modal
 				{...modalProps}
-				height="lg"
-				size="3xl">
+				height="xl"
+				size="5xl">
 				{/* Header */}
 				<Modal.Header
 					onClose={modalProps.handleClose}
 					showCloseButton={false}>
 					<div className="flex items-start justify-between w-full">
-						<div className="flex flex-col min-w-0 mr-3">
-							{output ? (
-								<div className="flex flex-col min-w-0">
-									<h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">Output #{output.index + 1}</h3>
-									<p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{output.key}</p>
-								</div>
-							) : (
-								<div className="flex flex-col gap-2">
-									<div className="h-6 bg-gray-200 dark:bg-neutral-700 rounded w-32 animate-pulse" />
-									<div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-48 animate-pulse" />
-								</div>
-							)}
+						<div className="flex items-start gap-3 overflow-hidden min-w-0">
+							<ArrowUpTrayIcon className="h-7 w-7 text-gray-600 dark:text-gray-400 mt-0.5 shrink-0" />
+							<div className="min-w-0">
+								{output && (
+									<div className="flex flex-col min-w-0">
+										<h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+											Output #{output.index + 1}
+										</h3>
+										<p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{output.key}</p>
+									</div>
+								)}
+								{!output && <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
+							</div>
 						</div>
-						<div className="shrink-0 flex items-center gap-3 ml-4">
-							{output?.status === "FAILED" && (
+						<div className="flex items-center gap-3 shrink-0 ml-4">
+							{["FAILED"].includes(output?.status as string) && (
 								<Button
 									variant="secondary"
 									size="xs"
@@ -107,46 +115,21 @@ const OutputDetailModal: React.FC = () => {
 								</Button>
 							)}
 							{output && <Label status={output.status}>{output.status}</Label>}
-							<Button
-								variant="ghost"
-								size="md"
-								iconOnly
-								onClick={modalProps.handleClose}>
-								<svg
-									className="h-6 w-6"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor">
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M6 18L18 6M6 6l12 12"
-									/>
-								</svg>
-							</Button>
+							<Tooltip content="Close">
+								<Button
+									variant="ghost"
+									size="md"
+									iconOnly
+									onClick={modalProps.handleClose}>
+									<XMarkIcon className="h-6 w-6" />
+								</Button>
+							</Tooltip>
 						</div>
 					</div>
 				</Modal.Header>
 
 				{/* Tabs Navigation */}
-				<div className="shrink-0 flex gap-6 px-6 border-b border-gray-200 dark:border-neutral-700 overflow-x-auto">
-					{tabs.map((tab) => (
-						<NavLink
-							key={tab.path}
-							to={tab.path}
-							className={({ isActive }) =>
-								`flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-									isActive
-										? "border-neutral-900 dark:border-white text-neutral-900 dark:text-white"
-										: "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-								}`
-							}>
-							<tab.icon className="w-5 h-5" />
-							{tab.label}
-						</NavLink>
-					))}
-				</div>
+				<TabsNavigation tabs={tabs} />
 
 				{/* Tab Content */}
 				<Modal.Content

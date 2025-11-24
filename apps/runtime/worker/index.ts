@@ -1,8 +1,7 @@
 import { config } from "@voltage/config";
 
+import { database, logger, stats } from "@voltage/utils";
 import { getNow, addNow } from "@voltage/utils";
-import { logger } from "@voltage/utils/logger";
-import { database } from "@voltage/utils/database";
 
 import { downloadInput } from "./downloader";
 import { analyzeInputMetadata } from "./analyzer";
@@ -16,7 +15,7 @@ import fs from "fs/promises";
 
 // import * as tf from '@tensorflow/tfjs-node';
 
-database.config(config.database);
+// database.config(config.database);
 
 async function run() {
 	await logger.insert("INFO", "Worker starts running...");
@@ -314,10 +313,12 @@ async function run() {
 	// await updateWorkerStatus('IDLE');
 
 	if (job.status === "COMPLETED") {
+		await stats.update({ jobs_completed: 1 });
 		await logger.insert("INFO", "Job successfully completed!");
 		await createJobNotification(job, job.status);
 		process.exit(0);
 	} else {
+		await stats.update({ jobs_failed: 1 });
 		await logger.insert("ERROR", "Job failed!", { error: job.outcome });
 		await createJobNotification(job, job.status);
 		process.exit(1);

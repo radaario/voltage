@@ -22,5 +22,5 @@
 	},
 	"include": ["./*.ts"],
 	"exclude": ["node_modules", "dist"],
-	"files": ["index.ts", "logger.ts", "storage.ts", "database.ts"]
+	"files": ["index.ts", "storage.ts", "database.ts", "logger.ts", "stats.ts"]
 }

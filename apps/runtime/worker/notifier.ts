@@ -1,13 +1,13 @@
 import { config } from "@voltage/config";
 import { NotificationSpecs } from "@voltage/config/types";
+
+import { database, stats, logger } from "@voltage/utils";
 import { uukey, getNow, addNow, sanitizeData } from "@voltage/utils";
-import { logger } from "@voltage/utils/logger";
-import { database } from "@voltage/utils/database";
 
 import axios from "axios";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 
-database.config(config.database);
+// database.config(config.database);
 
 export async function createJobNotification(job: any, jobStatus: string): Promise<any> {
 	if (!job.notification || !job.notification.type) {
@@ -170,7 +170,10 @@ export async function notify(specs: NotificationSpecs, payload: any): Promise<an
 		} else {
 			throw new Error("Unknown notification type!");
 		}
+
+		await stats.update({ notifications_sent: 1 });
 	} catch (error: Error | any) {
+		await stats.update({ notifications_failed: 1 });
 		logger.console("WARNING", "Notification couldn't be sent!", {
 			error: { code: error.code, name: error.name, message: error.message || "Unknown error occurred!" }
 		});

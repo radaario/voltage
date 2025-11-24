@@ -1,6 +1,10 @@
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate, Outlet, useParams } from "react-router-dom";
 import type { Instance } from "@/interfaces/instance";
-import { JobCard } from "@/components";
+import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
+import { JobCard, Label, Button, Tooltip } from "@/components";
+import { formatDate } from "@/utils";
+import { EyeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
+import { getWorkerName } from "@/utils/naming";
 
 interface OutletContext {
 	instance: Instance;
@@ -8,6 +12,9 @@ interface OutletContext {
 
 const WorkersTab: React.FC = () => {
 	const { instance } = useOutletContext<OutletContext>();
+	const { instanceKey } = useParams<{ instanceKey: string }>();
+	const { config } = useGlobalStateContext();
+	const navigate = useNavigate();
 
 	if (!instance) {
 		return (
@@ -31,16 +38,22 @@ const WorkersTab: React.FC = () => {
 				<thead className="bg-gray-50 dark:bg-neutral-900">
 					<tr>
 						<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							Worker Key
+							#
+						</th>
+						<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+							Worker
+						</th>
+						<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+							Job
 						</th>
 						<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 							Status
 						</th>
 						<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							PID
+							Updated At
 						</th>
 						<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							Job
+							Actions
 						</th>
 					</tr>
 				</thead>
@@ -48,28 +61,56 @@ const WorkersTab: React.FC = () => {
 					{instance.workers.map((worker) => (
 						<tr
 							key={worker.key}
-							className="hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors">
-							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-								<span className="font-mono text-xs">{worker.key}</span>
+							onClick={() => navigate(`/instances/${instanceKey}/workers/${worker.key}/info`)}
+							className="hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors cursor-pointer">
+							<td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-400">
+								{worker.index + 1}
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-								<span
-									className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium ${
-										worker.status === "RUNNING"
-											? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-											: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
-									}`}>
-									{worker.status}
-								</span>
+								<div className="flex items-start gap-2 min-w-[120px] shrink-0">
+									<CpuChipIcon className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0 mt-0.5" />
+									<div>
+										<div className="text-sm text-gray-900 dark:text-white font-bold">
+											{getWorkerName(instance.workers, worker)}
+										</div>
+										<div className="font-mono text-xs text-gray-500 dark:text-gray-400 truncate">{worker.key}</div>
+									</div>
+								</div>
 							</td>
-							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{worker.pid || "N/A"}</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
 								{worker.job_key ? <JobCard jobKey={worker.job_key} /> : <span className="text-gray-400">No Job</span>}
+							</td>
+							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+								<Label
+									status={worker.status}
+									size="sm">
+									{worker.status}
+								</Label>
+							</td>
+							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+								{formatDate(worker.updated_at, config?.timezone || "UTC")}
+							</td>
+							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+								<Tooltip content="View">
+									<Button
+										variant="soft"
+										size="sm"
+										iconOnly
+										onClick={(e) => {
+											e.stopPropagation();
+											navigate(`/instances/${instanceKey}/workers/${worker.key}/info`);
+										}}>
+										<EyeIcon className="h-4 w-4" />
+									</Button>
+								</Tooltip>
 							</td>
 						</tr>
 					))}
 				</tbody>
 			</table>
+
+			{/* Nested Outlet for WorkerDetailModal */}
+			<Outlet context={{ instance }} />
 		</div>
 	);
 };

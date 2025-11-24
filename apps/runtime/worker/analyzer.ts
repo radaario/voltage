@@ -1,7 +1,7 @@
 import { config } from "@voltage/config";
 
+// import { logger } from "@voltage/utils";
 import { guessContentType } from "@voltage/utils";
-// import { logger } from "@voltage/utils/logger";
 
 import { spawn } from "child_process";
 import fs from "fs/promises";

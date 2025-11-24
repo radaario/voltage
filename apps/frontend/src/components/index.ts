@@ -11,6 +11,7 @@ export { MemoizedTableRow } from "./base/MemoizedTableRow";
 export { default as Modal } from "./base/Modal";
 export { default as Pagination } from "./base/Pagination";
 export { TableKeyValuePreview } from "./base/TableKeyValuePreview";
+export { default as TabsNavigation } from "./base/TabsNavigation";
 export { default as TimeAgo } from "./base/TimeAgo/TimeAgo";
 export { default as Tooltip } from "./base/Tooltip/Tooltip";
 
@@ -21,4 +22,4 @@ export { WorkerCard } from "./composite/WorkerCard";
 export { NotificationCard } from "./composite/NotificationCard";
 
 // Modals
-export { ConfirmModal } from "./modals/ConfirmModal";
+export { default as ConfirmModal } from "./modals/ConfirmModal/ConfirmModal";

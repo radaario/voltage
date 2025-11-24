@@ -1,19 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import { useOutletContext, useNavigate, Outlet } from "react-router-dom";
-import { Label, Tooltip, Button, Pagination } from "@/components";
+import { Label, Tooltip, Button, Pagination, JobCard } from "@/components";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
-import type { Job } from "@/interfaces/job";
+import type { Instance } from "@/interfaces";
 import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { formatDate } from "@/utils";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { WorkerCard } from "@/components/composite/WorkerCard";
 
 interface OutletContext {
-	job: Job;
+	instance: Instance;
 }
 
 interface PaginationInfo {
@@ -27,7 +26,7 @@ interface PaginationInfo {
 }
 
 const LogsTab: React.FC = () => {
-	const { job } = useOutletContext<OutletContext>();
+	const { instance } = useOutletContext<OutletContext>();
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
 	const { config } = useGlobalStateContext();
@@ -42,18 +41,18 @@ const LogsTab: React.FC = () => {
 
 	// Fetch logs with React Query
 	const { data: logsResponse, isLoading } = useQuery<ApiResponse<Log[]>>({
-		queryKey: ["job-logs", job.key, currentPage, currentLimit, searchQuery, typeFilter, authToken],
+		queryKey: ["instance-logs", instance.key, currentPage, currentLimit, searchQuery, typeFilter, authToken],
 		queryFn: async () => {
 			return await api.get<Log[]>("/logs", {
 				token: authToken || "",
-				job_key: job.key,
+				instance_key: instance.key,
 				page: currentPage,
 				limit: currentLimit,
 				...(searchQuery && { q: searchQuery }),
 				...(typeFilter && { type: typeFilter })
 			});
 		},
-		enabled: !!authToken && !!job.key,
+		enabled: !!authToken && !!instance.key,
 		placeholderData: (previousData) => previousData
 	});
 
@@ -124,7 +123,6 @@ const LogsTab: React.FC = () => {
 					<option value="INFO">Info</option>
 					<option value="WARNING">Warning</option>
 					<option value="ERROR">Error</option>
-					{/* <option value="DEBUG">Debug</option> */}
 				</select>
 
 				{/* Search Bar */}
@@ -146,7 +144,8 @@ const LogsTab: React.FC = () => {
 						</button>
 					)}
 				</div>
-			</div>{" "}
+			</div>
+
 			{/* Table */}
 			{isLoading ? (
 				<div className="flex justify-center items-center py-12">
@@ -154,7 +153,7 @@ const LogsTab: React.FC = () => {
 				</div>
 			) : logs.length === 0 ? (
 				<div className="text-center py-12">
-					<p className="text-sm text-gray-600 dark:text-gray-400">No logs found for this job.</p>
+					<p className="text-sm text-gray-600 dark:text-gray-400">No logs found for this instance.</p>
 				</div>
 			) : (
 				<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
@@ -165,7 +164,7 @@ const LogsTab: React.FC = () => {
 									Log
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Worker
+									Job
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Created At
@@ -179,7 +178,7 @@ const LogsTab: React.FC = () => {
 							{logs.map((log: Log) => (
 								<tr
 									key={log.key}
-									onClick={() => navigate(`/jobs/${job.key}/logs/${log.key}/info`)}
+									onClick={() => navigate(`/instances/${instance.key}/logs/${log.key}/info`)}
 									className={`hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors cursor-pointer ${
 										newLogKeys.has(log.key) ? "animate-pulse bg-green-50 dark:bg-green-900/20" : ""
 									}`}>
@@ -193,14 +192,7 @@ const LogsTab: React.FC = () => {
 										<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{log.key}</div>
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										{log.worker_key ? (
-											<WorkerCard
-												workerKey={log.worker_key}
-												short={true}
-											/>
-										) : (
-											"-"
-										)}
+										{log.job_key ? <JobCard jobKey={log.job_key} /> : <span className="text-gray-400">-</span>}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
 										{formatDate(log.created_at, config?.timezone || "UTC")}
@@ -213,7 +205,7 @@ const LogsTab: React.FC = () => {
 												iconOnly
 												onClick={(e) => {
 													e.stopPropagation();
-													navigate(`/jobs/${job.key}/logs/${log.key}/info`);
+													navigate(`/instances/${instance.key}/logs/${log.key}/info`);
 												}}>
 												<EyeIcon className="w-4 h-4" />
 											</Button>
@@ -225,6 +217,7 @@ const LogsTab: React.FC = () => {
 					</table>
 				</div>
 			)}
+
 			{/* Pagination */}
 			{pagination && pagination.total_pages > 1 && (
 				<Pagination
@@ -237,6 +230,7 @@ const LogsTab: React.FC = () => {
 					onPageChange={setCurrentPage}
 				/>
 			)}
+
 			{/* Outlet for nested modals */}
 			<Outlet />
 		</div>

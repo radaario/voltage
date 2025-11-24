@@ -13,7 +13,7 @@ const OutcomeTab: React.FC = () => {
 		<div className="space-y-4">
 			<JsonViewer
 				data={output?.outcome}
-				emptyMessage="No outcome available"
+				emptyMessage="There is no outcome yet!"
 			/>
 		</div>
 	);

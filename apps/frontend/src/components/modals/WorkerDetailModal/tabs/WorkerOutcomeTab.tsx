@@ -16,7 +16,7 @@ const WorkerOutcomeTab = () => {
 	return (
 		<JsonViewer
 			data={worker.outcome}
-			emptyMessage="No outcome data available!"
+			emptyMessage="There is no outcome yet!"
 		/>
 	);
 };

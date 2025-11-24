@@ -1,7 +1,6 @@
 import { useOutletContext } from "react-router-dom";
 import { Worker } from "@/interfaces/instance";
-import Label from "@/components/base/Label/Label";
-import { JobCard, InstanceCard } from "@/components";
+import { Label, JobCard, InstanceCard } from "@/components";
 
 const InfoTab = () => {
 	const { worker } = useOutletContext<{ worker: Worker }>();

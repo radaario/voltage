@@ -1,6 +1,5 @@
 import { ExclamationTriangleIcon, ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
-import Modal from "@/components/base/Modal/Modal";
-import Button from "@/components/base/Button/Button";
+import { Modal, Button } from "@/components";
 
 export type ConfirmModalVariant = "danger" | "warning" | "info";
 
@@ -70,7 +69,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 			size="lg"
 			closeOnBackdrop={!isLoading}
 			closeOnEscape={!isLoading}
-			id="ConfirmModal">
+			data-modal-id="ConfirmModal">
 			<Modal.Content noPadding>
 				<div className="p-6">
 					<div className="flex items-start gap-4">

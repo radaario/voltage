@@ -5,15 +5,19 @@ import { useNavigate } from "react-router-dom";
 import { Notification } from "@/interfaces/notification";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/utils";
-import TimeAgo from "@/components/base/TimeAgo/TimeAgo";
-import Tooltip from "@/components/base/Tooltip/Tooltip";
-import Button from "@/components/base/Button/Button";
-import Pagination from "@/components/base/Pagination";
-import LoadingOverlay from "@/components/base/LoadingOverlay";
-import EmptyState from "@/components/base/EmptyState";
-import { MemoizedTableRow } from "@/components/base/MemoizedTableRow";
+import {
+	ConfirmModal,
+	Label,
+	Tooltip,
+	Button,
+	TimeAgo,
+	MemoizedTableRow,
+	Pagination,
+	LoadingOverlay,
+	EmptyState,
+	JobCard
+} from "@/components";
 import { ArrowUturnLeftIcon, EyeIcon } from "@heroicons/react/24/outline";
-import { JobCard, ConfirmModal } from "@/components";
 
 interface PaginationInfo {
 	total: number;
@@ -73,23 +77,29 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 
 	const columns = useMemo(
 		() => [
+			columnHelper.accessor("payload.status", {
+				header: "Notification",
+				cell: (info) => {
+					const notification = info.row.original;
+					return (
+						<>
+							<Label
+								status={notification.payload.status}
+								statusColor={false}
+								size="sm">
+								{notification.payload.status || "UNKNOWN"}
+							</Label>
+							<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{notification.key}</div>
+						</>
+					);
+				}
+			}),
 			columnHelper.accessor("job_key", {
 				header: "Job",
 				cell: (info) => {
 					const jobKey = info.getValue();
 					if (!jobKey) return <span className="text-gray-400">-</span>;
 					return <JobCard jobKey={jobKey} />;
-				}
-			}),
-			columnHelper.accessor("payload.status", {
-				header: "Event",
-				cell: (info) => {
-					const event = info.getValue();
-					return (
-						<div className="flex flex-col">
-							<span className="font-medium text-gray-900 dark:text-white">{event || "UNKNOWN"}</span>
-						</div>
-					);
 				}
 			}),
 			columnHelper.accessor("priority", {
