@@ -1,4 +1,4 @@
-import { CalendarIcon, ChartBarIcon, KeyIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline";
+import { CalendarIcon, ChartBarIcon, KeyIcon, ClipboardDocumentIcon, HashtagIcon } from "@heroicons/react/24/outline";
 import { JobCard, WorkerCard, InstanceCard, Label } from "@/components";
 import { formatDate as utilFormatDate, copyToClipboard } from "@/utils";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
@@ -139,7 +139,19 @@ const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, exclu
 					</button>
 				</div>
 			);
-		} // Numbers with icon
+		}
+
+		// Numbers with icon
+		if (typeof value === "number" && key === "index") {
+			return (
+				<span className="inline-flex items-center gap-1">
+					<HashtagIcon className="h-4 w-4 text-gray-400" />
+					<span className="font-medium text-gray-800 dark:text-gray-200">{value + 1}</span>
+				</span>
+			);
+		}
+
+		// Numbers with icon
 		if (typeof value === "number") {
 			return (
 				<span className="inline-flex items-center gap-1">

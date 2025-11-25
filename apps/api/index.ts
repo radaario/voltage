@@ -3,13 +3,18 @@ import { config } from "@voltage/config";
 import { JobRequest, JobRow, OutputSpecs } from "@voltage/config/types";
 
 import { storage, database, logger, stats } from "@voltage/utils";
-import { getInstanceKey, sanitizeData, uuid, uukey, hash, getNow } from "@voltage/utils";
+import { getInstanceKey, sanitizeData, uuid, uukey, hash, getDate, getNow, subtractFrom } from "@voltage/utils";
 
 import path from "path";
 import "express-async-errors";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import { createJobNotification } from "@voltage/runtime/worker/notifier";
+
+const responseMetadata = {
+	version: config.version,
+	env: config.env
+};
 
 // INSTANCE: KEY
 const instance_key = getInstanceKey();
@@ -57,16 +62,24 @@ const authMiddleware = (options: {} = {}) => {
 			(req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.substring(7) : null);
 
 		if (!token) {
-			return res
-				.status(401)
-				.json({ metadata: { status: "ERROR", error: { code: "AUTH_TOKEN_REQUIRED", message: "Authentication token required!" } } });
+			return res.status(401).json({
+				metadata: {
+					...responseMetadata,
+					status: "ERROR",
+					error: { code: "AUTH_TOKEN_REQUIRED", message: "Authentication token required!" }
+				}
+			});
 		}
 
 		// Check if token matches either frontend token or API key
 		if (token !== frontendToken && token !== apiToken) {
-			return res
-				.status(401)
-				.json({ metadata: { status: "ERROR", error: { code: "AUTH_TOKEN_INVALID", message: "Invalid authentication token!" } } });
+			return res.status(401).json({
+				metadata: {
+					...responseMetadata,
+					status: "ERROR",
+					error: { code: "AUTH_TOKEN_INVALID", message: "Invalid authentication token!" }
+				}
+			});
 		}
 
 		next();
@@ -76,10 +89,10 @@ const authMiddleware = (options: {} = {}) => {
 // API: ROUTEs
 // Support both /health and /status for health checks (some load balancers
 // or orchestration systems expect one or the other).
-app.get(["/status", "/health"], (req, res) => res.json({ metadata: { status: "SUCCESSFUL" } }));
+app.get(["/status", "/health"], (req, res) => res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" } }));
 
 app.get("/config", async (req, res) => {
-	return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(config) });
+	return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(config) });
 });
 
 app.post("/auth", async (req, res) => {
@@ -88,21 +101,63 @@ app.post("/auth", async (req, res) => {
 
 	if (config.frontend.is_authentication_required) {
 		if (!inputPassword) {
-			return res
-				.status(400)
-				.json({ metadata: { status: "ERROR", error: { code: "PASSWORD_REQUIRED", message: "Password required!" } } });
+			return res.status(400).json({
+				metadata: { ...responseMetadata, status: "ERROR", error: { code: "PASSWORD_REQUIRED", message: "Password required!" } }
+			});
 		}
 
 		if (inputPassword === config.frontend.password) {
 			const token = hash(inputPassword);
-			return res.json({ metadata: { status: "SUCCESSFUL" }, data: { token } });
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: { token } });
 		} else {
-			return res
-				.status(401)
-				.json({ metadata: { status: "ERROR", error: { code: "PASSWORD_INVALID", message: "Invalid password!" } } });
+			return res.status(401).json({
+				metadata: { ...responseMetadata, status: "ERROR", error: { code: "PASSWORD_INVALID", message: "Invalid password!" } }
+			});
 		}
 	} else {
-		return res.json({ metadata: { status: "SUCCESSFUL" } });
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" } });
+	}
+});
+
+app.get("/stats", authMiddleware(), async (req, res) => {
+	try {
+		let since_at = (req.query.since_at || req.body.since_at || "").trim();
+		let until_at = (req.query.until_at || req.body.until_at || "").trim();
+
+		if (!until_at) until_at = getNow("YYYY-MM-DD");
+		if (!since_at) since_at = subtractFrom(until_at, 1, "month", "YYYY-MM-DD");
+
+		since_at = getDate(since_at, "YYYY-MM-DD");
+		until_at = getDate(until_at, "YYYY-MM-DD");
+
+		const stats = await database.table("stats").where("date", ">=", since_at).where("date", "<=", until_at).orderBy("date", "asc");
+
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL", since_at, until_at }, data: sanitizeData(stats) });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to fetch logs!", { error });
+		return res.status(500).json({
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch stats!" }
+			}
+		});
+	}
+});
+
+app.delete("/stats/all", authMiddleware(), async (req, res) => {
+	try {
+		await database.table("stats").delete();
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "All stats deleted successfully!" });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to delete stats!", { error });
+		return res.status(500).json({
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to delete stats!" }
+			}
+		});
 	}
 });
 
@@ -115,10 +170,12 @@ app.get("/logs", authMiddleware(), async (req, res) => {
 			const log = await database.table("logs").where("key", log_key).first();
 
 			if (!log) {
-				return res.status(404).json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Log not found!" } } });
+				return res
+					.status(404)
+					.json({ metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_FOUND", message: "Log not found!" } } });
 			}
 
-			return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(log) });
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(log) });
 		}
 
 		const defaultLimit = 25;
@@ -179,7 +236,7 @@ app.get("/logs", authMiddleware(), async (req, res) => {
 		const prevPage = page > 1 ? page - 1 : null;
 
 		return res.json({
-			metadata: { status: "SUCCESSFUL" },
+			metadata: { ...responseMetadata, status: "SUCCESSFUL" },
 			data: sanitizeData(logs),
 			pagination: {
 				limit,
@@ -193,9 +250,29 @@ app.get("/logs", authMiddleware(), async (req, res) => {
 		});
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to fetch logs!", { error });
-		return res
-			.status(500)
-			.json({ metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch logs!" } } });
+		return res.status(500).json({
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch logs!" }
+			}
+		});
+	}
+});
+
+app.delete("/logs/all", authMiddleware(), async (req, res) => {
+	try {
+		await database.table("logs").delete();
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "All logs deleted successfully!" });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to delete logs!", { error });
+		return res.status(500).json({
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to delete logs!" }
+			}
+		});
 	}
 });
 
@@ -210,16 +287,16 @@ app.get("/instances", authMiddleware(), async (req, res) => {
 			const instance = await database.table("instances").where("key", instance_key).first();
 
 			if (!instance) {
-				return res
-					.status(404)
-					.json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Instance not found!" } } });
+				return res.status(404).json({
+					metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_FOUND", message: "Instance not found!" } }
+				});
 			}
 
 			const workers = await database.table("instances_workers").where("instance_key", instance_key).orderBy("index", "asc");
 
 			const result = { ...instance, specs: instance.specs ? JSON.parse(instance.specs) : "{}", workers };
 
-			return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(result) });
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(result) });
 		}
 
 		let query = database.table("instances");
@@ -242,7 +319,7 @@ app.get("/instances", authMiddleware(), async (req, res) => {
 
 		// If no instances, return empty array immediately
 		if (instances.length === 0) {
-			return res.json({ metadata: { status: "SUCCESSFUL" }, data: [] });
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: [] });
 		}
 
 		// Collect instance keys and fetch workers for those instances in one query
@@ -263,11 +340,15 @@ app.get("/instances", authMiddleware(), async (req, res) => {
 			};
 		});
 
-		return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(result) });
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(result) });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to fetch instances!", { error });
 		res.status(500).json({
-			metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch instances!" } }
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch instances!" }
+			}
 		});
 	}
 });
@@ -282,10 +363,12 @@ app.get("/instances/workers", authMiddleware(), async (req, res) => {
 			const worker = await database.table("instances_workers").where("key", worker_key).first();
 
 			if (!worker) {
-				return res.status(404).json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Worker not found!" } } });
+				return res.status(404).json({
+					metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_FOUND", message: "Worker not found!" } }
+				});
 			}
 
-			return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(worker) });
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(worker) });
 		}
 
 		const instance_key = (req.query.instance_key || req.body.instance_key || "").trim();
@@ -294,24 +377,16 @@ app.get("/instances/workers", authMiddleware(), async (req, res) => {
 		if (instance_key) query.where("instance_key", instance_key);
 		const workers = await query.orderBy("index", "asc");
 
-		return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(workers) });
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(workers) });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to fetch workers!", { error });
 		return res.status(500).json({
-			metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch workers!" } }
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch workers!" }
+			}
 		});
-	}
-});
-
-app.delete("/logs/all", authMiddleware(), async (req, res) => {
-	try {
-		await database.table("logs").delete();
-		return res.json({ metadata: { status: "SUCCESSFUL" }, message: "All logs deleted successfully!" });
-	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete logs!", { error });
-		return res
-			.status(500)
-			.json({ metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Failed to delete logs!" } } });
 	}
 });
 
@@ -324,10 +399,12 @@ app.get("/jobs", authMiddleware(), async (req, res) => {
 			const job = await database.table("jobs").where("key", job_key).first();
 
 			if (!job) {
-				return res.status(404).json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Job not found!" } } });
+				return res
+					.status(404)
+					.json({ metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_FOUND", message: "Job not found!" } } });
 			}
 
-			return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(job) });
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(job) });
 		}
 
 		const defaultLimit = 25;
@@ -383,7 +460,7 @@ app.get("/jobs", authMiddleware(), async (req, res) => {
 		const prevPage = page > 1 ? page - 1 : null;
 
 		return res.json({
-			metadata: { status: "SUCCESSFUL" },
+			metadata: { ...responseMetadata, status: "SUCCESSFUL" },
 			data: sanitizeData(jobs),
 			pagination: {
 				limit,
@@ -397,9 +474,13 @@ app.get("/jobs", authMiddleware(), async (req, res) => {
 		});
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to fetch jobs!", { error });
-		return res
-			.status(500)
-			.json({ metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch jobs!" } } });
+		return res.status(500).json({
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch jobs!" }
+			}
+		});
 	}
 });
 
@@ -407,9 +488,13 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 	const body = req.body as JobRequest;
 
 	if (!body || !body.input || !Array.isArray(body.outputs) || body.outputs.length === 0) {
-		return res
-			.status(400)
-			.json({ metadata: { status: "ERROR", error: { code: "REQUEST_INVALID", message: "Require input and outputs[]!" } } });
+		return res.status(400).json({
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "REQUEST_INVALID", message: "Require input and outputs[]!" }
+			}
+		});
 	}
 
 	try {
@@ -437,6 +522,7 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 		if (outputs.length === 0) {
 			return res.status(400).json({
 				metadata: {
+					...responseMetadata,
 					status: "ERROR",
 					error: { code: "REQUEST_INVALID", message: "At least one output specification is required!" }
 				}
@@ -488,7 +574,14 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 			})
 			.then(async (result) => {
 				await createJobNotification(job, "RECEIVED");
-				await stats.update({ jobs_recieved: 1 });
+
+				await stats.update({
+					jobs_recieved: 1,
+					inputs_recieved: 1,
+					outputs_requested: job.outputs?.length || 0,
+					notifications_requested: job.notification ? 1 : 0
+				});
+
 				await logger.insert("INFO", "Job request received!", { job_key });
 				// await logger.insert("INFO", "Job successfully created!", { job_key });
 
@@ -516,10 +609,12 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 				throw error;
 			});
 
-		return res.status(202).json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(job) });
+		return res.status(202).json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(job) });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Create job failed!", { error });
-		return res.status(500).json({ metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: "Job creation failed!" } } });
+		return res.status(500).json({
+			metadata: { ...responseMetadata, status: "ERROR", error: { code: "INTERNAL_ERROR", message: "Job creation failed!" } }
+		});
 	}
 });
 
@@ -528,18 +623,22 @@ app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) =>
 	const output_key = (req.query.output_key || req.body.output_key || "").trim();
 
 	if (!job_key) {
-		return res.status(400).json({ metadata: { status: "ERROR", error: { code: "KEY_REQUIRED", message: "Job key required!" } } });
+		return res
+			.status(400)
+			.json({ metadata: { ...responseMetadata, status: "ERROR", error: { code: "KEY_REQUIRED", message: "Job key required!" } } });
 	}
 
 	const job = await database.table("jobs").where("key", job_key).first();
 
 	if (!job) {
-		return res.status(404).json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Job not found!" } } });
+		return res
+			.status(404)
+			.json({ metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_FOUND", message: "Job not found!" } } });
 	}
 
 	if (!["CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(job.status)) {
 		return res.status(405).json({
-			metadata: { status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be reprocessed!" } }
+			metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be reprocessed!" } }
 		});
 	}
 
@@ -557,7 +656,7 @@ app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) =>
 
 	if (jobOutputsUpdatedCount <= 0) {
 		return res.status(405).json({
-			metadata: { status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be reprocessed!" } }
+			metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be reprocessed!" } }
 		});
 	}
 
@@ -573,32 +672,86 @@ app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) =>
 
 	await logger.insert("INFO", "Retrying job!", { job_key, output_key });
 
-	return res.json({ metadata: { status: "SUCCESSFUL" } });
+	return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" } });
 });
 
 app.delete("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 	const job_key = (req.query.job_key || req.body.job_key || "").trim();
 
 	if (!job_key) {
-		return res.status(400).json({ metadata: { status: "ERROR", error: { code: "KEY_REQUIRED", message: "Job key required!" } } });
+		return res
+			.status(400)
+			.json({ metadata: { ...responseMetadata, status: "ERROR", error: { code: "KEY_REQUIRED", message: "Job key required!" } } });
 	}
 
 	const job = await database.table("jobs").where("key", job_key).select("key", "status").first();
 
 	if (!job) {
-		return res.status(404).json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Job not found!" } } });
+		return res
+			.status(404)
+			.json({ metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_FOUND", message: "Job not found!" } } });
+	}
+
+	if (["DELETED"].includes(job.status)) {
+		await database.table("jobs").where("key", job_key).delete();
+		await database.table("jobs_queue").where("key", job_key).delete();
+		await database.table("jobs_notifications").where("job_key", job_key).delete();
+		await database.table("jobs_notifications_queue").where("job_key", job_key).delete();
+
+		try {
+			await storage.delete(`/jobs/${job_key}/`);
+		} catch (error: Error | any) {}
+
+		await logger.insert("INFO", "Job permanently deleted!", { job_key });
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" } });
 	}
 
 	if (!["RECEIVED", "PENDING", "RETRYING"].includes(job.status)) {
 		return res.status(405).json({
-			metadata: { status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be deleted!" } }
+			metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be soft deleted!" } }
 		});
 	}
 
 	await database.table("jobs").where("key", job_key).update({ status: "DELETED" });
-	await logger.insert("INFO", "Job deleted!", { job_key });
+	await logger.insert("INFO", "Job soft deleted!", { job_key });
 
-	return res.json({ metadata: { status: "SUCCESSFUL" } });
+	return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" } });
+});
+
+app.delete("/jobs/all", authMiddleware(), async (req, res) => {
+	try {
+		const jobs = await database.table("jobs").select("key");
+
+		const jobsKeys = jobs.map((r: any) => r.key);
+
+		if (jobsKeys.length > 0) {
+			// Delete job folders/objects via unified storage facade
+			for (const job_key of jobsKeys) {
+				try {
+					await storage.delete(`/jobs/${job_key}/`);
+				} catch (error: Error | any) {}
+			}
+
+			await database.table("jobs").whereIn("key", jobsKeys).delete();
+			await database.table("jobs_queue").whereIn("key", jobsKeys).delete();
+			await database.table("jobs_notifications").whereIn("job_key", jobsKeys).delete();
+			await database.table("jobs_notifications_queue").whereIn("job_key", jobsKeys).delete();
+
+			await logger.insert("INFO", "All jobs permanently deleted!", { count: jobsKeys.length });
+		}
+
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "All jobs permanently deleted!" });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to delete all jobs!", { error });
+
+		return res.status(500).json({
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to delete all jobs!" }
+			}
+		});
+	}
 });
 
 app.get("/jobs/preview", async (req: Request, res: Response) => {
@@ -616,7 +769,9 @@ app.get("/jobs/preview", async (req: Request, res: Response) => {
 			const job = await database.table("jobs").where("key", job_key).first();
 
 			if (!job) {
-				return res.status(404).json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Job not found!" } } });
+				return res
+					.status(404)
+					.json({ metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_FOUND", message: "Job not found!" } } });
 			}
 
 			try {
@@ -643,12 +798,12 @@ app.get("/jobs/notifications", authMiddleware(), async (req, res) => {
 			const notification = await database.table("jobs_notifications").where("key", notification_key).first();
 
 			if (!notification) {
-				return res
-					.status(404)
-					.json({ metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Notification not found!" } } });
+				return res.status(404).json({
+					metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_FOUND", message: "Notification not found!" } }
+				});
 			}
 
-			return res.json({ metadata: { status: "SUCCESSFUL" }, data: sanitizeData(notification) });
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(notification) });
 		}
 
 		const defaultLimit = 25;
@@ -704,7 +859,7 @@ app.get("/jobs/notifications", authMiddleware(), async (req, res) => {
 		const prevPage = page > 1 ? page - 1 : null;
 
 		return res.json({
-			metadata: { status: "SUCCESSFUL" },
+			metadata: { ...responseMetadata, status: "SUCCESSFUL" },
 			data: sanitizeData(notifications),
 			pagination: {
 				limit,
@@ -720,6 +875,7 @@ app.get("/jobs/notifications", authMiddleware(), async (req, res) => {
 		await logger.insert("ERROR", "Failed to fetch job notifications!", { error });
 		return res.status(500).json({
 			metadata: {
+				...responseMetadata,
 				status: "ERROR",
 				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch job notifications!" }
 			}
@@ -733,7 +889,7 @@ app.post("/jobs/notifications/retry", authMiddleware(), async (req, res) => {
 
 		if (!notification_key) {
 			return res.status(400).json({
-				metadata: { status: "ERROR", error: { code: "KEY_REQUIRED", message: "Notification key required!" } }
+				metadata: { ...responseMetadata, status: "ERROR", error: { code: "KEY_REQUIRED", message: "Notification key required!" } }
 			});
 		}
 
@@ -741,7 +897,7 @@ app.post("/jobs/notifications/retry", authMiddleware(), async (req, res) => {
 
 		if (!notification) {
 			return res.status(404).json({
-				metadata: { status: "ERROR", error: { code: "NOT_FOUND", message: "Notification not found!" } }
+				metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_FOUND", message: "Notification not found!" } }
 			});
 		}
 
@@ -752,11 +908,12 @@ app.post("/jobs/notifications/retry", authMiddleware(), async (req, res) => {
 			updated_at: getNow()
 		});
 
-		return res.json({ metadata: { status: "SUCCESSFUL" }, message: "Notification successfully rescheduled!" });
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "Notification successfully rescheduled!" });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to fetch job notifications!", { error });
 		return res.status(500).json({
 			metadata: {
+				...responseMetadata,
 				status: "ERROR",
 				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch job notifications!" }
 			}
@@ -777,9 +934,13 @@ app.get("/*", (req: Request, res: Response) => res.sendFile(path.join(frontendPa
 
 app.use((error: any, req: any, res: any, _next: any) => {
 	logger.insert("ERROR", "An error occurred on API service!", { error });
-	return res
-		.status(500)
-		.json({ metadata: { status: "ERROR", error: { code: "INTERNAL_ERROR", message: "An error occurred on API service!" } } });
+	return res.status(500).json({
+		metadata: {
+			...responseMetadata,
+			status: "ERROR",
+			error: { code: "INTERNAL_ERROR", message: "An error occurred on API service!" }
+		}
+	});
 });
 
 logger.insert("INFO", "Starting API service on :port...", { instance_key, port: config.api.node_port });

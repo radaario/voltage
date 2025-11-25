@@ -7,7 +7,7 @@ import { api, ApiResponse } from "@/utils";
 import JobsTable from "./JobsTable";
 import DeleteConfirmModal from "@/components/modals/DeleteConfirmModal/DeleteConfirmModal";
 import { ConfirmModal, Alert, Button, Tooltip } from "@/components";
-import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon, TrashIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
 	total: number;
@@ -33,6 +33,7 @@ const Jobs: React.FC = () => {
 	const [jobToRetry, setJobToRetry] = useState<Job | null>(null);
 	const previousDataRef = useRef<Job[]>([]);
 	const [newJobKeys, setNewJobKeys] = useState<Set<string>>(new Set());
+	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
 	// Fetch jobs with React Query
 	const {
@@ -54,6 +55,26 @@ const Jobs: React.FC = () => {
 		refetchInterval: 5000, // 5 saniyede bir otomatik refresh
 		placeholderData: (previousData) => previousData
 	}); // Detect new jobs when data updates
+
+	// Delete all jobs mutation
+	const deleteAllJobsMutation = useMutation({
+		mutationFn: async () => {
+			return await api.delete("/jobs/all", { token: authToken });
+		},
+		onSuccess: async () => {
+			// Close Delete All modal
+			setShowDeleteAllModal(false);
+			// Invalidate and refetch jobs immediately
+			await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+			await refetch();
+			// Auto-dismiss success message after 3 seconds
+			setTimeout(() => {
+				deleteAllJobsMutation.reset();
+			}, 3000);
+		}
+	});
+
+	// effects
 	useEffect(() => {
 		if (!jobsResponse?.data || currentPage !== 1) {
 			return;
@@ -235,6 +256,20 @@ const Jobs: React.FC = () => {
 		}
 	};
 
+	const handleConfirmDeleteAll = () => {
+		deleteAllJobsMutation.mutate();
+	};
+
+	const handleCloseDeleteAllModal = () => {
+		if (!deleteAllJobsMutation.isPending) {
+			setShowDeleteAllModal(false);
+		}
+	};
+
+	const handleDeleteAllJobs = () => {
+		setShowDeleteAllModal(true);
+	};
+
 	// Prepare pagination data
 	const pagination: PaginationInfo = {
 		total: jobsResponse?.pagination?.total || 0,
@@ -304,6 +339,19 @@ const Jobs: React.FC = () => {
 						isLoading={createJobMutation.isPending}>
 						{createJobMutation.isPending ? "Creating…" : "+ Create Test Job"}
 					</Button>
+
+					{/* Delete All Button */}
+					<Tooltip content="Delete All Logs">
+						<Button
+							variant="soft"
+							size="md"
+							iconOnly
+							onClick={handleDeleteAllJobs}
+							disabled={deleteAllJobsMutation.isPending || (jobsResponse?.data?.length || 0) === 0}
+							isLoading={deleteAllJobsMutation.isPending}>
+							<TrashIcon className="h-5 w-5 text-red-600 dark:text-white" />
+						</Button>
+					</Tooltip>
 				</div>
 			</div>
 
@@ -386,6 +434,26 @@ const Jobs: React.FC = () => {
 					variant="info"
 					isLoading={retryJobMutation.isPending}
 					loadingText="Retrying"
+				/>
+			)}
+
+			{/* Delete All Confirmation Modal */}
+			{showDeleteAllModal && (
+				<ConfirmModal
+					isOpen={showDeleteAllModal}
+					onClose={handleCloseDeleteAllModal}
+					onConfirm={handleConfirmDeleteAll}
+					title="Delete All Jobs"
+					message={
+						<>
+							Are you sure you want to delete <strong>ALL jobs</strong>? This action cannot be undone and will permanently
+							remove all Job entries from the system.
+						</>
+					}
+					confirmText="Delete All Jobs"
+					variant="danger"
+					isLoading={deleteAllJobsMutation.isPending}
+					loadingText="Deleting"
 				/>
 			)}
 

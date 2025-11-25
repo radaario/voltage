@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useOutletContext, useNavigate, Outlet } from "react-router-dom";
-import { Label, Tooltip, Button, Pagination, JobCard } from "@/components";
+import { Label, Tooltip, Button, Pagination, JobCard, WorkerCard } from "@/components";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import type { Instance } from "@/interfaces";
@@ -153,7 +153,7 @@ const LogsTab: React.FC = () => {
 				</div>
 			) : logs.length === 0 ? (
 				<div className="text-center py-12">
-					<p className="text-sm text-gray-600 dark:text-gray-400">No logs found for this instance.</p>
+					<p className="text-sm text-gray-600 dark:text-gray-400">There are no logs yet!</p>
 				</div>
 			) : (
 				<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
@@ -164,7 +164,7 @@ const LogsTab: React.FC = () => {
 									Log
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Job
+									Worker & Job
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Created At
@@ -192,7 +192,20 @@ const LogsTab: React.FC = () => {
 										<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{log.key}</div>
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										{log.job_key ? <JobCard jobKey={log.job_key} /> : <span className="text-gray-400">-</span>}
+										{log.worker_key && (
+											<div className="my-1">
+												<WorkerCard
+													workerKey={log.worker_key}
+													short={true}
+												/>
+											</div>
+										)}
+										{log.job_key && (
+											<div className="my-1">
+												<JobCard jobKey={log.job_key} />
+											</div>
+										)}
+										{!log.worker_key && !log.job_key && <span className="text-gray-400">-</span>}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
 										{formatDate(log.created_at, config?.timezone || "UTC")}

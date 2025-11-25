@@ -154,7 +154,7 @@ const LogsTab: React.FC = () => {
 				</div>
 			) : logs.length === 0 ? (
 				<div className="text-center py-12">
-					<p className="text-sm text-gray-600 dark:text-gray-400">No logs found for this job.</p>
+					<p className="text-sm text-gray-600 dark:text-gray-400">There are no logs yet!</p>
 				</div>
 			) : (
 				<div className="overflow-hidden border border-gray-200 dark:border-neutral-700 rounded-lg overflow-x-auto">

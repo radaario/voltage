@@ -148,7 +148,7 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 					<tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-800">
 						{table.getRowModel().rows.length === 0 ? (
 							<EmptyState
-								message="No logs found"
+								message="There are no logs yet!"
 								colSpan={columns.length}
 							/>
 						) : (

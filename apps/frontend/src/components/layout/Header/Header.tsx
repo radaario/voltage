@@ -9,7 +9,8 @@ import {
 	DocumentTextIcon,
 	ExclamationTriangleIcon,
 	Bars3Icon,
-	XMarkIcon
+	XMarkIcon,
+	PresentationChartLineIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
@@ -37,6 +38,18 @@ function Header() {
 				</div>
 				{isAuthenticated && (
 					<nav className="hidden md:flex items-center gap-3">
+						<NavLink
+							to="/"
+							className={({ isActive }: { isActive: boolean }) =>
+								`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+									isActive
+										? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md"
+										: "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700 hover:text-gray-900 dark:hover:text-white"
+								}`
+							}>
+							<PresentationChartLineIcon className="h-4 w-4" />
+							Dashboard
+						</NavLink>
 						<NavLink
 							to="/jobs"
 							className={({ isActive }: { isActive: boolean }) =>

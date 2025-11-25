@@ -231,7 +231,7 @@ const Logs: React.FC = () => {
 					</div>
 
 					{/* Delete All Button */}
-					<Tooltip content="Delete all logs">
+					<Tooltip content="Delete All Logs">
 						<Button
 							variant="soft"
 							size="md"

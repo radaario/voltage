@@ -3,7 +3,7 @@ import { api, formatDuration } from "@/utils";
 interface JobPreviewImageProps {
 	jobKey: string;
 	authToken: string | null;
-	version: string | null;
+	version: string | null | undefined;
 	className?: string;
 	duration?: number;
 }
@@ -13,7 +13,7 @@ const JobPreviewImage = ({ jobKey, authToken, duration, version, className }: Jo
 		<div
 			className={
 				className ||
-				"w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 group-hover:bg-gray-200 dark:group-hover:bg-neutral-700 rounded overflow-hidden transition-colors"
+				"w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 group-hover:bg-gray-200 dark:group-hover:bg-neutral-700 rounded overflow-hidden transition-colors border border-gray-100 dark:border-neutral-700"
 			}>
 			<img
 				key={jobKey}

@@ -111,15 +111,21 @@ export async function retryJobNotification(notification: any): Promise<any> {
 		notification.outcome = notificationOutcome;
 		notification.retry_at = null;
 
-		if (notification.status === "FAILED" && notification.try_count < notification.try_max) {
-			notification.status = "RETRYING";
-			notification.retry_at = addNow(notification.retry_in, "milliseconds");
+		if (notification.status === "SUCCESSFUL") {
+			await stats.update({ notifications_sent: 1 });
+		} else if (notification.status === "FAILED") {
+			if (notification.try_count < notification.try_max) {
+				notification.status = "RETRYING";
+				notification.retry_at = addNow(notification.retry_in, "milliseconds");
 
-			// JOB: NOTIFICATION: QUEUE: UPDATE OR INSERT
-			try {
-				await database.table("jobs_notifications_queue").insert(notification).onConflict("key").merge();
-			} catch (error: Error | any) {
-				// console.log("ERROR", error);
+				// JOB: NOTIFICATION: QUEUE: UPDATE OR INSERT
+				try {
+					await database.table("jobs_notifications_queue").insert(notification).onConflict("key").merge();
+				} catch (error: Error | any) {
+					// console.log("ERROR", error);
+				}
+			} else {
+				await stats.update({ notifications_failed: 1 });
 			}
 		}
 
@@ -170,10 +176,7 @@ export async function notify(specs: NotificationSpecs, payload: any): Promise<an
 		} else {
 			throw new Error("Unknown notification type!");
 		}
-
-		await stats.update({ notifications_sent: 1 });
 	} catch (error: Error | any) {
-		await stats.update({ notifications_failed: 1 });
 		logger.console("WARNING", "Notification couldn't be sent!", {
 			error: { code: error.code, name: error.name, message: error.message || "Unknown error occurred!" }
 		});

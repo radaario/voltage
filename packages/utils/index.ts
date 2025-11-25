@@ -117,7 +117,17 @@ export function getNow(format: string = "YYYY-MM-DD HH:mm:ss.SSS"): string {
 }
 
 export function addNow(amount: number, unit: moment.unitOfTime.DurationConstructor, format: string = "YYYY-MM-DD HH:mm:ss.SSS"): string {
-	let m = moment();
+	return addThis(getNow(), amount, unit, format);
+}
+
+export function addThis(
+	date: string,
+	amount: number,
+	unit: moment.unitOfTime.DurationConstructor,
+	format: string = "YYYY-MM-DD HH:mm:ss.SSS"
+): string {
+	let m = moment(date);
+
 	if (config.timezone && config.timezone !== "") {
 		try {
 			m = m.tz(config.timezone);
@@ -134,7 +144,16 @@ export function subtractNow(
 	unit: moment.unitOfTime.DurationConstructor,
 	format: string = "YYYY-MM-DD HH:mm:ss.SSS"
 ): string {
-	let m = moment();
+	return subtractFrom(getNow(), amount, unit, format);
+}
+
+export function subtractFrom(
+	date: string,
+	amount: number,
+	unit: moment.unitOfTime.DurationConstructor,
+	format: string = "YYYY-MM-DD HH:mm:ss.SSS"
+): string {
+	let m = moment(date);
 
 	if (config.timezone && config.timezone !== "") {
 		try {

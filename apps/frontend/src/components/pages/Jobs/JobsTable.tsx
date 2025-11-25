@@ -124,54 +124,65 @@ const JobsTable = ({
 				}
 			}),
 			columnHelper.display({
-				id: "duration",
-				header: "Duration",
+				id: "progress",
+				header: "Progress",
 				cell: (info) => {
 					const job = info.row.original;
 
-					// Job henüz başlamadıysa
-					if (!job.started_at || !job.completed_at) return <span className="text-gray-400">-</span>;
+					const duration = (() => {
+						// Job henüz başlamadıysa
+						if (!job.started_at || !job.completed_at) {
+							return null; //<span className="text-gray-400">-</span>;
+						}
 
-					// Her iki tarih de varsa süreyi hesapla
-					try {
-						const started_at = new Date(job.started_at).getTime();
-						const completed_at = new Date(job.completed_at).getTime();
+						// Her iki tarih de varsa süreyi hesapla
+						try {
+							const started_at = new Date(job.started_at).getTime();
+							const completed_at = new Date(job.completed_at).getTime();
 
-						// Geçersiz tarih kontrolü
-						if (isNaN(started_at) || isNaN(completed_at)) {
+							// Geçersiz tarih kontrolü
+							if (isNaN(started_at) || isNaN(completed_at)) {
+								return null; //<span className="text-gray-400">-</span>;
+							}
+
+							// Negatif veya çok büyük değer kontrolü
+							const duration = (completed_at - started_at) / 1000; // saniye cinsinden
+							if (duration < 0 || duration > 86400) {
+								// 24 saatten fazla ise
+								return <span className="text-gray-400">Invalid</span>;
+							}
+
+							// Süreyi formatla
+							if (duration < 60) {
+								return <span>{Math.round(duration)}s</span>;
+							} else if (duration < 3600) {
+								const minutes = Math.floor(duration / 60);
+								const seconds = Math.round(duration % 60);
+								return (
+									<span>
+										{minutes}m {seconds}s
+									</span>
+								);
+							} else {
+								const hours = Math.floor(duration / 3600);
+								const minutes = Math.floor((duration % 3600) / 60);
+								return (
+									<span>
+										{hours}h {minutes}m
+									</span>
+								);
+							}
+						} catch (error) {
 							return <span className="text-gray-400">-</span>;
 						}
+					})();
 
-						// Negatif veya çok büyük değer kontrolü
-						const duration = (completed_at - started_at) / 1000; // saniye cinsinden
-						if (duration < 0 || duration > 86400) {
-							// 24 saatten fazla ise
-							return <span className="text-gray-400">Invalid</span>;
-						}
-
-						// Süreyi formatla
-						if (duration < 60) {
-							return <span>{Math.round(duration)}s</span>;
-						} else if (duration < 3600) {
-							const minutes = Math.floor(duration / 60);
-							const seconds = Math.round(duration % 60);
-							return (
-								<span>
-									{minutes}m {seconds}s
-								</span>
-							);
-						} else {
-							const hours = Math.floor(duration / 3600);
-							const minutes = Math.floor((duration % 3600) / 60);
-							return (
-								<span>
-									{hours}h {minutes}m
-								</span>
-							);
-						}
-					} catch (error) {
-						return <span className="text-gray-400">-</span>;
-					}
+					return (
+						<>
+							<div>%{job.progress || 0}</div>
+							{duration && <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{duration}</div>}
+						</>
+					);
 				}
 			}),
 			columnHelper.accessor("status", {
@@ -247,7 +258,7 @@ const JobsTable = ({
 									variant="soft"
 									size="md"
 									iconOnly
-									disabled={!["RECEIVED", "PENDING", "RETRYING"].includes(job?.status as string)}
+									disabled={!["RECEIVED", "PENDING", "RETRYING", "DELETED"].includes(job?.status as string)}
 									onClick={(e) => {
 										e.stopPropagation();
 										onDeleteJob(job);

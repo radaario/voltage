@@ -1,13 +1,19 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
+
 import Layout from "@/components/layout/Layout";
-import Login from "@/components/pages/Login/Login";
-import Jobs from "@/components/pages/Jobs/Jobs";
-import Instances from "@/components/pages/Instances/Instances";
-import Logs from "@/components/pages/Logs/Logs";
+import ScreenLoading from "@/components/composite/ScreenLoading/ScreenLoading";
+
+import LoginPage from "@/components/pages/Login/Login";
+import DashboardPage from "@/components/pages/Dashboard/Dashboard";
+import JobsPage from "@/components/pages/Jobs/Jobs";
+import InstancesPage from "@/components/pages/Instances/Instances";
+import LogsPage from "@/components/pages/Logs/Logs";
+import NotificationsPage from "@/components/pages/Notifications/Notifications";
 import LogDetailModal from "@/components/modals/LogDetailModal/LogDetailModal";
 import LogInfoTab from "@/components/modals/LogDetailModal/tabs/InfoTab";
 import MetadataTab from "@/components/modals/LogDetailModal/tabs/MetadataTab";
-import Notifications from "@/components/pages/Notifications/Notifications";
 import JobDetailModal from "@/components/modals/JobDetailModal/JobDetailModal";
 import InstanceDetailModal from "@/components/modals/InstanceDetailModal/InstanceDetailModal";
 import InstanceInfoTab from "@/components/modals/InstanceDetailModal/tabs/InfoTab";
@@ -34,9 +40,6 @@ import NotificationInfoTab from "@/components/modals/NotificationDetailModal/tab
 import NotificationSpecsTab from "@/components/modals/NotificationDetailModal/tabs/SpecsTab";
 import NotificationPayloadTab from "@/components/modals/NotificationDetailModal/tabs/PayloadTab";
 import NotificationOutcomeTab from "@/components/modals/NotificationDetailModal/tabs/NotificationOutcomeTab";
-import { useAuth } from "@/hooks/useAuth";
-import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
-import ScreenLoading from "@/components/composite/ScreenLoading/ScreenLoading";
 
 const AuthSafeRoute = () => {
 	const { isAuthenticated } = useAuth();
@@ -94,7 +97,7 @@ const AuthRedirect = () => {
 		);
 	}
 
-	return <Login />;
+	return <LoginPage />;
 };
 
 export const router = createBrowserRouter(
@@ -110,16 +113,11 @@ export const router = createBrowserRouter(
 					children: [
 						{
 							path: "",
-							element: (
-								<Navigate
-									to="/jobs"
-									replace
-								/>
-							)
+							element: <DashboardPage />
 						},
 						{
 							path: "jobs",
-							element: <Jobs />,
+							element: <JobsPage />,
 							children: [
 								{
 									path: ":jobKey/*",
@@ -215,7 +213,7 @@ export const router = createBrowserRouter(
 						},
 						{
 							path: "instances",
-							element: <Instances />,
+							element: <InstancesPage />,
 							children: [
 								// Standalone worker route (without instance modal)
 								{
@@ -349,7 +347,7 @@ export const router = createBrowserRouter(
 						},
 						{
 							path: "logs",
-							element: <Logs />,
+							element: <LogsPage />,
 							children: [
 								{
 									path: ":logKey",
@@ -372,7 +370,7 @@ export const router = createBrowserRouter(
 						},
 						{
 							path: "notifications",
-							element: <Notifications />,
+							element: <NotificationsPage />,
 							children: [
 								{
 									path: ":notificationKey",

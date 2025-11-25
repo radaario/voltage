@@ -292,15 +292,18 @@ async function run() {
 			throw new Error("Some job outputs failed!");
 		}
 
+		await stats.update({ jobs_completed: 1, inputs_completed: 1, outputs_completed: job.outputs?.length || 0 });
+
 		job.status = "COMPLETED";
 		job.outcome = { message: "Successfully completed!" };
 	} catch (error: Error | any) {
-		job.status = "FAILED";
-		job.outcome = { message: error.message || "Unknown error occurred!" };
-
 		if (job.try_count < job.try_max) {
 			job.status = "RETRYING";
 			job.retry_at = addNow(job.retry_in || 0, "milliseconds");
+		} else {
+			await stats.update({ jobs_failed: 1 });
+			job.status = "FAILED";
+			job.outcome = { message: error.message || "Unknown error occurred!" };
 		}
 	}
 
@@ -313,12 +316,10 @@ async function run() {
 	// await updateWorkerStatus('IDLE');
 
 	if (job.status === "COMPLETED") {
-		await stats.update({ jobs_completed: 1 });
 		await logger.insert("INFO", "Job successfully completed!");
 		await createJobNotification(job, job.status);
 		process.exit(0);
 	} else {
-		await stats.update({ jobs_failed: 1 });
 		await logger.insert("ERROR", "Job failed!", { error: job.outcome });
 		await createJobNotification(job, job.status);
 		process.exit(1);
