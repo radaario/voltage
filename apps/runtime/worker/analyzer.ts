@@ -95,8 +95,9 @@ function parseFfprobeOutput(data: any, fileInfo: any): any[] {
 	const duration = parseFloat(format.duration || "0");
 	const durationInTimestamp = Math.round(duration * 1000000); // Convert to microseconds
 
-	// VIDEO: INFO: PARSE
-	let videoInfo = null;
+	/* VIDEO: INFO: PARSE */
+	let videoInfo = { video: false } as any;
+
 	if (videoStream) {
 		const videoWidth = parseInt(videoStream.width || "0");
 		const videoHeight = parseInt(videoStream.height || "0");
@@ -108,6 +109,7 @@ function parseFfprobeOutput(data: any, fileInfo: any): any[] {
 		const videoAspectRatio = getAspectRatio(videoAspectRatioDecimal);
 
 		videoInfo = {
+			video: true,
 			video_width: videoWidth,
 			video_width_coded: videoCodedWidth,
 			video_height: videoHeight,
@@ -127,10 +129,12 @@ function parseFfprobeOutput(data: any, fileInfo: any): any[] {
 		};
 	}
 
-	// AUDIO: INFO: PARSE
-	let audioInfo = null;
+	/* AUDIO: INFO: PARSE */
+	let audioInfo = { audio: false } as any;
+
 	if (audioStream) {
 		audioInfo = {
+			audio: true,
 			audio_codec: audioStream.codec_name || "",
 			audio_profile: audioStream.profile || "",
 			audio_channels: parseInt(audioStream.channels || "0"),

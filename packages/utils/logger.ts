@@ -1,11 +1,11 @@
 import { config } from "@voltage/config";
-import { getNow, uukey } from "./index";
 
 import { database } from "./database";
+import { getNow, uukey } from "./index";
 
 import { pino as _pino } from "pino";
 
-// database.config(config.database);
+database.config(config.database);
 
 const pino = _pino({
 	level: process.env.LOG_LEVEL ?? "info",

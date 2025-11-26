@@ -82,7 +82,7 @@ const Jobs: React.FC = () => {
 					}
 				],
 				destination: {
-					service: "HTTPS",
+					type: "HTTPS",
 					method: "POST",
 					url: "https://httpbin.org/post",
 					headers: {
