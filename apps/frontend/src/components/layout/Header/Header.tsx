@@ -48,7 +48,7 @@ function Header() {
 								}`
 							}>
 							<PresentationChartLineIcon className="h-4 w-4" />
-							Dashboard
+							Overview
 						</NavLink>
 						<NavLink
 							to="/jobs"
@@ -168,7 +168,7 @@ function Header() {
 
 					{/* Menu Panel */}
 					<div
-						className="absolute right-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-neutral-800 shadow-2xl"
+						className="absolute right-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-neutral-800 overflow-y-auto shadow-2xl"
 						onClick={(e) => e.stopPropagation()}>
 						{/* Header */}
 						<div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-700">

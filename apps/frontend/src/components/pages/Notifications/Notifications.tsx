@@ -5,8 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import type { Notification } from "@/interfaces/notification";
 import NotificationsTable from "./NotificationsTable.tsx";
-import { Alert, Button, Tooltip } from "@/components";
-import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import { SearchInput, LoadingSpinner, PageHeader, ErrorAlert } from "@/components";
 
 interface PaginationInfo {
 	total: number;
@@ -31,7 +30,7 @@ const Notifications: React.FC = () => {
 	const previousDataRef = useRef<Notification[]>([]);
 	const [newNotificationKeys, setNewNotificationKeys] = useState<Set<string>>(new Set());
 
-	// Fetch notifications with React Query
+	// queries
 	const {
 		data: notificationsResponse,
 		isLoading,
@@ -50,8 +49,34 @@ const Notifications: React.FC = () => {
 		enabled: !!authToken,
 		refetchInterval: 5000, // 5 saniyede bir otomatik refresh
 		placeholderData: (previousData) => previousData
-	}); // Detect new notifications when data updates
+	});
+
+	// actions
+	const handleClearSearch = () => {
+		setSearchInput("");
+	};
+
+	const handlePageChange = (newPage: number) => {
+		setCurrentPage(newPage);
+	};
+
+	const handleLimitChange = (newLimit: number) => {
+		setCurrentLimit(newLimit);
+		setCurrentPage(1);
+	};
+
+	const handleRefresh = () => {
+		queryClient.invalidateQueries({ queryKey: ["notifications"] });
+	};
+
+	const handleStatusFilterChange = (status: string) => {
+		setStatusFilter(status);
+		setCurrentPage(1);
+	};
+
+	// effects
 	useEffect(() => {
+		// Only detect new notifications on first page
 		if (!notificationsResponse?.data || currentPage !== 1) {
 			return;
 		}
@@ -85,9 +110,8 @@ const Notifications: React.FC = () => {
 		}
 
 		previousDataRef.current = currentNotifications;
-	}, [dataUpdatedAt, notificationsResponse, currentPage]);
+	}, [dataUpdatedAt, currentPage]); // Removed notificationsResponse from deps - dataUpdatedAt is enough
 
-	// Debounce search input (500ms)
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			setSearchQuery(searchInput);
@@ -96,35 +120,11 @@ const Notifications: React.FC = () => {
 		return () => clearTimeout(timer);
 	}, [searchInput]);
 
-	// Reset to page 1 when search query changes
 	useEffect(() => {
 		if (searchQuery !== "") {
 			setCurrentPage(1);
 		}
 	}, [searchQuery]);
-
-	// actions
-	const handleClearSearch = () => {
-		setSearchInput("");
-	};
-
-	const handlePageChange = (newPage: number) => {
-		setCurrentPage(newPage);
-	};
-
-	const handleLimitChange = (newLimit: number) => {
-		setCurrentLimit(newLimit);
-		setCurrentPage(1);
-	};
-
-	const handleRefresh = () => {
-		queryClient.invalidateQueries({ queryKey: ["notifications"] });
-	};
-
-	const handleStatusFilterChange = (status: string) => {
-		setStatusFilter(status);
-		setCurrentPage(1);
-	};
 
 	// Prepare pagination data
 	const pagination: PaginationInfo = {
@@ -139,68 +139,36 @@ const Notifications: React.FC = () => {
 
 	// renders
 	if (isLoading && !notificationsResponse) {
-		return (
-			<div className="flex justify-center items-center h-64">
-				<div className="animate-spin rounded-full h-10 w-10 border-2 border-b-white border-gray-500 dark:border-gray-400"></div>
-			</div>
-		);
+		return <LoadingSpinner />;
 	}
 
 	return (
 		<div className="space-y-6">
-			{/* Header with Search */}
-			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-				<div className="flex items-center gap-3">
-					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h3>
-					<Tooltip content="Reload">
-						<Button
-							variant="ghost"
-							size="md"
-							iconOnly
-							onClick={handleRefresh}
-							disabled={isLoading}>
-							<ArrowPathIcon className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
-						</Button>
-					</Tooltip>
-				</div>
-				<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-					{/* Status Filter */}
-					<select
-						value={statusFilter}
-						onChange={(e) => handleStatusFilterChange(e.target.value)}
-						className="h-[38px] px-3 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm">
-						<option value="">All Status</option>
-						<option value="PENDING">PENDING</option>
-						<option value="SUCCESSFUL">SUCCESSFUL</option>
-						<option value="FAILED">FAILED</option>
-						<option value="SKIPPED">SKIPPED</option>
-					</select>
+			<PageHeader
+				title="Notifications"
+				onRefresh={handleRefresh}
+				isRefreshing={isLoading}>
+				{/* Status Filter */}
+				<select
+					value={statusFilter}
+					onChange={(e) => handleStatusFilterChange(e.target.value)}
+					className="h-[38px] px-3 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm">
+					<option value="">All Status</option>
+					<option value="PENDING">PENDING</option>
+					<option value="SUCCESSFUL">SUCCESSFUL</option>
+					<option value="FAILED">FAILED</option>
+					<option value="SKIPPED">SKIPPED</option>
+				</select>
 
-					{/* Search Box */}
-					<div className="relative flex-1 sm:w-64">
-						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-							<MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-						</div>
-						<input
-							type="text"
-							value={searchInput}
-							onChange={(e) => setSearchInput(e.target.value)}
-							placeholder="Search notifications..."
-							className="block w-full h-[38px] pl-10 pr-10 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
-						/>
-						{searchInput && (
-							<button
-								type="button"
-								onClick={handleClearSearch}
-								className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-								<XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
-							</button>
-						)}
-					</div>
-				</div>
-			</div>{" "}
-			{/* Error Message */}
-			{error && <Alert variant="error">{error instanceof Error ? error.message : "An error occurred"}</Alert>}
+				<SearchInput
+					value={searchInput}
+					onChange={setSearchInput}
+					onClear={handleClearSearch}
+					placeholder="Search notifications..."
+					className="h-[38px]"
+				/>
+			</PageHeader>{" "}
+			<ErrorAlert error={error} />
 			{/* Table */}
 			<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 				<NotificationsTable

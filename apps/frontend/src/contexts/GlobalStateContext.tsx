@@ -46,7 +46,7 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 	const [isLoading, setLoading] = useState(false);
 	const [currentScreenDimension, setCurrentScreenDimension] = useState("desktop");
 
-	// Fetch config from backend
+	// queries
 	const {
 		data: configData,
 		isLoading: configLoading,
@@ -55,16 +55,12 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 	} = useQuery({
 		queryKey: ["config"],
 		queryFn: () => api.get<Config>("/config"),
-		staleTime: 5 * 60 * 1000, // Config 5 dakika boyunca fresh kabul edilir
-		refetchOnWindowFocus: false // Pencere focus olduğunda otomatik refetch etme
+		staleTime: 5 * 60 * 1000,
+		refetchOnWindowFocus: false
 	});
 
-	// actions
-
-	// effects
-
+	// context value
 	const context: GlobalStateContextType = {
-		// states
 		currentScreenDimension,
 		setCurrentScreenDimension,
 		isLoading,
@@ -73,8 +69,6 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 		configLoading,
 		configError,
 		refetchConfig
-
-		// actions
 	};
 
 	return <GlobalStateContext.Provider value={context}>{children}</GlobalStateContext.Provider>;

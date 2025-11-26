@@ -1,4 +1,5 @@
 import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { Button } from "@/components";
 
 interface PaginationProps {
 	currentPage: number;
@@ -79,22 +80,28 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, hasNext
 			{/* Pagination Controls */}
 			<div className="flex items-center gap-1 order-1 sm:order-2">
 				{/* First Page Button */}
-				<button
-					className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg enabled:hover:bg-gray-200 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-700 dark:text-gray-300"
+				<Button
+					variant="ghost"
+					size="sm"
+					iconOnly
 					onClick={() => onPageChange(1)}
 					disabled={!hasPrevPage}
-					title="First page">
+					title="First page"
+					className="border border-gray-300 dark:border-neutral-600 w-9! h-9! p-0!">
 					<ChevronDoubleLeftIcon className="w-4 h-4" />
-				</button>
+				</Button>
 
 				{/* Previous Page Button */}
-				<button
-					className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg enabled:hover:bg-gray-200 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-700 dark:text-gray-300"
+				<Button
+					variant="ghost"
+					size="sm"
+					iconOnly
 					onClick={() => onPageChange(currentPage - 1)}
 					disabled={!hasPrevPage}
-					title="Previous page">
+					title="Previous page"
+					className="border border-gray-300 dark:border-neutral-600 w-9! h-9! p-0!">
 					<ChevronLeftIcon className="w-4 h-4" />
-				</button>
+				</Button>
 
 				{/* Page Numbers */}
 				<div className="hidden sm:flex items-center gap-1">
@@ -106,16 +113,14 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, hasNext
 								...
 							</span>
 						) : (
-							<button
+							<Button
 								key={pageNum}
-								className={`min-w-10 px-3 py-2 text-sm rounded-lg transition-colors ${
-									currentPage === pageNum
-										? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-semibold"
-										: "border border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 enabled:hover:bg-gray-200 dark:hover:bg-neutral-700"
-								}`}
-								onClick={() => onPageChange(Number(pageNum))}>
+								variant={currentPage === pageNum ? "primary" : "ghost"}
+								size="sm"
+								onClick={() => onPageChange(Number(pageNum))}
+								className={`w-9! h-9! p-0! ${currentPage === pageNum ? "" : "border border-gray-300 dark:border-neutral-600"}`}>
 								{pageNum}
-							</button>
+							</Button>
 						)
 					)}
 				</div>
@@ -126,22 +131,28 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, hasNext
 				</div>
 
 				{/* Next Page Button */}
-				<button
-					className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg enabled:hover:bg-gray-200 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-700 dark:text-gray-300"
+				<Button
+					variant="ghost"
+					size="sm"
+					iconOnly
 					onClick={() => onPageChange(currentPage + 1)}
 					disabled={!hasNextPage}
-					title="Next page">
+					title="Next page"
+					className="border border-gray-300 dark:border-neutral-600 w-9! h-9! p-0!">
 					<ChevronRightIcon className="w-4 h-4" />
-				</button>
+				</Button>
 
 				{/* Last Page Button */}
-				<button
-					className="p-2 text-sm border border-gray-300 dark:border-neutral-600 rounded-lg enabled:hover:bg-gray-200 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-700 dark:text-gray-300"
+				<Button
+					variant="ghost"
+					size="sm"
+					iconOnly
 					onClick={() => onPageChange(totalPages)}
 					disabled={!hasNextPage}
-					title="Last page">
+					title="Last page"
+					className="border border-gray-300 dark:border-neutral-600 w-9! h-9! p-0!">
 					<ChevronDoubleRightIcon className="w-4 h-4" />
-				</button>
+				</Button>
 			</div>
 		</div>
 	);

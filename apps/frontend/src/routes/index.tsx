@@ -6,7 +6,7 @@ import Layout from "@/components/layout/Layout";
 import ScreenLoading from "@/components/composite/ScreenLoading/ScreenLoading";
 
 import LoginPage from "@/components/pages/Login/Login";
-import DashboardPage from "@/components/pages/Dashboard/Dashboard";
+import OverviewPage from "@/components/pages/Overview/Overview";
 import JobsPage from "@/components/pages/Jobs/Jobs";
 import InstancesPage from "@/components/pages/Instances/Instances";
 import LogsPage from "@/components/pages/Logs/Logs";
@@ -113,7 +113,7 @@ export const router = createBrowserRouter(
 					children: [
 						{
 							path: "",
-							element: <DashboardPage />
+							element: <OverviewPage />
 						},
 						{
 							path: "jobs",

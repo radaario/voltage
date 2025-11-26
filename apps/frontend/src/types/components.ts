@@ -28,6 +28,7 @@ export interface LabelProps {
 	status?: string;
 	statusColor?: boolean;
 	hidden?: string;
+	progress?: number;
 	className?: string;
 	icon?: boolean;
 }

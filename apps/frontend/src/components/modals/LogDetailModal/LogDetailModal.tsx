@@ -17,7 +17,7 @@ const LogDetailModal: React.FC = () => {
 	}>();
 	const { authToken } = useAuth();
 
-	// Determine navigateBackTo based on context
+	// states (computed from route params)
 	const navigateBackTo = useMemo(() => {
 		if (instanceKey && workerKey) {
 			return `/instances/${instanceKey}/workers/${workerKey}/logs`;
@@ -38,12 +38,11 @@ const LogDetailModal: React.FC = () => {
 		return "/logs";
 	}, [instanceKey, workerKey, jobKey]);
 
-	// Determine modal ID based on context to prevent closing parent modals
 	const modalId = instanceKey ? "InstanceLogDetailModal" : jobKey ? "JobLogDetailModal" : "LogDetailModal";
 
 	const modalProps = useRouteModal({ navigateBackTo: navigateBackTo, id: modalId });
 
-	// Fetch log details
+	// queries
 	const {
 		data: logResponse,
 		isLoading,
@@ -58,6 +57,7 @@ const LogDetailModal: React.FC = () => {
 		enabled: !!logKey && !!authToken
 	});
 
+	// states (need query data)
 	const log = logResponse?.data;
 
 	const tabs = [

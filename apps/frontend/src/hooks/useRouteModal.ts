@@ -31,7 +31,9 @@ export function useRouteModal(options: UseRouteModalOptions = {}) {
 				navigate(-1);
 			}
 		}
-	}, [isOpen, modalProps.shouldRender, navigate, navigateBackTo]);
+		// navigate is stable from react-router
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isOpen, modalProps.shouldRender, navigateBackTo]);
 
 	return {
 		...modalProps,

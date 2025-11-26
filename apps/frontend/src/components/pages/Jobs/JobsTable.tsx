@@ -192,34 +192,13 @@ const JobsTable = ({
 					const job = info.row.original;
 					const progress = job.progress || 0;
 
-					// Progress bar color based on status
-					const getProgressBarColor = (status: string) => {
-						switch (status) {
-							case "COMPLETED":
-								return "bg-green-700 dark:bg-green-500";
-							case "FAILED":
-								return "bg-red-700 dark:bg-red-500";
-							case "CANCELLED":
-								return "bg-gray-700 dark:bg-gray-500";
-							case "PENDING":
-								return "bg-yellow-700 dark:bg-yellow-500";
-							case "PROCESSING":
-								return "bg-blue-700 dark:bg-blue-500";
-							default:
-								return "bg-nautral-700 dark:bg-nautral-500";
-						}
-					};
-
 					return (
 						<div className="relative inline-flex rounded overflow-hidden">
-							<Label status={status}>{status}</Label>
-							{/* Progress Bar Overlay */}
-							{progress > 0 && progress < 100 && (
-								<span
-									className={`absolute bottom-0 left-0 h-full opacity-50 transition-all duration-300 ${getProgressBarColor(status)}`}
-									style={{ width: `${progress}%` }}
-								/>
-							)}
+							<Label
+								status={status}
+								progress={progress}>
+								{status}
+							</Label>
 						</div>
 					);
 				}

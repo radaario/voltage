@@ -127,6 +127,9 @@ export const config = {
 		is_authentication_required: frontendPassword ? true : false,
 		password: frontendPassword
 	},
+	stats: {
+		retention: Number(process.env.VOLTAGE_STATS_RETENTION ?? 365 * 24 * 60 * 60 * 1000) // in milliseconds, default 365 days
+	},
 	logs: {
 		is_disabled: process.env.VOLTAGE_LOGS_IS_DISABLED === "true",
 		retention: Number(process.env.VOLTAGE_LOGS_RETENTION ?? 60 * 60 * 1000) // in milliseconds, default 1 hour

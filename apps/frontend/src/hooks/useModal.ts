@@ -68,9 +68,12 @@ export function useModal({ isOpen, onClose, id }: UseModalOptions) {
 			setIsAnimating(false);
 			// Call onClose after animation duration
 			if (onClose) {
-				setTimeout(() => {
+				const timer = setTimeout(() => {
 					onClose();
 				}, 100);
+				// Note: We can't cleanup this timeout because the component will unmount
+				// but it's safe because onClose typically triggers navigation/unmount anyway
+				return timer;
 			}
 		}
 	}, [modalId, isTopModal, onClose]);

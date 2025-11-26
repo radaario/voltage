@@ -20,6 +20,8 @@ const NotificationDetailModal: React.FC = () => {
 	const { notificationKey, jobKey } = useParams<{ notificationKey: string; jobKey?: string }>();
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
+
+	// states
 	const [showRetryModal, setShowRetryModal] = useState(false);
 
 	// Determine navigate back path based on current route
@@ -29,7 +31,7 @@ const NotificationDetailModal: React.FC = () => {
 
 	const modalProps = useRouteModal({ navigateBackTo, id: "NotificationDetailModal" });
 
-	// Fetch notification details
+	// queries
 	const { data: notificationResponse, isLoading } = useQuery<ApiResponse<Notification>>({
 		queryKey: ["notification", notificationKey],
 		queryFn: () =>
@@ -40,9 +42,7 @@ const NotificationDetailModal: React.FC = () => {
 		enabled: !!notificationKey && !!authToken
 	});
 
-	const notification = notificationResponse?.data;
-
-	// Retry notification mutation
+	// mutations
 	const retryNotificationMutation = useMutation({
 		mutationFn: async () => {
 			return await api.post("/jobs/notifications/retry", null, {
@@ -50,13 +50,23 @@ const NotificationDetailModal: React.FC = () => {
 			});
 		},
 		onSuccess: () => {
-			// Invalidate list queries and detail query
 			queryClient.invalidateQueries({ queryKey: ["notifications"] });
 			queryClient.invalidateQueries({ queryKey: ["notification", notificationKey] });
 			setShowRetryModal(false);
 		}
 	});
 
+	// data
+	const notification = notificationResponse?.data;
+
+	const tabs = [
+		{ path: "info", label: "Info", icon: InformationCircleIcon },
+		{ path: "specs", label: "Specs", icon: DocumentChartBarIcon },
+		{ path: "payload", label: "Payload", icon: DocumentTextIcon },
+		{ path: "outcome", label: "Outcome", icon: ClipboardDocumentCheckIcon }
+	];
+
+	// actions
 	const handleRetry = () => {
 		if (!notificationKey) return;
 		setShowRetryModal(true);
@@ -71,13 +81,6 @@ const NotificationDetailModal: React.FC = () => {
 			setShowRetryModal(false);
 		}
 	};
-
-	const tabs = [
-		{ path: "info", label: "Info", icon: InformationCircleIcon },
-		{ path: "specs", label: "Specs", icon: DocumentChartBarIcon },
-		{ path: "payload", label: "Payload", icon: DocumentTextIcon },
-		{ path: "outcome", label: "Outcome", icon: ClipboardDocumentCheckIcon }
-	];
 
 	return (
 		<>

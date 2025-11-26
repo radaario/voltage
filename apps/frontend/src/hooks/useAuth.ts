@@ -43,7 +43,8 @@ export const useAuth = () => {
 		localStorage.removeItem("authToken");
 		setAuthState({ authToken: null, isAuthenticated: false });
 		navigate("/login");
-	}, [navigate]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	return { ...authState, login, logout };
 };

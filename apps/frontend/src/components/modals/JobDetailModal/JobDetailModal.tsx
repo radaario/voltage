@@ -23,9 +23,11 @@ const JobDetailModal: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
 	const modalProps = useRouteModal({ navigateBackTo: "/jobs", id: "JobDetailModal" });
+
+	// states
 	const [showRetryModal, setShowRetryModal] = useState(false);
 
-	// Fetch job details
+	// queries
 	const { data: jobResponse, isLoading } = useQuery<ApiResponse<Job>>({
 		queryKey: ["job", jobKey],
 		queryFn: () =>
@@ -36,6 +38,21 @@ const JobDetailModal: React.FC = () => {
 		enabled: !!jobKey && !!authToken
 	});
 
+	// mutations
+	const retryJobMutation = useMutation({
+		mutationFn: async () => {
+			return await api.post("/jobs/retry", null, {
+				params: { token: authToken, job_key: jobKey }
+			});
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["jobs"] });
+			queryClient.invalidateQueries({ queryKey: ["job", jobKey] });
+			setShowRetryModal(false);
+		}
+	});
+
+	// data
 	const job = jobResponse?.data;
 	const filename = job?.input?.file_name || job?.input?.url?.split("/").pop() || "Unknown";
 	const specs: string[] = [];
@@ -54,20 +71,16 @@ const JobDetailModal: React.FC = () => {
 		specs.push(`${sizeInMB}mb`);
 	}
 
-	// Retry job mutation
-	const retryJobMutation = useMutation({
-		mutationFn: async () => {
-			return await api.post("/jobs/retry", null, {
-				params: { token: authToken, job_key: jobKey }
-			});
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["jobs"] });
-			queryClient.invalidateQueries({ queryKey: ["job", jobKey] });
-			setShowRetryModal(false);
-		}
-	});
+	const tabs = [
+		{ path: "info", label: "Info", icon: InformationCircleIcon },
+		{ path: "input", label: "Input", icon: ArrowDownTrayIcon },
+		{ path: "outputs", label: "Outputs", icon: ArrowUpTrayIcon },
+		{ path: "outcome", label: "Outcome", icon: ClipboardDocumentCheckIcon },
+		{ path: "notifications", label: "Notifications", icon: BellIcon },
+		{ path: "logs", label: "Logs", icon: DocumentTextIcon }
+	];
 
+	// actions
 	const handleRetry = () => {
 		if (!jobKey) return;
 		setShowRetryModal(true);
@@ -82,15 +95,6 @@ const JobDetailModal: React.FC = () => {
 			setShowRetryModal(false);
 		}
 	};
-
-	const tabs = [
-		{ path: "info", label: "Info", icon: InformationCircleIcon },
-		{ path: "input", label: "Input", icon: ArrowDownTrayIcon },
-		{ path: "outputs", label: "Outputs", icon: ArrowUpTrayIcon },
-		{ path: "outcome", label: "Outcome", icon: ClipboardDocumentCheckIcon },
-		{ path: "notifications", label: "Notifications", icon: BellIcon },
-		{ path: "logs", label: "Logs", icon: DocumentTextIcon }
-	];
 
 	return (
 		<>

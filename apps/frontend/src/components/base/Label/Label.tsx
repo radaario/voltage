@@ -18,6 +18,7 @@ const Label: React.FC<LabelProps> = ({
 	variant = "gray",
 	status,
 	statusColor = true,
+	progress,
 	hidden = "",
 	className = "",
 	icon = true
@@ -47,17 +48,27 @@ const Label: React.FC<LabelProps> = ({
 		yellow: "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800"
 	};
 
+	// Progress bar darker overlay colors
+	const progressBarClasses = {
+		success: "bg-green-200 dark:bg-green-700",
+		error: "bg-red-200 dark:bg-red-700",
+		deleted: "bg-red-200 dark:bg-red-700",
+		warning: "bg-yellow-200 dark:bg-yellow-700",
+		info: "bg-blue-200 dark:bg-blue-700",
+		gray: "bg-gray-200 dark:bg-gray-700",
+		blue: "bg-blue-200 dark:bg-blue-700",
+		purple: "bg-purple-200 dark:bg-purple-700",
+		green: "bg-green-200 dark:bg-green-700",
+		red: "bg-red-200 dark:bg-red-700",
+		yellow: "bg-yellow-200 dark:bg-yellow-700"
+	};
+
 	// Get icon component based on status
 	const getStatusIcon = () => {
 		if (!icon || !status) return null;
 
 		const upperStatus = status.toUpperCase();
 		const iconClass = "w-4 h-4";
-
-		// '++RECEIVED','++PENDING','++RETRYING','++QUEUED','++STARTED','++DOWNLOADING','++DOWNLOADED','++ANALYZING','++ANALYZED','++PROCESSING','++PROCESSED','++UPLOADING','++UPLOADED','++COMPLETED','++CANCELLED','++DELETED','++FAILED','++TIMEOUT'
-		// '++PENDING','++RETRYING','++QUEUED','++SUCCESSFUL','++SKIPPED','++FAILED'
-		// '+ONLINE','+OFFLINE'
-		// '++IDLE','++BUSY','++TIMEOUT','++TERMINATED'
 
 		switch (upperStatus) {
 			case "RECEIVED":
@@ -105,7 +116,7 @@ const Label: React.FC<LabelProps> = ({
 	return (
 		<span
 			className={clsx(
-				`items-center font-semibold rounded border`,
+				`items-center font-semibold rounded border relative overflow-hidden`,
 				{
 					"inline-flex": hidden === "",
 					[`hidden ${hidden}:flex`]: hidden !== ""
@@ -115,8 +126,17 @@ const Label: React.FC<LabelProps> = ({
 				variantClasses[finalVariant],
 				className
 			)}>
-			{StatusIcon}
-			{children}
+			{/* Progress Bar Overlay */}
+			{typeof progress === "number" && progress > 0 && progress < 100 && (
+				<div
+					className={`absolute bottom-0 left-0 h-full transition-all duration-300 ${progressBarClasses[finalVariant]}`}
+					style={{ width: `${progress}%` }}
+				/>
+			)}
+			<span className="relative flex items-center">
+				{StatusIcon}
+				{children}
+			</span>
 		</span>
 	);
 };

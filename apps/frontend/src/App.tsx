@@ -16,9 +16,9 @@ const queryClient = new QueryClient({
 			},
 			refetchInterval: (query) => {
 				// Only refetch every 15 seconds if we have successful data
-				return query.state.data ? 15000 : false;
+				return query.state.data ? import.meta.env.VITE_QUERY_REFRECH_INTERVAL_MS || 10_000 : false;
 			},
-			staleTime: 15_000 // Consider data fresh for 15 seconds
+			staleTime: import.meta.env.VITE_QUERY_REFRECH_INTERVAL_MS || 10_000 // Consider data fresh for 15 seconds
 		}
 	}
 });

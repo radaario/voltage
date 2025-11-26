@@ -21,13 +21,14 @@ const InstanceDetailModal: React.FC = () => {
 	const { authToken } = useAuth();
 	const modalProps = useRouteModal({ navigateBackTo: "/instances", id: "InstanceDetailModal" });
 
-	// Fetch instances and find the specific one
+	// queries
 	const { data: instancesResponse, isLoading } = useQuery<ApiResponse<Instance[]>>({
 		queryKey: ["instances", authToken],
 		queryFn: () => api.get<Instance[]>("/instances", { token: authToken }),
 		enabled: !!instanceKey && !!authToken
 	});
 
+	// data
 	const instance = instancesResponse?.data?.find((inst) => inst.key === instanceKey);
 
 	const tabs = [

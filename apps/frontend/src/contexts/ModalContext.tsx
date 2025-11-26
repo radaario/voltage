@@ -21,9 +21,10 @@ const BASE_Z_INDEX = 50;
 const Z_INDEX_INCREMENT = 10;
 
 export function ModalProvider({ children }: { children: ReactNode }) {
+	// states
 	const [modalStack, setModalStack] = useState<ModalStackItem[]>([]);
 
-	// Register a new modal and return its z-index
+	// actions
 	const registerModal = useCallback((id: string): number => {
 		let zIndex = BASE_Z_INDEX;
 
@@ -44,7 +45,6 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 		return zIndex;
 	}, []);
 
-	// Unregister a modal
 	const unregisterModal = useCallback((id: string) => {
 		setModalStack((prev) => {
 			const filtered = prev.filter((m) => m.id !== id);
@@ -52,7 +52,6 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 		});
 	}, []);
 
-	// Get the z-index for a specific modal
 	const getModalIndex = useCallback(
 		(id: string): number => {
 			const modal = modalStack.find((m) => m.id === id);
@@ -61,7 +60,6 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 		[modalStack]
 	);
 
-	// Get the stack position (0 = first, 1 = second, etc.)
 	const getModalStackPosition = useCallback(
 		(id: string): number => {
 			const index = modalStack.findIndex((m) => m.id === id);
@@ -70,7 +68,6 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 		[modalStack]
 	);
 
-	// Check if a modal is the topmost modal
 	const isTopModal = useCallback(
 		(id: string): boolean => {
 			if (modalStack.length === 0) return false;
@@ -79,18 +76,15 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 		[modalStack]
 	);
 
-	// Manage body overflow based on modal count
+	// effects
 	useEffect(() => {
 		if (modalStack.length > 0) {
-			// Prevent body scroll when modals are open
 			document.body.style.overflow = "hidden";
 		} else {
-			// Restore body scroll when all modals are closed
 			document.body.style.overflow = "";
 		}
 
 		return () => {
-			// Cleanup on unmount
 			if (modalStack.length === 0) {
 				document.body.style.overflow = "";
 			}

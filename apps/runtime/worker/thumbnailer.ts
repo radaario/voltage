@@ -9,6 +9,10 @@ export async function generateInputPreview(job: any, options: any): Promise<any>
 	try {
 		// logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
+		if (!job.input.video) {
+			return { message: "" };
+		}
+
 		const tempJobDir = path.join(config.temp_dir, "jobs", job.key);
 		const tempJobInputFilePath = path.join(tempJobDir, "input");
 		const tempJobInputPreviewFilePath = path.join(tempJobDir, `preview.${(options.format || "webp").toLowerCase()}`);
@@ -48,7 +52,7 @@ export async function generateInputPreview(job: any, options: any): Promise<any>
 		await storage.upload(tempJobInputPreviewFilePath, `/jobs/${job.key}/preview.${(options.format || "webp").toLowerCase()}`);
 
 		// logger.console("INFO", "Preview generated from job input!");
-		return { path: tempJobInputPreviewFilePath };
+		return { path: tempJobInputPreviewFilePath, ffmpeg_args: args };
 	} catch (error: Error | any) {
 		// await logger.insert("ERROR", "Job input preview couldn't be generated!", { error });
 		throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());

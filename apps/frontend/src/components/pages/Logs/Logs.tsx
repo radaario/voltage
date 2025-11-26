@@ -5,8 +5,8 @@ import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import LogsTable from "./LogsTable.tsx";
-import { ConfirmModal, Alert, Button, Tooltip } from "@/components";
-import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { ConfirmModal, Alert, Button, Tooltip, SearchInput, LoadingSpinner, PageHeader, ErrorAlert } from "@/components";
+import { TrashIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
 	total: number;
@@ -32,7 +32,7 @@ const Logs: React.FC = () => {
 	const [newLogKeys, setNewLogKeys] = useState<Set<string>>(new Set());
 	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
-	// Fetch logs with React Query
+	// queries
 	const {
 		data: logsResponse,
 		isLoading,
@@ -52,74 +52,29 @@ const Logs: React.FC = () => {
 		enabled: !!authToken,
 		refetchInterval: 5000, // 5 saniyede bir otomatik refresh
 		placeholderData: (previousData) => previousData
-	}); // Detect new logs when data updates
-	useEffect(() => {
-		if (!logsResponse?.data || currentPage !== 1) {
-			return;
-		}
+	});
 
-		const currentLogs = logsResponse.data;
-		const previousLogs = previousDataRef.current;
-
-		// Skip first load
-		if (previousLogs.length === 0) {
-			previousDataRef.current = currentLogs;
-			return;
-		}
-
-		// Find new logs by comparing keys
-		const previousKeys = new Set(previousLogs.map((l) => l.key));
-		const newKeys = currentLogs.filter((log) => !previousKeys.has(log.key)).map((log) => log.key);
-
-		if (newKeys.length > 0) {
-			setNewLogKeys(new Set(newKeys));
-			// Clear animation after 2 seconds
-			const timer = setTimeout(() => {
-				setNewLogKeys(new Set());
-			}, 2000);
-
-			// Update ref
-			previousDataRef.current = currentLogs;
-
-			return () => clearTimeout(timer);
-		}
-
-		previousDataRef.current = currentLogs;
-	}, [dataUpdatedAt, logsResponse, currentPage]);
-
-	// Debounce search input (500ms)
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setSearchQuery(searchInput);
-		}, 500);
-
-		return () => clearTimeout(timer);
-	}, [searchInput]);
-
-	// Reset to page 1 when search query changes
-	useEffect(() => {
-		if (searchQuery !== "") {
-			setCurrentPage(1);
-		}
-	}, [searchQuery]);
-
-	// Delete all logs mutation
+	// mutations
 	const deleteAllLogsMutation = useMutation({
 		mutationFn: async () => {
 			return await api.delete("/logs/all", { token: authToken });
 		},
 		onSuccess: async () => {
-			// Close Delete All modal
 			setShowDeleteAllModal(false);
-			// Invalidate and refetch logs immediately
 			await queryClient.invalidateQueries({ queryKey: ["logs"] });
 			await refetch();
-			// Auto-dismiss success message after 3 seconds
-			setTimeout(() => {
-				deleteAllLogsMutation.reset();
-			}, 3000);
 		}
 	});
+
+	// Auto-reset mutation after success
+	useEffect(() => {
+		if (deleteAllLogsMutation.isSuccess) {
+			const timer = setTimeout(() => {
+				deleteAllLogsMutation.reset();
+			}, 3000);
+			return () => clearTimeout(timer);
+		}
+	}, [deleteAllLogsMutation.isSuccess]);
 
 	// actions
 	const handleClearSearch = () => {
@@ -158,6 +113,56 @@ const Logs: React.FC = () => {
 		setCurrentPage(1);
 	};
 
+	// effects
+	useEffect(() => {
+		// Only detect new logs on first page
+		if (!logsResponse?.data || currentPage !== 1) {
+			return;
+		}
+
+		const currentLogs = logsResponse.data;
+		const previousLogs = previousDataRef.current;
+
+		// Skip first load
+		if (previousLogs.length === 0) {
+			previousDataRef.current = currentLogs;
+			return;
+		}
+
+		// Find new logs by comparing keys
+		const previousKeys = new Set(previousLogs.map((l) => l.key));
+		const newKeys = currentLogs.filter((log) => !previousKeys.has(log.key)).map((log) => log.key);
+
+		if (newKeys.length > 0) {
+			setNewLogKeys(new Set(newKeys));
+			// Clear animation after 2 seconds
+			const timer = setTimeout(() => {
+				setNewLogKeys(new Set());
+			}, 2000);
+
+			// Update ref
+			previousDataRef.current = currentLogs;
+
+			return () => clearTimeout(timer);
+		}
+
+		previousDataRef.current = currentLogs;
+	}, [dataUpdatedAt, currentPage]); // Removed logsResponse from deps - dataUpdatedAt is enough
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setSearchQuery(searchInput);
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, [searchInput]);
+
+	useEffect(() => {
+		if (searchQuery !== "") {
+			setCurrentPage(1);
+		}
+	}, [searchQuery]);
+
 	// Prepare pagination data
 	const pagination: PaginationInfo = {
 		total: logsResponse?.pagination?.total || 0,
@@ -171,90 +176,48 @@ const Logs: React.FC = () => {
 
 	// renders
 	if (isLoading && !logsResponse) {
-		return (
-			<div className="flex justify-center items-center h-64">
-				<div className="animate-spin rounded-full h-10 w-10 border-2 border-b-white border-gray-500 dark:border-gray-400"></div>
-			</div>
-		);
+		return <LoadingSpinner />;
 	}
 
 	return (
 		<div className="space-y-6">
-			{/* Header with Search */}
-			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-				<div className="flex items-center gap-3">
-					<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Logs</h3>
-					<Tooltip content="Reload">
-						<Button
-							variant="ghost"
-							size="md"
-							iconOnly
-							onClick={handleRefresh}
-							disabled={isLoading}>
-							<ArrowPathIcon className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
-						</Button>
-					</Tooltip>
-				</div>
-				<div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-					{/* Type Filter */}
-					<select
-						value={typeFilter}
-						onChange={(e) => handleTypeFilterChange(e.target.value)}
-						className="h-[38px] px-3 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm">
-						<option value="">All Types</option>
-						<option value="INFO">Info</option>
-						<option value="WARNING">Warning</option>
-						<option value="ERROR">Error</option>
-						{/* <option value="DEBUG">Debug</option> */}
-					</select>
+			<PageHeader
+				title="Logs"
+				onRefresh={handleRefresh}
+				isRefreshing={isLoading}>
+				{/* Type Filter */}
+				<select
+					value={typeFilter}
+					onChange={(e) => handleTypeFilterChange(e.target.value)}
+					className="h-[38px] px-3 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm">
+					<option value="">All Types</option>
+					<option value="INFO">Info</option>
+					<option value="WARNING">Warning</option>
+					<option value="ERROR">Error</option>
+				</select>
 
-					{/* Search Box */}
-					<div className="relative flex-1 sm:w-64">
-						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-							<MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-						</div>
-						<input
-							type="text"
-							value={searchInput}
-							onChange={(e) => setSearchInput(e.target.value)}
-							placeholder="Search logs..."
-							className="block w-full h-[38px] pl-10 pr-10 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
-						/>
-						{searchInput && (
-							<button
-								type="button"
-								onClick={handleClearSearch}
-								className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-								<XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
-							</button>
-						)}
-					</div>
+				<SearchInput
+					value={searchInput}
+					onChange={setSearchInput}
+					onClear={handleClearSearch}
+					placeholder="Search logs..."
+					className="h-[38px]"
+				/>
 
-					{/* Delete All Button */}
-					<Tooltip content="Delete All Logs">
-						<Button
-							variant="soft"
-							size="md"
-							iconOnly
-							onClick={handleDeleteAllLogs}
-							disabled={deleteAllLogsMutation.isPending || (logsResponse?.data?.length || 0) === 0}
-							isLoading={deleteAllLogsMutation.isPending}>
-							<TrashIcon className="h-5 w-5 text-red-600 dark:text-white" />
-						</Button>
-					</Tooltip>
-				</div>
-			</div>
+				<Tooltip content="Delete All Logs">
+					<Button
+						variant="soft"
+						size="md"
+						iconOnly
+						onClick={handleDeleteAllLogs}
+						disabled={deleteAllLogsMutation.isPending || (logsResponse?.data?.length || 0) === 0}
+						isLoading={deleteAllLogsMutation.isPending}>
+						<TrashIcon className="h-5 w-5 text-red-600 dark:text-white" />
+					</Button>
+				</Tooltip>
+			</PageHeader>
 
-			{/* Error Message */}
-			{(error || deleteAllLogsMutation.error) && (
-				<Alert variant="error">
-					{error instanceof Error
-						? error.message
-						: deleteAllLogsMutation.error instanceof Error
-							? deleteAllLogsMutation.error.message
-							: "An error occurred"}
-				</Alert>
-			)}
+			<ErrorAlert errors={[error, deleteAllLogsMutation.error]} />
 
 			{/* Success Message */}
 			{deleteAllLogsMutation.isSuccess && (

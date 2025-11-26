@@ -16,16 +16,16 @@ export async function analyzeInputMetadata(job: any): Promise<any[]> {
 
 		// logger.console("INFO", "Analyzing from job input file...");
 
-		/* FILE: INFO: EXTRACT */
+		// FILE: INFO: EXTRACT
 		const fileName = path.basename(job.input?.url || job.input?.path || "unknown");
 		const fileExtension = path.extname(fileName).toLowerCase().replace(/^\./, "");
 		const fileStats = await fs.stat(tempJobInputFilePath);
 		const fileMimeType = guessContentType(fileName);
 
-		/* FFPROBE: RUN */
+		// FFPROBE: RUN
 		const ffprobeData = await runFfprobe(tempJobInputFilePath);
 
-		/* METADATA: EXTRACT */
+		// METADATA: EXTRACT
 		const metadata = parseFfprobeOutput(ffprobeData, {
 			file_name: fileName,
 			file_extension: fileExtension,
@@ -87,15 +87,15 @@ function parseFfprobeOutput(data: any, fileInfo: any): any[] {
 	const format = data.format || {};
 	const streams = data.streams || [];
 
-	/* VIDEO & AUDIO: STREAMs: FIND */
+	// VIDEO & AUDIO: STREAMs: FIND
 	const videoStream = streams.find((s: any) => s.codec_type === "video");
 	const audioStream = streams.find((s: any) => s.codec_type === "audio");
 
-	/* DURATION: CALCULATION */
+	// DURATION: CALCULATION
 	const duration = parseFloat(format.duration || "0");
 	const durationInTimestamp = Math.round(duration * 1000000); // Convert to microseconds
 
-	/* VIDEO: INFO: PARSE */
+	// VIDEO: INFO: PARSE
 	let videoInfo = null;
 	if (videoStream) {
 		const videoWidth = parseInt(videoStream.width || "0");
@@ -127,7 +127,7 @@ function parseFfprobeOutput(data: any, fileInfo: any): any[] {
 		};
 	}
 
-	/* AUDIO: INFO: PARSE */
+	// AUDIO: INFO: PARSE
 	let audioInfo = null;
 	if (audioStream) {
 		audioInfo = {

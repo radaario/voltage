@@ -206,7 +206,7 @@ async function run() {
 			await updateJob(job);
 			await createJobNotification(job, job.status);
 
-			/* JOB: OUTPUTs: UPLOADING */
+			// JOB: OUTPUTs: UPLOADING
 			await logger.insert("INFO", "Uploading job outputs...");
 
 			job.status = "UPLOADING";

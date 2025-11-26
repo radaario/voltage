@@ -59,7 +59,7 @@ async function initInstance() {
 	const specs = getInstanceSpecs();
 
 	try {
-		/* WORKERS: COUNT */
+		// WORKERS: COUNT
 		const _existsWorkersCount = await database
 			.table("instances_workers")
 			.where("instance_key", instance_key)
@@ -68,7 +68,7 @@ async function initInstance() {
 		const existsWorkersCount = (_existsWorkersCount as any).count || 0;
 		const missingWorkersCount = config.runtime.workers.max - existsWorkersCount;
 
-		/* WORKERs: INSERT */
+		// WORKERs: INSERT
 		if (missingWorkersCount > 0) {
 			const newWorkers = Array.from({ length: missingWorkersCount }, (_, index) => ({
 				key: hash(`${instance_key}:${existsWorkersCount + index}`),
@@ -87,7 +87,7 @@ async function initInstance() {
 	} catch (error: Error | any) {}
 
 	try {
-		/* WORKERs: UPDATE */
+		// WORKERs: UPDATE
 		await database
 			.table("instances_workers")
 			.where("instance_key", instance_key)
@@ -100,7 +100,7 @@ async function initInstance() {
 	} catch (error: Error | any) {}
 
 	try {
-		/* INSTANCEs: SELECT */
+		// INSTANCEs: SELECT
 		const instance = await database.table("instances").select("key").where("key", instance_key).first();
 
 		if (!instance) {
@@ -160,14 +160,14 @@ async function maintainInstancesAndWorkers() {
 		await logger.insert("ERROR", "Instance maintenance failed!", { error });
 	}
 
-	/* INSTANCE: SELECT: MASTER */
+	// INSTANCE: SELECT: MASTER
 	const masterInstance = await getMasterInstance();
 
-	/* INSTANCEs & WORKERs: MAINTAINING */
+	// INSTANCEs & WORKERs: MAINTAINING
 	if (!masterInstance || masterInstance.key === instance_key) {
 		logger.console("INFO", "Maintaining workers...");
 
-		/* WORKERs: UPDATE: TIMEOUT */
+		// WORKERs: UPDATE: TIMEOUT
 		try {
 			const busyTimeout = config.runtime.workers.busy_timeout || 5 * 60 * 1000; // in milliseconds, default 5 minutes
 
@@ -197,7 +197,7 @@ async function maintainInstancesAndWorkers() {
 			await logger.insert("ERROR", "Timing out busy workers failed!", { error });
 		}
 
-		/* WORKERs: UPDATE: IDLE */
+		// WORKERs: UPDATE: IDLE
 		try {
 			const idleAfter = config.runtime.workers.idle_after || 1 * 10 * 1000; // in milliseconds, default 10 seconds
 
@@ -217,7 +217,7 @@ async function maintainInstancesAndWorkers() {
 
 		logger.console("INFO", "Maintaining instances...");
 
-		/* INSTANCEs: UPDATE: OFFLINE */
+		// INSTANCEs: UPDATE: OFFLINE
 		try {
 			const offlineTimeout = config.runtime.online_timeout || 1 * 60 * 1000; // in milliseconds, default 1 minute
 
@@ -255,7 +255,7 @@ async function maintainInstancesAndWorkers() {
 			await logger.insert("ERROR", "Unable to take offline instances that were not updated!", { error });
 		}
 
-		/* INSTANCEs: DELETE: PURGE */
+		// INSTANCEs: DELETE: PURGE
 		try {
 			const purgeAfter = config.runtime.purge_after || 1 * 60 * 1000; // in milliseconds, default 1 minute
 
@@ -452,10 +452,10 @@ async function processJobsNotifications(): Promise<void> {
 
 async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<any> {
 	try {
-		/* JOB: NOTIFICATIONs: UPDATE */
+		// JOB: NOTIFICATIONs: UPDATE
 		// await database.table('jobs_notifications').where('job_key', job_key).update({ instance_key, worker_key: worker_key });
 
-		/* WORKER: CREATE */
+		// WORKER: CREATE
 		let child: ChildProcess;
 
 		if (config.env === "prod") {
@@ -473,12 +473,12 @@ async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<a
 			});
 		}
 
-		/* WORKER: EVENTs */
+		// WORKER: EVENTs
 		child.on("exit", async (code, signal) => {
 			logger.console("INFO", "Worker exited!", { worker_key, job_key, code, signal });
 			workersProcessMap.delete(worker_key);
 
-			/* WORKER: UPDATE */
+			// WORKER: UPDATE
 			await database
 				.table("instances_workers")
 				.where("key", worker_key)
@@ -497,7 +497,7 @@ async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<a
 			await logger.insert("ERROR", "Worker exited due error!", { worker_key, job_key, error });
 			workersProcessMap.delete(worker_key);
 
-			/* WORKER: UPDATE */
+			// WORKER: UPDATE
 			await database
 				.table("instances_workers")
 				.where("key", worker_key)
@@ -523,7 +523,7 @@ async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<a
 
 async function cleanup() {
 	if (config.jobs.retention > 0) {
-		/* JOBs: CLEANUP */
+		// JOBs: CLEANUP
 		logger.console("INFO", "Cleaning up completed jobs...");
 
 		const jobs = await database
@@ -552,14 +552,29 @@ async function cleanup() {
 		}
 	}
 
-	/* LOGS: CLEANUP */
+	// STATs: CLEANUP
+	if ((config.stats.retention || 365 * 24 * 60 * 60 * 1000) > 0) {
+		// in milliseconds, default 365 days
+		logger.console("INFO", "Cleaning stats...");
+
+		await database
+			.table("stats")
+			.where("date", "<", subtractNow(config.stats.retention || 365 * 24 * 60 * 60 * 1000, "milliseconds"))
+			.delete(); // in milliseconds, default 365 days
+
+		logger.console("INFO", "Stats cleaning completed!");
+	}
+
+	// LOGS: CLEANUP
 	if (!config.logs.is_disabled || (config.logs.retention || 60 * 60 * 1000) > 0) {
 		// in milliseconds, default 1 hour
 		logger.console("INFO", "Cleaning logs...");
+
 		await database
 			.table("logs")
 			.where("created_at", "<", subtractNow(config.logs.retention || 60 * 60 * 1000, "milliseconds"))
 			.delete(); // in milliseconds, default 1 hour
+
 		logger.console("INFO", "Logs cleaning completed!");
 	}
 
