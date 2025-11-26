@@ -70,15 +70,15 @@ async function runFfprobe(filePath: string): Promise<any[]> {
 					const result = JSON.parse(stdout);
 					resolve(result);
 				} catch (error: Error | any) {
-					reject(new Error(`Failed to parse ffprobe output: ${error.message}`));
+					reject(new Error(`Failed to parse FFProbe output: ${error.message}`));
 				}
 			} else {
-				reject(new Error(`ffprobe failed with code ${code}: ${stderr}`));
+				reject(new Error(`FFProbe failed with code ${code}: ${stderr}`));
 			}
 		});
 
 		ffprobe.on("error", (error: Error | any) => {
-			reject(new Error(`Failed to start ffprobe: ${error.message}`));
+			reject(new Error(`Failed to start FFProbe: ${error.message}`));
 		});
 	});
 }

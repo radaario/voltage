@@ -153,6 +153,7 @@ async function run() {
 			await fs.access(jobInputPreview.path);
 			await logger.insert("INFO", "Job input preview successfully generated!");
 
+			/* ! */
 			/*
 			async function fn() {
 				const nsfwjs = await import('nsfwjs');

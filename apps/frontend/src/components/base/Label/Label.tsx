@@ -133,7 +133,7 @@ const Label: React.FC<LabelProps> = ({
 					style={{ width: `${progress}%` }}
 				/>
 			)}
-			<span className="relative flex items-center">
+			<span className="relative flex items-center gap-1">
 				{StatusIcon}
 				{children}
 			</span>

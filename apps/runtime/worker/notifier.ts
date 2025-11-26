@@ -68,6 +68,7 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 
 	if (notification.status === "SUCCESSFUL") {
 		notificationStats.notifications_sent_count = 1;
+		/* ! */
 	} else if (notification.status === "FAILED") {
 		if (notification.try_count < notification.try_max) {
 			notification.status = "RETRYING";
@@ -79,6 +80,7 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 			notificationStats.notifications_retried_count = 1;
 		} else {
 			notificationStats.notifications_failed_count = 1;
+			/* ! */
 		}
 	}
 
@@ -136,6 +138,7 @@ export async function retryJobNotification(notification: any): Promise<any> {
 
 		if (notification.status === "SUCCESSFUL") {
 			notificationStats.notifications_sent_count = 1;
+			/* ! */
 		} else if (notification.status === "FAILED") {
 			if (notification.try_count < notification.try_max) {
 				notification.status = "RETRYING";
@@ -151,6 +154,7 @@ export async function retryJobNotification(notification: any): Promise<any> {
 				notificationStats.notifications_retried_count = 1;
 			} else {
 				notificationStats.notifications_failed_count = 1;
+				/* ! */
 			}
 		}
 

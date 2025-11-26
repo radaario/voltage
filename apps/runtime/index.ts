@@ -163,11 +163,10 @@ async function maintainInstancesAndWorkers() {
 	// INSTANCE: SELECT: MASTER
 	const masterInstance = await getMasterInstance();
 
-	if (!masterInstance) await initInstance();
+	if (!masterInstance) await initInstance(); /* ! */
 
 	/* INSTANCEs & WORKERs: MAINTAINING */
-	if (masterInstance && masterInstance.key === instance_key) {
-		// !masterInstance ||
+	if (!masterInstance || masterInstance.key === instance_key) {
 		logger.console("INFO", "Maintaining workers...");
 
 		// WORKERs: UPDATE: TIMEOUT

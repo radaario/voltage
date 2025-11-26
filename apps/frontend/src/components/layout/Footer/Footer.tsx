@@ -2,7 +2,7 @@ const Footer: React.FC = () => {
 	return (
 		<footer className="layout-footer">
 			<div className="container mx-auto px-4 py-4">
-				<div className="flex justify-center align-middle text-sm text-gray-600 dark:text-gray-400">
+				<div className="flex justify-between align-middle text-sm text-gray-600 dark:text-gray-400">
 					<p className="leading-relaxed">
 						{new Date().getFullYear()},{" "}
 						<a
@@ -11,14 +11,14 @@ const Footer: React.FC = () => {
 							target="_blank">
 							Voltage Video Encoder
 						</a>
-						. MIT License. Developed by{" "}
+						. MIT License.
 					</p>
 					<a
 						href="https://www.radaar.io/"
 						target="_blank"
 						className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity ml-1.5">
 						<img
-							src="/radaar-logo.webp"
+							src="/radaar-developed-by.svg"
 							alt="RADAAR"
 							className="h-6 w-auto"
 						/>

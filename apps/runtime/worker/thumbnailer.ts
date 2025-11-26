@@ -10,7 +10,7 @@ export async function generateInputPreview(job: any, options: any): Promise<any>
 		// logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
 		if (!job.input.video) {
-			return { message: "" };
+			return { message: "There is no video in the input file!" };
 		}
 
 		const tempJobDir = path.join(config.temp_dir, "jobs", job.key);
@@ -40,11 +40,11 @@ export async function generateInputPreview(job: any, options: any): Promise<any>
 		];
 
 		await new Promise<void>((resolve, reject) => {
-			const proc = spawn(config.utils.ffmpeg.path, args, { stdio: "ignore" }); // inherit
+			const proc = spawn(config.utils.ffmpeg.path, args, { stdio: "ignore" }); // inherit || ignore
 			proc.on("error", reject);
 			proc.on("exit", (code) => {
 				if (code === 0) resolve();
-				else reject(new Error(`Ffmpeg preview generation exited with code ${code}`));
+				else reject(new Error(`FFmpeg preview generation exited with code ${code}! ffmpeg_args: ${args.join(" ")}`));
 			});
 		});
 

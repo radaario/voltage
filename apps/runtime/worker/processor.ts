@@ -37,16 +37,16 @@ export async function processOutput(job: any, output: any): Promise<any> {
 
 			try {
 				await new Promise<void>((resolve, reject) => {
-					const proc = spawn(config.utils.ffmpeg.path, wavArgs, { stdio: "ignore" });
+					const proc = spawn(config.utils.ffmpeg.path, wavArgs, { stdio: "ignore" }); // inherit || ignore
 					proc.on("error", reject);
 					proc.on("exit", (code) => {
 						if (code === 0) resolve();
-						else reject(new Error(`Ffmpeg WAV conversion exited with code ${code}`));
+						else reject(new Error(`FFmpeg WAV conversion exited with code ${code}! ffmpeg_args. ${wavArgs.join(" ")}`));
 					});
 				});
 
 				// Generate subtitles using whisper-node
-				const { nodewhisper } = await import("nodejs-whisper");
+				const { nodewhisper } = await import("nodejs-whisper"); /* ! */
 
 				const outputFormat = (output.specs.format || "srt").toLowerCase();
 				const modelName = (output.specs.model || "base").toLowerCase().replace("_en", ".en").replace("_", "-");
@@ -211,11 +211,11 @@ export async function processOutput(job: any, output: any): Promise<any> {
 		args.push(tempJobOutputFilePath);
 
 		await new Promise<void>((resolve, reject) => {
-			const proc = spawn(config.utils.ffmpeg.path, args, { stdio: "inherit" }); // inherit
+			const proc = spawn(config.utils.ffmpeg.path, args, { stdio: "ignore" }); // inherit || ignore
 			proc.on("error", reject);
 			proc.on("exit", (code) => {
 				if (code === 0) resolve();
-				else reject(new Error(`Ffmpeg processing job output exited with code ${code}. ffmpeg_args: ${args.join(" ")}`));
+				else reject(new Error(`FFmpeg processing job output exited with code ${code}! ffmpeg_args: ${args.join(" ")}`));
 			});
 		});
 
