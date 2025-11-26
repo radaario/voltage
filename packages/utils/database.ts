@@ -1,4 +1,4 @@
-import { logger } from "./logger";
+// import { logger } from "./logger";
 import knex, { Knex } from "knex";
 
 class Database {
@@ -29,7 +29,7 @@ class Database {
 	}
 
 	async verifySchemaExists() {
-		logger.console("INFO", "Ensuring database schema exists...", { type: this._config.type?.toUpperCase() });
+		// logger.console("INFO", "Ensuring database schema exists...", { type: this._config.type?.toUpperCase() });
 
 		try {
 			const prefix = this.getTablePrefix();
@@ -183,9 +183,9 @@ class Database {
 				}
 			}
 
-			logger.console("INFO", "Database schema verified successfully!");
+			// logger.console("INFO", "Database schema verified successfully!");
 		} catch (error: Error | any) {
-			logger.console("ERROR", "Failed to verify database schema!", { error });
+			// logger.console("ERROR", "Failed to verify database schema!", { error });
 			throw error;
 		}
 	}
@@ -236,10 +236,12 @@ class Database {
 						afterCreate: (conn: any, done: any) => {
 							conn.query(`SET TIME ZONE '${this._config.timezone}'`, (err: any) => {
 								if (err) {
+									/*
 									logger.console("ERROR", "Failed to set PostgreSQL timezone", {
 										timezone: this._config.timezone,
 										error: err
 									});
+									*/
 								}
 								done(err, conn);
 							});
@@ -263,11 +265,13 @@ class Database {
 				};
 				knexConfig.pool = { min: 0, max: 10 };
 				if (this._config.timezone) {
+					/*
 					logger.console(
 						"WARN",
 						"MSSQL does not support setting a session timezone; config.timezone will be ignored for MSSQL connections",
 						{ timezone: this._config.timezone }
 					);
+					*/
 				}
 				break;
 

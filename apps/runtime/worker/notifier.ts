@@ -7,7 +7,7 @@ import { uukey, getNow, addNow, sanitizeData } from "@voltage/utils";
 import axios from "axios";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 
-// database.config(config.database);
+database.config(config.database);
 
 export async function createJobNotification(job: any, jobStatus: string): Promise<any> {
 	if (!job.notification || !job.notification.type) {
@@ -60,12 +60,26 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 	if (notification.retry_in < 1 * 1000) notification.retry_in = 1 * 1000;
 	if (notification.retry_in > config.jobs.notifications.retry_in_max) notification.retry_in = config.jobs.notifications.retry_in_max;
 
-	if (notification.status === "FAILED" && notification.try_count < notification.try_max) {
-		notification.status = "RETRYING";
-		notification.retry_at = addNow(notification.retry_in, "milliseconds");
+	let notificationStats = {
+		notifications_retried_count: 0,
+		notifications_sent_count: 0,
+		notifications_failed_count: 0
+	};
 
-		// JOB: NOTIFICATION: QUEUE: INSERT
-		await database.table("jobs_notifications_queue").insert(notification); // .onConflict('key').merge();
+	if (notification.status === "SUCCESSFUL") {
+		notificationStats.notifications_sent_count = 1;
+	} else if (notification.status === "FAILED") {
+		if (notification.try_count < notification.try_max) {
+			notification.status = "RETRYING";
+			notification.retry_at = addNow(notification.retry_in, "milliseconds");
+
+			// JOB: NOTIFICATION: QUEUE: INSERT
+			await database.table("jobs_notifications_queue").insert(notification); // .onConflict('key').merge();
+
+			notificationStats.notifications_retried_count = 1;
+		} else {
+			notificationStats.notifications_failed_count = 1;
+		}
 	}
 
 	if (["SUCCESSFUL", "FAILED"].includes(notification.status)) {
@@ -89,7 +103,10 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 	} catch (error: Error | any) {
 		logger.console("ERROR", "Failed to create job notification record!", { notification_key: notification.key, error });
 		outcome = { status: "FAILED", error: { message: error.message || "Unknown error occurred!" } }; // , outcome: notificationOutcome
+		notificationStats.notifications_failed_count = 1;
 	}
+
+	await stats.update(notificationStats);
 
 	return outcome;
 }
@@ -102,6 +119,12 @@ export async function retryJobNotification(notification: any): Promise<any> {
 		status: "FAILED"
 	};
 
+	let notificationStats = {
+		notifications_retried_count: 0,
+		notifications_sent_count: 0,
+		notifications_failed_count: 0
+	};
+
 	try {
 		const notificationOutcome = await notify(JSON.parse(notification.specs), JSON.parse(notification.payload));
 
@@ -112,7 +135,7 @@ export async function retryJobNotification(notification: any): Promise<any> {
 		notification.retry_at = null;
 
 		if (notification.status === "SUCCESSFUL") {
-			await stats.update({ notifications_sent: 1 });
+			notificationStats.notifications_sent_count = 1;
 		} else if (notification.status === "FAILED") {
 			if (notification.try_count < notification.try_max) {
 				notification.status = "RETRYING";
@@ -124,8 +147,10 @@ export async function retryJobNotification(notification: any): Promise<any> {
 				} catch (error: Error | any) {
 					// console.log("ERROR", error);
 				}
+
+				notificationStats.notifications_retried_count = 1;
 			} else {
-				await stats.update({ notifications_failed: 1 });
+				notificationStats.notifications_failed_count = 1;
 			}
 		}
 
@@ -156,7 +181,10 @@ export async function retryJobNotification(notification: any): Promise<any> {
 	} catch (error: Error | any) {
 		logger.console("ERROR", "Failed to retry job notification!", { notification_key: notification.key, error });
 		outcome.error = { message: error.message || "Unknown error occurred!" };
+		notificationStats.notifications_failed_count = 1;
 	}
+
+	await stats.update(notificationStats);
 
 	return outcome;
 }

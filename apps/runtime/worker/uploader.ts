@@ -57,7 +57,19 @@ export async function uploadOutput(job: any, output: any): Promise<Record<string
 				data: await fs.readFile(tempJobOutputFilePath)
 			});
 
-			return { status: resp.status, headers: resp.headers, body: resp.data };
+			/*
+			const contentType = resp.headers["content-type"] || "";
+
+			let body;
+
+			if (["text/plain", "text/html", "application/json"].includes(contentType)) {
+				body = resp.data;
+			}
+
+			return { status: resp.status, headers: resp.headers, body };
+			*/
+
+			return { status: resp.status, headers: resp.headers };
 		}
 
 		// DESTINATION: TYPE: OTHERs

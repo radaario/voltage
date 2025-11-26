@@ -163,8 +163,11 @@ async function maintainInstancesAndWorkers() {
 	/* INSTANCE: SELECT: MASTER */
 	const masterInstance = await getMasterInstance();
 
+	if (!masterInstance) await initInstance();
+
 	/* INSTANCEs & WORKERs: MAINTAINING */
-	if (!masterInstance || masterInstance.key === instance_key) {
+	if (masterInstance && masterInstance.key === instance_key) {
+		// !masterInstance ||
 		logger.console("INFO", "Maintaining workers...");
 
 		/* WORKERs: UPDATE: TIMEOUT */
@@ -458,18 +461,18 @@ async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<a
 		/* WORKER: CREATE */
 		let child: ChildProcess;
 
-		if (config.env === "prod") {
-			const workerScriptPath = path.join(process.cwd(), "dist", "worker", "index.js");
-			child = spawn("node", [workerScriptPath, instance_key, worker_key, job_key], {
-				stdio: ["inherit", "inherit", "inherit"],
-				cwd: process.cwd()
-			});
-		} else {
+		if (config.env === "local") {
 			const workerScriptPath = path.join(process.cwd(), "worker", "index.ts");
 			child = spawn("npx", ["tsx", workerScriptPath, instance_key, worker_key, job_key], {
 				stdio: ["inherit", "inherit", "inherit"],
 				cwd: process.cwd(),
 				shell: true
+			});
+		} else {
+			const workerScriptPath = path.join(process.cwd(), "dist", "worker", "index.js");
+			child = spawn("node", [workerScriptPath, instance_key, worker_key, job_key], {
+				stdio: ["inherit", "inherit", "inherit"],
+				cwd: process.cwd()
 			});
 		}
 

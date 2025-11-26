@@ -576,10 +576,10 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 				await createJobNotification(job, "RECEIVED");
 
 				await stats.update({
-					jobs_recieved: 1,
-					inputs_recieved: 1,
-					outputs_requested: job.outputs?.length || 0,
-					notifications_requested: job.notification ? 1 : 0
+					jobs_recieved_count: 1,
+					inputs_recieved_count: 1,
+					outputs_requested_count: job.outputs?.length || 0
+					// notifications_requested_count: job.notification ? 1 : 0
 				});
 
 				await logger.insert("INFO", "Job request received!", { job_key });
@@ -591,7 +591,7 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 						.table("jobs_queue")
 						.insert({ key: job.key, priority: job.priority, created_at: job.created_at })
 						.then(async (result) => {
-							// await stats.update({ jobs_queued: 1 });
+							// await stats.update({ jobs_queued_count: 1 });
 							await logger.insert("INFO", "Job successfully queued!", { job_key });
 						})
 						.catch(async (error) => {

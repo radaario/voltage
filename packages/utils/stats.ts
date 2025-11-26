@@ -1,9 +1,9 @@
 import { config } from "@voltage/config";
-import { getNow, getDate, hash } from "./index";
 
 import { database } from "./database";
+import { getNow, getDate, hash } from "./index";
 
-// database.config(config.database);
+database.config(config.database);
 
 class Stats {
 	async update(data: any = {}, date: string | null = null) {

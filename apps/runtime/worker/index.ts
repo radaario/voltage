@@ -15,7 +15,7 @@ import fs from "fs/promises";
 
 // import * as tf from '@tensorflow/tfjs-node';
 
-// database.config(config.database);
+database.config(config.database);
 
 async function run() {
 	await logger.insert("INFO", "Worker starts running...");
@@ -35,6 +35,20 @@ async function run() {
 		try_count: 0
 	};
 
+	let jobStats = {
+		jobs_completed_count: 0,
+		jobs_retried_count: 0,
+		jobs_failed_count: 0,
+		inputs_completed_count: 0,
+		inputs_completed_duration: 0,
+		inputs_failed_count: 0,
+		inputs_failed_duration: 0,
+		outputs_completed_count: 0,
+		outputs_completed_duration: 0,
+		outputs_failed_count: 0,
+		outputs_failed_duration: 0
+	};
+
 	try {
 		await updateWorkerStatus("BUSY");
 
@@ -45,18 +59,17 @@ async function run() {
 		// JOB: STARTING
 		await logger.insert("INFO", "Job found, starting processing...", { job_key: job.key });
 
-		// JOB: UPDATE
+		// JOB: PARSE
 		job.instance_key = instance_key;
 		job.worker_key = worker_key;
-		job.status = "STARTED";
-
-		// JOB: PARSE
 		job.input = job.input ? JSON.parse(job.input as string) : null;
 		job.outputs = job.outputs ? JSON.parse(job.outputs as string) : null;
 		job.destination = job.destination ? JSON.parse(job.destination as string) : null;
 		job.notification = job.notification ? JSON.parse(job.notification as string) : null;
 		job.metadata = job.metadata ? JSON.parse(job.metadata as string) : null;
 		job.outcome = job.outcome ? JSON.parse(job.outcome as string) : null;
+		job.status = "STARTED";
+		job.progress = 0.0;
 		job.started_at = getNow();
 		job.completed_at = null;
 		job.try_count = parseInt(job.try_count as string) + 1;
@@ -81,13 +94,16 @@ async function run() {
 
 		await updateJob(job);
 		await createJobNotification(job, job.status);
-		await updateWorkerStatus("BUSY");
+		// await updateWorkerStatus("BUSY");
 
 		const jobInput = await downloadInput(job);
 
 		try {
 			await fs.access(jobInput.path);
 		} catch (error: Error | any) {
+			// JOB: STATs: UPDATE
+			jobStats.inputs_failed_count = 1;
+
 			throw new Error(`Job input couldn't be downloaded! ${error.message || ""}`.trim());
 		}
 
@@ -107,10 +123,15 @@ async function run() {
 
 		await updateJob(job);
 		await createJobNotification(job, job.status);
-		await updateWorkerStatus("BUSY");
+		// await updateWorkerStatus("BUSY");
 
 		const jobInputMetadata = await analyzeInputMetadata(job);
-		if (!jobInputMetadata) throw new Error("Job input couldn't be analyzed!");
+		if (!jobInputMetadata) {
+			// JOB: STATs: UPDATE
+			jobStats.inputs_failed_count = 1;
+
+			throw new Error("Job input couldn't be analyzed!");
+		}
 
 		job.input = { ...job.input, ...jobInputMetadata };
 
@@ -156,7 +177,7 @@ async function run() {
 
 		await updateJob(job);
 		await createJobNotification(job, job.status);
-		await updateWorkerStatus("BUSY");
+		// await updateWorkerStatus("BUSY");
 
 		// JOB: OUTPUTs: PROCESSING
 		for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
@@ -172,6 +193,7 @@ async function run() {
 
 			try {
 				job.outputs[index].outcome = await processOutput(job, job.outputs[index]);
+				job.outputs[index].duration = job.outputs[index].outcome?.duration || 0.0;
 				job.outputs[index].status = "PROCESSED";
 
 				await logger.insert("INFO", "Job output successfully processed!", {
@@ -194,7 +216,7 @@ async function run() {
 			job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
 
 			await updateJob(job);
-			await updateWorkerStatus("BUSY");
+			// await updateWorkerStatus("BUSY");
 		}
 
 		if (jobOutputsProcessedCount > 0) {
@@ -206,14 +228,14 @@ async function run() {
 			await updateJob(job);
 			await createJobNotification(job, job.status);
 
-			/* JOB: OUTPUTs: UPLOADING */
+			// JOB: OUTPUTs: UPLOADING
 			await logger.insert("INFO", "Uploading job outputs...");
 
 			job.status = "UPLOADING";
 
 			await updateJob(job);
 			await createJobNotification(job, job.status);
-			await updateWorkerStatus("BUSY");
+			// await updateWorkerStatus("BUSY");
 
 			for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
 				if (job.outputs[index].status == "PROCESSED") {
@@ -242,6 +264,9 @@ async function run() {
 
 				try {
 					job.outputs[index].outcome = await uploadOutput(job, job.outputs[index]);
+					job.outputs[index].path = job.outputs[index].outcome?.path;
+					job.outputs[index].location = job.outputs[index].outcome?.location;
+					job.outputs[index].url = job.outputs[index].outcome?.url;
 					job.outputs[index].status = "COMPLETED";
 
 					await logger.insert("INFO", "Job output successfully uploaded!", {
@@ -264,7 +289,7 @@ async function run() {
 				job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
 
 				await updateJob(job);
-				await updateWorkerStatus("BUSY");
+				// await updateWorkerStatus("BUSY");
 			}
 
 			if (jobOutputsUploadedCount > 0) {
@@ -276,44 +301,55 @@ async function run() {
 				await updateJob(job);
 				await createJobNotification(job, job.status);
 			}
-
-			/*
-			for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
-				if (job.outputs[index].status === 'FAILED') {
-				throw new Error('Some outputs failed!');
-				break;
-				}
-			}
-			*/
 		}
 
 		// JOB: OUTPUTs: CHECK FAILED
-		if (jobOutputsProcessedCount !== job.outputs?.length || jobOutputsUploadedCount !== job.outputs?.length) {
-			throw new Error("Some job outputs failed!");
-		}
-
-		await stats.update({ jobs_completed: 1, inputs_completed: 1, outputs_completed: job.outputs?.length || 0 });
+		const jobOutputsFailed = job.outputs?.filter((output: any) => output.status !== "COMPLETED");
+		if (jobOutputsFailed.length > 0) throw new Error("Some job outputs failed!");
 
 		job.status = "COMPLETED";
 		job.outcome = { message: "Successfully completed!" };
+
+		// JOB: STATs: UPDATE
+		jobStats.jobs_completed_count = 1;
+		jobStats.inputs_completed_count = 1;
+		jobStats.inputs_completed_duration = job.input?.duration || 0.0;
+		jobStats.outputs_completed_count = job.outputs?.length || 0;
+		jobStats.outputs_completed_duration =
+			job.outputs?.reduce((sum: number, output: any) => sum + (output?.duration || 0.0), 0.0) || 0.0;
 	} catch (error: Error | any) {
 		if (job.try_count < job.try_max) {
 			job.status = "RETRYING";
 			job.retry_at = addNow(job.retry_in || 0, "milliseconds");
+
+			// JOB: STATs: UPDATE
+			jobStats.jobs_retried_count = 1;
 		} else {
-			await stats.update({ jobs_failed: 1 });
+			const jobOutputsCompleted = job.outputs?.filter((output: any) => output.status === "COMPLETED");
+			const jobOutputsFailed = job.outputs?.filter((output: any) => output.status !== "COMPLETED");
+
 			job.status = "FAILED";
 			job.outcome = { message: error.message || "Unknown error occurred!" };
+
+			// JOB: STATs: UPDATE
+			jobStats.jobs_failed_count = 1;
+			jobStats.outputs_completed_count = jobOutputsCompleted?.length || 0;
+			jobStats.outputs_completed_duration =
+				jobOutputsCompleted?.reduce((sum: number, output: any) => sum + (output?.duration || 0.0), 0.0) || 0.0;
+			jobStats.outputs_failed_count = jobOutputsFailed?.length || 0;
+			jobStats.outputs_failed_duration =
+				jobOutputsFailed?.reduce((sum: number, output: any) => sum + (output?.duration || 0.0), 0.0) || 0.0;
 		}
 	}
 
 	job.progress = 100.0;
 	job.completed_at = getNow();
 
-	await fs.rm(tempJobDir, { recursive: true }).catch(() => {});
+	// await fs.rm(tempJobDir, { recursive: true }).catch(() => {});
 
 	await updateJob(job);
 	// await updateWorkerStatus('IDLE');
+	await stats.update(jobStats);
 
 	if (job.status === "COMPLETED") {
 		await logger.insert("INFO", "Job successfully completed!");
@@ -341,10 +377,11 @@ async function updateJob(job: any): Promise<void> {
 				notification: job.notification ? JSON.stringify(job.notification) : null,
 				metadata: job.metadata ? JSON.stringify(job.metadata) : null,
 				outcome: job.outcome ? JSON.stringify(job.outcome) : null,
+				progress: parseFloat(job.progress || 0.0).toFixed(2),
 				updated_at: getNow()
 			});
 	} catch (error: Error | any) {
-		// console.log("updateJob", "ERROR", error);
+		await logger.insert("ERROR", "Failed to update job!", { error });
 	}
 }
 
