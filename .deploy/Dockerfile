@@ -35,18 +35,15 @@ RUN apt-get update && apt-get install -y \
     gettext-base
 
 # Setup Python virtual environment and install whisper-cli
-RUN python3 -m venv /opt/venv && \
-    /opt/venv/bin/pip install --upgrade pip && \
-    /opt/venv/bin/pip install whisper-cli
+# RUN python3 -m venv /opt/venv && \
+#    /opt/venv/bin/pip install --upgrade pip && \
+#    /opt/venv/bin/pip install whisper-cli
 
 # Set working directory
 WORKDIR ${VOLTAGE_DIR}
 
 # Copy source code
 COPY ./ ./
-
-# Download whisper models
-RUN npx nodejs-whisper download
 
 # Install pnpm globally
 RUN corepack enable && corepack prepare pnpm@9.1.0 --activate
@@ -56,6 +53,11 @@ RUN corepack enable && corepack prepare pnpm@9.1.0 --activate
 # RUN pnpm approve-builds
 RUN rm pnpm-lock.yaml
 RUN pnpm install
+
+# Download whisper models
+RUN cd ${VOLTAGE_DIR}/apps/runtime
+RUN npx nodejs-whisper download
+RUN cd ${VOLTAGE_DIR}
 
 # Build all services
 RUN npm run build:packages

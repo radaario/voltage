@@ -48,11 +48,13 @@ export async function generateInputPreview(job: any, options: any): Promise<any>
 			});
 		});
 
-		storage.config(config.storage);
-		await storage.upload(tempJobInputPreviewFilePath, `/jobs/${job.key}/preview.${(options.format || "webp").toLowerCase()}`);
+		try {
+			storage.config(config.storage);
+			await storage.upload(tempJobInputPreviewFilePath, `/jobs/${job.key}/preview.${(options.format || "webp").toLowerCase()}`);
+		} catch (error: Error | any) {}
 
 		// logger.console("INFO", "Preview generated from job input!");
-		return { path: tempJobInputPreviewFilePath, ffmpeg_args: args };
+		return { temp_path: tempJobInputPreviewFilePath, ffmpeg_args: args };
 	} catch (error: Error | any) {
 		// await logger.insert("ERROR", "Job input preview couldn't be generated!", { error });
 		throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());

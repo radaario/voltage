@@ -13,7 +13,7 @@ import { createJobNotification } from "./notifier";
 import path from "path";
 import fs from "fs/promises";
 
-// import * as tf from '@tensorflow/tfjs-node';
+import * as tf from "@tensorflow/tfjs-node";
 
 database.config(config.database);
 
@@ -99,7 +99,7 @@ async function run() {
 		const jobInput = await downloadInput(job);
 
 		try {
-			await fs.access(jobInput.path);
+			await fs.access(jobInput.temp_path);
 		} catch (error: Error | any) {
 			// JOB: STATs: UPDATE
 			jobStats.inputs_failed_count = 1;
@@ -150,23 +150,22 @@ async function run() {
 		const jobInputPreview = await generateInputPreview(job, config.jobs.preview);
 
 		try {
-			await fs.access(jobInputPreview.path);
+			await fs.access(jobInputPreview.temp_path);
 			await logger.insert("INFO", "Job input preview successfully generated!");
 
 			/* ! */
-			/*
-			async function fn() {
-				const nsfwjs = await import('nsfwjs');
+			try {
+				const imgBuffer = await fs.readFile(jobInputPreview.temp_path);
+				const nsfwjs = await import("nsfwjs");
 				const model = await nsfwjs.load();
-				const img = await fs.readFile(jobInputPreview);
-				const image = await tf.node.decodeImage(img, 3) as tf.Tensor3D;
+				const image = tf.node.decodeImage(imgBuffer, 3) as tf.Tensor3D;
 				const predictions = await model.classify(image);
-				image.dispose(); // Tensor memory must be managed explicitly (it is not sufficient to let a tf.Tensor go out of scope for its memory to be released).
-				console.log("predictions", predictions);
+				console.log("PREDICTIONS", predictions);
+				// const imgBuffer = await fs.readFile(jobInputPreview.temp_path);
+				// image.dispose(); // Tensor memory must be managed explicitly (it is not sufficient to let a tf.Tensor go out of scope for its memory to be released).
+			} catch (error: Error | any) {
+				console.log("PREDICTIONS: ERROR", error.message || error);
 			}
-
-			fn();
-			*/
 		} catch (error: Error | any) {
 			throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
 		}
@@ -194,8 +193,9 @@ async function run() {
 
 			try {
 				job.outputs[index].outcome = await processOutput(job, job.outputs[index]);
-				job.outputs[index].duration = job.outputs[index].outcome?.duration || 0.0;
 				job.outputs[index].status = "PROCESSED";
+				job.outputs[index].updated_at = getNow();
+				job.outputs[index].duration = job.outputs[index].outcome?.duration || 0.0;
 
 				await logger.insert("INFO", "Job output successfully processed!", {
 					output_key: job.outputs[index].key,
@@ -204,8 +204,9 @@ async function run() {
 
 				jobOutputsProcessedCount++;
 			} catch (error: Error | any) {
-				job.outputs[index].status = "FAILED";
 				job.outputs[index].outcome = { message: error.message || "Couldn't be processed!" };
+				job.outputs[index].status = "FAILED";
+				job.outputs[index].updated_at = getNow();
 
 				await logger.insert("ERROR", "Failed to process job output!", {
 					output_key: job.outputs[index].key,
@@ -248,8 +249,9 @@ async function run() {
 					try {
 						await fs.access(tempJobOutputFilePath);
 					} catch {
-						job.outputs[index].status = "FAILED";
 						job.outputs[index].outcome = { message: "Output file is missing!" };
+						job.outputs[index].status = "FAILED";
+						job.outputs[index].updated_at = getNow();
 					}
 				}
 
@@ -261,14 +263,16 @@ async function run() {
 				});
 
 				job.outputs[index].status = "UPLOADING";
+				job.outputs[index].updated_at = getNow();
 				await updateJob(job);
 
 				try {
 					job.outputs[index].outcome = await uploadOutput(job, job.outputs[index]);
+					job.outputs[index].status = "COMPLETED";
+					job.outputs[index].updated_at = getNow();
 					job.outputs[index].path = job.outputs[index].outcome?.path;
 					job.outputs[index].location = job.outputs[index].outcome?.location;
 					job.outputs[index].url = job.outputs[index].outcome?.url;
-					job.outputs[index].status = "COMPLETED";
 
 					await logger.insert("INFO", "Job output successfully uploaded!", {
 						output_key: job.outputs[index].key,
@@ -277,8 +281,9 @@ async function run() {
 
 					jobOutputsUploadedCount++;
 				} catch (error: Error | any) {
-					job.outputs[index].status = "FAILED";
 					job.outputs[index].outcome = { message: error.message || "Couldn't be uploaded!" };
+					job.outputs[index].status = "FAILED";
+					job.outputs[index].updated_at = getNow();
 
 					await logger.insert("ERROR", "Job output couldn't be uploaded!", {
 						output_key: job.outputs[index].key,
@@ -346,7 +351,7 @@ async function run() {
 	job.progress = 100.0;
 	job.completed_at = getNow();
 
-	await fs.rm(tempJobDir, { recursive: true }).catch(() => {});
+	// await fs.rm(tempJobDir, { recursive: true }).catch(() => {});
 
 	await updateJob(job);
 	// await updateWorkerStatus('IDLE');

@@ -54,6 +54,10 @@ export const config = {
 		},
 		ffprobe: {
 			path: process.env.FFPROBE_PATH ?? ffprobePathDefault
+		},
+		whisper: {
+			model: process.env.WHISPER_MODEL ?? "base",
+			cuda: process.env.WHISPER_CUDA === "true"
 		}
 	},
 	storage: {

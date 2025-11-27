@@ -21,7 +21,7 @@ export async function downloadInput(job: any): Promise<any> {
 			await fs.writeFile(tempJobInputFilePath, buffer);
 
 			// logger.console("INFO", "Job input successfully downloaded!");
-			return { path: tempJobInputFilePath };
+			return { temp_path: tempJobInputFilePath };
 		}
 
 		if (["HTTP", "HTTPS"].includes(job.input.type)) {
@@ -41,7 +41,7 @@ export async function downloadInput(job: any): Promise<any> {
 			await fs.writeFile(tempJobInputFilePath, Buffer.from(resp.data));
 
 			// logger.console("INFO", "Job input successfully downloaded!");
-			return { path: tempJobInputFilePath };
+			return { temp_path: tempJobInputFilePath };
 		}
 
 		if (!["BASE64", "HTTP", "HTTPS"].includes(job.input.type)) {
@@ -49,7 +49,7 @@ export async function downloadInput(job: any): Promise<any> {
 			await storage.download(job.input.path, tempJobInputFilePath);
 
 			// logger.console("INFO", "Job input successfully downloaded!");
-			return { path: tempJobInputFilePath };
+			return { temp_path: tempJobInputFilePath };
 		}
 
 		throw new Error(`Unsupported job input type: ${job.input.type}!`);

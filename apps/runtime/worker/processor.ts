@@ -1,9 +1,9 @@
 import { config } from "@voltage/config";
-import { storage } from "@voltage/utils";
 
 // import { logger } from "@voltage/utils";
 
 import { spawn } from "child_process";
+import fs from "fs/promises";
 import path from "path";
 import { Jimp } from "jimp";
 import sharp from "sharp";
@@ -26,8 +26,8 @@ export async function processOutput(job: any, output: any): Promise<any> {
 		// OUTPUT: TYPE: SUBTITLE
 		if (["SUBTITLE"].includes(output.specs.type)) {
 			if (!job.input.audio) {
-				storage.write(tempJobOutputFilePath, "There is no sound in the input file!");
-				return { file_path: tempJobOutputFilePath, message: "There is no sound in the input file!" };
+				// storage.write(tempJobOutputFilePath, "There is no sound in the input file!");
+				return { temp_path: tempJobOutputFilePath, message: "There is no sound in the input file!" };
 			}
 
 			const jobInputAudioFilePath = path.join(tempJobDir, "audio.wav");
@@ -49,11 +49,17 @@ export async function processOutput(job: any, output: any): Promise<any> {
 				const { nodewhisper } = await import("nodejs-whisper"); /* ! */
 
 				const outputFormat = (output.specs.format || "srt").toLowerCase();
-				const modelName = (output.specs.model || "base").toLowerCase().replace("_en", ".en").replace("_", "-");
+				const modelName = (output.specs.model || config.utils.whisper.model || "base")
+					.toLowerCase()
+					.replace("_en", ".en")
+					.replace("_", "-");
 
 				await nodewhisper(path.resolve(jobInputAudioFilePath), {
 					modelName: modelName,
 					autoDownloadModelName: modelName,
+					// removeWavFileAfterTranscription: true,
+					withCuda: config.utils.whisper.cuda || false,
+					// logger: null,
 					whisperOptions: {
 						outputInSrt: outputFormat === "srt",
 						outputInVtt: outputFormat === "vtt",
@@ -68,9 +74,18 @@ export async function processOutput(job: any, output: any): Promise<any> {
 					}
 				});
 
+				try {
+					// Move generated subtitle file to output path
+					await fs.rename(path.join(tempJobDir, `audio.wav.${outputFormat}`), tempJobOutputFilePath);
+				} catch (error: Error | any) {
+					throw new Error(
+						`Failed to move generated subtitle file! ${path.join(tempJobDir, `audio.wav.${outputFormat}`)} to ${tempJobOutputFilePath}. ${error.message || ""}`.trim()
+					);
+				}
+
 				// logger.console("INFO", "Subtitle generated!", { output_key: output.key, output_index: output.index });
 
-				return { file_path: tempJobOutputFilePath, ffmpeg_args: wavArgs };
+				return { temp_path: tempJobOutputFilePath, ffmpeg_args: wavArgs };
 			} catch (error: Error | any) {
 				// await logger.insert("ERROR", "Failed to generate subtitle!", { output_key: output.key, output_index: output.index, error });
 				throw new Error(
@@ -134,12 +149,17 @@ export async function processOutput(job: any, output: any): Promise<any> {
 		// OUTPUT: TYPE: THUMBNAIL
 		if (["THUMBNAIL"].includes(output.specs.type)) {
 			if (!job.input.video) {
-				storage.write(
-					tempJobOutputFilePath,
-					await createBlackImageBuffer(output.specs.format || "JPG", output.specs.width || 1920, output.specs.height || 1080)
+				const thubnailBuffer = await createBlackImageBuffer(
+					output.specs.format || "JPG",
+					output.specs.width || 1920,
+					output.specs.height || 1080
 				);
 
-				return { file_path: tempJobOutputFilePath, message: "There is no video in the input file!" };
+				try {
+					await fs.writeFile(tempJobOutputFilePath, thubnailBuffer);
+				} catch (err) {}
+
+				return { temp_path: tempJobOutputFilePath, message: "There is no video in the input file!" };
 			}
 
 			args.push("-quality", String(output.specs.quality || 75));
@@ -221,7 +241,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
 
 		// logger.console("INFO", "Job output processed!", { output_key: output.key, output_index: output.index });
 
-		return { file_path: tempJobOutputFilePath, duration: output.specs.duration || job.input.duration || 0.0, ffmpeg_args: args };
+		return { temp_path: tempJobOutputFilePath, duration: output.specs.duration || job.input.duration || 0.0, ffmpeg_args: args };
 	} catch (error: Error | any) {
 		// await logger.insert("ERROR", "Failed to process job output!", { output_key: output.key, output_index: output.index, error });
 		throw new Error(`Failed to process job output! ${error.message || ""}!`.trim());

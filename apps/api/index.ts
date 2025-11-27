@@ -644,6 +644,7 @@ app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) =>
 		});
 	}
 
+	const now = getNow();
 	let jobOutputsUpdatedCount = 0;
 	job.outputs = job.outputs ? JSON.parse(job.outputs as string) : null;
 
@@ -651,6 +652,7 @@ app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) =>
 		for (let index = 0; index < job.outputs.length; index++) {
 			if ((!output_key || output_key == job.outputs[index].key) && !["COMPLETED"].includes(job.outputs[index].status)) {
 				job.outputs[index].status = "PENDING";
+				job.outputs[index].updated_at = now;
 				jobOutputsUpdatedCount++;
 			}
 		}
@@ -668,6 +670,7 @@ app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) =>
 		.update({
 			outputs: job.outputs ? JSON.stringify(job.outputs) : null,
 			status: "PENDING", // RETRYING
+			updated_at: now,
 			try_count: 0
 			// retry_at: getNow()
 		});
