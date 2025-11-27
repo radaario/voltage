@@ -34,19 +34,13 @@ app.use(cors());
 // Authentication middleware factory
 const authMiddleware = (options: {} = {}) => {
 	return (req: Request, res: Response, next: any) => {
+		const client = req.query.client?.toString().toUpperCase() || "FRONTEND"; // null /* ! */
+
 		// Expected tokens
-		const apiToken = config.api.key;
-		const frontendToken = hash(config.frontend.password || uuid());
+		const frontendToken = config.frontend.password ? hash(config.frontend.password) : null;
+		const apiToken = client === "FRONTEND" ? frontendToken : config.api.key;
 
-		if (!apiToken && !config.frontend.is_authentication_required) {
-			return next();
-		}
-
-		if (req.query.client?.toString().toUpperCase() === "FRONTEND" && !config.frontend.is_authentication_required) {
-			return next();
-		}
-
-		if (req.query.client?.toString().toUpperCase() !== "FRONTEND" && !apiToken) {
+		if (!apiToken) {
 			return next();
 		}
 
@@ -72,7 +66,7 @@ const authMiddleware = (options: {} = {}) => {
 		}
 
 		// Check if token matches either frontend token or API key
-		if (token !== frontendToken && token !== apiToken) {
+		if (token !== apiToken) {
 			return res.status(401).json({
 				metadata: {
 					...responseMetadata,
