@@ -8,7 +8,12 @@ interface TooltipProps {
 	delayDuration?: number;
 }
 
-function Tooltip({ children, content, side = "top", delayDuration = 200 }: TooltipProps) {
+function Tooltip({ content, side = "top", delayDuration = 200, children }: TooltipProps) {
+	// If no content is provided, just return the children without the tooltip
+	if (["", null, undefined].includes(content)) {
+		return children;
+	}
+
 	return (
 		<TooltipPrimitive.Provider delayDuration={delayDuration}>
 			<TooltipPrimitive.Root>

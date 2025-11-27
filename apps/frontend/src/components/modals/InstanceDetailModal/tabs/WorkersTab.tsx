@@ -1,8 +1,6 @@
 import { useOutletContext, useNavigate, Outlet, useParams } from "react-router-dom";
 import type { Instance } from "@/interfaces/instance";
-import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
-import { JobCard, Label, Button, Tooltip } from "@/components";
-import { formatDate } from "@/utils";
+import { JobCard, Label, Button, Tooltip, TimeAgo } from "@/components";
 import { EyeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
 import { getWorkerName } from "@/utils/naming";
 
@@ -13,7 +11,6 @@ interface OutletContext {
 const WorkersTab: React.FC = () => {
 	const { instance } = useOutletContext<OutletContext>();
 	const { instanceKey } = useParams<{ instanceKey: string }>();
-	const { config } = useGlobalStateContext();
 	const navigate = useNavigate();
 
 	if (!instance) {
@@ -88,7 +85,7 @@ const WorkersTab: React.FC = () => {
 								</Label>
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-								{formatDate(worker.updated_at, config?.timezone || "UTC")}
+								<TimeAgo datetime={worker.updated_at} />
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
 								<Tooltip content="View">

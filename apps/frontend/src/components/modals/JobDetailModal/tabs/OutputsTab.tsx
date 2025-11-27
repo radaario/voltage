@@ -2,12 +2,10 @@ import { useState } from "react";
 import { useOutletContext, useNavigate, useParams, Outlet } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Job } from "@/interfaces/job";
-import { formatDate } from "@/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/utils";
-import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { ArrowUturnLeftIcon, EyeIcon, VideoCameraIcon, PhotoIcon, MusicalNoteIcon, LanguageIcon } from "@heroicons/react/24/outline";
-import { ConfirmModal, Label, Tooltip } from "@/components";
+import { ConfirmModal, Label, Tooltip, TimeAgo } from "@/components";
 
 interface OutletContext {
 	job: Job;
@@ -18,7 +16,6 @@ const OutputsTab: React.FC = () => {
 	const { jobKey } = useParams<{ jobKey: string }>();
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
-	const { config } = useGlobalStateContext();
 	const queryClient = useQueryClient();
 	const [outputToRetry, setOutputToRetry] = useState<{ key: string; index: number } | null>(null);
 
@@ -154,7 +151,7 @@ const OutputsTab: React.FC = () => {
 									</td>
 									*/}
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-										{formatDate(output.updated_at, config?.timezone || "UTC")}
+										<TimeAgo datetime={output.updated_at} />
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
 										<div className="flex items-center gap-1">

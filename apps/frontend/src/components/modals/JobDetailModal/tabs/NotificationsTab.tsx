@@ -3,11 +3,9 @@ import { useOutletContext, useNavigate, Outlet } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
-import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
-import { formatDate } from "@/utils";
 import type { Job } from "@/interfaces/job";
 import type { Notification } from "@/interfaces/notification";
-import { Label, Tooltip, Button, ConfirmModal, Pagination } from "@/components";
+import { Label, Tooltip, Button, ConfirmModal, Pagination, TimeAgo } from "@/components";
 import { ArrowUturnLeftIcon, EyeIcon } from "@heroicons/react/24/outline";
 
 interface OutletContext {
@@ -17,7 +15,6 @@ interface OutletContext {
 const NotificationsTab: React.FC = () => {
 	const { job } = useOutletContext<OutletContext>();
 	const { authToken } = useAuth();
-	const { config } = useGlobalStateContext();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const [currentPage, setCurrentPage] = useState(1);
@@ -151,7 +148,7 @@ const NotificationsTab: React.FC = () => {
 											</Label>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-											{formatDate(notification.updated_at, config?.timezone || "UTC")}
+											<TimeAgo datetime={notification.updated_at} />
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm">
 											<div

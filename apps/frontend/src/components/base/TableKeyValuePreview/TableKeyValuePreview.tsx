@@ -1,7 +1,6 @@
 import { CalendarIcon, ChartBarIcon, KeyIcon, ClipboardDocumentIcon, HashtagIcon } from "@heroicons/react/24/outline";
-import { JobCard, WorkerCard, InstanceCard, Label } from "@/components";
-import { formatDate as utilFormatDate, copyToClipboard } from "@/utils";
-import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
+import { JobCard, WorkerCard, InstanceCard, Label, TimeAgo } from "@/components";
+import { copyToClipboard, getCountryFromIP } from "@/utils";
 import { useState, useEffect } from "react";
 
 interface TableKeyValuePreviewProps {
@@ -9,16 +8,6 @@ interface TableKeyValuePreviewProps {
 	excludedKeys?: string[];
 	langMap?: Record<string, string>;
 }
-
-const getCountryFromIP = async (ip: string): Promise<string> => {
-	try {
-		const response = await fetch(`http://ip-api.com/json/${ip}`);
-		const data = await response.json();
-		return data.countryCode || "";
-	} catch {
-		return "";
-	}
-};
 
 // Default language map for common keys
 const DEFAULT_LANG_MAP: Record<string, string> = {
@@ -32,7 +21,6 @@ const DEFAULT_LANG_MAP: Record<string, string> = {
 };
 
 const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, excludedKeys = [], langMap = {} }) => {
-	const { config } = useGlobalStateContext();
 	const [countryCode, setCountryCode] = useState<string>("");
 	const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -41,18 +29,11 @@ const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, exclu
 
 	useEffect(() => {
 		if (data.ip_address && typeof data.ip_address === "string") {
-			getCountryFromIP(data.ip_address).then(setCountryCode);
+			getCountryFromIP(data.ip_address).then((result) => {
+				setCountryCode(result?.countryCode || "");
+			});
 		}
 	}, [data.ip_address]);
-
-	const formatDate = (dateStr: string) => {
-		if (!dateStr) return "N/A";
-		try {
-			return utilFormatDate(dateStr, config?.timezone || "UTC");
-		} catch {
-			return dateStr;
-		}
-	};
 
 	const formatKey = (key: string) => {
 		// Check if there's a custom translation in langMap
@@ -166,7 +147,7 @@ const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, exclu
 			return (
 				<span className="inline-flex items-center gap-1">
 					<CalendarIcon className="h-4 w-4 text-gray-400" />
-					<span className="font-medium text-gray-800 dark:text-gray-200">{formatDate(value)}</span>
+					<TimeAgo datetime={value} />
 				</span>
 			);
 		}

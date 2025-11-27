@@ -5,6 +5,7 @@ import { Instance } from "@/interfaces/instance";
 import { JobCard, TimeAgo, Tooltip, Button, Label, EmptyState, LoadingOverlay } from "@/components";
 import { ChevronDownIcon, ChevronRightIcon, EyeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
 import { getInstanceName, getWorkerName } from "@/utils/naming";
+import { getCountryFromIP } from "@/utils";
 
 interface InstancesTableProps {
 	data: Instance[];
@@ -12,24 +13,6 @@ interface InstancesTableProps {
 }
 
 const columnHelper = createColumnHelper<Instance>();
-
-// Helper function to get country from IP
-const getCountryFromIP = async (ip: string): Promise<{ country: string; countryCode: string } | null> => {
-	try {
-		const response = await fetch(`http://ip-api.com/json/${ip}`);
-		const data = await response.json();
-		if (data.status === "success") {
-			return {
-				country: data.country,
-				countryCode: data.countryCode
-			};
-		}
-		return null;
-	} catch (error) {
-		console.error("Failed to fetch country from IP:", error);
-		return null;
-	}
-};
 
 const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 	const navigate = useNavigate();

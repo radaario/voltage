@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useOutletContext, useNavigate, Outlet } from "react-router-dom";
-import { Label, Tooltip, Button, Pagination } from "@/components";
+import { Label, Tooltip, Button, Pagination, TimeAgo } from "@/components";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import type { Job } from "@/interfaces/job";
 import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
-import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
-import { formatDate } from "@/utils";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { WorkerCard } from "@/components/composite/WorkerCard";
 
@@ -30,7 +28,6 @@ const LogsTab: React.FC = () => {
 	const { job } = useOutletContext<OutletContext>();
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
-	const { config } = useGlobalStateContext();
 
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchInput, setSearchInput] = useState("");
@@ -203,7 +200,7 @@ const LogsTab: React.FC = () => {
 										)}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-										{formatDate(log.created_at, config?.timezone || "UTC")}
+										<TimeAgo datetime={log.created_at} />
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
 										<Tooltip content="View">

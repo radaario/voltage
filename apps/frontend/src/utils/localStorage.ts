@@ -6,11 +6,25 @@ interface StorageOptions {
 	boolean?: boolean;
 }
 
+/**
+ * A utility class for managing browser localStorage with additional features
+ * like expiration times and automatic JSON parsing/stringification.
+ */
 class LocalStorageUtil {
+	/**
+	 * Generates the expiration key name for a given storage key
+	 * @param key - The base key name
+	 * @returns The expiration key name (key_expiresIn)
+	 */
 	private getKeyWithExpiration(key: string): string {
 		return key + "_expiresIn";
 	}
 
+	/**
+	 * Removes an item from localStorage along with its expiration data
+	 * @param key - The key to remove
+	 * @returns True if successful, false if an error occurred
+	 */
 	public remove(key: string): boolean {
 		try {
 			localStorage.removeItem(key);
@@ -22,6 +36,15 @@ class LocalStorageUtil {
 		return true;
 	}
 
+	/**
+	 * Retrieves an item from localStorage with support for expiration and type conversion
+	 * @param key - The key to retrieve
+	 * @param params - Optional parameters for parsing the value
+	 * @param params.defaultValue - Default value to return if key doesn't exist
+	 * @param params.json - Parse the value as JSON
+	 * @param params.boolean - Parse the value as boolean
+	 * @returns The retrieved value, or null if expired/not found
+	 */
 	public get(key: string, params?: StorageOptions): any {
 		let expiresIn = localStorage.getItem(this.getKeyWithExpiration(key));
 
@@ -64,6 +87,14 @@ class LocalStorageUtil {
 		}
 	}
 
+	/**
+	 * Stores an item in localStorage with optional expiration time
+	 * Automatically stringifies objects and arrays to JSON
+	 * @param key - The key to store the value under
+	 * @param value - The value to store (will be stringified if object/array)
+	 * @param expires - Optional expiration time in seconds (defaults to 24 hours if provided without value)
+	 * @returns True if successful, false if an error occurred
+	 */
 	public set(key: string, value: any, expires?: number): boolean {
 		try {
 			if (isPlainObject(value) || isArray(value)) {

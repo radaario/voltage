@@ -9,165 +9,43 @@ import { spawn, ChildProcess } from "child_process";
 import { createJobNotification, retryJobNotification } from "./worker/notifier.js";
 
 // INSTANCE: KEY
-const instance_key = getInstanceKey();
+const selfInstanceKey = getInstanceKey();
 const workersProcessMap = new Map<string, ChildProcess>();
 
-async function getMasterInstance(): Promise<any | null> {
-	try {
-		const offlineTimeout = config.runtime.online_timeout || 1 * 60 * 1000; // in milliseconds, default 1 minute
+async function maintainInstancesAndWorkers() {
+	logger.console("INFO", "Maintaining instances and workers...");
 
-		const instances = await database.table("instances").orderBy("created_at", "asc");
-		const activeInstances = instances.filter(
-			(instance: any) => instance.status === "ONLINE" && instance.updated_at > subtractNow(offlineTimeout, "milliseconds")
-		);
-
-		if (!activeInstances.length) {
-			logger.console("ERROR", "No active instances found in database!");
-			return null;
-		}
-
-		const masterInstances = instances.filter((instance: any) => instance.type === "MASTER");
-		let masterInstance = masterInstances.length
-			? masterInstances.filter(
-					(instance: any) => instance.status === "ONLINE" && instance.updated_at > subtractNow(offlineTimeout, "milliseconds")
-				)[0]
-			: null;
-
-		if (!masterInstance) {
-			masterInstance = activeInstances[0];
-			masterInstance.type = "MASTER";
-			await database.table("instances").where("key", masterInstance.key).update({ type: "MASTER" });
-			logger.console("INFO", "No MASTER instance found; promoted first instance to MASTER!");
-		}
-
-		if (masterInstances.length > 1) {
-			await database.table("instances").where("type", "MASTER").whereNot("key", masterInstance.key).update({ type: "SLAVE" });
-			logger.console("INFO", "Multiple MASTER instances found; demoted extras to SLAVE!");
-		}
-
-		return masterInstance;
-	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Selecting MASTER instance failed!", { error });
-		return null;
-	}
-}
-
-async function initInstance() {
-	await logger.insert("INFO", "Initializing instance...");
-
-	const now = getNow();
-	const specs = getInstanceSpecs();
-
-	try {
-		// WORKERS: COUNT
-		const _existsWorkersCount = await database
-			.table("instances_workers")
-			.where("instance_key", instance_key)
-			.count("* as count")
-			.first();
-		const existsWorkersCount = (_existsWorkersCount as any).count || 0;
-		const missingWorkersCount = config.runtime.workers.max - existsWorkersCount;
-
-		// WORKERs: INSERT
-		if (missingWorkersCount > 0) {
-			const newWorkers = Array.from({ length: missingWorkersCount }, (_, index) => ({
-				key: hash(`${instance_key}:${existsWorkersCount + index}`),
-				index: existsWorkersCount + index,
-				instance_key,
-				job_key: null,
-				status: "IDLE",
-				updated_at: now,
-				created_at: now
-			}));
-
-			await database.table("instances_workers").insert(newWorkers);
-
-			logger.console("INFO", `${missingWorkersCount} new workers initialized for instance!`);
-		}
-	} catch (error: Error | any) {}
-
-	try {
-		// WORKERs: UPDATE
-		await database
-			.table("instances_workers")
-			.where("instance_key", instance_key)
-			.update({
-				job_key: null,
-				outcome: null,
-				status: database.knex.raw(`CASE WHEN \`index\` < ? THEN 'IDLE' ELSE 'TERMINATED' END`, [config.runtime.workers.max]),
-				updated_at: now
-			});
-	} catch (error: Error | any) {}
+	let instances: any[] = [];
+	let selfInstance: any = null;
 
 	try {
 		// INSTANCEs: SELECT
-		const instance = await database.table("instances").select("key").where("key", instance_key).first();
+		instances = await database.table("instances"); // .orderBy("created_at", "asc")
+	} catch (error: Error | any) {}
 
-		if (!instance) {
-			// INSTANCE: INSERT
-			await database.table("instances").insert({
-				key: instance_key,
-				specs: JSON.stringify(specs),
-				status: "ONLINE",
-				updated_at: now,
-				created_at: now
-			});
-
-			await logger.insert("INFO", "Instance created!");
-			return;
-		}
-
-		// INSTANCE: UPDATE
-		await database
-			.table("instances")
-			.where("key", instance_key)
-			.update({
-				specs: JSON.stringify(specs),
-				status: "ONLINE",
-				outcome: null,
-				updated_at: now,
-				restart_count: database.knex.raw("restart_count + 1")
-			});
-
-		await logger.insert("INFO", "Instance restarted!");
-	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Instance initialization failed!", { error });
+	if (instances) {
+		// INSTANCE: UPDATE: SELF
+		selfInstance = instances.filter((instance: any) => instance.key === selfInstanceKey)[0];
 	}
-}
 
-async function maintainInstancesAndWorkers() {
-	// MAINTAIN ITSELF
-	logger.console("INFO", "Maintaining itself...");
-
-	try {
-		// INSTACE: UPDATE
-		await database
-			.table("instances")
-			.where("key", instance_key)
-			.update({
-				specs: JSON.stringify(getInstanceSpecs()),
-				status: "ONLINE",
-				updated_at: getNow()
-			});
-
-		// WORKERS: UPDATE
-		await database
-			.table("instances_workers")
-			.where("instance_key", instance_key)
-			.where("status", "IDLE")
-			.update({ updated_at: getNow() });
-	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Instance maintenance failed!", { error });
+	if (!selfInstance) {
+		selfInstance = await initInstance(selfInstanceKey);
 	}
+
+	await maintainInstance(selfInstanceKey);
 
 	// INSTANCE: SELECT: MASTER
-	const masterInstance = await getMasterInstance();
-
-	if (!masterInstance) await initInstance(); /* ! */
+	const masterInstance = await getMasterInstance(instances);
 
 	/* INSTANCEs & WORKERs: MAINTAINING */
-	if (!masterInstance || masterInstance.key === instance_key) {
+	if (!masterInstance || masterInstance.key === selfInstanceKey) {
 		logger.console("INFO", "Maintaining workers...");
+
+		try {
+			if (selfInstance.type !== "MASTER") {
+				await setMasterInstance(selfInstanceKey);
+			}
+		} catch (error: Error | any) {}
 
 		// WORKERs: UPDATE: TIMEOUT
 		try {
@@ -281,6 +159,185 @@ async function maintainInstancesAndWorkers() {
 	setTimeout(() => maintainInstancesAndWorkers(), config.runtime.maintain_interval || 60000);
 }
 
+async function initInstance(instanceKey: string, instance: any = null): Promise<any> {
+	await logger.insert("INFO", `Initializing instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""}...`);
+
+	const now = getNow();
+	const specs = getInstanceSpecs();
+
+	// INSTANCE: WORKERs: MISSINGs
+	try {
+		// INSTANCE: WORKERs: COUNT
+		const existsWorkersCount = await database
+			.table("instances_workers")
+			.where("instance_key", instanceKey)
+			.count("* as count")
+			.first()
+			.then((result: any) => result?.count || 0);
+		const missingWorkersCount = config.runtime.workers.max - existsWorkersCount;
+
+		// INSTANCE: WORKERs: INSERT
+		if (missingWorkersCount > 0) {
+			const newWorkers = Array.from({ length: missingWorkersCount }, (_, index) => ({
+				key: hash(`${instanceKey}:${existsWorkersCount + index}`),
+				index: existsWorkersCount + index,
+				instance_key: instanceKey,
+				job_key: null,
+				status: "IDLE",
+				updated_at: now,
+				created_at: now
+			}));
+
+			await database.table("instances_workers").insert(newWorkers);
+
+			logger.console(
+				"INFO",
+				`${missingWorkersCount} new workers initialized for instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""}!`
+			);
+		}
+	} catch (error: Error | any) {}
+
+	// INSTANCE: WORKERs: EXISTs
+	try {
+		await database
+			.table("instances_workers")
+			.where("instance_key", instanceKey)
+			.update({
+				job_key: null,
+				outcome: null,
+				status: database.knex.raw(`CASE WHEN \`index\` < ? THEN 'IDLE' ELSE 'TERMINATED' END`, [config.runtime.workers.max]),
+				updated_at: now
+			});
+	} catch (error: Error | any) {}
+
+	try {
+		if (!instance) {
+			// INSTANCE: INSERT
+			await database.table("instances").insert({
+				key: instanceKey,
+				specs: JSON.stringify(specs),
+				status: "ONLINE",
+				updated_at: now,
+				created_at: now
+			});
+
+			await logger.insert("INFO", `Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} created!`);
+
+			return await database.table("instances").where("key", instanceKey).first();
+		}
+
+		// INSTANCE: UPDATE
+		await database
+			.table("instances")
+			.where("key", instanceKey)
+			.update({
+				specs: JSON.stringify(specs),
+				status: "ONLINE",
+				outcome: null,
+				updated_at: now,
+				restart_count: database.knex.raw("restart_count + 1")
+			});
+
+		await logger.insert(
+			"WARNING",
+			`Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} restarted (${(instance.restart_count || 0) + 1} times)!`
+		);
+
+		return instance;
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", `Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} initialization failed!`, {
+			error
+		});
+	}
+}
+
+async function maintainInstance(instanceKey: string): Promise<void> {
+	logger.console("INFO", `Maintaining instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""}...`);
+
+	try {
+		// INSTACE: UPDATE
+		await database
+			.table("instances")
+			.where("key", instanceKey)
+			.update({
+				specs: JSON.stringify(getInstanceSpecs()),
+				status: "ONLINE",
+				updated_at: getNow()
+			});
+
+		// INSTANCE: WORKERs: UPDATE
+		await database
+			.table("instances_workers")
+			.where("instance_key", instanceKey)
+			.where("status", "IDLE")
+			.update({ updated_at: getNow() });
+
+		logger.console("INFO", `Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} successfully maintained!`);
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", `Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} maintenance failed!`, {
+			error
+		});
+	}
+}
+
+async function getMasterInstance(instances: any[]): Promise<any | null> {
+	try {
+		if (!instances.length) {
+			logger.console("ERROR", "No instances found!");
+			return null;
+		}
+
+		const offlineTimeout = config.runtime.online_timeout || 1 * 60 * 1000; // in milliseconds, default 1 minute
+
+		const activeInstances = instances.filter(
+			(instance: any) => instance.status === "ONLINE" && instance.updated_at > subtractNow(offlineTimeout, "milliseconds")
+		);
+
+		if (!activeInstances.length) {
+			logger.console("ERROR", "No active instances found!");
+			return null;
+		}
+
+		const masterInstances = instances.filter((instance: any) => instance.type === "MASTER");
+		let masterInstance = masterInstances.length
+			? masterInstances.filter(
+					(instance: any) => instance.status === "ONLINE" && instance.updated_at > subtractNow(offlineTimeout, "milliseconds")
+				)[0]
+			: null;
+
+		if (!masterInstance) {
+			masterInstance = activeInstances[0];
+			masterInstance.type = "MASTER";
+			await setMasterInstance(masterInstance.key);
+		}
+
+		if (masterInstances.length > 1) {
+			await database.table("instances").where("type", "MASTER").whereNot("key", masterInstance.key).update({ type: "SLAVE" });
+			logger.console("INFO", "Multiple MASTER instances found; demoted extras to SLAVE!");
+		}
+
+		return masterInstance;
+	} catch (error: Error | any) {
+		logger.console("ERROR", "Selecting MASTER instance failed!", { error });
+		return null;
+	}
+}
+
+async function setMasterInstance(instanceKey: string): Promise<void> {
+	logger.console("INFO", `Setting instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} as MASTER...`);
+
+	try {
+		await database.table("instances").where("type", "MASTER").whereNot("key", instanceKey).update({ type: "SLAVE" });
+		await database.table("instances").where("key", instanceKey).update({ type: "MASTER" });
+
+		await logger.insert("INFO", `Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} is now MASTER!`);
+	} catch (error: Error | any) {
+		logger.console("ERROR", `Setting instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} as MASTER failed!`, {
+			error
+		});
+	}
+}
+
 async function processJobs(): Promise<void> {
 	// JOBs: PENDINGs
 	logger.console("INFO", "Enqueuing pending jobs...");
@@ -299,14 +356,14 @@ async function processJobs(): Promise<void> {
 			.orderBy("priority", "asc")
 			.orderBy("created_at", "asc")
 			.limit(config.jobs.enqueue_limit || 10) // default 10
-			.update({ updated_at: getNow(), locked_by: instance_key });
+			.update({ updated_at: getNow(), locked_by: selfInstanceKey });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to select pending jobs!", { error });
 	}
 
 	try {
 		// JOBs: PENDINGs: SELECT LOCKEDs
-		const pendingJobs = await database.table("jobs").where("locked_by", instance_key);
+		const pendingJobs = await database.table("jobs").where("locked_by", selfInstanceKey);
 
 		for (const pendingJob of pendingJobs) {
 			// JOB: UPDATE: QUEUED
@@ -332,7 +389,7 @@ async function processJobs(): Promise<void> {
 		}
 
 		// JOBs: PENDINGs: RELEASE
-		await database.table("jobs").where("locked_by", instance_key).update({ updated_at: getNow(), locked_by: null });
+		await database.table("jobs").where("locked_by", selfInstanceKey).update({ updated_at: getNow(), locked_by: null });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to enqueuing pending jobs!", { error });
 	}
@@ -342,7 +399,7 @@ async function processJobs(): Promise<void> {
 
 	const idleWorkers = await database
 		.table("instances_workers")
-		.where("instance_key", instance_key)
+		.where("instance_key", selfInstanceKey)
 		.where("status", "IDLE")
 		.orderBy("index", "asc");
 
@@ -352,13 +409,13 @@ async function processJobs(): Promise<void> {
 			await database
 				.table("jobs_queue")
 				.where("locked_by", null)
-				.update({ locked_by: instance_key })
+				.update({ locked_by: selfInstanceKey })
 				.orderBy("priority", "asc")
 				.orderBy("created_at", "asc")
 				.limit(idleWorkers.length);
 
 			// JOBs: QUEUEDs: LOCKEDs
-			const queuedJobs = await database.table("jobs_queue").where("locked_by", instance_key);
+			const queuedJobs = await database.table("jobs_queue").where("locked_by", selfInstanceKey);
 
 			for (let index = 0; index < queuedJobs.length; index++) {
 				const idleWorker = idleWorkers[index];
@@ -370,7 +427,7 @@ async function processJobs(): Promise<void> {
 					// WORKER: UPDATE: BUSY
 					await database.table("instances_workers").where("key", idleWorker.key).update({ status: "BUSY", updated_at: getNow() });
 
-					await spawnWorkerForJob(idleWorker.key, queuedJob.key);
+					await spawnWorkerForJob(selfInstanceKey, idleWorker.key, queuedJob.key);
 
 					// JOB: QUEUE: DELETE
 					await database.table("jobs_queue").where("key", queuedJob.key).delete();
@@ -390,7 +447,7 @@ async function processJobs(): Promise<void> {
 
 			// JOBs: QUEUEDs: RELEASE
 			if (queuedJobs.length > 0) {
-				await database.table("jobs_queue").where("locked_by", instance_key).update({ locked_by: null });
+				await database.table("jobs_queue").where("locked_by", selfInstanceKey).update({ locked_by: null });
 			}
 		} catch (error: Error | any) {
 			await logger.insert("ERROR", "Failed to poll jobs!", { error });
@@ -434,17 +491,17 @@ async function processJobsNotifications(): Promise<void> {
 			.orderBy("priority", "asc")
 			.orderBy("created_at", "asc")
 			.limit(config.jobs.notifications.process_limit || 10) // default 10
-			.update({ locked_by: instance_key }); // updated_at: getNow(),
+			.update({ locked_by: selfInstanceKey }); // updated_at: getNow(),
 
 		// JOBs: NOTIFICATIONs: QUEUE: SELECT LOCKEDs
-		const pendingJobsNotifications = await database.table("jobs_notifications_queue").where("locked_by", instance_key);
+		const pendingJobsNotifications = await database.table("jobs_notifications_queue").where("locked_by", selfInstanceKey);
 
 		for (const pendingNotification of pendingJobsNotifications) {
 			await retryJobNotification(pendingNotification);
 		}
 
 		// JOBs: QUEUEDs: RELEASE
-		await database.table("jobs_notifications_queue").where("locked_by", instance_key).update({ locked_by: null });
+		await database.table("jobs_notifications_queue").where("locked_by", selfInstanceKey).update({ locked_by: null });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to process jobs notifications queue!", { error });
 	}
@@ -452,7 +509,7 @@ async function processJobsNotifications(): Promise<void> {
 	setTimeout(() => processJobsNotifications(), config.jobs.notifications.process_interval || 60000); // default 1 minute
 }
 
-async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<any> {
+async function spawnWorkerForJob(instanceKey: string, workerKey: string, jobKey: string): Promise<any> {
 	try {
 		// JOB: NOTIFICATIONs: UPDATE
 		// await database.table('jobs_notifications').where('job_key', job_key).update({ instance_key, worker_key: worker_key });
@@ -462,14 +519,14 @@ async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<a
 
 		if (config.env === "local") {
 			const workerScriptPath = path.join(process.cwd(), "worker", "index.ts");
-			child = spawn("npx", ["tsx", workerScriptPath, instance_key, worker_key, job_key], {
+			child = spawn("npx", ["tsx", workerScriptPath, instanceKey, workerKey, jobKey], {
 				stdio: ["inherit", "inherit", "inherit"],
 				cwd: process.cwd(),
 				shell: true
 			});
 		} else {
 			const workerScriptPath = path.join(process.cwd(), "dist", "worker", "index.js");
-			child = spawn("node", [workerScriptPath, instance_key, worker_key, job_key], {
+			child = spawn("node", [workerScriptPath, instanceKey, workerKey, jobKey], {
 				stdio: ["inherit", "inherit", "inherit"],
 				cwd: process.cwd()
 			});
@@ -477,13 +534,13 @@ async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<a
 
 		// WORKER: EVENTs
 		child.on("exit", async (code, signal) => {
-			logger.console("INFO", "Worker exited!", { worker_key, job_key, code, signal });
-			workersProcessMap.delete(worker_key);
+			logger.console("INFO", "Worker exited!", { worker_key: workerKey, job_key: jobKey, code, signal });
+			workersProcessMap.delete(workerKey);
 
 			// WORKER: UPDATE
 			await database
 				.table("instances_workers")
-				.where("key", worker_key)
+				.where("key", workerKey)
 				.update({
 					job_key: null,
 					status: "IDLE",
@@ -491,18 +548,18 @@ async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<a
 					outcome: JSON.stringify({ message: "Worker exited!", exit_code: code, exit_signal: signal })
 				})
 				.catch((error) => {
-					logger.insert("ERROR", "Failed to idle worker!", { worker_key, job_key, error });
+					logger.insert("ERROR", "Failed to idle worker!", { worker_key: workerKey, job_key: jobKey, error });
 				});
 		});
 
 		child.on("error", async (error) => {
-			await logger.insert("ERROR", "Worker exited due error!", { worker_key, job_key, error });
-			workersProcessMap.delete(worker_key);
+			await logger.insert("ERROR", "Worker exited due error!", { worker_key: workerKey, job_key: jobKey, error });
+			workersProcessMap.delete(workerKey);
 
 			// WORKER: UPDATE
 			await database
 				.table("instances_workers")
-				.where("key", worker_key)
+				.where("key", workerKey)
 				.update({
 					job_key: null,
 					status: "IDLE",
@@ -510,15 +567,15 @@ async function spawnWorkerForJob(worker_key: string, job_key: string): Promise<a
 					outcome: JSON.stringify({ message: error.message || "Unknown error occurred!", exit_signal: "ERROR" })
 				})
 				.catch((error) => {
-					logger.insert("ERROR", "Failed to idle worker!", { worker_key, job_key, error });
+					logger.insert("ERROR", "Failed to idle worker!", { worker_key: workerKey, job_key: jobKey, error });
 				});
 		});
 
-		workersProcessMap.set(worker_key, child);
+		workersProcessMap.set(workerKey, child);
 
-		logger.console("INFO", "Worker successfully spawned for the job!", { worker_key, job_key });
+		logger.console("INFO", "Worker successfully spawned for the job!", { worker_key: workerKey, job_key: jobKey });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to spawn worker for the job!", { job_key, error });
+		await logger.insert("ERROR", "Failed to spawn worker for the job!", { job_key: jobKey, error });
 		throw error;
 	}
 }
@@ -595,7 +652,7 @@ const gracefulShutdown = async (signal: string) => {
 		try {
 			await database
 				.table("instances_workers")
-				.where("instance_key", instance_key)
+				.where("instance_key", selfInstanceKey)
 				.update({
 					job_key: null,
 					status: "TERMINATED",
@@ -610,7 +667,7 @@ const gracefulShutdown = async (signal: string) => {
 		try {
 			await database
 				.table("instances")
-				.where("key", instance_key)
+				.where("key", selfInstanceKey)
 				.update({
 					specs: JSON.stringify(getInstanceSpecs()),
 					status: "OFFLINE",
@@ -629,8 +686,8 @@ const gracefulShutdown = async (signal: string) => {
 	process.exit(0);
 };
 
-async function bootstrap() {
-	logger.setMetadata({ instance_key });
+async function init() {
+	logger.setMetadata({ instance_key: selfInstanceKey });
 	await storage.config(config.storage);
 	database.config(config.database);
 	await database.verifySchemaExists();
@@ -638,7 +695,10 @@ async function bootstrap() {
 	await logger.insert("INFO", "Starting runtime service...");
 
 	try {
-		await initInstance();
+		// INSTANCE: SELECT: SELF
+		const selfInstance = await database.table("instances").where("key", selfInstanceKey).first();
+
+		await initInstance(selfInstanceKey, selfInstance);
 		await maintainInstancesAndWorkers();
 		await processJobs();
 		await processJobsNotifications();
@@ -649,7 +709,7 @@ async function bootstrap() {
 	}
 }
 
-bootstrap().catch((err) => {
+init().catch((err) => {
 	// Final catch to avoid unhandled rejections
-	logger.console("ERROR", "Runtime bootstrap failed!", { error: err });
+	logger.console("ERROR", "Runtime initialization failed!", { error: err });
 });
