@@ -20,7 +20,7 @@ async function maintainInstancesAndWorkers() {
 
 	try {
 		// INSTANCEs: SELECT
-		instances = await database.table("instances"); // .orderBy("created_at", "asc")
+		instances = await database.table("instances").select("key", "type", "status", "updated_at"); // .orderBy("created_at", "asc")
 	} catch (error: Error | any) {}
 
 	if (instances) {
@@ -30,6 +30,7 @@ async function maintainInstancesAndWorkers() {
 
 	if (!selfInstance) {
 		selfInstance = await initInstance(selfInstanceKey);
+		instances.push(selfInstance);
 	}
 
 	await maintainInstance(selfInstanceKey);
@@ -37,17 +38,18 @@ async function maintainInstancesAndWorkers() {
 	// INSTANCE: SELECT: MASTER
 	const masterInstance = await getMasterInstance(instances);
 
-	/* INSTANCEs & WORKERs: MAINTAINING */
+	// INSTANCEs & WORKERs: MAINTAINING
 	if (!masterInstance || masterInstance.key === selfInstanceKey) {
-		logger.console("INFO", "Maintaining workers...");
-
+		// INSTANCE: UPDATE: SELF AS MASTER
 		try {
 			if (selfInstance.type !== "MASTER") {
 				await setMasterInstance(selfInstanceKey);
 			}
 		} catch (error: Error | any) {}
 
-		// WORKERs: UPDATE: TIMEOUT
+		// INSTANCEs: WORKERs: UPDATE: TIMEOUT
+		logger.console("INFO", "Maintaining workers...");
+
 		try {
 			const busyTimeout = config.runtime.workers.busy_timeout || 5 * 60 * 1000; // in milliseconds, default 5 minutes
 
@@ -77,7 +79,7 @@ async function maintainInstancesAndWorkers() {
 			await logger.insert("ERROR", "Timing out busy workers failed!", { error });
 		}
 
-		// WORKERs: UPDATE: IDLE
+		// INSTANCEs: WORKERs: UPDATE: IDLE
 		try {
 			const idleAfter = config.runtime.workers.idle_after || 1 * 10 * 1000; // in milliseconds, default 10 seconds
 
@@ -298,22 +300,12 @@ async function getMasterInstance(instances: any[]): Promise<any | null> {
 			return null;
 		}
 
-		const masterInstances = instances.filter((instance: any) => instance.type === "MASTER");
-		let masterInstance = masterInstances.length
-			? masterInstances.filter(
-					(instance: any) => instance.status === "ONLINE" && instance.updated_at > subtractNow(offlineTimeout, "milliseconds")
-				)[0]
-			: null;
+		let masterInstance = activeInstances.filter((instance: any) => instance.type === "MASTER")[0];
 
 		if (!masterInstance) {
 			masterInstance = activeInstances[0];
 			masterInstance.type = "MASTER";
 			await setMasterInstance(masterInstance.key);
-		}
-
-		if (masterInstances.length > 1) {
-			await database.table("instances").where("type", "MASTER").whereNot("key", masterInstance.key).update({ type: "SLAVE" });
-			logger.console("INFO", "Multiple MASTER instances found; demoted extras to SLAVE!");
 		}
 
 		return masterInstance;
