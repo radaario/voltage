@@ -8,7 +8,7 @@ import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { WorkerCard } from "@/components/composite/WorkerCard";
+import { WorkerCard } from "@/components";
 
 interface OutletContext {
 	job: Job;

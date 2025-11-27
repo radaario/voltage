@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
+import { Page } from "@/components";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { ArrowDownTrayIcon, ArrowUpTrayIcon, BellIcon, RectangleStackIcon } from "@heroicons/react/24/outline";
 import { NavLink } from "react-router-dom";
@@ -198,7 +199,7 @@ const Overview: React.FC = () => {
 	}, [stats.length, stats]);
 
 	return (
-		<div className="space-y-6">
+		<Page>
 			{/* Header */}
 			<div className="flex items-center justify-between gap-4">
 				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Overview</h1>
@@ -662,7 +663,7 @@ const Overview: React.FC = () => {
 					</div>
 				</>
 			)}
-		</div>
+		</Page>
 	);
 };
 

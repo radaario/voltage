@@ -4,8 +4,8 @@ import { Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import type { Notification } from "@/interfaces/notification";
-import NotificationsTable from "./NotificationsTable.tsx";
-import { SearchInput, LoadingSpinner, PageHeader, ErrorAlert } from "@/components";
+import NotificationsTable from "@/components/pages/Notifications/Table/Table";
+import { SearchInput, LoadingSpinner, Page, ErrorAlert } from "@/components";
 
 interface PaginationInfo {
 	total: number;
@@ -143,8 +143,8 @@ const Notifications: React.FC = () => {
 	}
 
 	return (
-		<div className="space-y-6">
-			<PageHeader
+		<Page>
+			<Page.Header
 				title="Notifications"
 				onRefresh={handleRefresh}
 				isRefreshing={isLoading}>
@@ -167,30 +167,29 @@ const Notifications: React.FC = () => {
 					placeholder="Search notifications..."
 					className="h-[38px]"
 				/>
-			</PageHeader>{" "}
+			</Page.Header>
 			<ErrorAlert error={error} />
-			{/* Table */}
-			<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
-				<NotificationsTable
-					data={notificationsResponse?.data || []}
-					loading={isLoading}
-					pagination={{
-						total: pagination.total,
-						page: pagination.page,
-						limit: pagination.limit,
-						totalPages: pagination.totalPages,
-						has_more: pagination.has_more,
-						next_page: pagination.next_page,
-						prev_page: pagination.prev_page
-					}}
-					onPageChange={handlePageChange}
-					onLimitChange={handleLimitChange}
-					newNotificationKeys={newNotificationKeys}
-				/>
-			</div>
+
+			<NotificationsTable
+				data={notificationsResponse?.data || []}
+				loading={isLoading}
+				pagination={{
+					total: pagination.total,
+					page: pagination.page,
+					limit: pagination.limit,
+					totalPages: pagination.totalPages,
+					has_more: pagination.has_more,
+					next_page: pagination.next_page,
+					prev_page: pagination.prev_page
+				}}
+				onPageChange={handlePageChange}
+				onLimitChange={handleLimitChange}
+				newNotificationKeys={newNotificationKeys}
+			/>
+
 			{/* Nested Route Outlet for NotificationDetailModal */}
 			<Outlet />
-		</div>
+		</Page>
 	);
 };
 
