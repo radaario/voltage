@@ -123,6 +123,8 @@ async function maintainInstancesAndWorkers() {
 						outcome: JSON.stringify({ message: "The worker was terminated because the instance was offline!" })
 					});
 
+				// cpu_usage_percent, memory_usage_percent
+
 				await database
 					.table("instances")
 					.whereIn("key", inactiveInstanceKeys)
@@ -166,7 +168,6 @@ async function initInstance(instanceKey: string, instance: any = null): Promise<
 	await logger.insert("INFO", `Initializing instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""}...`);
 
 	const now = getNow();
-	const specs = getInstanceSpecs();
 
 	// INSTANCE: WORKERs: MISSINGs
 	try {
@@ -218,7 +219,7 @@ async function initInstance(instanceKey: string, instance: any = null): Promise<
 			// INSTANCE: INSERT
 			await database.table("instances").insert({
 				key: instanceKey,
-				specs: JSON.stringify(specs),
+				specs: JSON.stringify(getInstanceSpecs()),
 				status: "ONLINE",
 				updated_at: now,
 				created_at: now
@@ -230,28 +231,42 @@ async function initInstance(instanceKey: string, instance: any = null): Promise<
 		}
 
 		// INSTANCE: UPDATE
-		await database
-			.table("instances")
-			.where("key", instanceKey)
-			.update({
-				specs: JSON.stringify(specs),
-				status: "ONLINE",
-				outcome: null,
-				updated_at: now,
-				restart_count: database.knex.raw("restart_count + 1")
-			});
-
-		await logger.insert(
-			"WARNING",
-			`Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} restarted (${(instance.restart_count || 0) + 1} times)!`
-		);
-
+		instance = await restartInstance(instanceKey, instance);
 		return instance;
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", `Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} initialization failed!`, {
 			error
 		});
 	}
+}
+
+async function restartInstance(instanceKey: string, instance: any): Promise<any> {
+	if (!instance) return null;
+
+	await logger.insert("INFO", `Restarting instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""}...`);
+
+	try {
+		instance.restart_count = (instance.restart_count || 0) + 1;
+
+		await database
+			.table("instances")
+			.where("key", instanceKey)
+			.update({
+				specs: JSON.stringify(getInstanceSpecs()),
+				status: "ONLINE",
+				outcome: null,
+				updated_at: getNow(),
+				restart_count: database.knex.raw("restart_count + 1")
+			})
+			.then(async (result) => {
+				await logger.insert(
+					"WARNING",
+					`Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} restarted (${instance.restart_count} times)!`
+				);
+			});
+
+		return instance;
+	} catch (error: Error | any) {}
 }
 
 async function maintainInstance(instanceKey: string): Promise<void> {
@@ -688,6 +703,9 @@ async function init() {
 	await logger.insert("INFO", "Starting runtime service...");
 
 	try {
+		const selfInstance = await database.table("instances").where("key", selfInstanceKey).first();
+		await restartInstance(selfInstanceKey, selfInstance);
+
 		await maintainInstancesAndWorkers();
 		await processJobs();
 		await processJobsNotifications();
