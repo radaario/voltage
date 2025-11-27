@@ -4,7 +4,7 @@ import { DocumentTextIcon, InformationCircleIcon, CircleStackIcon, XMarkIcon } f
 import { useAuth } from "@/hooks/useAuth";
 import { useRouteModal } from "@/hooks/useRouteModal";
 import type { Log } from "@/interfaces/log";
-import { Modal, Label, Button, Tooltip, TabsNavigation } from "@/components";
+import { Modal, Label, Button, Tooltip, TabsNavigation, LoadingSpinner } from "@/components";
 import { api, ApiResponse } from "@/utils";
 import { useMemo } from "react";
 
@@ -116,9 +116,7 @@ const LogDetailModal: React.FC = () => {
 				className="h-[60vh]">
 				<div className="p-6 h-full overflow-y-auto">
 					{isLoading ? (
-						<div className="flex justify-center items-center py-12">
-							<div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-500 dark:border-gray-400 border-t-transparent"></div>
-						</div>
+						<LoadingSpinner />
 					) : isError || !log ? (
 						<div className="flex flex-col justify-center items-center py-12 gap-3">
 							<p className="text-sm text-gray-600 dark:text-gray-400">

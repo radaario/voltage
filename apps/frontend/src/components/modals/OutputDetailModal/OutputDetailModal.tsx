@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useRouteModal } from "@/hooks/useRouteModal";
 import { api, ApiResponse } from "@/utils";
-import { Modal, ConfirmModal, Label, Button, Tooltip, TabsNavigation } from "@/components";
+import { Modal, ConfirmModal, Label, Button, Tooltip, TabsNavigation, LoadingSpinner } from "@/components";
 import type { Job } from "@/interfaces/job";
 
 const OutputDetailModal: React.FC = () => {
@@ -135,15 +135,7 @@ const OutputDetailModal: React.FC = () => {
 				<Modal.Content
 					noPadding
 					className="h-[50vh]">
-					<div className="p-6 h-full overflow-y-auto">
-						{isLoading ? (
-							<div className="flex items-center justify-center h-full">
-								<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neutral-900 dark:border-white" />
-							</div>
-						) : (
-							<Outlet context={{ output }} />
-						)}
-					</div>
+					<div className="p-6 h-full overflow-y-auto">{isLoading ? <LoadingSpinner /> : <Outlet context={{ output }} />}</div>
 				</Modal.Content>
 			</Modal>
 

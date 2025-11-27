@@ -1,4 +1,6 @@
-import ReactJson from "react-json-view";
+import JsonView from "@uiw/react-json-view";
+import { darkTheme } from "@uiw/react-json-view/dark";
+import { lightTheme } from "@uiw/react-json-view/light";
 import { useTheme } from "@/contexts/ThemeContext";
 
 interface JsonViewerProps {
@@ -7,9 +9,10 @@ interface JsonViewerProps {
 	collapsed?: boolean | number;
 }
 
-const JsonViewer: React.FC<JsonViewerProps> = ({ data, emptyMessage = "No data available", collapsed = false }) => {
+const JsonViewer = ({ data, emptyMessage = "No data available", collapsed = false }: JsonViewerProps) => {
 	const { theme } = useTheme();
 
+	// renders
 	if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
 		return (
 			<div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-8 text-center">
@@ -20,22 +23,17 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ data, emptyMessage = "No data a
 
 	return (
 		<div className="bg-gray-50 dark:bg-neutral-900 rounded-lg p-4 overflow-auto">
-			<ReactJson
-				src={data}
-				theme={theme === "dark" ? "monokai" : "rjv-default"}
-				collapsed={collapsed}
-				displayDataTypes={false}
-				displayObjectSize={true}
-				enableClipboard={(copy) => {
-					const value = copy.src;
-					navigator.clipboard.writeText(typeof value === "string" ? value : JSON.stringify(value, null, 2));
-				}}
-				name={false}
-				iconStyle="triangle"
+			<JsonView
+				value={data}
 				style={{
+					...(theme === "dark" ? darkTheme : lightTheme),
 					backgroundColor: "transparent",
 					fontSize: "0.875rem"
 				}}
+				collapsed={typeof collapsed === "number" ? collapsed : collapsed ? 1 : false}
+				displayDataTypes={false}
+				displayObjectSize={true}
+				enableClipboard={true}
 			/>
 		</div>
 	);

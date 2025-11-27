@@ -7,18 +7,10 @@ import { useRouteModal } from "@/hooks/useRouteModal";
 import { api, ApiResponse } from "@/utils";
 import type { Instance } from "@/interfaces/instance";
 import { Modal, Label, Button, Tooltip, TabsNavigation } from "@/components";
-import { getWorkerName } from "@/utils/naming";
+import { getWorkerName, getInstanceNameForWorker } from "@/utils/naming";
 
 interface OutletContext {
 	instance?: Instance;
-}
-
-interface Worker {
-	key: string;
-	index: number;
-	status: string;
-	instance_key: string;
-	[key: string]: any;
 }
 
 const WorkerDetailModal = () => {
@@ -79,6 +71,10 @@ const WorkerDetailModal = () => {
 		{ path: "logs", label: "Logs", icon: DocumentTextIcon }
 	];
 
+	// Get all instances for naming
+	const allInstances = isStandalone ? instancesResponse?.data || [] : outletContext?.instance ? [outletContext.instance] : [];
+	const workerInstanceName = worker && allInstances.length > 0 ? getInstanceNameForWorker(allInstances, worker as any) : "";
+
 	return (
 		<Modal
 			{...modalProps}
@@ -99,6 +95,9 @@ const WorkerDetailModal = () => {
 									<h2 className="text-2xl font-bold text-gray-900 dark:text-white">
 										{instance?.workers ? getWorkerName(instance.workers, worker as any) : `Worker ${worker.index + 1}`}
 									</h2>
+									{workerInstanceName && (
+										<div className="text-md text-gray-500 dark:text-gray-400">({workerInstanceName})</div>
+									)}
 								</div>
 								<div className="text-sm text-gray-500 dark:text-gray-400 font-mono truncate">{worker.key}</div>
 							</div>

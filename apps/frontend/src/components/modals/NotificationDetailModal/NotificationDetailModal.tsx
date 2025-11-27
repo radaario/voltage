@@ -13,7 +13,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import { useRouteModal } from "@/hooks/useRouteModal";
-import { Modal, ConfirmModal, Label, Button, Tooltip, TabsNavigation } from "@/components";
+import { Modal, ConfirmModal, Label, Button, Tooltip, TabsNavigation, LoadingSpinner } from "@/components";
 import type { Notification } from "@/interfaces/notification";
 
 const NotificationDetailModal: React.FC = () => {
@@ -156,9 +156,7 @@ const NotificationDetailModal: React.FC = () => {
 					className="h-[60vh]">
 					<div className="p-6 h-full overflow-y-auto">
 						{isLoading ? (
-							<div className="flex justify-center items-center py-12">
-								<div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-500 dark:border-gray-400 border-t-transparent"></div>
-							</div>
+							<LoadingSpinner />
 						) : !notification ? (
 							<div className="flex flex-col justify-center items-center py-12 gap-3">
 								<p className="text-sm text-gray-600 dark:text-gray-400">Notification not found.</p>

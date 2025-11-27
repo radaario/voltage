@@ -12,34 +12,34 @@ import InstancesPage from "@/components/pages/Instances/Instances";
 import LogsPage from "@/components/pages/Logs/Logs";
 import NotificationsPage from "@/components/pages/Notifications/Notifications";
 import LogDetailModal from "@/components/modals/LogDetailModal/LogDetailModal";
-import LogInfoTab from "@/components/modals/LogDetailModal/tabs/InfoTab";
-import MetadataTab from "@/components/modals/LogDetailModal/tabs/MetadataTab";
+import LogInfoTab from "@/components/modals/LogDetailModal/Tabs/Info";
+import MetadataTab from "@/components/modals/LogDetailModal/Tabs/Metadata";
 import JobDetailModal from "@/components/modals/JobDetailModal/JobDetailModal";
 import InstanceDetailModal from "@/components/modals/InstanceDetailModal/InstanceDetailModal";
-import InstanceInfoTab from "@/components/modals/InstanceDetailModal/tabs/InfoTab";
-import InstanceWorkersTab from "@/components/modals/InstanceDetailModal/tabs/WorkersTab";
-import InstanceLogsTab from "@/components/modals/InstanceDetailModal/tabs/LogsTab";
-import InstanceSpecsTab from "@/components/modals/InstanceDetailModal/tabs/InstanceOutcomeTab";
-import InstanceOutcomeTab from "@/components/modals/InstanceDetailModal/tabs/OutcomeTab";
+import InstanceInfoTab from "@/components/modals/InstanceDetailModal/Tabs/Info";
+import InstanceWorkersTab from "@/components/modals/InstanceDetailModal/Tabs/Workers";
+import InstanceLogsTab from "@/components/modals/InstanceDetailModal/Tabs/Logs";
+import InstanceSpecsTab from "@/components/modals/InstanceDetailModal/Tabs/Specs";
+import InstanceOutcomeTab from "@/components/modals/InstanceDetailModal/Tabs/Outcome";
 import WorkerDetailModal from "@/components/modals/WorkerDetailModal/WorkerDetailModal";
-import WorkerInfoTab from "@/components/modals/WorkerDetailModal/tabs/InfoTab";
-import WorkerOutcomeTab from "@/components/modals/WorkerDetailModal/tabs/WorkerOutcomeTab";
-import WorkerLogsTab from "@/components/modals/WorkerDetailModal/tabs/LogsTab";
+import WorkerInfoTab from "@/components/modals/WorkerDetailModal/Tabs/Info";
+import WorkerOutcomeTab from "@/components/modals/WorkerDetailModal/Tabs/Outcome";
+import WorkerLogsTab from "@/components/modals/WorkerDetailModal/Tabs/Logs";
 import NotificationDetailModal from "@/components/modals/NotificationDetailModal/NotificationDetailModal";
-import JobInfoTab from "@/components/modals/JobDetailModal/tabs/InfoTab";
-import JobInputTab from "@/components/modals/JobDetailModal/tabs/InputTab";
-import JobOutputsTab from "@/components/modals/JobDetailModal/tabs/OutputsTab";
-import JobOutcomeTab from "@/components/modals/JobDetailModal/tabs/OutcomeTab";
-import JobLogsTab from "@/components/modals/JobDetailModal/tabs/LogsTab";
-import NotificationsTab from "@/components/modals/JobDetailModal/tabs/NotificationsTab";
+import JobInfoTab from "@/components/modals/JobDetailModal/Tabs/Info";
+import JobInputTab from "@/components/modals/JobDetailModal/Tabs/Input";
+import JobOutputsTab from "@/components/modals/JobDetailModal/Tabs/Outputs";
+import JobOutcomeTab from "@/components/modals/JobDetailModal/Tabs/Outcome";
+import JobLogsTab from "@/components/modals/JobDetailModal/Tabs/Logs";
+import NotificationsTab from "@/components/modals/JobDetailModal/Tabs/Notifications";
 import OutputDetailModal from "@/components/modals/OutputDetailModal/OutputDetailModal";
-import OutputInfoTab from "@/components/modals/OutputDetailModal/tabs/InfoTab";
-import OutputSpecsTab from "@/components/modals/OutputDetailModal/tabs/SpecsTab";
-import OutputOutcomeTab from "@/components/modals/OutputDetailModal/tabs/OutcomeTab";
-import NotificationInfoTab from "@/components/modals/NotificationDetailModal/tabs/InfoTab";
-import NotificationSpecsTab from "@/components/modals/NotificationDetailModal/tabs/SpecsTab";
-import NotificationPayloadTab from "@/components/modals/NotificationDetailModal/tabs/PayloadTab";
-import NotificationOutcomeTab from "@/components/modals/NotificationDetailModal/tabs/NotificationOutcomeTab";
+import OutputInfoTab from "@/components/modals/OutputDetailModal/Tabs/Info";
+import OutputSpecsTab from "@/components/modals/OutputDetailModal/Tabs/Specs";
+import OutputOutcomeTab from "@/components/modals/OutputDetailModal/Tabs/Outcome";
+import NotificationInfoTab from "@/components/modals/NotificationDetailModal/Tabs/Info";
+import NotificationSpecsTab from "@/components/modals/NotificationDetailModal/Tabs/Specs";
+import NotificationPayloadTab from "@/components/modals/NotificationDetailModal/Tabs/Payload";
+import NotificationOutcomeTab from "@/components/modals/NotificationDetailModal/Tabs/Outcome";
 
 const AuthSafeRoute = () => {
 	const { isAuthenticated } = useAuth();
@@ -109,7 +109,7 @@ export const router = createBrowserRouter(
 			children: [
 				{
 					path: "/",
-					element: <Layout />,
+					element: <Layout.Auth />,
 					children: [
 						{
 							path: "",

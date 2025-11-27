@@ -2,10 +2,11 @@ import { useMemo, useState, useEffect, Fragment } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, getExpandedRowModel } from "@tanstack/react-table";
 import { useNavigate } from "react-router-dom";
 import { Instance } from "@/interfaces/instance";
-import { JobCard, TimeAgo, Tooltip, Button, Label, EmptyState, LoadingOverlay } from "@/components";
-import { ChevronDownIcon, ChevronRightIcon, EyeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
-import { getInstanceName, getWorkerName } from "@/utils/naming";
+import { TimeAgo, Tooltip, Button, Label, EmptyState, LoadingOverlay } from "@/components";
+import { ChevronDownIcon, ChevronRightIcon, EyeIcon } from "@heroicons/react/24/outline";
+import { getInstanceName } from "@/utils/naming";
 import { getCountryFromIP } from "@/utils";
+import WorkersTable from "./Workers/Workers";
 
 interface InstancesTableProps {
 	data: Instance[];
@@ -321,72 +322,10 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 											<tr key={`${row.id}-workers`}>
 												<td
 													colSpan={8}
-													className="px-6 py-0 bg-gray-50 dark:bg-neutral-900/50">
-													<div className="py-3 pl-12">
-														<div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-															Workers
-														</div>
-														<div className="space-y-1">
-															{row.original.workers.map((worker) => (
-																<div
-																	key={worker.key}
-																	onClick={() => navigate(`/instances/workers/${worker.key}/info`)}
-																	className="flex items-center justify-between gap-3 py-2 px-3 bg-white dark:bg-neutral-800 rounded border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors cursor-pointer">
-																	{/* Worker Name & Key with Icon */}
-																	<div className="flex items-start gap-2 min-w-[120px] shrink-0">
-																		<CpuChipIcon className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0 mt-0.5" />
-																		<div>
-																			<div className="text-sm text-gray-900 dark:text-white font-bold">
-																				{getWorkerName(row.original.workers, worker)}
-																			</div>
-																			<div className="font-mono text-xs text-gray-500 dark:text-gray-400 truncate">
-																				{worker.key}
-																			</div>
-																		</div>
-																	</div>
-
-																	{/* Job Card - centered with flex-1 */}
-																	<div className="flex-1 flex justify-center">
-																		{worker.job_key ? (
-																			<div className="max-w-[300px]">
-																				<JobCard jobKey={worker.job_key} />
-																			</div>
-																		) : (
-																			<span className="text-xs text-gray-400">No Job</span>
-																		)}
-																	</div>
-
-																	{/* Right side items */}
-																	<div className="flex items-center gap-3 shrink-0">
-																		{/* Status */}
-																		<Label
-																			status={worker.status}
-																			size="sm">
-																			{worker.status}
-																		</Label>
-
-																		<TimeAgo
-																			datetime={worker.updated_at}
-																			className="text-sm text-gray-500 dark:text-gray-400"
-																		/>
-
-																		{/* View Worker Button */}
-																		<Tooltip content="View">
-																			<Button
-																				variant="soft"
-																				size="sm"
-																				iconOnly
-																				onClick={(e) => {
-																					e.stopPropagation();
-																					navigate(`/instances/workers/${worker.key}/info`);
-																				}}>
-																				<EyeIcon className="h-4 w-4" />
-																			</Button>
-																		</Tooltip>
-																	</div>
-																</div>
-															))}
-														</div>
+													className="relative px-6 py-0 bg-gray-50 dark:bg-neutral-900/50">
+													<div className="absolute left-8.75 top-5 bottom-5 rounded-sm border-4 border-gray-100" />
+													<div className="py-4 pl-10 pr-2">
+														<WorkersTable workers={row.original.workers} />
 													</div>
 												</td>
 											</tr>

@@ -3,7 +3,6 @@ import { isEmpty } from "lodash-es";
 import { useNavigate } from "react-router-dom";
 import { Layout, ScreenLoading } from "@/components";
 import { useAuth } from "@/hooks/useAuth";
-import Header from "@/components/layout/Header/Header";
 import { Logo, Button, Input } from "@/components";
 import { LockClosedIcon } from "@heroicons/react/24/outline";
 

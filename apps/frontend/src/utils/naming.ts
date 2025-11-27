@@ -15,6 +15,15 @@ export const getInstanceName = (instances: Instance[], instance: Instance): stri
 };
 
 /**
+ * Get instance name for a worker
+ */
+export const getInstanceNameForWorker = (instances: Instance[], worker: Worker): string => {
+	const instance = instances.find((i) => i.key === worker.instance_key);
+	if (!instance) return "Unknown Instance";
+	return getInstanceName(instances, instance);
+};
+
+/**
  * Get a human-readable name for a worker based on its position among instance workers
  */
 export const getWorkerName = (workers: Worker[], worker: Worker): string => {
