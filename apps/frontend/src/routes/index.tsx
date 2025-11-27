@@ -109,7 +109,7 @@ export const router = createBrowserRouter(
 			children: [
 				{
 					path: "/",
-					element: <Layout />,
+					element: <Layout.Auth />,
 					children: [
 						{
 							path: "",

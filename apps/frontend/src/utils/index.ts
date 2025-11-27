@@ -3,3 +3,4 @@ export * from "@/utils/formatDate";
 export * from "@/utils/api";
 export * from "@/utils/clsx";
 export * from "@/utils/clipboard";
+export * from "@/utils/naming";
