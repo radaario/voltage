@@ -327,11 +327,19 @@ app.get("/instances", authMiddleware(), async (req, res) => {
 
 		// Parse instance.system JSON and attach workers array to each instance
 		const result = instances.map((instance) => {
-			return {
+			instance = {
 				...instance,
 				specs: instance.specs ? JSON.parse(instance.specs) : "{}",
 				workers: workersByInstance[instance.key] || []
 			};
+
+			if (instance.specs && instance.status !== "ONLINE") {
+				instance.specs.cpu_usage_percent = 0.0;
+				instance.specs.memory_free = instance.specs.memory_total;
+				instance.specs.memory_usage_percent = 0.0;
+			}
+
+			return instance;
 		});
 
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(result) });
