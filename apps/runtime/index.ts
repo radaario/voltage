@@ -20,7 +20,7 @@ async function maintainInstancesAndWorkers() {
 
 	try {
 		// INSTANCEs: SELECT
-		instances = await database.table("instances"); // .orderBy("created_at", "asc")
+		instances = await database.table("instances").select("key", "type", "status", "updated_at"); // .orderBy("created_at", "asc")
 	} catch (error: Error | any) {}
 
 	if (instances) {
@@ -30,6 +30,7 @@ async function maintainInstancesAndWorkers() {
 
 	if (!selfInstance) {
 		selfInstance = await initInstance(selfInstanceKey);
+		instances.push(selfInstance);
 	}
 
 	await maintainInstance(selfInstanceKey);
@@ -37,24 +38,26 @@ async function maintainInstancesAndWorkers() {
 	// INSTANCE: SELECT: MASTER
 	const masterInstance = await getMasterInstance(instances);
 
-	/* INSTANCEs & WORKERs: MAINTAINING */
+	// INSTANCEs & WORKERs: MAINTAINING
 	if (!masterInstance || masterInstance.key === selfInstanceKey) {
-		logger.console("INFO", "Maintaining workers...");
-
+		// INSTANCE: UPDATE: SELF AS MASTER
 		try {
 			if (selfInstance.type !== "MASTER") {
 				await setMasterInstance(selfInstanceKey);
 			}
 		} catch (error: Error | any) {}
 
-		// WORKERs: UPDATE: TIMEOUT
+		// INSTANCEs: WORKERs: UPDATE
+		logger.console("INFO", "Maintaining workers...");
+
+		// INSTANCEs: WORKERs: UPDATE: TIMEOUT
 		try {
 			const busyTimeout = config.runtime.workers.busy_timeout || 5 * 60 * 1000; // in milliseconds, default 5 minutes
 
 			const timeoutedWorkers = await database
 				.table("instances_workers")
 				.where("status", "BUSY")
-				.where("updated_at", "<", subtractNow(busyTimeout, "milliseconds"));
+				.where("updated_at", "<=", subtractNow(busyTimeout, "milliseconds"));
 
 			if (timeoutedWorkers.length > 0) {
 				const timeoutedWorkerKeys = timeoutedWorkers.map((r: any) => r.key).filter(Boolean);
@@ -77,14 +80,14 @@ async function maintainInstancesAndWorkers() {
 			await logger.insert("ERROR", "Timing out busy workers failed!", { error });
 		}
 
-		// WORKERs: UPDATE: IDLE
+		// INSTANCEs: WORKERs: UPDATE: IDLE
 		try {
 			const idleAfter = config.runtime.workers.idle_after || 1 * 10 * 1000; // in milliseconds, default 10 seconds
 
 			await database
 				.table("instances_workers")
 				.where("status", "TIMEOUT")
-				.where("updated_at", "<", subtractNow(idleAfter, "milliseconds"))
+				.where("updated_at", "<=", subtractNow(idleAfter, "milliseconds"))
 				.update({
 					job_key: null,
 					status: "IDLE",
@@ -104,7 +107,7 @@ async function maintainInstancesAndWorkers() {
 			const inactiveInstances = await database
 				.table("instances")
 				.where("status", "ONLINE")
-				.where("updated_at", "<", subtractNow(offlineTimeout, "milliseconds"))
+				.where("updated_at", "<=", subtractNow(offlineTimeout, "milliseconds"))
 				.select("key");
 
 			const inactiveInstanceKeys = inactiveInstances.map((r: any) => r.key).filter(Boolean);
@@ -142,7 +145,7 @@ async function maintainInstancesAndWorkers() {
 			const offlineInstances = await database
 				.table("instances")
 				.where("status", "OFFLINE")
-				.where("updated_at", "<", subtractNow(purgeAfter, "milliseconds"))
+				.where("updated_at", "<=", subtractNow(purgeAfter, "milliseconds"))
 				.select("key");
 
 			const offlineInstanceKeys = offlineInstances.map((r: any) => r.key).filter(Boolean);
@@ -298,22 +301,12 @@ async function getMasterInstance(instances: any[]): Promise<any | null> {
 			return null;
 		}
 
-		const masterInstances = instances.filter((instance: any) => instance.type === "MASTER");
-		let masterInstance = masterInstances.length
-			? masterInstances.filter(
-					(instance: any) => instance.status === "ONLINE" && instance.updated_at > subtractNow(offlineTimeout, "milliseconds")
-				)[0]
-			: null;
+		let masterInstance = activeInstances.filter((instance: any) => instance.type === "MASTER")[0];
 
 		if (!masterInstance) {
 			masterInstance = activeInstances[0];
 			masterInstance.type = "MASTER";
 			await setMasterInstance(masterInstance.key);
-		}
-
-		if (masterInstances.length > 1) {
-			await database.table("instances").where("type", "MASTER").whereNot("key", masterInstance.key).update({ type: "SLAVE" });
-			logger.console("INFO", "Multiple MASTER instances found; demoted extras to SLAVE!");
 		}
 
 		return masterInstance;
@@ -462,7 +455,7 @@ async function processJobs(): Promise<void> {
 			await database
 				.table("jobs")
 				.whereNotIn("status", ["COMPLETED", "CANCELLED", "FAILED", "TIMEOUT"])
-				.where("updated_at", "<", subtractNow(config.jobs.process_timeout || 10 * 60 * 1000, "milliseconds")) // in milliseconds, default 10 minutes
+				.where("updated_at", "<=", subtractNow(config.jobs.process_timeout || 10 * 60 * 1000, "milliseconds")) // in milliseconds, default 10 minutes
 				.where("try_count", ">", 0)
 				.update({ status: "TIMEOUT" });
 		} catch (error: Error | any) {
@@ -590,7 +583,7 @@ async function cleanup() {
 			.select("key")
 			.where("status", "COMPLETED")
 			.whereNotNull("completed_at")
-			.where("completed_at", "<", subtractNow(config.jobs.retention || 24 * 60 * 60 * 1000, "milliseconds")); // in milliseconds, default 24 hours
+			.where("completed_at", "<=", subtractNow(config.jobs.retention || 24 * 60 * 60 * 1000, "milliseconds")); // in milliseconds, default 24 hours
 
 		const jobsKeys = jobs.map((r: any) => r.key);
 
@@ -618,7 +611,7 @@ async function cleanup() {
 
 		await database
 			.table("stats")
-			.where("date", "<", subtractNow(config.stats.retention || 365 * 24 * 60 * 60 * 1000, "milliseconds"))
+			.where("date", "<=", subtractNow(config.stats.retention || 365 * 24 * 60 * 60 * 1000, "milliseconds"))
 			.delete(); // in milliseconds, default 365 days
 
 		logger.console("INFO", "Stats cleaning completed!");
@@ -631,7 +624,7 @@ async function cleanup() {
 
 		await database
 			.table("logs")
-			.where("created_at", "<", subtractNow(config.logs.retention || 60 * 60 * 1000, "milliseconds"))
+			.where("created_at", "<=", subtractNow(config.logs.retention || 60 * 60 * 1000, "milliseconds"))
 			.delete(); // in milliseconds, default 1 hour
 
 		logger.console("INFO", "Logs cleaning completed!");
