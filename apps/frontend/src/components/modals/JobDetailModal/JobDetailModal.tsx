@@ -16,7 +16,7 @@ import { useRouteModal } from "@/hooks/useRouteModal";
 import { api, ApiResponse } from "@/utils";
 import { Modal, Label, Button, Tooltip, ConfirmModal, TabsNavigation } from "@/components";
 import type { Job } from "@/interfaces/job";
-import { JobPreviewImage } from "@/components/composite/JobPreviewImage";
+import { JobPreviewImage } from "@/components";
 
 const JobDetailModal: React.FC = () => {
 	const { jobKey } = useParams<{ jobKey: string }>();

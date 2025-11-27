@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { formatDuration } from "@/utils";
-import { JobPreviewImage } from "@/components/composite/JobPreviewImage";
+import { JobPreviewImage } from "@/components";
 
 interface JobCardProps {
 	jobKey: string;

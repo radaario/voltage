@@ -48,7 +48,7 @@ function toVal(mix: string | number | Record<string, any>): string {
  * clsx(['foo', 'bar']) // => 'foo bar'
  * clsx('foo', null, undefined, 'bar') // => 'foo bar'
  */
-export function clsx(...args: Array<string | number | Record<string, any>>): string {
+export function clsx(...args: Array<string | number | undefined | Record<string, any>>): string {
 	let str = "";
 	const len = args.length;
 

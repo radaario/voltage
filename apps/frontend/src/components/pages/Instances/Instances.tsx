@@ -4,8 +4,8 @@ import { Outlet } from "react-router-dom";
 import type { Instance } from "@/interfaces/instance";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
-import InstancesTable from "./InstancesTable";
-import { SearchInput, LoadingSpinner, PageHeader, ErrorAlert } from "@/components";
+import InstancesTable from "@/components/pages/Instances/Table/Table";
+import { SearchInput, LoadingSpinner, Page, ErrorAlert } from "@/components";
 
 const Instances: React.FC = () => {
 	const { authToken } = useAuth();
@@ -55,8 +55,8 @@ const Instances: React.FC = () => {
 	}
 
 	return (
-		<div className="space-y-6">
-			<PageHeader
+		<Page>
+			<Page.Header
 				title="Instances"
 				onRefresh={handleRefresh}
 				isRefreshing={isLoading}>
@@ -66,21 +66,18 @@ const Instances: React.FC = () => {
 					onClear={handleClearSearch}
 					placeholder="Search instances..."
 				/>
-			</PageHeader>
+			</Page.Header>
 
 			<ErrorAlert error={error} />
 
-			{/* Instances Table */}
-			<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
-				<InstancesTable
-					data={filteredInstances}
-					loading={isLoading}
-				/>
-			</div>
+			<InstancesTable
+				data={filteredInstances}
+				loading={isLoading}
+			/>
 
 			{/* Route-based Instance Detail Modal */}
 			<Outlet context={{ instances: instancesResponse?.data || [] }} />
-		</div>
+		</Page>
 	);
 };
 

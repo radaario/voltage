@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 
 import Layout from "@/components/layout/Layout";
-import ScreenLoading from "@/components/composite/ScreenLoading/ScreenLoading";
+import { ScreenLoading } from "@/components";
 
 import LoginPage from "@/components/pages/Login/Login";
 import OverviewPage from "@/components/pages/Overview/Overview";

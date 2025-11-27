@@ -125,82 +125,83 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 	});
 
 	return (
-		<div className="w-full relative">
-			{/* Loading Overlay */}
-			<LoadingOverlay show={loading} />
+		<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+			<div className="w-full relative">
+				{/* Loading Overlay */}
+				<LoadingOverlay show={loading} />
 
-			<div className="overflow-x-auto">
-				<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
-					<thead className="bg-gray-50 dark:bg-neutral-800">
-						{table.getHeaderGroups().map((headerGroup) => (
-							<tr key={headerGroup.id}>
-								{headerGroup.headers.map((header) => (
-									<th
-										key={header.id}
-										scope="col"
-										className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										{flexRender(header.column.columnDef.header, header.getContext())}
-									</th>
-								))}
-							</tr>
+				<div className="overflow-x-auto">
+					<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+						<thead className="bg-gray-50 dark:bg-neutral-800">
+							{table.getHeaderGroups().map((headerGroup) => (
+								<tr key={headerGroup.id}>
+									{headerGroup.headers.map((header) => (
+										<th
+											key={header.id}
+											scope="col"
+											className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											{flexRender(header.column.columnDef.header, header.getContext())}
+										</th>
+									))}
+								</tr>
+							))}
+						</thead>
+						<tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-800">
+							{table.getRowModel().rows.length === 0 ? (
+								<EmptyState
+									message="There are no logs yet!"
+									colSpan={columns.length}
+								/>
+							) : (
+								table.getRowModel().rows.map((row) => {
+									const log = row.original;
+									const isNew = newLogKeys.has(log.key);
+									return (
+										<MemoizedTableRow
+											key={row.id}
+											row={row}
+											isNew={isNew}
+											onClick={() => navigate(`/logs/${log.key}/info`)}
+										/>
+									);
+								})
+							)}
+						</tbody>
+					</table>
+				</div>
+
+				{/* Pagination Controls */}
+				<Pagination
+					currentPage={pagination.page}
+					totalPages={pagination.totalPages}
+					totalItems={pagination.total}
+					itemsPerPage={pagination.limit}
+					hasNextPage={!!pagination.next_page}
+					hasPrevPage={!!pagination.prev_page}
+					onPageChange={onPageChange}
+				/>
+
+				{/* Items per page selector */}
+				<div className="px-6 py-3 flex items-center justify-end gap-4 border-t border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
+					<span className="text-sm text-gray-700 dark:text-gray-300">
+						<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total logs
+					</span>
+
+					<select
+						value={pagination.limit}
+						onChange={(e) => onLimitChange(Number(e.target.value))}
+						className="px-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500">
+						{[10, 25, 50, 100].map((pageSize) => (
+							<option
+								key={pageSize}
+								value={pageSize}>
+								{pageSize} per page
+							</option>
 						))}
-					</thead>
-					<tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-800">
-						{table.getRowModel().rows.length === 0 ? (
-							<EmptyState
-								message="There are no logs yet!"
-								colSpan={columns.length}
-							/>
-						) : (
-							table.getRowModel().rows.map((row) => {
-								const log = row.original;
-								const isNew = newLogKeys.has(log.key);
-								return (
-									<MemoizedTableRow
-										key={row.id}
-										row={row}
-										isNew={isNew}
-										onClick={() => navigate(`/logs/${log.key}/info`)}
-									/>
-								);
-							})
-						)}
-					</tbody>
-				</table>
-			</div>
-
-			{/* Pagination Controls */}
-			<Pagination
-				currentPage={pagination.page}
-				totalPages={pagination.totalPages}
-				totalItems={pagination.total}
-				itemsPerPage={pagination.limit}
-				hasNextPage={!!pagination.next_page}
-				hasPrevPage={!!pagination.prev_page}
-				onPageChange={onPageChange}
-			/>
-
-			{/* Items per page selector */}
-			<div className="px-6 py-3 flex items-center justify-end gap-4 border-t border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
-				<span className="text-sm text-gray-700 dark:text-gray-300">
-					<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total logs
-				</span>
-
-				<select
-					value={pagination.limit}
-					onChange={(e) => onLimitChange(Number(e.target.value))}
-					className="px-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500">
-					{[10, 25, 50, 100].map((pageSize) => (
-						<option
-							key={pageSize}
-							value={pageSize}>
-							{pageSize} per page
-						</option>
-					))}
-				</select>
+					</select>
+				</div>
 			</div>
 		</div>
 	);
 };
-
 export default LogsTable;

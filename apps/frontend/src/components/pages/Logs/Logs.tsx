@@ -4,8 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
-import LogsTable from "./LogsTable.tsx";
-import { ConfirmModal, Alert, Button, Tooltip, SearchInput, LoadingSpinner, PageHeader, ErrorAlert } from "@/components";
+import LogsTable from "@/components/pages/Logs/Table/Table";
+import { ConfirmModal, Alert, Button, Tooltip, SearchInput, LoadingSpinner, Page, ErrorAlert } from "@/components";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
@@ -180,8 +180,8 @@ const Logs: React.FC = () => {
 	}
 
 	return (
-		<div className="space-y-6">
-			<PageHeader
+		<Page>
+			<Page.Header
 				title="Logs"
 				onRefresh={handleRefresh}
 				isRefreshing={isLoading}>
@@ -215,7 +215,7 @@ const Logs: React.FC = () => {
 						<TrashIcon className="h-5 w-5 text-red-600 dark:text-white" />
 					</Button>
 				</Tooltip>
-			</PageHeader>
+			</Page.Header>
 
 			<ErrorAlert errors={[error, deleteAllLogsMutation.error]} />
 
@@ -228,17 +228,14 @@ const Logs: React.FC = () => {
 				</Alert>
 			)}
 
-			{/* Table */}
-			<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
-				<LogsTable
-					data={logsResponse?.data || []}
-					loading={isLoading}
-					pagination={pagination}
-					onPageChange={handlePageChange}
-					onLimitChange={handleLimitChange}
-					newLogKeys={newLogKeys}
-				/>
-			</div>
+			<LogsTable
+				data={logsResponse?.data || []}
+				loading={isLoading}
+				pagination={pagination}
+				onPageChange={handlePageChange}
+				onLimitChange={handleLimitChange}
+				newLogKeys={newLogKeys}
+			/>
 
 			{/* Delete All Confirmation Modal */}
 			{showDeleteAllModal && (
@@ -262,7 +259,7 @@ const Logs: React.FC = () => {
 
 			{/* Nested modal outlet */}
 			<Outlet />
-		</div>
+		</Page>
 	);
 };
 

@@ -4,9 +4,9 @@ import { useNavigate, Outlet } from "react-router-dom";
 import type { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
-import JobsTable from "./JobsTable";
+import JobsTable from "@/components/pages/Jobs/Table/Table";
 import DeleteConfirmModal from "@/components/modals/DeleteConfirmModal/DeleteConfirmModal";
-import { ConfirmModal, Button, Tooltip, SearchInput, LoadingSpinner, PageHeader, ErrorAlert } from "@/components";
+import { ConfirmModal, Button, Tooltip, SearchInput, LoadingSpinner, Page, ErrorAlert } from "@/components";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
@@ -285,9 +285,9 @@ const Jobs: React.FC = () => {
 	}
 
 	return (
-		<div className="space-y-6">
+		<Page>
 			{/* Header with Search */}
-			<PageHeader
+			<Page.Header
 				title="Jobs"
 				onRefresh={handleRefresh}
 				isRefreshing={isLoading}>
@@ -318,24 +318,21 @@ const Jobs: React.FC = () => {
 						<TrashIcon className="h-5 w-5 text-red-600 dark:text-white" />
 					</Button>
 				</Tooltip>
-			</PageHeader>
+			</Page.Header>
 
 			<ErrorAlert errors={[error, createJobMutation.error, retryJobMutation.error]} />
 
-			{/* Table */}
-			<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
-				<JobsTable
-					data={jobsResponse?.data || []}
-					loading={isLoading}
-					pagination={pagination}
-					onPageChange={handlePageChange}
-					onLimitChange={handleLimitChange}
-					onViewJob={handleViewJob}
-					onDeleteJob={handleDeleteJob}
-					onRetryJob={handleRetryJob}
-					newJobKeys={newJobKeys}
-				/>
-			</div>
+			<JobsTable
+				data={jobsResponse?.data || []}
+				loading={isLoading}
+				pagination={pagination}
+				onPageChange={handlePageChange}
+				onLimitChange={handleLimitChange}
+				onViewJob={handleViewJob}
+				onDeleteJob={handleDeleteJob}
+				onRetryJob={handleRetryJob}
+				newJobKeys={newJobKeys}
+			/>
 
 			{/* Delete Confirmation Modal */}
 			{jobToDelete && (
@@ -413,7 +410,7 @@ const Jobs: React.FC = () => {
 
 			{/* Route-based Job Detail Modal */}
 			<Outlet />
-		</div>
+		</Page>
 	);
 };
 
