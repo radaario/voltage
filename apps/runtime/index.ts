@@ -688,10 +688,6 @@ async function init() {
 	await logger.insert("INFO", "Starting runtime service...");
 
 	try {
-		// INSTANCE: SELECT: SELF
-		const selfInstance = await database.table("instances").where("key", selfInstanceKey).first();
-
-		await initInstance(selfInstanceKey, selfInstance);
 		await maintainInstancesAndWorkers();
 		await processJobs();
 		await processJobsNotifications();

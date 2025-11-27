@@ -127,15 +127,6 @@ export function addThis(
 	format: string = "YYYY-MM-DD HH:mm:ss.SSS"
 ): string {
 	let m = moment(date);
-
-	if (config.timezone && config.timezone !== "") {
-		try {
-			m = m.tz(config.timezone);
-		} catch (error: Error | any) {
-			// invalid timezone — fall back to local moment
-		}
-	}
-
 	return m.add(amount, unit).format(format).toString();
 }
 
@@ -154,15 +145,6 @@ export function subtractFrom(
 	format: string = "YYYY-MM-DD HH:mm:ss.SSS"
 ): string {
 	let m = moment(date);
-
-	if (config.timezone && config.timezone !== "") {
-		try {
-			m = m.tz(config.timezone);
-		} catch (error: Error | any) {
-			// invalid timezone — fall back to local moment
-		}
-	}
-
 	return m.subtract(amount, unit).format(format).toString();
 }
 
