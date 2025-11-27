@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useRouteModal } from "@/hooks/useRouteModal";
 import { api, ApiResponse } from "@/utils";
-import { Modal, Label, Button, Tooltip, ConfirmModal, TabsNavigation } from "@/components";
+import { Modal, Label, Button, Tooltip, ConfirmModal, TabsNavigation, LoadingSpinner } from "@/components";
 import type { Job } from "@/interfaces/job";
 import { JobPreviewImage } from "@/components";
 
@@ -166,22 +166,15 @@ const JobDetailModal: React.FC = () => {
 				{/* Tabs Navigation */}
 				<TabsNavigation tabs={tabs} />
 
-				{/* Tab Content */}
+				{/* Content */}
 				<Modal.Content
 					noPadding
 					className="h-[65vh]">
-					<div className="p-6 h-full overflow-y-auto">
-						{isLoading ? (
-							<div className="flex justify-center items-center py-12">
-								<div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-500 dark:border-gray-400 border-t-transparent"></div>
-							</div>
-						) : (
-							<Outlet context={{ job: job }} />
-						)}
-					</div>
+					<div className="p-6 h-full overflow-y-auto">{isLoading ? <LoadingSpinner /> : <Outlet context={{ job: job }} />}</div>
 				</Modal.Content>
 			</Modal>
 
+			{/* Retry Confirmation Modal */}
 			<ConfirmModal
 				isOpen={showRetryModal}
 				onClose={handleCloseRetryModal}

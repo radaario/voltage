@@ -56,6 +56,7 @@ const Instances: React.FC = () => {
 
 	return (
 		<Page>
+			{/* Page Header */}
 			<Page.Header
 				title="Instances"
 				onRefresh={handleRefresh}
@@ -68,8 +69,10 @@ const Instances: React.FC = () => {
 				/>
 			</Page.Header>
 
+			{/* Error Alert */}
 			<ErrorAlert error={error} />
 
+			{/* Instances Table */}
 			<InstancesTable
 				data={filteredInstances}
 				loading={isLoading}

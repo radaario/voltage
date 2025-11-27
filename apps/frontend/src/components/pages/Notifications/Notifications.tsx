@@ -144,6 +144,7 @@ const Notifications: React.FC = () => {
 
 	return (
 		<Page>
+			{/* Page Header */}
 			<Page.Header
 				title="Notifications"
 				onRefresh={handleRefresh}
@@ -168,8 +169,11 @@ const Notifications: React.FC = () => {
 					className="h-[38px]"
 				/>
 			</Page.Header>
+
+			{/* Error Alert */}
 			<ErrorAlert error={error} />
 
+			{/* Notifications Table */}
 			<NotificationsTable
 				data={notificationsResponse?.data || []}
 				loading={isLoading}

@@ -286,7 +286,7 @@ const Jobs: React.FC = () => {
 
 	return (
 		<Page>
-			{/* Header with Search */}
+			{/* Page Header */}
 			<Page.Header
 				title="Jobs"
 				onRefresh={handleRefresh}
@@ -297,7 +297,6 @@ const Jobs: React.FC = () => {
 					onClear={handleClearSearch}
 					placeholder="Search jobs..."
 				/>
-
 				<Button
 					variant="secondary"
 					size="sm"
@@ -306,7 +305,6 @@ const Jobs: React.FC = () => {
 					isLoading={createJobMutation.isPending}>
 					{createJobMutation.isPending ? "Creating…" : "+ Create Test Job"}
 				</Button>
-
 				<Tooltip content="Delete All Jobs">
 					<Button
 						variant="soft"
@@ -320,8 +318,10 @@ const Jobs: React.FC = () => {
 				</Tooltip>
 			</Page.Header>
 
+			{/* Error Alert */}
 			<ErrorAlert errors={[error, createJobMutation.error, retryJobMutation.error]} />
 
+			{/* Jobs Table */}
 			<JobsTable
 				data={jobsResponse?.data || []}
 				loading={isLoading}

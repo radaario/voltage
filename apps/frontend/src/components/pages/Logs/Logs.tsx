@@ -181,6 +181,7 @@ const Logs: React.FC = () => {
 
 	return (
 		<Page>
+			{/* Page Header */}
 			<Page.Header
 				title="Logs"
 				onRefresh={handleRefresh}
@@ -216,7 +217,7 @@ const Logs: React.FC = () => {
 					</Button>
 				</Tooltip>
 			</Page.Header>
-
+			{/* Error Alert */}
 			<ErrorAlert errors={[error, deleteAllLogsMutation.error]} />
 
 			{/* Success Message */}
@@ -227,7 +228,7 @@ const Logs: React.FC = () => {
 					All logs deleted successfully!
 				</Alert>
 			)}
-
+			{/* Logs Table */}
 			<LogsTable
 				data={logsResponse?.data || []}
 				loading={isLoading}
