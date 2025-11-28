@@ -13,9 +13,24 @@ import { createJobNotification } from "./notifier";
 import path from "path";
 import fs from "fs/promises";
 
-import * as tf from "@tensorflow/tfjs-node";
+import * as tf from "@tensorflow/tfjs";
+import { createRequire } from "module";
 
 database.config(config.database);
+
+const require = createRequire(import.meta.url);
+const Jimp = require("jimp");
+const nsfwjs = require("nsfwjs");
+
+let nsfwModel: any = null;
+
+async function loadNsfwModel() {
+	if (!nsfwModel) {
+		nsfwModel = await nsfwjs.load();
+	}
+
+	return nsfwModel;
+}
 
 async function run() {
 	await logger.insert("INFO", "Worker starts running...");
@@ -155,14 +170,28 @@ async function run() {
 
 			/* ! */
 			try {
-				const imgBuffer = await fs.readFile(jobInputPreview.temp_path);
-				const nsfwjs = await import("nsfwjs");
-				const model = await nsfwjs.load();
-				const image = tf.node.decodeImage(imgBuffer, 3) as tf.Tensor3D;
-				const predictions = await model.classify(image);
-				console.log("PREDICTIONS", predictions);
-				// const imgBuffer = await fs.readFile(jobInputPreview.temp_path);
-				// image.dispose(); // Tensor memory must be managed explicitly (it is not sufficient to let a tf.Tensor go out of scope for its memory to be released).
+				// Lazy load model - only loads on the first call
+				const nsfwModel = await loadNsfwModel();
+
+				// Image processing
+				const image = await Jimp.Jimp.read(jobInputPreview.temp_path);
+				const { width, height } = image.bitmap;
+
+				// Convert bitmap data to tensor
+				const imageData = new Uint8Array(width * height * 3);
+				let offset = 0;
+
+				image.scan(0, 0, width, height, (_x: number, _y: number, idx: number) => {
+					imageData[offset++] = image.bitmap.data[idx + 0]; // R
+					imageData[offset++] = image.bitmap.data[idx + 1]; // G
+					imageData[offset++] = image.bitmap.data[idx + 2]; // B
+				});
+
+				const imageTensor = tf.tensor3d(imageData, [height, width, 3]);
+				const predictions = await nsfwModel.classify(imageTensor);
+				console.log("predictions:", predictions);
+
+				imageTensor.dispose();
 			} catch (error: Error | any) {
 				console.log("PREDICTIONS: ERROR", error.message || error);
 			}
