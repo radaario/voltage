@@ -49,7 +49,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
 				const { nodewhisper } = await import("nodejs-whisper"); /* ! */
 
 				const outputFormat = (output.specs.format || "srt").toLowerCase();
-				const modelName = (output.specs.model || config.utils.whisper.model || "base")
+				const modelName = (output.specs.model || config.utils.whisper.model || "BASE")
 					.toLowerCase()
 					.replace("_en", ".en")
 					.replace("_", "-");

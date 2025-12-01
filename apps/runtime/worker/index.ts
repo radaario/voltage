@@ -22,16 +22,6 @@ const require = createRequire(import.meta.url);
 const Jimp = require("jimp");
 const nsfwjs = require("nsfwjs");
 
-let nsfwModel: any = null;
-
-async function loadNsfwModel() {
-	if (!nsfwModel) {
-		nsfwModel = await nsfwjs.load();
-	}
-
-	return nsfwModel;
-}
-
 async function run() {
 	await logger.insert("INFO", "Worker starts running...");
 
@@ -148,7 +138,7 @@ async function run() {
 			throw new Error("Job input couldn't be analyzed!");
 		}
 
-		job.input = { ...job.input, ...jobInputMetadata };
+		job.input = { ...job.input, ...jobInputMetadata, nsfw: false, classification: false };
 
 		// JOB: INPUT: ANALYZED
 		await logger.insert("INFO", "Job input successfully analyzed!");
@@ -168,32 +158,58 @@ async function run() {
 			await fs.access(jobInputPreview.temp_path);
 			await logger.insert("INFO", "Job input preview successfully generated!");
 
-			/* ! */
-			try {
-				// Lazy load model - only loads on the first call
-				const nsfwModel = await loadNsfwModel();
+			const nsfwIsDisabled = job.input.nsfw_is_disabled || config.utils.nsfw.is_disabled;
 
-				// Image processing
-				const image = await Jimp.Jimp.read(jobInputPreview.temp_path);
-				const { width, height } = image.bitmap;
+			if (!nsfwIsDisabled) {
+				try {
+					const nsfwModelName = job.input.nsfw_model || config.utils.nsfw.model;
+					const nsfwSize = job.input.nsfw_size || config.utils.nsfw.size || 299;
+					const nsfwType = job.input.nsfw_type || config.utils.nsfw.type || "GRAPH";
+					const nsfwThreshold = job.input.nsfw_threshold || config.utils.nsfw.threshold || 0.7;
 
-				// Convert bitmap data to tensor
-				const imageData = new Uint8Array(width * height * 3);
-				let offset = 0;
+					// Lazy load model - only loads on the first call
+					const models: any = { MOBILE_NET_V2_MID: "MobileNetV2Mid", MOBILE_NET_V2: "MobileNetV2", INCEPTION_V3: "InceptionV3" };
 
-				image.scan(0, 0, width, height, (_x: number, _y: number, idx: number) => {
-					imageData[offset++] = image.bitmap.data[idx + 0]; // R
-					imageData[offset++] = image.bitmap.data[idx + 1]; // G
-					imageData[offset++] = image.bitmap.data[idx + 2]; // B
-				});
+					let model = models["MOBILE_NET_V2_MID"];
+					if (nsfwModelName && Object.keys(models).includes(nsfwModelName.toUpperCase())) {
+						model = models[nsfwModelName.toUpperCase()];
+					}
 
-				const imageTensor = tf.tensor3d(imageData, [height, width, 3]);
-				const predictions = await nsfwModel.classify(imageTensor);
-				console.log("predictions:", predictions);
+					const nsfwModel = await nsfwjs.load(model, { size: nsfwSize, type: nsfwType.toLowerCase() }); // , type: "graph", backend: "tensorflow"
 
-				imageTensor.dispose();
-			} catch (error: Error | any) {
-				console.log("PREDICTIONS: ERROR", error.message || error);
+					// Image processing
+					const image = await Jimp.Jimp.read(jobInputPreview.temp_path);
+					const { width, height } = image.bitmap;
+
+					// Convert bitmap data to tensor
+					const imageData = new Uint8Array(width * height * 3);
+					let offset = 0;
+
+					image.scan(0, 0, width, height, (_x: number, _y: number, idx: number) => {
+						imageData[offset++] = image.bitmap.data[idx + 0]; // R
+						imageData[offset++] = image.bitmap.data[idx + 1]; // G
+						imageData[offset++] = image.bitmap.data[idx + 2]; // B
+					});
+
+					const imageTensor = tf.tensor3d(imageData, [height, width, 3]);
+					const predictions = await nsfwModel.classify(imageTensor);
+
+					if (predictions) {
+						job.input.classification = predictions.reduce(
+							(acc: any, item: any) => {
+								acc[item.className.toUpperCase()] = item.probability;
+								return acc;
+							},
+							{} as Record<string, number>
+						);
+
+						if (job.input.classification.HENTAI >= nsfwThreshold || job.input.classification.PORN >= nsfwThreshold) {
+							job.input.nsfw = true;
+						}
+					}
+
+					imageTensor.dispose();
+				} catch (error: Error | any) {}
 			}
 		} catch (error: Error | any) {
 			throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());

@@ -55,8 +55,15 @@ export const config = {
 		ffprobe: {
 			path: process.env.FFPROBE_PATH ?? ffprobePathDefault
 		},
+		nsfw: {
+			is_disabled: process.env.NSFW_IS_DISABLED === "true",
+			model: process.env.NSFW_MODEL ?? "MOBILE_NET_V2_MID", // MOBILE_NET_V2 || MOBILE_NET_V2_MID || INCEPTION_V3
+			size: Number(process.env.NSFW_SIZE ?? 299),
+			type: process.env.NSFW_TYPE ?? "GRAPH", // GRAPH
+			threshold: Number(process.env.NSFW_THRESHOLD ?? 0.7)
+		},
 		whisper: {
-			model: process.env.WHISPER_MODEL ?? "base",
+			model: process.env.WHISPER_MODEL ?? "BASE", // TINY || SMALL || MEDIUM || LARGE || TINY_EN || BASE_EN || SMALL_EN || MEDIUM_EN || LARGE_V1 || LARGE_V3_TURBO
 			cuda: process.env.WHISPER_CUDA === "true"
 		}
 	},
@@ -129,7 +136,9 @@ export const config = {
 		url: process.env.VOLTAGE_HOST ? appUrl : `http://localhost:${Number(process.env.VOLTAGE_FRONTEND_NODE_PORT ?? 3000)}`,
 		node_port: Number(process.env.VOLTAGE_FRONTEND_NODE_PORT ?? 3000),
 		is_authentication_required: frontendPassword ? true : false,
-		password: frontendPassword
+		password: frontendPassword,
+		data_refetch_interval: Number(process.env.VOLTAGE_FRONTEND_DATA_REFETCH_INTERVAL ?? 10000), // in milliseconds, default 10 seconds
+		datetime_format: process.env.VOLTAGE_FRONTEND_DATETIME_FORMAT ?? "YYYY-MM-DD HH:mm:ss"
 	},
 	stats: {
 		retention: Number(process.env.VOLTAGE_STATS_RETENTION ?? 365 * 24 * 60 * 60 * 1000) // in milliseconds, default 365 days
@@ -139,8 +148,9 @@ export const config = {
 		retention: Number(process.env.VOLTAGE_LOGS_RETENTION ?? 60 * 60 * 1000) // in milliseconds, default 1 hour
 	},
 	jobs: {
+		queue_timeout: Number(process.env.VOLTAGE_JOBS_QUEUE_TIMEOUT ?? 10 * 60 * 1000), // in milliseconds, default 10 minutes
 		process_interval: Number(process.env.VOLTAGE_JOBS_PROCESS_INTERVAL ?? 1 * 1 * 1000), // in milliseconds, default 1 second
-		process_timeout: Number(process.env.VOLTAGE_JOBS_PROCESS_TIMEOUT ?? 10 * 60 * 1000), // in milliseconds, default 10 minutes
+		process_timeout: Number(process.env.VOLTAGE_JOBS_PROCESS_TIMEOUT ?? 30 * 60 * 1000), // in milliseconds, default 30 minutes
 		enqueue_on_receive: process.env.VOLTAGE_JOBS_ENQUEUE_ON_RECEIVE ?? true, // enqueue job immediately when received
 		enqueue_limit: Number(process.env.VOLTAGE_JOBS_ENQUEUE_LIMIT ?? 10), // default 10 jobs per enqueue
 		retention: Number(process.env.VOLTAGE_JOBS_RETENTION ?? 24 * 60 * 60 * 1000), // in milliseconds, default 24 hours || 7 days = 24 * 7
@@ -151,7 +161,7 @@ export const config = {
 		retry_in_max: Number(process.env.VOLTAGE_JOBS_RETRY_IN_MAX ?? 60 * 60 * 1000), // in milliseconds, default 60 minutes
 		retry_in: Number(process.env.VOLTAGE_JOBS_RETRY_IN ?? 1 * 60 * 1000), // in milliseconds, default 60 seconds
 		preview: {
-			format: process.env.VOLTAGE_JOBS_PREVIEW_FORMAT ?? "WEBP", // format of the generated preview thumbnail
+			format: process.env.VOLTAGE_JOBS_PREVIEW_FORMAT ?? "PNG", // format of the generated preview thumbnail: PNG || JPG || BMP || WEBP, NSFW is not supporting WEBP!
 			quality: process.env.VOLTAGE_JOBS_PREVIEW_QUALITY ?? 75
 		},
 		notifications: {

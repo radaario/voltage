@@ -15,6 +15,7 @@ const workersProcessMap = new Map<string, ChildProcess>();
 async function maintainInstancesAndWorkers() {
 	logger.console("INFO", "Maintaining instances and workers...");
 
+	let now = getNow();
 	let instances: any[] = [];
 	let selfInstance: any = null;
 
@@ -72,7 +73,7 @@ async function maintainInstancesAndWorkers() {
 					.update({
 						job_key: null,
 						status: "TIMEOUT",
-						updated_at: getNow(),
+						updated_at: now,
 						outcome: JSON.stringify({ message: "Busy worker timed out!" })
 					});
 			}
@@ -91,7 +92,7 @@ async function maintainInstancesAndWorkers() {
 				.update({
 					job_key: null,
 					status: "IDLE",
-					updated_at: getNow(),
+					updated_at: now,
 					outcome: JSON.stringify({ message: "Worker is idle again!" })
 				});
 		} catch (error: Error | any) {
@@ -119,7 +120,7 @@ async function maintainInstancesAndWorkers() {
 					.update({
 						job_key: null,
 						status: "TERMINATED",
-						updated_at: getNow(),
+						updated_at: now,
 						outcome: JSON.stringify({ message: "The worker was terminated because the instance was offline!" })
 					});
 
@@ -130,7 +131,7 @@ async function maintainInstancesAndWorkers() {
 					.whereIn("key", inactiveInstanceKeys)
 					.update({
 						status: "OFFLINE",
-						updated_at: getNow(),
+						updated_at: now,
 						outcome: JSON.stringify({
 							message: "The instance has gone offline because it has not been updated for a long time!"
 						})
@@ -272,6 +273,8 @@ async function restartInstance(instanceKey: string, instance: any): Promise<any>
 async function maintainInstance(instanceKey: string): Promise<void> {
 	logger.console("INFO", `Maintaining instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""}...`);
 
+	let now = getNow();
+
 	try {
 		// INSTACE: UPDATE
 		await database
@@ -280,15 +283,11 @@ async function maintainInstance(instanceKey: string): Promise<void> {
 			.update({
 				specs: JSON.stringify(getInstanceSpecs()),
 				status: "ONLINE",
-				updated_at: getNow()
+				updated_at: now
 			});
 
 		// INSTANCE: WORKERs: UPDATE
-		await database
-			.table("instances_workers")
-			.where("instance_key", instanceKey)
-			.where("status", "IDLE")
-			.update({ updated_at: getNow() });
+		await database.table("instances_workers").where("instance_key", instanceKey).where("status", "IDLE").update({ updated_at: now });
 
 		logger.console("INFO", `Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} successfully maintained!`);
 	} catch (error: Error | any) {
@@ -350,6 +349,28 @@ async function processJobs(): Promise<void> {
 	// JOBs: PENDINGs
 	logger.console("INFO", "Enqueuing pending jobs...");
 
+	let now = getNow();
+
+	try {
+		// JOBs: QUEUEs: TIMEOUT
+		await database
+			.table("jobs")
+			.where("status", "QUEUED")
+			.where("updated_at", "<=", subtractNow(config.jobs.queue_timeout || 10 * 60 * 1000, "milliseconds")) // in milliseconds, default 10 minutes
+			.update({
+				outcome: database.knex.raw(
+					`CASE WHEN \`try_count\` >= \`try_max\` THEN '{"message":"Job queue didn\\'t processed and it failed!"}' ELSE \`outcome\` END`
+				),
+				status: database.knex.raw(`CASE WHEN \`try_count\` < \`try_max\` THEN 'PENDING' ELSE 'FAILED' END`),
+				started_at: null,
+				completed_at: null,
+				updated_at: now,
+				locked_by: null,
+				// try_count: database.knex.raw(`CASE WHEN \`try_count\` < \`try_max\` THEN \`try_count\` + 1 ELSE \`try_count\` END`),
+				retry_at: null
+			});
+	} catch (error: Error | any) {}
+
 	try {
 		// JOBs: PENDINGs: LOCK
 		await database
@@ -357,14 +378,14 @@ async function processJobs(): Promise<void> {
 			// .where('try_count', '<', 'try_max')
 			.where(function () {
 				this.where("status", "PENDING").orWhere(function () {
-					this.where("status", "RETRYING").where("retry_at", "<=", getNow());
+					this.where("status", "RETRYING").where("retry_at", "<=", now);
 				});
 			})
 			.where("locked_by", null)
 			.orderBy("priority", "asc")
 			.orderBy("created_at", "asc")
 			.limit(config.jobs.enqueue_limit || 10) // default 10
-			.update({ updated_at: getNow(), locked_by: selfInstanceKey });
+			.update({ updated_at: now, locked_by: selfInstanceKey });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to select pending jobs!", { error });
 	}
@@ -375,7 +396,7 @@ async function processJobs(): Promise<void> {
 
 		for (const pendingJob of pendingJobs) {
 			// JOB: UPDATE: QUEUED
-			await database.table("jobs").where("key", pendingJob.key).update({ status: "QUEUED", updated_at: getNow(), locked_by: null });
+			await database.table("jobs").where("key", pendingJob.key).update({ status: "QUEUED", updated_at: now, locked_by: null });
 
 			// JOB: QUEUE: INSERT
 			await database
@@ -390,14 +411,14 @@ async function processJobs(): Promise<void> {
 					await database
 						.table("jobs")
 						.where("key", pendingJob.key)
-						.update({ status: "PENDING", updated_at: getNow(), locked_by: null });
+						.update({ status: "PENDING", updated_at: now, locked_by: null });
 
 					await logger.insert("ERROR", "Enqueuing pending job failed!", { job_key: pendingJob.key, error });
 				});
 		}
 
 		// JOBs: PENDINGs: RELEASE
-		await database.table("jobs").where("locked_by", selfInstanceKey).update({ updated_at: getNow(), locked_by: null });
+		await database.table("jobs").where("locked_by", selfInstanceKey).update({ updated_at: now, locked_by: null });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to enqueuing pending jobs!", { error });
 	}
@@ -433,7 +454,7 @@ async function processJobs(): Promise<void> {
 					await logger.insert("INFO", "Spawning worker for job...", { worker_key: idleWorker.key, job_key: queuedJob.key });
 
 					// WORKER: UPDATE: BUSY
-					await database.table("instances_workers").where("key", idleWorker.key).update({ status: "BUSY", updated_at: getNow() });
+					await database.table("instances_workers").where("key", idleWorker.key).update({ status: "BUSY", updated_at: now });
 
 					await spawnWorkerForJob(selfInstanceKey, idleWorker.key, queuedJob.key);
 
@@ -443,7 +464,7 @@ async function processJobs(): Promise<void> {
 					await logger.insert("INFO", "Spawned worker for job...", { worker_key: idleWorker.key, job_key: queuedJob.key });
 				} catch (error: Error | any) {
 					// WORKER: UPDATE: BUSY
-					await database.table("instances_workers").where("key", idleWorker.key).update({ status: "IDLE", updated_at: getNow() });
+					await database.table("instances_workers").where("key", idleWorker.key).update({ status: "IDLE", updated_at: now });
 
 					await logger.insert("ERROR", "Failed to spawn worker for job!", {
 						worker_key: idleWorker.key,
@@ -470,9 +491,15 @@ async function processJobs(): Promise<void> {
 			await database
 				.table("jobs")
 				.whereNotIn("status", ["COMPLETED", "CANCELLED", "FAILED", "TIMEOUT"])
-				.where("updated_at", "<=", subtractNow(config.jobs.process_timeout || 10 * 60 * 1000, "milliseconds")) // in milliseconds, default 10 minutes
+				.where("updated_at", "<=", subtractNow(config.jobs.process_timeout || 30 * 60 * 1000, "milliseconds")) // in milliseconds, default 30 minutes
 				.where("try_count", ">", 0)
-				.update({ status: "TIMEOUT" });
+				.update({
+					outcome: JSON.stringify({ message: "Job processing timed out!" }),
+					status: "TIMEOUT",
+					progress: 0.0,
+					completed_at: now,
+					updated_at: now
+				});
 		} catch (error: Error | any) {
 			await logger.insert("ERROR", "Jobs could not be timed out!", { error });
 		}
@@ -485,6 +512,8 @@ async function processJobsNotifications(): Promise<void> {
 	// JOBs: NOTIFICATIONs: PROCESSING
 	logger.console("INFO", "Processing jobs notifications queue...");
 
+	let now = getNow();
+
 	try {
 		// JOBs: NOTIFICATIONs: QUEUE: LOCK
 		await database
@@ -492,14 +521,14 @@ async function processJobsNotifications(): Promise<void> {
 			// .where('try_count', '<', 'try_max')
 			.where(function () {
 				this.where("status", "PENDING").orWhere(function () {
-					this.where("status", "RETRYING").where("retry_at", "<=", getNow());
+					this.where("status", "RETRYING").where("retry_at", "<=", now);
 				});
 			})
 			.where("locked_by", null)
 			.orderBy("priority", "asc")
 			.orderBy("created_at", "asc")
 			.limit(config.jobs.notifications.process_limit || 10) // default 10
-			.update({ locked_by: selfInstanceKey }); // updated_at: getNow(),
+			.update({ locked_by: selfInstanceKey }); // updated_at: now,
 
 		// JOBs: NOTIFICATIONs: QUEUE: SELECT LOCKEDs
 		const pendingJobsNotifications = await database.table("jobs_notifications_queue").where("locked_by", selfInstanceKey);
@@ -655,6 +684,8 @@ process.on("SIGQUIT", (signal) => gracefulShutdown(signal));
 const gracefulShutdown = async (signal: string) => {
 	await logger.insert("INFO", `Runtime received :signal, shutting down gracefully!`, { signal });
 
+	let now = getNow();
+
 	try {
 		// DB: WORKERs: UPDATE
 		try {
@@ -664,7 +695,7 @@ const gracefulShutdown = async (signal: string) => {
 				.update({
 					job_key: null,
 					status: "TERMINATED",
-					updated_at: getNow(),
+					updated_at: now,
 					outcome: JSON.stringify({ message: "The worker was terminated because the instance was shutdown!", signal })
 				});
 		} catch (error: Error | any) {
@@ -679,7 +710,7 @@ const gracefulShutdown = async (signal: string) => {
 				.update({
 					specs: JSON.stringify(getInstanceSpecs()),
 					status: "OFFLINE",
-					updated_at: getNow(),
+					updated_at: now,
 					outcome: JSON.stringify({ message: "The instance has gone offline due to shutdown!", signal })
 				});
 		} catch (error: Error | any) {

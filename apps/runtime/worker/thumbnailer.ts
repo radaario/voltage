@@ -13,9 +13,14 @@ export async function generateInputPreview(job: any, options: any): Promise<any>
 			return { message: "There is no video in the input file!" };
 		}
 
+		let tempJobInputPreviewFileFormat = "PNG";
+		if (["PNG", "JPG", "JPEG", "WEBP", "TIFF", "BMP"].includes(options.format.toUpperCase())) {
+			tempJobInputPreviewFileFormat = options.format.toUpperCase();
+		}
+
 		const tempJobDir = path.join(config.temp_dir, "jobs", job.key);
 		const tempJobInputFilePath = path.join(tempJobDir, "input");
-		const tempJobInputPreviewFilePath = path.join(tempJobDir, `preview.${(options.format || "webp").toLowerCase()}`);
+		const tempJobInputPreviewFilePath = path.join(tempJobDir, `preview.${tempJobInputPreviewFileFormat.toLowerCase()}`);
 
 		// logger.console("INFO", "Generating preview from job input...");
 
@@ -24,7 +29,7 @@ export async function generateInputPreview(job: any, options: any): Promise<any>
 		if (options.offset !== undefined) offset = options.offset;
 		if (job.input.duration && offset > job.input.duration) offset = job.input.duration;
 
-		// Use ffmpeg to extract a frame at the middle timestamp and convert to webp
+		// Use ffmpeg to extract a frame at the middle timestamp and convert it to the desired format
 		const args = [
 			"-y", // overwrite output file if exists
 			"-ss",
@@ -35,7 +40,7 @@ export async function generateInputPreview(job: any, options: any): Promise<any>
 			"1",
 			// '-vf', 'scale=640:-1', // width 640, height auto to maintain aspect ratio
 			"-quality",
-			(options.quality || 75).toString(), // webp quality
+			(options.quality || 75).toString(), // quality
 			tempJobInputPreviewFilePath
 		];
 
@@ -50,11 +55,11 @@ export async function generateInputPreview(job: any, options: any): Promise<any>
 
 		try {
 			storage.config(config.storage);
-			await storage.upload(tempJobInputPreviewFilePath, `/jobs/${job.key}/preview.${(options.format || "webp").toLowerCase()}`);
+			await storage.upload(tempJobInputPreviewFilePath, `/jobs/${job.key}/preview.${tempJobInputPreviewFileFormat.toLowerCase()}`);
 		} catch (error: Error | any) {}
 
 		// logger.console("INFO", "Preview generated from job input!");
-		return { temp_path: tempJobInputPreviewFilePath, ffmpeg_args: args };
+		return { temp_path: tempJobInputPreviewFilePath, format: tempJobInputPreviewFileFormat, ffmpeg_args: args };
 	} catch (error: Error | any) {
 		// await logger.insert("ERROR", "Job input preview couldn't be generated!", { error });
 		throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());

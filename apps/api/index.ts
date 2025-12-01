@@ -129,6 +129,7 @@ app.get("/stats", authMiddleware(), async (req, res) => {
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL", since_at, until_at }, data: sanitizeData(stats) });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to fetch logs!", { error });
+
 		return res.status(500).json({
 			metadata: {
 				...responseMetadata,
@@ -139,12 +140,55 @@ app.get("/stats", authMiddleware(), async (req, res) => {
 	}
 });
 
-app.delete("/stats/all", authMiddleware(), async (req, res) => {
+app.delete("/stats", authMiddleware(), async (req, res) => {
 	try {
-		await database.table("stats").delete();
-		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "All stats deleted successfully!" });
+		if (req.query.all || req.body.all) {
+			await database.table("stats").delete();
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "All stats successfully deleted!" });
+		}
+
+		if (req.query.stat_key || req.body.stat_key) {
+			await database
+				.table("stats")
+				.where("stat_key", (req.query.stat_key || req.body.stat_key || "").trim())
+				.delete();
+
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "All stats successfully deleted!" });
+		}
+
+		if (req.query.date || req.body.date) {
+			await database
+				.table("stats")
+				.where("date", getDate((req.query.date || req.body.date || "").trim(), "YYYY-MM-DD"))
+				.delete();
+
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "All stats successfully deleted!" });
+		}
+
+		let since_at = (req.query.since_at || req.body.since_at || "").trim();
+		let until_at = (req.query.until_at || req.body.until_at || "").trim();
+
+		let query = database.table("stats");
+
+		if (since_at) {
+			since_at = getDate(since_at, "YYYY-MM-DD");
+			query = query.where("date", ">=", since_at);
+		}
+
+		if (until_at) {
+			until_at = getDate(until_at, "YYYY-MM-DD");
+			query = query.where("date", "<=", until_at);
+		}
+
+		await query.delete();
+
+		return res.json({
+			metadata: { ...responseMetadata, status: "SUCCESSFUL", since_at: since_at || null, until_at: until_at || null },
+			message: "Some stats successfully deleted!"
+		});
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to delete stats!", { error });
+
 		return res.status(500).json({
 			metadata: {
 				...responseMetadata,
@@ -244,6 +288,7 @@ app.get("/logs", authMiddleware(), async (req, res) => {
 		});
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to fetch logs!", { error });
+
 		return res.status(500).json({
 			metadata: {
 				...responseMetadata,
@@ -254,12 +299,46 @@ app.get("/logs", authMiddleware(), async (req, res) => {
 	}
 });
 
-app.delete("/logs/all", authMiddleware(), async (req, res) => {
+app.delete("/logs", authMiddleware(), async (req, res) => {
 	try {
-		await database.table("logs").delete();
-		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "All logs deleted successfully!" });
+		if (req.query.all || req.body.all) {
+			await database.table("logs").delete();
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "All logs successfully deleted!" });
+		}
+
+		if (req.query.log_key || req.body.log_key) {
+			await database
+				.table("logs")
+				.where("key", req.query.log_key || req.body.log_key)
+				.delete();
+
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "Log successfully deleted!" });
+		}
+
+		let since_at = (req.query.since_at || req.body.since_at || "").trim();
+		let until_at = (req.query.until_at || req.body.until_at || "").trim();
+
+		let query = database.table("logs");
+
+		if (since_at) {
+			since_at = getDate(since_at, "YYYY-MM-DD");
+			query = query.where("created_at", ">=", since_at);
+		}
+
+		if (until_at) {
+			until_at = getDate(until_at, "YYYY-MM-DD");
+			query = query.where("created_at", "<=", until_at);
+		}
+
+		await query.delete();
+
+		return res.json({
+			metadata: { ...responseMetadata, status: "SUCCESSFUL", since_at: since_at || null, until_at: until_at || null },
+			message: "Some logs successfully deleted!"
+		});
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to delete logs!", { error });
+
 		return res.status(500).json({
 			metadata: {
 				...responseMetadata,
@@ -355,6 +434,41 @@ app.get("/instances", authMiddleware(), async (req, res) => {
 	}
 });
 
+app.delete("/instances", authMiddleware(), async (req, res) => {
+	try {
+		if (req.query.all || req.body.all) {
+			await database.table("instances").delete();
+			await database.table("instances_workers").delete();
+
+			return res.json({
+				metadata: { ...responseMetadata, status: "SUCCESSFUL" },
+				message: "All instances and workers successfully deleted!"
+			});
+		}
+
+		const instance_key = (req.query.instance_key || req.body.instance_key || "").trim();
+
+		if (!instance_key) {
+			throw new Error("No instance_key provided to delete specific instance!");
+		}
+
+		await database.table("instances").where("key", instance_key).delete();
+		await database.table("instances_workers").where("instance_key", instance_key).delete();
+
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "Instance successfully deleted!" });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to delete instances!", { error });
+
+		return res.status(500).json({
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to delete instances!" }
+			}
+		});
+	}
+});
+
 // Worker status endpoint - read persisted worker metadata and enrich with in-memory process state
 app.get("/instances/workers", authMiddleware(), async (req, res) => {
 	try {
@@ -382,11 +496,50 @@ app.get("/instances/workers", authMiddleware(), async (req, res) => {
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(workers) });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to fetch workers!", { error });
+
 		return res.status(500).json({
 			metadata: {
 				...responseMetadata,
 				status: "ERROR",
 				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to fetch workers!" }
+			}
+		});
+	}
+});
+
+app.delete("/instances/workers", authMiddleware(), async (req, res) => {
+	try {
+		if (req.query.all || req.body.all) {
+			await database.table("instances_workers").delete();
+
+			return res.json({
+				metadata: { ...responseMetadata, status: "SUCCESSFUL" },
+				message: "All workers successfully deleted!"
+			});
+		}
+
+		const instance_key = (req.query.instance_key || req.body.instance_key || "").trim();
+		const worker_key = (req.query.worker_key || req.body.worker_key || "").trim();
+
+		if (!instance_key || !worker_key) {
+			throw new Error("No instance_key or worker_key provided to delete!");
+		}
+
+		const query = database.table("instances_workers");
+
+		if (instance_key) query.where("instance_key", instance_key);
+		if (worker_key) query.where("key", worker_key);
+
+		await query.delete();
+
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "Workers successfully deleted!" });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to delete workers!", { error });
+		return res.status(500).json({
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to delete workers!" }
 			}
 		});
 	}
@@ -476,6 +629,7 @@ app.get("/jobs", authMiddleware(), async (req, res) => {
 		});
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to fetch jobs!", { error });
+
 		return res.status(500).json({
 			metadata: {
 				...responseMetadata,
@@ -614,6 +768,7 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 		return res.status(202).json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(job) });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Create job failed!", { error });
+
 		return res.status(500).json({
 			metadata: { ...responseMetadata, status: "ERROR", error: { code: "INTERNAL_ERROR", message: "Job creation failed!" } }
 		});
@@ -680,69 +835,66 @@ app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) =>
 	return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" } });
 });
 
-app.delete("/jobs", authMiddleware(), async (req: Request, res: Response) => {
-	const job_key = (req.query.job_key || req.body.job_key || "").trim();
-
-	if (!job_key) {
-		return res
-			.status(400)
-			.json({ metadata: { ...responseMetadata, status: "ERROR", error: { code: "KEY_REQUIRED", message: "Job key required!" } } });
-	}
-
-	const job = await database.table("jobs").where("key", job_key).select("key", "status").first();
-
-	if (!job) {
-		return res
-			.status(404)
-			.json({ metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_FOUND", message: "Job not found!" } } });
-	}
-
-	if (["DELETED"].includes(job.status)) {
-		await database.table("jobs").where("key", job_key).delete();
-		await database.table("jobs_queue").where("key", job_key).delete();
-		await database.table("jobs_notifications").where("job_key", job_key).delete();
-		await database.table("jobs_notifications_queue").where("job_key", job_key).delete();
-
-		try {
-			await storage.delete(`/jobs/${job_key}/`);
-		} catch (error: Error | any) {}
-
-		await logger.insert("INFO", "Job permanently deleted!", { job_key });
-		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" } });
-	}
-
-	if (!["RECEIVED", "PENDING", "RETRYING"].includes(job.status)) {
-		return res.status(405).json({
-			metadata: { ...responseMetadata, status: "ERROR", error: { code: "NOT_ALLOWED", message: "Job cannot be soft deleted!" } }
-		});
-	}
-
-	await database.table("jobs").where("key", job_key).update({ status: "DELETED" });
-	await logger.insert("INFO", "Job soft deleted!", { job_key });
-
-	return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" } });
-});
-
-app.delete("/jobs/all", authMiddleware(), async (req, res) => {
+app.delete("/jobs", authMiddleware(), async (req, res) => {
 	try {
-		const jobs = await database.table("jobs").select("key");
+		let query = database.table("jobs");
 
-		const jobsKeys = jobs.map((r: any) => r.key);
+		if (req.query.all || req.body.all) {
+		} else if (req.query.job_key || req.body.job_key) {
+			const job_key = (req.query.job_key || req.body.job_key || "").trim();
 
-		if (jobsKeys.length > 0) {
+			if (!job_key) {
+				return res.status(400).json({
+					metadata: { ...responseMetadata, status: "ERROR", error: { code: "KEY_REQUIRED", message: "Job key required!" } }
+				});
+			}
+
+			query = query.where("key", job_key);
+		}
+
+		let since_at = (req.query.since_at || req.body.since_at || "").trim();
+		let until_at = (req.query.until_at || req.body.until_at || "").trim();
+
+		if (since_at) {
+			since_at = getDate(since_at, "YYYY-MM-DD");
+			query = query.where("created_at", ">=", since_at);
+		}
+
+		if (until_at) {
+			until_at = getDate(until_at, "YYYY-MM-DD");
+			query = query.where("created_at", "<=", until_at);
+		}
+
+		const jobs = await query.select("key", "status");
+		const jobsKeysToSoftDelete = [];
+		const jobsKeysToHardDelete = [];
+
+		for (const job of jobs) {
+			if (req.query.hard_delete || req.body.hard_delete || ["DELETED"].includes(job.status)) {
+				jobsKeysToHardDelete.push(job.key);
+			} else {
+				jobsKeysToSoftDelete.push(job.key);
+			}
+		}
+
+		if (jobsKeysToSoftDelete.length > 0) {
+			await database.table("jobs").whereIn("key", jobsKeysToSoftDelete).update({ status: "DELETED" });
+		}
+
+		if (jobsKeysToHardDelete.length > 0) {
 			// Delete job folders/objects via unified storage facade
-			for (const job_key of jobsKeys) {
+			for (const job_key of jobsKeysToHardDelete) {
 				try {
 					await storage.delete(`/jobs/${job_key}/`);
 				} catch (error: Error | any) {}
 			}
 
-			await database.table("jobs").whereIn("key", jobsKeys).delete();
-			await database.table("jobs_queue").whereIn("key", jobsKeys).delete();
-			await database.table("jobs_notifications").whereIn("job_key", jobsKeys).delete();
-			await database.table("jobs_notifications_queue").whereIn("job_key", jobsKeys).delete();
+			await database.table("jobs").whereIn("key", jobsKeysToHardDelete).delete();
+			await database.table("jobs_queue").whereIn("key", jobsKeysToHardDelete).delete();
+			await database.table("jobs_notifications").whereIn("job_key", jobsKeysToHardDelete).delete();
+			await database.table("jobs_notifications_queue").whereIn("job_key", jobsKeysToHardDelete).delete();
 
-			await logger.insert("INFO", "All jobs permanently deleted!", { count: jobsKeys.length });
+			await logger.insert("INFO", "All jobs permanently deleted!", { count: jobsKeysToHardDelete.length });
 		}
 
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "All jobs permanently deleted!" });
@@ -784,8 +936,10 @@ app.get("/jobs/preview", async (req: Request, res: Response) => {
 				const exists = await storage.exists(`/jobs/${job_key}/preview.${config.jobs.preview.format.toLowerCase()}`);
 				if (!exists) return serveFallbackImage();
 				const buffer = await storage.read(`/jobs/${job_key}/preview.${config.jobs.preview.format.toLowerCase()}`);
+
 				res.setHeader("Content-Type", "image/webp");
 				res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+
 				return res.send(buffer);
 			} catch (error: Error | any) {}
 		}
@@ -878,6 +1032,7 @@ app.get("/jobs/notifications", authMiddleware(), async (req, res) => {
 		});
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to fetch job notifications!", { error });
+
 		return res.status(500).json({
 			metadata: {
 				...responseMetadata,
@@ -916,6 +1071,7 @@ app.post("/jobs/notifications/retry", authMiddleware(), async (req, res) => {
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "Notification successfully rescheduled!" });
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", "Failed to fetch job notifications!", { error });
+
 		return res.status(500).json({
 			metadata: {
 				...responseMetadata,
@@ -926,19 +1082,105 @@ app.post("/jobs/notifications/retry", authMiddleware(), async (req, res) => {
 	}
 });
 
-app.get("/test", async (req, res) => {
-	const rows = await database.table("jobs_queue");
-	return res.json({ ...rows });
+app.delete("/jobs/notifications", authMiddleware(), async (req, res) => {
+	try {
+		if (req.query.all || req.body.all) {
+			await database.table("jobs_notifications").delete();
+
+			return res.json({
+				metadata: { ...responseMetadata, status: "SUCCESSFUL" },
+				message: "All job notifications successfully deleted!"
+			});
+		}
+
+		if (req.query.notification_key || req.body.notification_key) {
+			await database
+				.table("jobs_notifications")
+				.where("key", req.query.notification_key || req.body.notification_key)
+				.delete();
+
+			return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "job notification successfully deleted!" });
+		}
+
+		let since_at = (req.query.since_at || req.body.since_at || "").trim();
+		let until_at = (req.query.until_at || req.body.until_at || "").trim();
+
+		let query = database.table("jobs_notifications");
+
+		if (since_at) {
+			since_at = getDate(since_at, "YYYY-MM-DD");
+			query = query.where("created_at", ">=", since_at);
+		}
+
+		if (until_at) {
+			until_at = getDate(until_at, "YYYY-MM-DD");
+			query = query.where("created_at", "<=", until_at);
+		}
+
+		await query.delete();
+
+		return res.json({
+			metadata: { ...responseMetadata, status: "SUCCESSFUL", since_at: since_at || null, until_at: until_at || null },
+			message: "Some job notifications successfully deleted!"
+		});
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to delete job notifications!", { error });
+
+		return res.status(500).json({
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to delete job notifications!" }
+			}
+		});
+	}
 });
 
-/*
-const frontendPath = path.join(__dirname, '../../frontend-build');
-app.use(express.static(frontendPath));
-app.get("/*", (req: Request, res: Response) => res.sendFile(path.join(frontendPath, "index.html")));
-*/
+app.delete("/all", authMiddleware(), async (req: Request, res: Response) => {
+	try {
+		await database.table("stats").delete();
+		await database.table("logs").delete();
+
+		await database.table("instances").delete();
+		await database.table("instances_workers").delete();
+
+		const jobs = await database.table("jobs").select("key");
+
+		const jobsKeys = jobs.map((r: any) => r.key);
+
+		if (jobsKeys.length > 0) {
+			// Delete job folders/objects via unified storage facade
+			for (const job_key of jobsKeys) {
+				try {
+					await storage.delete(`/jobs/${job_key}/`);
+				} catch (error: Error | any) {}
+			}
+
+			await database.table("jobs").whereIn("key", jobsKeys).delete();
+			await database.table("jobs_queue").whereIn("key", jobsKeys).delete();
+			await database.table("jobs_notifications").whereIn("job_key", jobsKeys).delete();
+			await database.table("jobs_notifications_queue").whereIn("job_key", jobsKeys).delete();
+		}
+
+		await logger.insert("INFO", "All data deleted!");
+
+		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" } });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to delete all data!", { error });
+
+		return res.status(500).json({
+			metadata: {
+				...responseMetadata,
+				status: "ERROR",
+				error: { code: "INTERNAL_ERROR", message: error.message || "Failed to delete all data!" }
+			}
+		});
+	}
+});
 
 app.use((error: any, req: any, res: any, _next: any) => {
 	logger.insert("ERROR", "An error occurred on API service!", { error });
+
 	return res.status(500).json({
 		metadata: {
 			...responseMetadata,
