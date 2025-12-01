@@ -12,7 +12,9 @@ const __dir = process.cwd();
 
 // Load environment specific .env files and override
 let envFiles = [".env", ".env.local"];
-if (process.env.VOLTAGE_ENV && !envFiles.includes(`.env.${process.env.VOLTAGE_ENV}`)) envFiles.push(`.env.${process.env.VOLTAGE_ENV}`);
+if (process.env.VOLTAGE_ENV && !envFiles.includes(`.env.${process.env.VOLTAGE_ENV.toLowerCase()}`))
+	envFiles.push(`.env.${process.env.VOLTAGE_ENV.toLowerCase()}`);
+
 for (const envFile of envFiles) {
 	const envPath = path.resolve(__dir, "../..", envFile);
 	if (fs.existsSync(envPath)) {

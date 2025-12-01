@@ -34,7 +34,7 @@ app.use(cors());
 // Authentication middleware factory
 const authMiddleware = (options: {} = {}) => {
 	return (req: Request, res: Response, next: any) => {
-		const client = req.query.client?.toString().toUpperCase() || "FRONTEND"; // null /* ! */
+		const client = req.query.client?.toString().toUpperCase() || null; // "FRONTEND"
 
 		// Expected tokens
 		const frontendToken = config.frontend.password ? hash(config.frontend.password) : null;

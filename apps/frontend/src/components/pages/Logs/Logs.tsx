@@ -57,7 +57,7 @@ const Logs: React.FC = () => {
 	// mutations
 	const deleteAllLogsMutation = useMutation({
 		mutationFn: async () => {
-			return await api.delete("/logs/all", { token: authToken });
+			return await api.delete("/logs", { token: authToken, all: "true" });
 		},
 		onSuccess: async () => {
 			setShowDeleteAllModal(false);
@@ -205,15 +205,16 @@ const Logs: React.FC = () => {
 					className="h-[38px]"
 				/>
 
-				<Tooltip content="Delete All Logs">
+				<Tooltip content="Delete All">
 					<Button
 						variant="soft"
+						hover="danger"
 						size="md"
 						iconOnly
 						onClick={handleDeleteAllLogs}
 						disabled={deleteAllLogsMutation.isPending || (logsResponse?.data?.length || 0) === 0}
 						isLoading={deleteAllLogsMutation.isPending}>
-						<TrashIcon className="h-5 w-5 text-red-600 dark:text-white" />
+						<TrashIcon className="h-5 w-5" />
 					</Button>
 				</Tooltip>
 			</Page.Header>
@@ -228,6 +229,7 @@ const Logs: React.FC = () => {
 					All logs deleted successfully!
 				</Alert>
 			)}
+
 			{/* Logs Table */}
 			<LogsTable
 				data={logsResponse?.data || []}
@@ -247,11 +249,13 @@ const Logs: React.FC = () => {
 					title="Delete All Logs"
 					message={
 						<>
-							Are you sure you want to delete <strong>ALL logs</strong>? This action cannot be undone and will permanently
-							remove all log entries from the system.
+							<p className="mb-4">
+								Are you sure you want to delete <strong className="text-red-600 dark:text-red-400">all logs</strong>?
+							</p>
+							<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
 						</>
 					}
-					confirmText="Delete All Logs"
+					confirmText="Delete All"
 					variant="danger"
 					isLoading={deleteAllLogsMutation.isPending}
 					loadingText="Deleting"

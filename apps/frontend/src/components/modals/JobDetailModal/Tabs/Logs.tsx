@@ -51,7 +51,8 @@ const Logs: React.FC = () => {
 			});
 		},
 		enabled: !!authToken && !!job.key,
-		placeholderData: (previousData) => previousData
+		placeholderData: (previousData) => previousData,
+		refetchOnMount: "always"
 	});
 
 	// Debounce search input (500ms)

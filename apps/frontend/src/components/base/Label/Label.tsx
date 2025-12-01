@@ -12,6 +12,18 @@ import {
 } from "@heroicons/react/24/outline";
 import type { LabelProps, LabelVariant } from "@/types";
 
+const PROGRESS_ALLOWED_STATUSES = [
+	"STARTED",
+	"DOWNLOADING",
+	"DOWNLOADED",
+	"ANALYZING",
+	"ANALYZED",
+	"PROCESSING",
+	"PROCESSED",
+	"UPLOADING",
+	"UPLOADED"
+];
+
 const Label: React.FC<LabelProps> = ({
 	children,
 	size = "md",
@@ -25,6 +37,7 @@ const Label: React.FC<LabelProps> = ({
 }) => {
 	// Determine variant from status if provided
 	const finalVariant = status && statusColor ? getVariantFromStatus(status) : variant;
+	const upperStatus = status ? status.toUpperCase() : "";
 
 	// Size classes
 	const sizeClasses = {
@@ -67,7 +80,6 @@ const Label: React.FC<LabelProps> = ({
 	const getStatusIcon = () => {
 		if (!icon || !status) return null;
 
-		const upperStatus = status.toUpperCase();
 		const iconClass = "w-4 h-4";
 
 		switch (upperStatus) {
@@ -127,7 +139,7 @@ const Label: React.FC<LabelProps> = ({
 				className
 			)}>
 			{/* Progress Bar Overlay */}
-			{typeof progress === "number" && progress > 0 && progress < 100 && (
+			{typeof progress === "number" && PROGRESS_ALLOWED_STATUSES.includes(upperStatus) && progress > 0 && progress < 100 && (
 				<div
 					className={`absolute bottom-0 left-0 h-full transition-all duration-300 ${progressBarClasses[finalVariant]}`}
 					style={{ width: `${progress}%` }}

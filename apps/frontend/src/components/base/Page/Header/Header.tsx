@@ -27,7 +27,7 @@ export function PageHeader({ title, onRefresh, isRefreshing = false, children }:
 					</Tooltip>
 				)}
 			</div>
-			{children && <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">{children}</div>}
+			{children && <div className="flex sm:flex-row gap-3 w-full sm:w-auto">{children}</div>}
 		</div>
 	);
 }

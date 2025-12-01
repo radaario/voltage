@@ -32,7 +32,7 @@ const OutputsChart: React.FC<OutputsChartProps> = ({ stats, aggregates }) => {
 
 		const maxVal = Math.max(1, ...valuesRequested, ...valuesCompleted, ...valuesFailed);
 
-		const width = 800;
+		const width = 1000; // viewBox base width, will scale with container
 		const height = 220;
 		const paddingLeft = 40;
 		const paddingRight = 20;
@@ -128,7 +128,8 @@ const OutputsChart: React.FC<OutputsChartProps> = ({ stats, aggregates }) => {
 					<div className="w-full overflow-x-auto">
 						<svg
 							viewBox={`0 0 ${chartSeries.width} ${chartSeries.height}`}
-							className="h-64 min-w-full">
+							className="w-full h-64"
+							preserveAspectRatio="none">
 							{/* Y axis grid */}
 							{[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
 								const y = chartSeries.paddingTop + chartSeries.innerHeight - ratio * chartSeries.innerHeight;

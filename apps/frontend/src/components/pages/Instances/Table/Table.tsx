@@ -275,14 +275,14 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 	});
 
 	return (
-		<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+		<div className="bg-gray-50 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 			<div className="w-full relative">
 				{/* Loading Overlay */}
 				<LoadingOverlay show={loading} />
 
 				<div className="overflow-x-auto">
 					<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
-						<thead className="bg-gray-50 dark:bg-neutral-900">
+						<thead className="bg-gray-50 dark:bg-neutral-800">
 							{table.getHeaderGroups().map((headerGroup) => (
 								<tr key={headerGroup.id}>
 									{headerGroup.headers.map((header) => (
@@ -295,7 +295,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 								</tr>
 							))}
 						</thead>
-						<tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700">
+						<tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-800">
 							{table.getRowModel().rows.length === 0 ? (
 								<EmptyState
 									message="No instances found"
@@ -323,7 +323,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 												<td
 													colSpan={8}
 													className="relative px-6 py-0 bg-gray-50 dark:bg-neutral-900/50">
-													<div className="absolute left-8.75 top-5 bottom-5 rounded-sm border-4 border-gray-100" />
+													<div className="absolute left-8.75 top-5 bottom-5 rounded-sm border-4 border-gray-100 bg-gray-100 dark:border-neutral-700 dark:bg-neutral-700" />
 													<div className="py-4 pl-10 pr-2">
 														<WorkersTable workers={row.original.workers} />
 													</div>

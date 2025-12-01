@@ -6,7 +6,7 @@ import {
 	InformationCircleIcon,
 	DocumentChartBarIcon,
 	ClipboardDocumentCheckIcon,
-	ArrowUturnLeftIcon,
+	ArrowPathIcon,
 	XMarkIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
@@ -110,7 +110,7 @@ const OutputDetailModal: React.FC = () => {
 									variant="secondary"
 									size="xs"
 									onClick={handleRetry}>
-									<ArrowUturnLeftIcon className="w-4 h-4" />
+									<ArrowPathIcon className="w-4 h-4" />
 									Retry
 								</Button>
 							)}
@@ -139,16 +139,25 @@ const OutputDetailModal: React.FC = () => {
 				</Modal.Content>
 			</Modal>
 
-			<ConfirmModal
-				isOpen={showRetryModal}
-				onClose={handleCloseRetryModal}
-				onConfirm={handleConfirmRetry}
-				title="Retry Output"
-				message={`Are you sure you want to retry this output?`}
-				confirmText="Retry"
-				variant="info"
-				isLoading={retryOutputMutation.isPending}
-			/>
+			{output && (
+				<ConfirmModal
+					isOpen={showRetryModal}
+					onClose={handleCloseRetryModal}
+					onConfirm={handleConfirmRetry}
+					title="Retry"
+					message={
+						<>
+							<p className="mb-4">Are you sure you want to retry this output?</p>
+							<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+								<li>{output.key}</li>
+							</ul>
+						</>
+					}
+					confirmText="Retry"
+					variant="info"
+					isLoading={retryOutputMutation.isPending}
+				/>
+			)}
 		</>
 	);
 };

@@ -1,8 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { EyeIcon } from "@heroicons/react/24/outline";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { EyeIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Log } from "@/interfaces/log";
+import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/utils";
 import {
 	Label,
 	Button,
@@ -13,7 +16,8 @@ import {
 	LoadingOverlay,
 	EmptyState,
 	JobCard,
-	WorkerCard
+	WorkerCard,
+	ConfirmModal
 } from "@/components";
 
 interface PaginationInfo {
@@ -39,6 +43,36 @@ const columnHelper = createColumnHelper<Log>();
 
 const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, newLogKeys }: LogsTableProps) => {
 	const navigate = useNavigate();
+	const { authToken } = useAuth();
+	const queryClient = useQueryClient();
+	const [logToDelete, setLogToDelete] = useState<Log | null>(null);
+
+	// Delete log mutation
+	const deleteLogMutation = useMutation({
+		mutationFn: async (logKey: string) => {
+			return await api.delete("/logs", { token: authToken, log_key: logKey });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["logs"] });
+			setLogToDelete(null);
+		}
+	});
+
+	const handleDeleteLog = (log: Log) => {
+		setLogToDelete(log);
+	};
+
+	const handleConfirmDelete = () => {
+		if (logToDelete) {
+			deleteLogMutation.mutate(logToDelete.key);
+		}
+	};
+
+	const handleCloseDeleteModal = () => {
+		if (!deleteLogMutation.isPending) {
+			setLogToDelete(null);
+		}
+	};
 
 	const columns = useMemo(
 		() => [
@@ -99,12 +133,28 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 					const log = info.row.original;
 					return (
 						<div className="flex items-center gap-2">
+							<Tooltip content="Delete">
+								<Button
+									variant="soft"
+									hover="danger"
+									size="md"
+									iconOnly
+									onClick={(e) => {
+										e.stopPropagation();
+										handleDeleteLog(log);
+									}}>
+									<TrashIcon className="h-5 w-5" />
+								</Button>
+							</Tooltip>
 							<Tooltip content="View">
 								<Button
 									variant="soft"
 									size="md"
 									iconOnly
-									onClick={() => navigate(`/logs/${log.key}/info`)}>
+									onClick={(e) => {
+										e.stopPropagation();
+										navigate(`/logs/${log.key}/info`);
+									}}>
 									<EyeIcon className="h-5 w-5" />
 								</Button>
 							</Tooltip>
@@ -113,7 +163,7 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 				}
 			})
 		],
-		[]
+		[navigate, handleDeleteLog, deleteLogMutation.isPending]
 	);
 
 	const table = useReactTable({
@@ -125,13 +175,13 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 	});
 
 	return (
-		<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+		<div className="bg-gray-50 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 			<div className="w-full relative">
 				{/* Loading Overlay */}
 				<LoadingOverlay show={loading} />
 
 				<div className="overflow-x-auto">
-					<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+					<table className="responsive-table min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
 						<thead className="bg-gray-50 dark:bg-neutral-800">
 							{table.getHeaderGroups().map((headerGroup) => (
 								<tr key={headerGroup.id}>
@@ -157,12 +207,21 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 									const log = row.original;
 									const isNew = newLogKeys.has(log.key);
 									return (
-										<MemoizedTableRow
+										<tr
 											key={row.id}
-											row={row}
-											isNew={isNew}
 											onClick={() => navigate(`/logs/${log.key}/info`)}
-										/>
+											className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors ${
+												isNew ? "animate-pulse bg-green-50 dark:bg-green-900/20" : ""
+											}`}>
+											{row.getVisibleCells().map((cell) => (
+												<td
+													key={cell.id}
+													data-label={cell.column.columnDef.header}
+													className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+													<div>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>
+												</td>
+											))}
+										</tr>
 									);
 								})
 							)}
@@ -179,27 +238,31 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 					hasNextPage={!!pagination.next_page}
 					hasPrevPage={!!pagination.prev_page}
 					onPageChange={onPageChange}
+					onLimitChange={onLimitChange}
 				/>
 
-				{/* Items per page selector */}
-				<div className="px-6 py-3 flex items-center justify-end gap-4 border-t border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
-					<span className="text-sm text-gray-700 dark:text-gray-300">
-						<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total logs
-					</span>
-
-					<select
-						value={pagination.limit}
-						onChange={(e) => onLimitChange(Number(e.target.value))}
-						className="px-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500">
-						{[10, 25, 50, 100].map((pageSize) => (
-							<option
-								key={pageSize}
-								value={pageSize}>
-								{pageSize} per page
-							</option>
-						))}
-					</select>
-				</div>
+				{/* Delete Confirmation Modal */}
+				{logToDelete && (
+					<ConfirmModal
+						isOpen={!!logToDelete}
+						onClose={handleCloseDeleteModal}
+						onConfirm={handleConfirmDelete}
+						title="Delete Log"
+						message={
+							<>
+								<p className="mb-4">Are you sure you want to delete this log?</p>
+								<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+									<li>{logToDelete.key}</li>
+								</ul>
+								<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
+							</>
+						}
+						confirmText="Delete"
+						variant="danger"
+						isLoading={deleteLogMutation.isPending}
+						loadingText="Deleting"
+					/>
+				)}
 			</div>
 		</div>
 	);

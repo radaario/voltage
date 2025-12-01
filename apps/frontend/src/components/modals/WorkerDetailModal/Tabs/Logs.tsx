@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useOutletContext, useNavigate, Outlet } from "react-router-dom";
 import { Label, Tooltip, Button, Pagination, JobCard, TimeAgo, LoadingSpinner } from "@/components";
 import { EyeIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Worker } from "@/interfaces";
 import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,7 +27,9 @@ const Logs: React.FC = () => {
 	const { worker } = useOutletContext<OutletContext>();
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
+	const queryClient = useQueryClient();
 
+	// states
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchInput, setSearchInput] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
@@ -36,6 +38,7 @@ const Logs: React.FC = () => {
 	const previousDataRef = useRef<Log[]>([]);
 	const [newLogKeys, setNewLogKeys] = useState<Set<string>>(new Set());
 
+	// querys
 	// Fetch logs with React Query
 	const { data: logsResponse, isLoading } = useQuery<ApiResponse<Log[]>>({
 		queryKey: ["worker-logs", worker.key, currentPage, currentLimit, searchQuery, typeFilter, authToken],
@@ -50,8 +53,24 @@ const Logs: React.FC = () => {
 			});
 		},
 		enabled: !!authToken && !!worker.key,
-		placeholderData: (previousData) => previousData
+		placeholderData: (previousData) => previousData,
+		refetchOnMount: "always",
+		refetchOnWindowFocus: false
 	});
+
+	// data
+	const logs = logsResponse?.data || [];
+	const pagination: PaginationInfo | undefined = logsResponse?.pagination;
+
+	// actions
+	const clearSearch = () => {
+		setSearchInput("");
+	};
+
+	// effects
+	useEffect(() => {
+		queryClient.invalidateQueries({ queryKey: ["worker", worker.key] });
+	}, [worker.key]);
 
 	// Debounce search input (500ms)
 	useEffect(() => {
@@ -96,13 +115,6 @@ const Logs: React.FC = () => {
 
 		previousDataRef.current = logs || [];
 	}, [logsResponse?.data, currentPage]);
-
-	const logs = logsResponse?.data || [];
-	const pagination: PaginationInfo | undefined = logsResponse?.pagination;
-
-	const clearSearch = () => {
-		setSearchInput("");
-	};
 
 	return (
 		<div className="space-y-4">

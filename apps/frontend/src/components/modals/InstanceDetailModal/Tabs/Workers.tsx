@@ -1,8 +1,12 @@
 import { useOutletContext, useNavigate, Outlet, useParams } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import type { Instance } from "@/interfaces/instance";
-import { JobCard, Label, Button, Tooltip, TimeAgo } from "@/components";
-import { EyeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
+import { JobCard, Label, Button, Tooltip, TimeAgo, ConfirmModal } from "@/components";
+import { EyeIcon, CpuChipIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { getWorkerName } from "@/utils/naming";
+import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/utils";
 
 interface OutletContext {
 	instance: Instance;
@@ -12,7 +16,46 @@ const Workers: React.FC = () => {
 	const { instance } = useOutletContext<OutletContext>();
 	const { instanceKey } = useParams<{ instanceKey: string }>();
 	const navigate = useNavigate();
+	const { authToken } = useAuth();
+	const queryClient = useQueryClient();
+	const [workerToDelete, setWorkerToDelete] = useState<{ key: string; name: string } | null>(null);
 
+	// Delete worker mutation
+	const deleteWorkerMutation = useMutation({
+		mutationFn: async (workerKey: string) => {
+			return await api.delete("/instances/workers", { token: authToken, worker_key: workerKey });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["instances"] });
+			setWorkerToDelete(null);
+		}
+	});
+
+	const handleDeleteWorker = (worker: any) => {
+		setWorkerToDelete({
+			key: worker.key,
+			name: getWorkerName(instance.workers, worker)
+		});
+	};
+
+	const handleConfirmDelete = () => {
+		if (workerToDelete) {
+			deleteWorkerMutation.mutate(workerToDelete.key);
+		}
+	};
+
+	const handleCloseDeleteModal = () => {
+		if (!deleteWorkerMutation.isPending) {
+			setWorkerToDelete(null);
+		}
+	};
+
+	// effects
+	useEffect(() => {
+		queryClient.invalidateQueries({ queryKey: ["instances"] });
+	}, []);
+
+	// renders
 	if (!instance) {
 		return (
 			<div className="flex justify-center items-center py-12">
@@ -88,23 +131,61 @@ const Workers: React.FC = () => {
 								<TimeAgo datetime={worker.updated_at} />
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-								<Tooltip content="View">
-									<Button
-										variant="soft"
-										size="sm"
-										iconOnly
-										onClick={(e) => {
-											e.stopPropagation();
-											navigate(`/instances/${instanceKey}/workers/${worker.key}/info`);
-										}}>
-										<EyeIcon className="h-4 w-4" />
-									</Button>
-								</Tooltip>
+								<div className="flex items-center gap-2">
+									<Tooltip content="Delete">
+										<Button
+											variant="soft"
+											hover="danger"
+											size="sm"
+											iconOnly
+											onClick={(e) => {
+												e.stopPropagation();
+												handleDeleteWorker(worker);
+											}}>
+											<TrashIcon className="h-4 w-4" />
+										</Button>
+									</Tooltip>
+									<Tooltip content="View">
+										<Button
+											variant="soft"
+											size="sm"
+											iconOnly
+											onClick={(e) => {
+												e.stopPropagation();
+												navigate(`/instances/${instanceKey}/workers/${worker.key}/info`);
+											}}>
+											<EyeIcon className="h-4 w-4" />
+										</Button>
+									</Tooltip>
+								</div>
 							</td>
 						</tr>
 					))}
 				</tbody>
 			</table>
+
+			{/* Delete Confirmation Modal */}
+			{workerToDelete && (
+				<ConfirmModal
+					isOpen={!!workerToDelete}
+					onClose={handleCloseDeleteModal}
+					onConfirm={handleConfirmDelete}
+					title="Delete Worker"
+					message={
+						<>
+							<p className="mb-4">Are you sure you want to delete this worker?</p>
+							<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+								<li>{workerToDelete.key}</li>
+							</ul>
+							<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
+						</>
+					}
+					confirmText="Delete"
+					variant="danger"
+					isLoading={deleteWorkerMutation.isPending}
+					loadingText="Deleting"
+				/>
+			)}
 
 			{/* Nested Outlet for WorkerDetailModal */}
 			<Outlet context={{ instance }} />

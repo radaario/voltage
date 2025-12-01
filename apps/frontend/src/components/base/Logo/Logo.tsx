@@ -17,7 +17,7 @@ function Logo({ size = "md", className = "", clickable = true }: LogoProps) {
 	const navigate = useNavigate();
 
 	const baseClasses =
-		"select-none leading-none font-light tracking-wider uppercase bg-neutral-700 dark:bg-white text-transparent bg-clip-text drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]";
+		"select-none leading-none font-medium tracking-wider uppercase bg-neutral-700 dark:bg-white text-transparent bg-clip-text drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]";
 
 	const handleClick = () => {
 		if (clickable) {
@@ -30,8 +30,7 @@ function Logo({ size = "md", className = "", clickable = true }: LogoProps) {
 			onClick={handleClick}
 			className={`${baseClasses} ${sizeClasses[size]} ${className} ${clickable ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
 			aria-label="Voltage logo text">
-			<span className="font-medium">VOLT</span>
-			<span>AGE</span>
+			VOLTAGE
 		</h2>
 	);
 }

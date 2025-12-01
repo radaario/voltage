@@ -1,246 +1,700 @@
-## Encoder v2 - Node.js Video Transcoding Service
+# ⚡ Voltage
 
-This project provides a scalable video-transcoding service (similar to Elastic Transcoder/Coconut/Qencode) with a REST API, MySQL-backed queue, Kubernetes manifests, and a minimal web dashboard.
+<div align="center">
 
-### Features
-- REST API to submit and monitor jobs
-- MySQL for metadata and as the queue backend
-- Worker(s) that pick jobs, download sources, transcode with `ffmpeg`, and deliver outputs
-- Notification callbacks on job status changes
-- Configurable retention cleanup
-- Dockerized and Kubernetes-ready; scale API and worker replicas independently
+**Open-source, fully customizable, scalable, multi-instance, FFMPEG-based video encoding API service**
 
-### Requirements
-- Node.js 20+
-- MySQL 8+
-- ffmpeg (installed in the container image)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Version](https://img.shields.io/badge/version-1.0.5-green.svg)](https://github.com/radaar/voltage)
 
-### Environment
-Copy `.env.example` to `.env` and set:
+</div>
 
-```
-NODE_ENV=development
-PORT=8080
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_USER=encoder
-MYSQL_PASSWORD=encoder_password
-MYSQL_DATABASE=encoder
-QUEUE_POLL_INTERVAL_MS=1000
-QUEUE_VISIBILITY_TIMEOUT_MS=600000
-QUEUE_MAX_ATTEMPTS=3
-RETENTION_HOURS=168
+---
 
-# AWS Configuration (for S3 support)
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-```
+## 📖 Introduction
 
-**AWS Credentials:** The application supports multiple AWS credential methods:
+**Voltage** is an enterprise-grade, open-source video encoding API service built for scale and flexibility. Designed and developed by **Mustafa Ercan Zırh** ([@ercanzirh](https://github.com/ercanzirh)) and **Faruk Gerçek** ([@favger](https://github.com/favger)) from [**RADAAR**](https://www.radaar.io/) — an AI-powered social media management and automation platform.
 
-1. **Request Payload** (Per-job credentials):
-   - Include `access_key_id` and `access_key_secret` directly in the source/destination objects
-   - Useful for multi-tenant scenarios where different jobs use different AWS accounts
-   - **Security Note**: Credentials are stored in the database as part of the job spec
+Voltage enables you to process video content at scale with:
 
-2. **Environment Variables** (Global credentials):
-   ```bash
-   AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
-   AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-   ```
+- **Multi-instance architecture** for horizontal scaling
+- **FFMPEG-based encoding** with full customization
+- **Multiple storage backends** (local, S3, FTP, SFTP, and more)
+- **Multiple database support** (SQLite, MySQL, PostgreSQL, and more)
+- **AI-powered content analysis** with Whisper transcription and NSFW detection
+- **RESTful API** for easy integration
+- **Real-time monitoring** with a modern web interface
+- **Job queue management** with priority handling and retry mechanisms
+- **Webhook notifications** for job status updates
 
-3. **AWS Credentials File** (`~/.aws/credentials`)
+Whether you're building a social media platform, video streaming service, or content management system, Voltage provides the robust infrastructure you need for reliable video processing at any scale.
 
-4. **IAM Roles** (Recommended for production on AWS infrastructure)
+---
 
-**Credential Priority:** Request payload > Environment variables > Credentials file > IAM roles
+## 🔄 Alternatives
 
-### Install & Run (Local)
+While Voltage is built for flexibility and scale, you might also consider these alternatives:
 
-**Unified Application (Recommended):**
-```
-npm install
-npm run dev
-```
+### Open Source
 
-**Legacy Separate API and Worker:**
-```
-npm install
-npm run dev:api
-npm run dev:worker
-```
+- **[Remotion](https://www.remotion.dev/)** - Create videos programmatically with React
+- **[VideoFlow](https://github.com/VideoFlowDev/VideoFlow)** - Python-based video processing framework
+- **[FFmpeg directly](https://ffmpeg.org/)** - Command-line multimedia framework (requires manual implementation)
 
-### Database Schema (MySQL)
-Tables:
-- `jobs`: one row per submitted job; stores source JSON, status, timestamps
-- `job_outputs`: one row per output rendition; spec JSON, status, result or error
-- `queue_jobs`: MySQL-backed FIFO with visibility timeouts and attempts
+### Commercial Services
 
-Schema is auto-created on boot by `initDb()` in `src/db.ts`.
+- **[Zencoder](https://www.zencoder.com/)** - Video and audio encoding API
+- **[Coconut](https://www.coconut.co/)** - Video encoding service & API for developers
+- **[Mux](https://www.mux.com/)** - Video streaming and encoding API
+- **[Cloudinary](https://cloudinary.com/)** - Media management and transformation
+- **[AWS Elemental MediaConvert](https://aws.amazon.com/mediaconvert/)** - File-based video transcoding
+- **[Azure Media Services](https://azure.microsoft.com/en-us/products/media-services)** - Cloud-based media workflows
 
-### Queue/Worker Model
+### Why Choose Voltage?
 
-**Unified Application:**
-- API inserts a `jobs` record and `job_outputs` rows, then enqueues the job id into `queue_jobs`.
-- Main application monitors the queue and spawns child processes for each job.
-- Child processes handle individual jobs and exit when complete.
-- Each child process runs independently, allowing for better resource isolation.
+✅ **Full control** - Self-hosted, no vendor lock-in  
+✅ **Cost-effective** - No per-minute encoding fees  
+✅ **Customizable** - Built on FFMPEG with full flexibility  
+✅ **Scalable** - Multi-instance architecture  
+✅ **AI-powered** - Built-in transcription and content analysis  
+✅ **Storage agnostic** - Works with any storage backend
 
-**Legacy Separate Worker:**
-- Workers poll `queue_jobs` using `SELECT ... FOR UPDATE SKIP LOCKED`, set a visibility timeout, and process.
-- During long-running steps, worker extends visibility to avoid re-delivery.
-- On success, outputs are marked `uploaded` and job set to `completed`; on error, `failed`.
+---
 
-### REST API
-- `GET /health` — health check
-- `POST /jobs` — create a job
-  - Request body:
-  ```json
-  {
-    "source": { 
-      "kind": "s3", 
-      "access_key_id": "AKIAIOSFODNN7EXAMPLE",
-      "access_key_secret": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-      "region": "us-east-1",
-      "bucket": "my-bucket", 
-      "path": "uploads/input/video.mp4"
-    },
-    "outputs": [
-      {
-        "container": "mp4",
-        "videoCodec": "libx264",
-        "videoBitrate": "2500k",
-        "audioCodec": "aac",
-        "audioBitrate": "128k",
-        "width": 1280,
-        "height": 720,
-        "destination": { 
-          "kind": "s3", 
-          "access_key_id": "AKIAIOSFODNN7EXAMPLE",
-          "access_key_secret": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-          "region": "us-east-1", 
-          "bucket": "my-bucket", 
-          "path": "processed/output/video_720p.mp4", 
-          "acl": "public-read"
-        }
-      }
-    ],
-    "notificationUrl": "https://example.com/webhook"
-  }
-  ```
-  
-  **Supported source types:**
-  - `http`/`https`: Direct URL download
-  - `s3`: S3 object download (supports request-provided credentials)
-  - `ftp`: FTP download
-  - `inline`: Base64 encoded content
-  
-  **Supported destination types:**
-  - `s3`: Upload to S3 (supports ACL, region, request-provided credentials)
-  - `http`: HTTP POST/PUT upload
-  - `ftp`: FTP upload
-  
-  **S3 Configuration:**
-  - `path`: Full path within the S3 bucket (e.g., `"processed/videos/720p/video.mp4"`)
-  - `access_key_id`/`access_key_secret`: Optional AWS credentials in request payload
-  - If credentials not provided in request, falls back to environment variables or IAM roles
-  - Response: `202 { id, uuid, status }`
-- `GET /jobs` — list latest jobs
-- `GET /jobs/:id` — get job with outputs
-- `DELETE /jobs/:id` — delete job (cascades outputs and queue rows)
-- `GET /workers` — list active worker processes (unified app only)
+## 🛠️ Used Technologies
 
-### Web UI
-- Static dashboard served from `/` that polls `/jobs` and displays latest 200 jobs.
-- Extend to add filters, pagination, and job detail view as needed.
+Voltage leverages industry-leading tools and libraries:
 
-### Storage Connectors
-The application supports multiple storage connectors:
+### Core Processing
 
-**✅ Implemented:**
-- **AWS S3**: Full support for download and upload using AWS SDK v3
-  - Automatic content-type detection
-  - ACL support for uploads
-  - Region configuration
-  - Comprehensive error handling and logging
-- **HTTP/HTTPS**: Direct URL download and upload
-- **Inline**: Base64 encoded content support
+- **[FFMPEG](https://ffmpeg.org/)** - Advanced multimedia framework for video/audio encoding, decoding, and transcoding
+- **[FFPROBE](https://ffmpeg.org/ffprobe.html)** - Multimedia stream analyzer for extracting video metadata and specifications
 
-**⚠️ Basic Support:**
-- **FTP**: Basic FTP support via axios (for simple FTP servers)
+### AI & Machine Learning
 
-**🔧 Extensions:**
-For production-grade FTP support, consider adding a dedicated FTP client like `basic-ftp`.
+- **[Whisper](https://github.com/openai/whisper)** - OpenAI's automatic speech recognition (ASR) for audio transcription
+    - Supports multiple models: TINY, BASE, SMALL, MEDIUM, LARGE variants
+    - CUDA acceleration support for faster processing
+- **[NSFWJS](https://nsfwjs.com/)** - Client-side indecent content checker
+    - Models: MOBILE_NET_V2, MOBILE_NET_V2_MID, INCEPTION_V3
+    - Configurable thresholds for content moderation
 
-### Docker
-Build image:
-```
-docker build -t your-registry/encoder:v0.1.0 .
-```
-Run Unified Application:
-```
-docker run --env-file .env -p 8080:8080 your-registry/encoder:v0.1.0
+### Backend & Framework
+
+- **[Node.js](https://nodejs.org/)** with **TypeScript** - Runtime environment
+- **[Express.js](https://expressjs.com/)** - Web application framework
+- **[Knex.js](https://knexjs.org/)** - SQL query builder with multi-database support
+
+### Storage & Database
+
+- **Multiple database engines** via Knex.js
+- **Cloud storage integration** via AWS SDK and custom adapters
+- **Worker threads** for parallel processing
+
+### Frontend
+
+- **[React](https://react.dev/)** with **TypeScript** - UI framework
+- **[Vite](https://vitejs.dev/)** - Build tool and dev server
+- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
+
+---
+
+## 💾 Supported Databases
+
+Voltage supports multiple database engines for maximum flexibility:
+
+| Database         | Type            | Use Case                        |
+| ---------------- | --------------- | ------------------------------- |
+| **SQLite**       | Embedded        | Development, small deployments  |
+| **MySQL**        | Relational      | Production, shared hosting      |
+| **MariaDB**      | Relational      | MySQL alternative               |
+| **PostgreSQL**   | Relational      | Advanced features, JSON support |
+| **MSSQL**        | Relational      | Microsoft environments          |
+| **AWS Redshift** | Data Warehouse  | Analytics, large-scale data     |
+| **CockroachDB**  | Distributed SQL | Global distribution, resilience |
+
+Configure via `VOLTAGE_DATABASE_TYPE` environment variable.
+
+---
+
+## 📦 Supported Storage Services
+
+Voltage provides unified storage abstraction for multiple providers:
+
+### Cloud Storage (S3-Compatible)
+
+- **AWS S3** - Amazon Web Services
+- **Google Cloud Storage** - Google Cloud Platform
+- **DigitalOcean Spaces** - DigitalOcean's object storage
+- **Linode Object Storage** - Akamai/Linode cloud storage
+- **Wasabi** - Hot cloud storage
+- **Backblaze B2** - Low-cost cloud storage
+- **Rackspace Cloud Files** - Rackspace cloud storage
+- **Microsoft Azure Blob Storage** - Azure cloud storage
+- **Other S3-Compatible** - Any S3 API compatible service
+
+### Traditional Storage
+
+- **Local Filesystem** - Local disk storage
+- **FTP** - File Transfer Protocol (with FTPS support)
+- **SFTP** - SSH File Transfer Protocol
+
+Configure via `VOLTAGE_STORAGE_TYPE` and related environment variables.
+
+---
+
+## 🚀 Installation
+
+### Prerequisites
+
+- **Node.js** 18+ and **pnpm** package manager
+- **FFMPEG** and **FFPROBE** binaries installed
+- **Database** (optional - defaults to SQLite)
+- **Storage** (optional - defaults to local filesystem)
+
+### Quick Start
+
+1. **Clone the repository**
+
+```bash
+git clone https://github.com/radaar/voltage.git
+cd voltage
 ```
 
-Run Legacy API:
-```
-docker run --env-file .env -p 8080:8080 your-registry/encoder:v0.1.0 node dist/server.js
-```
+2. **Install dependencies**
 
-Run Legacy Worker:
-```
-docker run --env-file .env your-registry/encoder:v0.1.0 node dist/worker.js
+```bash
+pnpm install
 ```
 
-### Kubernetes
-Manifests under `k8s/`:
-- `encoder-app.yaml`: Unified Deployment (2 replicas) + Service (Recommended)
-- `encoder-api.yaml`: Legacy API Deployment (2 replicas) + Service
-- `encoder-worker.yaml`: Legacy Worker Deployment (2 replicas). Scale workers for throughput.
-- `encoder-retention.yaml`: CronJob that deletes completed jobs older than `RETENTION_HOURS`.
+3. **Configure environment variables**
 
-Create a Secret with environment variables:
-```
-kubectl create secret generic encoder-env \
-  --from-literal=NODE_ENV=production \
-  --from-literal=PORT=8080 \
-  --from-literal=MYSQL_HOST=<host> \
-  --from-literal=MYSQL_PORT=3306 \
-  --from-literal=MYSQL_USER=<user> \
-  --from-literal=MYSQL_PASSWORD=<password> \
-  --from-literal=MYSQL_DATABASE=<db> \
-  --from-literal=QUEUE_POLL_INTERVAL_MS=1000 \
-  --from-literal=QUEUE_VISIBILITY_TIMEOUT_MS=600000 \
-  --from-literal=QUEUE_MAX_ATTEMPTS=3 \
-  --from-literal=RETENTION_HOURS=168 \
-  --from-literal=AWS_REGION=us-east-1 \
-  --from-literal=AWS_ACCESS_KEY_ID=your_access_key \
-  --from-literal=AWS_SECRET_ACCESS_KEY=your_secret_key
+```bash
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
-Apply manifests:
+4. **Build the project**
 
-**Unified Application (Recommended):**
-```
-kubectl apply -f k8s/encoder-app.yaml
-kubectl apply -f k8s/encoder-retention.yaml
+```bash
+pnpm build
 ```
 
-**Legacy Separate API and Worker:**
+5. **Start the services**
+
+```bash
+pnpm start
 ```
-kubectl apply -f k8s/encoder-api.yaml
-kubectl apply -f k8s/encoder-worker.yaml
-kubectl apply -f k8s/encoder-retention.yaml
+
+### Docker Deployment
+
+```bash
+docker-compose up -d --build
 ```
 
-### Notes on Scalability and Safety
-- Scale workers horizontally; MySQL row-level locks prevent double-processing.
-- Tune `visibility timeout` to exceed longest expected step; worker periodically extends it.
-- Consider isolating queue in a dedicated table, adding dead-letter handling on `attempts >= max_attempts`.
-- For large assets, prefer presigned URLs for both download and upload.
+The service will be available at `http://localhost:8080`
 
-### License
-MIT
+### Development Mode
 
+```bash
+# Start all services in development mode
+pnpm dev
 
+# Or start individual services
+pnpm dev:api        # API server only
+pnpm dev:runtime    # Runtime worker only
+pnpm dev:frontend   # Frontend only
+```
+
+---
+
+## 📡 API Endpoints
+
+All endpoints return JSON responses with this structure:
+
+```json
+{
+	"metadata": {
+		"version": "1.0.5",
+		"env": "production",
+		"status": "SUCCESSFUL"
+	},
+	"data": {}
+}
+```
+
+### Health & Configuration
+
+#### `GET /status` or `GET /health`
+
+Health check endpoint
+
+- **Auth**: Not required
+- **Response**: Service status
+
+#### `GET /config`
+
+Get service configuration
+
+- **Auth**: Not required
+- **Response**: Sanitized configuration object
+
+#### `POST /auth`
+
+Authenticate to frontend
+
+- **Auth**: Not required
+- **Params**:
+    - `password` (string) - Frontend password
+- **Response**: Authentication token
+
+---
+
+### Statistics
+
+#### `GET /stats`
+
+Fetch statistics for a date range
+
+- **Auth**: Required
+- **Params**:
+    - `since_at` (string, optional) - Start date (YYYY-MM-DD)
+    - `until_at` (string, optional) - End date (YYYY-MM-DD)
+- **Response**: Array of daily statistics
+
+#### `DELETE /stats`
+
+Delete statistics
+
+- **Auth**: Required
+- **Params**:
+    - `all` (boolean) - Delete all stats
+    - `stat_key` (string) - Delete specific stat
+    - `date` (string) - Delete stats for specific date
+    - `since_at` (string) - Delete from date
+    - `until_at` (string) - Delete until date
+
+---
+
+### Logs
+
+#### `GET /logs`
+
+Fetch system logs
+
+- **Auth**: Required
+- **Params**:
+    - `log_key` (string, optional) - Get specific log
+    - `limit` (number, default: 25) - Results per page
+    - `page` (number, default: 1) - Page number
+    - `type` (string) - Filter by log type
+    - `instance_key` (string) - Filter by instance
+    - `worker_key` (string) - Filter by worker
+    - `job_key` (string) - Filter by job
+    - `output_key` (string) - Filter by output
+    - `notification_key` (string) - Filter by notification
+    - `q` (string) - Search query
+- **Response**: Paginated logs array
+
+#### `DELETE /logs`
+
+Delete logs
+
+- **Auth**: Required
+- **Params**:
+    - `all` (boolean) - Delete all logs
+    - `log_key` (string) - Delete specific log
+    - `since_at` (string) - Delete from date
+    - `until_at` (string) - Delete until date
+
+---
+
+### Instances
+
+#### `GET /instances`
+
+List all processing instances
+
+- **Auth**: Required
+- **Params**:
+    - `instance_key` (string, optional) - Get specific instance
+    - `q` (string) - Search query
+- **Response**: Array of instances with workers
+
+#### `DELETE /instances`
+
+Delete instances
+
+- **Auth**: Required
+- **Params**:
+    - `all` (boolean) - Delete all instances
+    - `instance_key` (string) - Delete specific instance
+
+---
+
+### Workers
+
+#### `GET /instances/workers`
+
+List all workers
+
+- **Auth**: Required
+- **Params**:
+    - `worker_key` (string, optional) - Get specific worker
+    - `instance_key` (string) - Filter by instance
+- **Response**: Array of workers
+
+#### `DELETE /instances/workers`
+
+Delete workers
+
+- **Auth**: Required
+- **Params**:
+    - `all` (boolean) - Delete all workers
+    - `instance_key` (string) - Filter by instance
+    - `worker_key` (string) - Delete specific worker
+
+---
+
+### Jobs
+
+#### `GET /jobs`
+
+List encoding jobs
+
+- **Auth**: Required
+- **Params**:
+    - `job_key` (string, optional) - Get specific job
+    - `limit` (number, default: 25) - Results per page
+    - `page` (number, default: 1) - Page number
+    - `instance_key` (string) - Filter by instance
+    - `worker_key` (string) - Filter by worker
+    - `status` (string) - Filter by status
+    - `q` (string) - Search query
+- **Response**: Paginated jobs array
+
+#### `PUT /jobs`
+
+Create a new encoding job
+
+- **Auth**: Required
+- **Body**:
+    ```json
+    {
+    	"input": {
+    		"url": "https://example.com/video.mp4",
+    		"headers": {}
+    	},
+    	"outputs": [
+    		{
+    			"format": "mp4",
+    			"video_codec": "h264",
+    			"audio_codec": "aac",
+    			"resolution": "1920x1080",
+    			"bitrate": "5000k"
+    		}
+    	],
+    	"destination": {
+    		"type": "S3",
+    		"bucket": "my-bucket",
+    		"path": "/videos/"
+    	},
+    	"notification": {
+    		"url": "https://example.com/webhook",
+    		"method": "POST",
+    		"notify_on": ["COMPLETED", "FAILED"]
+    	},
+    	"metadata": {},
+    	"priority": 1000,
+    	"try_max": 3,
+    	"retry_in": 60000
+    }
+    ```
+- **Response**: Created job object
+
+#### `POST /jobs/retry`
+
+Retry a failed job
+
+- **Auth**: Required
+- **Params**:
+    - `job_key` (string, required) - Job to retry
+    - `output_key` (string, optional) - Specific output to retry
+
+#### `DELETE /jobs`
+
+Delete jobs
+
+- **Auth**: Required
+- **Params**:
+    - `all` (boolean) - Delete all jobs
+    - `job_key` (string) - Delete specific job
+    - `hard_delete` (boolean) - Permanently delete (including files)
+    - `since_at` (string) - Delete from date
+    - `until_at` (string) - Delete until date
+
+#### `GET /jobs/preview`
+
+Get job preview thumbnail
+
+- **Auth**: Not required
+- **Params**:
+    - `job_key` (string, required) - Job key
+- **Response**: Image file (PNG/JPG/WEBP)
+
+---
+
+### Notifications
+
+#### `GET /jobs/notifications`
+
+List job notifications
+
+- **Auth**: Required
+- **Params**:
+    - `notification_key` (string, optional) - Get specific notification
+    - `limit` (number, default: 25) - Results per page
+    - `page` (number, default: 1) - Page number
+    - `instance_key` (string) - Filter by instance
+    - `worker_key` (string) - Filter by worker
+    - `job_key` (string) - Filter by job
+    - `status` (string) - Filter by status
+    - `q` (string) - Search query
+- **Response**: Paginated notifications array
+
+#### `POST /jobs/notifications/retry`
+
+Retry a failed notification
+
+- **Auth**: Required
+- **Params**:
+    - `notification_key` (string, required) - Notification to retry
+
+#### `DELETE /jobs/notifications`
+
+Delete notifications
+
+- **Auth**: Required
+- **Params**:
+    - `all` (boolean) - Delete all notifications
+    - `notification_key` (string) - Delete specific notification
+    - `since_at` (string) - Delete from date
+    - `until_at` (string) - Delete until date
+
+---
+
+### System
+
+#### `DELETE /all`
+
+Delete all data (stats, logs, instances, jobs, notifications)
+
+- **Auth**: Required
+- **Warning**: This is a destructive operation
+
+---
+
+## 🔧 Environment Variables
+
+### Core Configuration
+
+| Variable           | Type   | Default         | Description                  |
+| ------------------ | ------ | --------------- | ---------------------------- |
+| `VOLTAGE_NAME`     | string | `VOLTAGE`       | Service name                 |
+| `VOLTAGE_VERSION`  | string | `1.0.5`         | Service version              |
+| `VOLTAGE_ENV`      | string | `local`         | Environment (local/dev/prod) |
+| `VOLTAGE_PROTOCOL` | string | `http`          | Protocol (http/https)        |
+| `VOLTAGE_HOST`     | string | `localhost`     | Host address                 |
+| `VOLTAGE_PORT`     | number | `8080`          | Nginx port                   |
+| `VOLTAGE_PATH`     | string | `/`             | Base path                    |
+| `VOLTAGE_TIMEZONE` | string | `UTC`           | Timezone                     |
+| `VOLTAGE_TEMP_DIR` | string | `./storage/tmp` | Temporary files directory    |
+
+---
+
+### FFMPEG Configuration
+
+| Variable       | Type   | Default   | Description            |
+| -------------- | ------ | --------- | ---------------------- |
+| `FFMPEG_PATH`  | string | `ffmpeg`  | Path to FFMPEG binary  |
+| `FFPROBE_PATH` | string | `ffprobe` | Path to FFPROBE binary |
+
+---
+
+### NSFW Detection
+
+| Variable           | Type    | Default             | Description                                            |
+| ------------------ | ------- | ------------------- | ------------------------------------------------------ |
+| `NSFW_IS_DISABLED` | boolean | `false`             | Disable NSFW detection                                 |
+| `NSFW_MODEL`       | string  | `MOBILE_NET_V2_MID` | Model (MOBILE_NET_V2, MOBILE_NET_V2_MID, INCEPTION_V3) |
+| `NSFW_SIZE`        | number  | `299`               | Input image size                                       |
+| `NSFW_TYPE`        | string  | `GRAPH`             | Model type                                             |
+| `NSFW_THRESHOLD`   | number  | `0.7`               | Detection threshold (0-1)                              |
+
+---
+
+### Whisper Transcription
+
+| Variable        | Type    | Default | Description                                    |
+| --------------- | ------- | ------- | ---------------------------------------------- |
+| `WHISPER_MODEL` | string  | `BASE`  | Model (TINY, BASE, SMALL, MEDIUM, LARGE, etc.) |
+| `WHISPER_CUDA`  | boolean | `false` | Enable CUDA acceleration                       |
+
+---
+
+### Storage Configuration
+
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `VOLTAGE_STORAGE_TYPE` | string | `LOCAL` | Storage type (LOCAL, AWS_S3, GOOGLE_CLOUD_STORAGE, DO_SPACES, LINODE, WASABI, BACKBLAZE, RACKSPACE, MICROSOFT_AZURE, OTHER_S3, FTP, SFTP) |
+| `VOLTAGE_STORAGE_ENDPOINT` | string | - | S3 endpoint URL |
+| `VOLTAGE_STORAGE_ACCESS_KEY` | string | - | Access key ID |
+| `VOLTAGE_STORAGE_ACCESS_SECRET` | string | - | Access key secret |
+| `VOLTAGE_STORAGE_REGION` | string | - | Storage region |
+| `VOLTAGE_STORAGE_BUCKET` | string | - | Bucket/container name |
+| `VOLTAGE_STORAGE_HOST` | string | - | FTP/SFTP host |
+| `VOLTAGE_STORAGE_USERNAME` | string | - | FTP/SFTP username |
+| `VOLTAGE_STORAGE_PASSWORD` | string | - | FTP/SFTP password |
+| `VOLTAGE_STORAGE_SECURE` | boolean | `false` | Use FTPS (explicit TLS) |
+| `VOLTAGE_STORAGE_BASE_PATH` | string | `./storage` | Base storage path |
+
+---
+
+### Database Configuration
+
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `VOLTAGE_DATABASE_TYPE` | string | `SQLITE` | Database type (SQLITE, MYSQL, MARIADB, POSTGRESQL, MSSQL, AWS_REDSHIFT, COCKROACHDB) |
+| `VOLTAGE_DATABASE_HOST` | string | `localhost` | Database host |
+| `VOLTAGE_DATABASE_PORT` | number | `3306` | Database port |
+| `VOLTAGE_DATABASE_USERNAME` | string | `root` | Database username |
+| `VOLTAGE_DATABASE_PASSWORD` | string | - | Database password |
+| `VOLTAGE_DATABASE_NAME` | string | `voltage` | Database name |
+| `VOLTAGE_DATABASE_TABLE_PREFIX` | string | - | Table name prefix |
+| `VOLTAGE_DATABASE_FILE_NAME` | string | `db.sqlite` | SQLite file name |
+| `VOLTAGE_DATABASE_CLEANUP_INTERVAL` | number | `3600000` | Cleanup interval (ms) |
+
+---
+
+### Runtime Configuration
+
+| Variable                              | Type    | Default      | Description                                  |
+| ------------------------------------- | ------- | ------------ | -------------------------------------------- |
+| `VOLTAGE_RUNTIME_IS_DISABLED`         | boolean | `false`      | Disable runtime service                      |
+| `VOLTAGE_INSTANCES_KEY_METHOD`        | string  | `IP_ADDRESS` | Instance key method (IP_ADDRESS, UNIQUE_KEY) |
+| `VOLTAGE_INSTANCES_MAINTAIN_INTERVAL` | number  | `10000`      | Maintenance interval (ms)                    |
+| `VOLTAGE_INSTANCES_ONLINE_TIMEOUT`    | number  | `60000`      | Online timeout (ms)                          |
+| `VOLTAGE_INSTANCES_PURGE_AFTER`       | number  | `60000`      | Purge after (ms)                             |
+| `VOLTAGE_WORKERS_PER_CPU_CORE`        | number  | `1`          | Workers per CPU core                         |
+| `VOLTAGE_WORKERS_BUSY_TIMEOUT`        | number  | `300000`     | Worker busy timeout (ms)                     |
+| `VOLTAGE_WORKERS_IDLE_AFTER`          | number  | `10000`      | Worker idle after (ms)                       |
+
+---
+
+### API Configuration
+
+| Variable                         | Type    | Default                  | Description                            |
+| -------------------------------- | ------- | ------------------------ | -------------------------------------- |
+| `VOLTAGE_API_IS_DISABLED`        | boolean | `false`                  | Disable API service                    |
+| `VOLTAGE_API_NODE_PORT`          | number  | `4000`                   | API server port                        |
+| `VOLTAGE_API_KEY`                | string  | -                        | API authentication key                 |
+| `VOLTAGE_API_REQUEST_BODY_LIMIT` | number  | `0`                      | Request body limit (MB, 0 = unlimited) |
+| `VOLTAGE_API_SENSITIVE_FIELDS`   | string  | `password,access_secret` | Sensitive fields to sanitize           |
+
+---
+
+### Frontend Configuration
+
+| Variable                                 | Type    | Default               | Description                      |
+| ---------------------------------------- | ------- | --------------------- | -------------------------------- |
+| `VOLTAGE_FRONTEND_IS_DISABLED`           | boolean | `false`               | Disable frontend                 |
+| `VOLTAGE_FRONTEND_NODE_PORT`             | number  | `3000`                | Frontend port                    |
+| `VOLTAGE_FRONTEND_PASSWORD`              | string  | -                     | Frontend authentication password |
+| `VOLTAGE_FRONTEND_DATA_REFETCH_INTERVAL` | number  | `10000`               | Data refresh interval (ms)       |
+| `VOLTAGE_FRONTEND_DATETIME_FORMAT`       | string  | `YYYY-MM-DD HH:mm:ss` | DateTime format                  |
+
+---
+
+### Statistics & Logs
+
+| Variable                   | Type    | Default       | Description                           |
+| -------------------------- | ------- | ------------- | ------------------------------------- |
+| `VOLTAGE_STATS_RETENTION`  | number  | `31536000000` | Stats retention period (ms, 365 days) |
+| `VOLTAGE_LOGS_IS_DISABLED` | boolean | `false`       | Disable logging                       |
+| `VOLTAGE_LOGS_RETENTION`   | number  | `3600000`     | Logs retention period (ms, 1 hour)    |
+
+---
+
+### Jobs Configuration
+
+| Variable                          | Type    | Default    | Description                          |
+| --------------------------------- | ------- | ---------- | ------------------------------------ |
+| `VOLTAGE_JOBS_QUEUE_TIMEOUT`      | number  | `600000`   | Queue timeout (ms)                   |
+| `VOLTAGE_JOBS_PROCESS_INTERVAL`   | number  | `1000`     | Processing interval (ms)             |
+| `VOLTAGE_JOBS_PROCESS_TIMEOUT`    | number  | `1800000`  | Processing timeout (ms)              |
+| `VOLTAGE_JOBS_ENQUEUE_ON_RECEIVE` | boolean | `true`     | Auto-enqueue on receive              |
+| `VOLTAGE_JOBS_ENQUEUE_LIMIT`      | number  | `10`       | Jobs per enqueue                     |
+| `VOLTAGE_JOBS_RETENTION`          | number  | `86400000` | Job retention period (ms, 24 hours)  |
+| `VOLTAGE_JOBS_TRY_MIN`            | number  | `1`        | Minimum retry attempts               |
+| `VOLTAGE_JOBS_TRY_MAX`            | number  | `3`        | Maximum retry attempts               |
+| `VOLTAGE_JOBS_TRY_COUNT`          | number  | `3`        | Default retry count                  |
+| `VOLTAGE_JOBS_RETRY_IN_MIN`       | number  | `60000`    | Minimum retry delay (ms)             |
+| `VOLTAGE_JOBS_RETRY_IN_MAX`       | number  | `3600000`  | Maximum retry delay (ms)             |
+| `VOLTAGE_JOBS_RETRY_IN`           | number  | `60000`    | Default retry delay (ms)             |
+| `VOLTAGE_JOBS_PREVIEW_FORMAT`     | string  | `PNG`      | Preview format (PNG, JPG, BMP, WEBP) |
+| `VOLTAGE_JOBS_PREVIEW_QUALITY`    | number  | `75`       | Preview quality (0-100)              |
+
+---
+
+### Notifications Configuration
+
+| Variable                                       | Type   | Default                             | Description                 |
+| ---------------------------------------------- | ------ | ----------------------------------- | --------------------------- |
+| `VOLTAGE_JOB_NOTIFICATIONS_PROCESS_INTERVAL`   | number | `1000`                              | Processing interval (ms)    |
+| `VOLTAGE_JOB_NOTIFICATIONS_PROCESS_LIMIT`      | number | `10`                                | Notifications per poll      |
+| `VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON`          | string | `RECEIVED,COMPLETED,FAILED,TIMEOUT` | Default notification events |
+| `VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON_ALLOWEDS` | string | `RECEIVED,PENDING,RETRYING,...`     | Allowed notification events |
+| `VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT`            | number | `10000`                             | Notification timeout (ms)   |
+| `VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX`        | number | `30000`                             | Maximum timeout (ms)        |
+| `VOLTAGE_JOB_NOTIFICATIONS_TRY`                | number | `3`                                 | Default retry attempts      |
+| `VOLTAGE_JOB_NOTIFICATIONS_TRY_MAX`            | number | `3`                                 | Maximum retry attempts      |
+| `VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN`           | number | `60000`                             | Retry delay (ms)            |
+| `VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MAX`       | number | `3600000`                           | Maximum retry delay (ms)    |
+
+---
+
+## 📄 License
+
+This project is open-source and available under the MIT License.
+
+---
+
+## 👥 Authors
+
+Developed with ⚡ by the RADAAR team:
+
+- **[Mustafa Ercan Zırh](https://github.com/ercanzirh)** - Core Developer
+- **[Faruk Gerçek](https://github.com/favger)** - Core Developer
+
+---
+
+## 🏢 About RADAAR
+
+[**RADAAR**](https://www.radaar.io/) is an AI-powered social media management and automation platform that helps businesses and creators streamline their social media workflow. Voltage was built to power RADAAR's video processing infrastructure and is now available as an open-source project for the community.
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/radaar/voltage/issues).
+
+---
+
+## ⭐ Support
+
+If you find Voltage useful, please consider giving it a star on GitHub!
+
+---
+
+<div align="center">
+Made with ⚡ by RADAAR
+</div>

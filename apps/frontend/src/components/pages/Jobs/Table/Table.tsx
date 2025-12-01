@@ -4,7 +4,7 @@ import { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
 import { Label, Button, Tooltip, TimeAgo, MemoizedTableRow, Pagination, LoadingOverlay, EmptyState } from "@/components";
 import { JobPreviewImage } from "@/components";
-import { EyeIcon, TrashIcon, ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
+import { EyeIcon, TrashIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
 	total: number;
@@ -218,7 +218,7 @@ const JobsTable = ({
 				cell: (info) => {
 					const job = info.row.original;
 					return (
-						<div className="flex items-center gap-1">
+						<div className="flex items-center gap-2">
 							<Tooltip content="Retry">
 								<Button
 									variant="soft"
@@ -229,12 +229,13 @@ const JobsTable = ({
 										e.stopPropagation();
 										onRetryJob(job);
 									}}>
-									<ArrowUturnLeftIcon className="h-5 w-5" />
+									<ArrowPathIcon className="h-5 w-5" />
 								</Button>
 							</Tooltip>
 							<Tooltip content="Delete">
 								<Button
 									variant="soft"
+									hover="danger"
 									size="md"
 									iconOnly
 									disabled={!["RECEIVED", "PENDING", "RETRYING", "DELETED"].includes(job?.status as string)}
@@ -274,13 +275,13 @@ const JobsTable = ({
 	});
 
 	return (
-		<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+		<div className="bg-gray-50 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 			<div className="w-full relative">
 				{/* Loading Overlay */}
 				<LoadingOverlay show={loading} />
 
 				<div className="overflow-x-auto">
-					<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+					<table className="responsive-table min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
 						<thead className="bg-gray-50 dark:bg-neutral-800">
 							{table.getHeaderGroups().map((headerGroup) => (
 								<tr key={headerGroup.id}>
@@ -331,27 +332,8 @@ const JobsTable = ({
 					hasNextPage={!!pagination.next_page}
 					hasPrevPage={!!pagination.prev_page}
 					onPageChange={onPageChange}
+					onLimitChange={onLimitChange}
 				/>
-
-				{/* Items per page selector */}
-				<div className="px-6 py-3 flex items-center justify-end gap-4 border-t border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
-					<span className="text-sm text-gray-700 dark:text-gray-300">
-						<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total jobs
-					</span>
-
-					<select
-						value={pagination.limit}
-						onChange={(e) => onLimitChange(Number(e.target.value))}
-						className="px-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500">
-						{[6, 10, 25, 50].map((pageSize) => (
-							<option
-								key={pageSize}
-								value={pageSize}>
-								{pageSize} per page
-							</option>
-						))}
-					</select>
-				</div>
 			</div>
 		</div>
 	);

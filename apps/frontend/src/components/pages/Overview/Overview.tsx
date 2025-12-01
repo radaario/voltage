@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
-import { LoadingSpinner, Page, ErrorAlert } from "@/components";
+import { LoadingSpinner, Page, ErrorAlert, Button, Tooltip, ConfirmModal } from "@/components";
 import StatsCards from "./StatsCards/StatsCards";
 import OutputsChart from "./OutputsChart/OutputsChart";
+import { TrashIcon } from "@heroicons/react/24/outline";
 
 type StatRow = {
 	key: string;
@@ -46,7 +47,9 @@ const DATE_RANGE_OPTIONS: { label: string; value: DateRange; days: number }[] = 
 
 const Overview: React.FC = () => {
 	const { authToken } = useAuth();
+	const queryClient = useQueryClient();
 	const [dateRange, setDateRange] = useState<DateRange>("30d");
+	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
 	const option = DATE_RANGE_OPTIONS.find((o) => o.value === dateRange)!;
 	const until = new Date();
@@ -57,7 +60,8 @@ const Overview: React.FC = () => {
 	const {
 		data: statsResponse,
 		isLoading,
-		error
+		error,
+		refetch
 	} = useQuery<ApiResponse<StatRow[]>>({
 		queryKey: ["stats", dateRange, authToken],
 		queryFn: () =>
@@ -69,6 +73,17 @@ const Overview: React.FC = () => {
 		enabled: !!authToken,
 		refetchOnWindowFocus: true,
 		refetchInterval: 30_000 // 30 saniyede bir otomatik refresh
+	});
+
+	const deleteAllStatsMutation = useMutation({
+		mutationFn: async () => {
+			return await api.delete("/stats", { token: authToken, all: "true" });
+		},
+		onSuccess: async () => {
+			setShowDeleteAllModal(false);
+			await queryClient.invalidateQueries({ queryKey: ["stats"] });
+			await refetch();
+		}
 	});
 
 	const stats = statsResponse?.data || [];
@@ -124,10 +139,31 @@ const Overview: React.FC = () => {
 		);
 	}, [stats.length, stats]);
 
+	const handleRefresh = () => {
+		queryClient.invalidateQueries({ queryKey: ["stats"] });
+	};
+
+	const handleDeleteAllStats = () => {
+		setShowDeleteAllModal(true);
+	};
+
+	const handleConfirmDeleteAll = () => {
+		deleteAllStatsMutation.mutate();
+	};
+
+	const handleCloseDeleteAllModal = () => {
+		if (!deleteAllStatsMutation.isPending) {
+			setShowDeleteAllModal(false);
+		}
+	};
+
 	return (
 		<Page>
 			{/* Page Header */}
-			<Page.Header title="Overview">
+			<Page.Header
+				title="Overview"
+				onRefresh={handleRefresh}
+				isRefreshing={isLoading}>
 				<div className="flex items-center gap-2">
 					<label
 						htmlFor="date-range"
@@ -148,6 +184,18 @@ const Overview: React.FC = () => {
 						))}
 					</select>
 				</div>
+				<Tooltip content="Delete All Stats">
+					<Button
+						variant="soft"
+						hover="danger"
+						size="md"
+						iconOnly
+						onClick={handleDeleteAllStats}
+						disabled={deleteAllStatsMutation.isPending || stats.length === 0}
+						isLoading={deleteAllStatsMutation.isPending}>
+						<TrashIcon className="h-5 w-5" />
+					</Button>
+				</Tooltip>
 			</Page.Header>
 
 			{/* Loading State */}
@@ -168,6 +216,28 @@ const Overview: React.FC = () => {
 						aggregates={aggregates}
 					/>
 				</>
+			)}
+
+			{/* Delete All Confirmation Modal */}
+			{showDeleteAllModal && (
+				<ConfirmModal
+					isOpen={showDeleteAllModal}
+					onClose={handleCloseDeleteAllModal}
+					onConfirm={handleConfirmDeleteAll}
+					title="Delete All Stats"
+					message={
+						<>
+							<p className="mb-4">
+								Are you sure you want to delete <strong className="text-red-600 dark:text-red-400">all stats</strong>?
+							</p>
+							<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
+						</>
+					}
+					confirmText="Delete All"
+					variant="danger"
+					isLoading={deleteAllStatsMutation.isPending}
+					loadingText="Deleting"
+				/>
 			)}
 		</Page>
 	);

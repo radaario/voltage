@@ -6,7 +6,7 @@ import { api, ApiResponse } from "@/utils";
 import type { Job } from "@/interfaces/job";
 import type { Notification } from "@/interfaces/notification";
 import { Label, Tooltip, Button, ConfirmModal, Pagination, TimeAgo, LoadingSpinner } from "@/components";
-import { ArrowUturnLeftIcon, EyeIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, EyeIcon } from "@heroicons/react/24/outline";
 
 interface OutletContext {
 	job: Job;
@@ -32,7 +32,8 @@ const Notifications: React.FC = () => {
 				limit: currentLimit
 			});
 		},
-		enabled: !!job.key && !!authToken
+		enabled: !!job.key && !!authToken,
+		refetchOnMount: "always"
 	});
 
 	// Retry notification mutation
@@ -162,7 +163,7 @@ const Notifications: React.FC = () => {
 															!["FAILED"].includes(notification?.status as string) ||
 															retryNotificationMutation.isPending
 														}>
-														<ArrowUturnLeftIcon className="w-4 h-4" />
+														<ArrowPathIcon className="w-4 h-4" />
 													</Button>
 												</Tooltip>
 												{/* View Button (right) */}
@@ -209,11 +210,13 @@ const Notifications: React.FC = () => {
 					title="Retry Notification"
 					message={
 						<>
-							Are you sure you want to retry notification <strong>{notificationToRetry.status}</strong>?
-							<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({notificationToRetry.key})</div>
+							<p className="mb-4">Are you sure you want to retry this notification?</p>
+							<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+								<li>{notificationToRetry.key}</li>
+							</ul>
 						</>
 					}
-					confirmText="Retry Notification"
+					confirmText="Retry"
 					variant="info"
 					isLoading={retryNotificationMutation.isPending}
 					loadingText="Retrying"

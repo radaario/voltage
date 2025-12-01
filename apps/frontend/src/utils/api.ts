@@ -53,6 +53,10 @@ class ApiClient {
 	private buildUrl(endpoint: string, params?: Record<string, any>): string {
 		const url = new URL(`${this.baseUrl}${endpoint}`);
 
+		// Always append client identifier
+		url.searchParams.append("client", "FRONTEND");
+
+		// Append additional params
 		if (params) {
 			Object.entries(params).forEach(([key, value]) => {
 				if (value !== undefined && value !== null) {

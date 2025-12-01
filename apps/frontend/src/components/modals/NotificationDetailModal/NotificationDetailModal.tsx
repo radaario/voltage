@@ -7,7 +7,7 @@ import {
 	DocumentTextIcon,
 	ClipboardDocumentCheckIcon,
 	DocumentChartBarIcon,
-	ArrowUturnLeftIcon,
+	ArrowPathIcon,
 	XMarkIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
@@ -120,7 +120,7 @@ const NotificationDetailModal: React.FC = () => {
 									variant="secondary"
 									size="xs"
 									onClick={handleRetry}>
-									<ArrowUturnLeftIcon className="w-4 h-4" />
+									<ArrowPathIcon className="w-4 h-4" />
 									Retry
 								</Button>
 							)}
@@ -183,11 +183,13 @@ const NotificationDetailModal: React.FC = () => {
 					title="Retry Notification"
 					message={
 						<>
-							Are you sure you want to retry notification <strong>{notification.status}</strong>?
-							<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({notification.key})</div>
+							<p className="mb-4">Are you sure you want to retry this notification?</p>
+							<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+								<li>{notification.key}</li>
+							</ul>
 						</>
 					}
-					confirmText="Retry Notification"
+					confirmText="Retry"
 					variant="info"
 					isLoading={retryNotificationMutation.isPending}
 					loadingText="Retrying"

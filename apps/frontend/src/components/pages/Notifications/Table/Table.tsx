@@ -17,7 +17,7 @@ import {
 	EmptyState,
 	JobCard
 } from "@/components";
-import { ArrowUturnLeftIcon, EyeIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, EyeIcon, TrashIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
 	total: number;
@@ -45,6 +45,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const [notificationToRetry, setNotificationToRetry] = useState<Notification | null>(null);
+	const [notificationToDelete, setNotificationToDelete] = useState<Notification | null>(null);
 
 	// Retry notification mutation
 	const retryNotificationMutation = useMutation({
@@ -55,6 +56,17 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["notifications"] });
+		}
+	});
+
+	// Delete notification mutation
+	const deleteNotificationMutation = useMutation({
+		mutationFn: async (notificationKey: string) => {
+			return await api.delete("/jobs/notifications", { token: authToken, notification_key: notificationKey });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["notifications"] });
+			setNotificationToDelete(null);
 		}
 	});
 
@@ -72,6 +84,22 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 	const handleCloseRetryModal = () => {
 		if (!retryNotificationMutation.isPending) {
 			setNotificationToRetry(null);
+		}
+	};
+
+	const handleDeleteNotification = (notification: Notification) => {
+		setNotificationToDelete(notification);
+	};
+
+	const handleConfirmDelete = () => {
+		if (notificationToDelete) {
+			deleteNotificationMutation.mutate(notificationToDelete.key);
+		}
+	};
+
+	const handleCloseDeleteModal = () => {
+		if (!deleteNotificationMutation.isPending) {
+			setNotificationToDelete(null);
 		}
 	};
 
@@ -183,7 +211,21 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 										e.stopPropagation();
 										handleRetryNotification(notification);
 									}}>
-									<ArrowUturnLeftIcon className="h-5 w-5" />
+									<ArrowPathIcon className="h-5 w-5" />
+								</Button>
+							</Tooltip>
+
+							<Tooltip content="Delete">
+								<Button
+									variant="soft"
+									hover="danger"
+									size="md"
+									iconOnly
+									onClick={(e) => {
+										e.stopPropagation();
+										handleDeleteNotification(notification);
+									}}>
+									<TrashIcon className="h-5 w-5" />
 								</Button>
 							</Tooltip>
 
@@ -205,7 +247,13 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 				}
 			})
 		],
-		[handleRetryNotification, retryNotificationMutation.isPending, navigate]
+		[
+			handleRetryNotification,
+			handleDeleteNotification,
+			retryNotificationMutation.isPending,
+			deleteNotificationMutation.isPending,
+			navigate
+		]
 	);
 
 	const table = useReactTable({
@@ -217,7 +265,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 	});
 
 	return (
-		<div className="bg-gray-100 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+		<div className="bg-gray-50 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 			<div className="w-full relative">
 				{/* Loading Overlay */}
 				<LoadingOverlay show={loading} />
@@ -271,27 +319,8 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 					hasNextPage={!!pagination.next_page}
 					hasPrevPage={!!pagination.prev_page}
 					onPageChange={onPageChange}
+					onLimitChange={onLimitChange}
 				/>
-
-				{/* Items per page selector */}
-				<div className="px-6 py-3 flex items-center justify-end gap-4 border-t border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
-					<span className="text-sm text-gray-700 dark:text-gray-300">
-						<strong className="font-semibold text-gray-900 dark:text-white">{pagination.total}</strong> total notifications
-					</span>
-
-					<select
-						value={pagination.limit}
-						onChange={(e) => onLimitChange(Number(e.target.value))}
-						className="px-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500">
-						{[10, 25, 50, 100].map((pageSize) => (
-							<option
-								key={pageSize}
-								value={pageSize}>
-								{pageSize} per page
-							</option>
-						))}
-					</select>
-				</div>
 
 				{/* Retry Confirmation Modal */}
 				{notificationToRetry && (
@@ -302,14 +331,39 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 						title="Retry Notification"
 						message={
 							<>
-								Are you sure you want to retry notification <strong>{notificationToRetry.status}</strong>?
-								<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({notificationToRetry.key})</div>
+								<p className="mb-4">Are you sure you want to retry this notification?</p>
+								<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+									<li>{notificationToRetry.key}</li>
+								</ul>
 							</>
 						}
-						confirmText="Retry Notification"
+						confirmText="Retry"
 						variant="info"
 						isLoading={retryNotificationMutation.isPending}
 						loadingText="Retrying"
+					/>
+				)}
+
+				{/* Delete Confirmation Modal */}
+				{notificationToDelete && (
+					<ConfirmModal
+						isOpen={!!notificationToDelete}
+						onClose={handleCloseDeleteModal}
+						onConfirm={handleConfirmDelete}
+						title="Delete Notification"
+						message={
+							<>
+								<p className="mb-4">Are you sure you want to delete this log?</p>
+								<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+									<li>{notificationToDelete.key}</li>
+								</ul>
+								<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
+							</>
+						}
+						confirmText="Delete"
+						variant="danger"
+						isLoading={deleteNotificationMutation.isPending}
+						loadingText="Deleting"
 					/>
 				)}
 			</div>

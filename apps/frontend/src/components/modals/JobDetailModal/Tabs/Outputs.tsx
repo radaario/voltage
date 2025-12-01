@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOutletContext, useNavigate, useParams, Outlet } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/utils";
-import { ArrowUturnLeftIcon, EyeIcon, VideoCameraIcon, PhotoIcon, MusicalNoteIcon, LanguageIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, EyeIcon, VideoCameraIcon, PhotoIcon, MusicalNoteIcon, LanguageIcon } from "@heroicons/react/24/outline";
 import { ConfirmModal, Label, Tooltip, TimeAgo } from "@/components";
 
 interface OutletContext {
@@ -17,8 +17,11 @@ const Outputs: React.FC = () => {
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
+
+	// states
 	const [outputToRetry, setOutputToRetry] = useState<{ key: string; index: number } | null>(null);
 
+	// mutations
 	// Retry output mutation
 	const retryOutputMutation = useMutation({
 		mutationFn: async (outputKey: string) => {
@@ -31,6 +34,7 @@ const Outputs: React.FC = () => {
 		}
 	});
 
+	// actions
 	const handleRetryOutput = (outputKey: string, index: number) => {
 		setOutputToRetry({ key: outputKey, index });
 	};
@@ -165,7 +169,7 @@ const Outputs: React.FC = () => {
 														!["FAILED"].includes(output?.status as string) || retryOutputMutation.isPending
 													}
 													className="p-1.5 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-neutral-600 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-													<ArrowUturnLeftIcon
+													<ArrowPathIcon
 														className={`w-4 h-4 ${retryOutputMutation.isPending ? "animate-spin" : ""}`}
 													/>
 												</button>
@@ -198,10 +202,13 @@ const Outputs: React.FC = () => {
 					title="Retry Output"
 					message={
 						<>
-							Are you sure you want to retry <strong>Output #{outputToRetry.index + 1}</strong>?
+							<p className="mb-4">Are you sure you want to retry this output?</p>
+							<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+								<li>{outputToRetry.key}</li>
+							</ul>
 						</>
 					}
-					confirmText="Retry Output"
+					confirmText="Retry"
 					variant="info"
 					isLoading={retryOutputMutation.isPending}
 					loadingText="Retrying"

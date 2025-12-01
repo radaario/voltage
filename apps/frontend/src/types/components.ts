@@ -2,11 +2,34 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes } from "react";
 
 // Button Component Types
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-	variant?: "primary" | "secondary" | "danger" | "ghost" | "soft" | "outline-primary" | "outline-secondary" | "outline-danger";
+	variant?:
+		| "primary"
+		| "secondary"
+		| "danger"
+		| "warning"
+		| "info"
+		| "ghost"
+		| "soft"
+		| "outline-primary"
+		| "outline-secondary"
+		| "outline-danger";
 	size?: "xs" | "sm" | "md" | "lg";
 	isLoading?: boolean;
 	iconOnly?: boolean;
 	rounded?: "none" | "sm" | "md" | "lg" | "full";
+	hover?:
+		| "primary"
+		| "secondary"
+		| "danger"
+		| "warning"
+		| "info"
+		| "ghost"
+		| "soft"
+		| "text-primary"
+		| "text-secondary"
+		| "text-danger"
+		| "text-warning"
+		| "text-success";
 	children: React.ReactNode;
 }
 
@@ -108,15 +131,6 @@ export interface ConfirmModalProps {
 	variant?: ConfirmModalVariant;
 	isLoading?: boolean;
 	loadingText?: string;
-}
-
-export interface DeleteConfirmModalProps {
-	isOpen: boolean;
-	onClose: () => void;
-	onConfirm: () => void;
-	itemName?: string;
-	itemType?: string;
-	loading?: boolean;
 }
 
 // Card Component Types

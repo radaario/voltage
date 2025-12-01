@@ -9,9 +9,19 @@ interface PaginationProps {
 	hasNextPage: boolean;
 	hasPrevPage: boolean;
 	onPageChange: (page: number) => void;
+	onLimitChange?: (limit: number) => void;
 }
 
-function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, hasNextPage, hasPrevPage, onPageChange }: PaginationProps) {
+function Pagination({
+	currentPage,
+	totalPages,
+	totalItems,
+	itemsPerPage,
+	hasNextPage,
+	hasPrevPage,
+	onPageChange,
+	onLimitChange
+}: PaginationProps) {
 	const getPageNumbers = () => {
 		const pages: (number | string)[] = [];
 		const maxVisible = 5;
@@ -70,15 +80,8 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, hasNext
 
 	return (
 		<div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700">
-			{/* Info Text */}
-			<div className="text-sm text-gray-600 dark:text-gray-400 order-2 sm:order-1">
-				Showing <span className="font-medium text-gray-900 dark:text-white">{startItem}</span> to{" "}
-				<span className="font-medium text-gray-900 dark:text-white">{endItem}</span> of{" "}
-				<span className="font-medium text-gray-900 dark:text-white">{totalItems}</span> results
-			</div>
-
 			{/* Pagination Controls */}
-			<div className="flex items-center gap-1 order-1 sm:order-2">
+			<div className="flex items-center gap-1 order-2 sm:order-1">
 				{/* First Page Button */}
 				<Button
 					variant="ghost"
@@ -116,6 +119,7 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, hasNext
 							<Button
 								key={pageNum}
 								variant={currentPage === pageNum ? "primary" : "ghost"}
+								hover={currentPage === pageNum ? "primary" : "secondary"}
 								size="sm"
 								onClick={() => onPageChange(Number(pageNum))}
 								className={`w-9! h-9! p-0! ${currentPage === pageNum ? "" : "border border-gray-300 dark:border-neutral-600"}`}>
@@ -133,6 +137,7 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, hasNext
 				{/* Next Page Button */}
 				<Button
 					variant="ghost"
+					hover="secondary"
 					size="sm"
 					iconOnly
 					onClick={() => onPageChange(currentPage + 1)}
@@ -145,6 +150,7 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, hasNext
 				{/* Last Page Button */}
 				<Button
 					variant="ghost"
+					hover="secondary"
 					size="sm"
 					iconOnly
 					onClick={() => onPageChange(totalPages)}
@@ -153,6 +159,29 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, hasNext
 					className="border border-gray-300 dark:border-neutral-600 w-9! h-9! p-0!">
 					<ChevronDoubleRightIcon className="w-4 h-4" />
 				</Button>
+			</div>
+
+			{/* Info Text & Items Per Page */}
+			<div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 order-1 sm:order-2">
+				<div>
+					Showing <span className="font-medium text-gray-900 dark:text-white">{startItem}</span> to{" "}
+					<span className="font-medium text-gray-900 dark:text-white">{endItem}</span> of{" "}
+					<span className="font-medium text-gray-900 dark:text-white">{totalItems}</span> results
+				</div>
+				{onLimitChange && (
+					<select
+						value={itemsPerPage}
+						onChange={(e) => onLimitChange(Number(e.target.value))}
+						className="px-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500">
+						{[10, 25, 50, 100].map((pageSize) => (
+							<option
+								key={pageSize}
+								value={pageSize}>
+								{pageSize} per page
+							</option>
+						))}
+					</select>
+				)}
 			</div>
 		</div>
 	);

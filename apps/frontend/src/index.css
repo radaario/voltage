@@ -138,6 +138,57 @@
 		border-color: var(--color-tr-border);
 	}
 
+	/* responsive table */
+	@media (max-width: 640px) {
+		.responsive-table thead {
+			display: none;
+		}
+
+		.responsive-table tbody tr {
+			display: block;
+			margin-bottom: 0;
+			border-bottom: 1px solid rgb(229 231 235);
+		}
+
+		.dark .responsive-table tbody tr {
+			border-bottom-color: rgb(38 38 38);
+		}
+
+		.responsive-table tbody td {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			padding: 0.75rem 1rem;
+			border: none;
+			gap: 0.75rem;
+		}
+
+		.responsive-table tbody td:before {
+			content: attr(data-label);
+			font-weight: 500;
+			text-transform: uppercase;
+			font-size: 0.75rem;
+			line-height: 1rem;
+			color: rgb(107 114 128);
+			width: 5rem;
+			flex-shrink: 0;
+			padding-top: 0.25rem;
+		}
+
+		.dark .responsive-table tbody td:before {
+			color: rgb(156 163 175);
+		}
+
+		.responsive-table tbody td > div {
+			flex: 1;
+			min-width: 0;
+		}
+
+		.responsive-table tbody tr {
+			border-bottom-width: 2px !important;
+		}
+	}
+
 	/* New job animation - slide in from top with highlight */
 	@keyframes slideInHighlight {
 		0% {

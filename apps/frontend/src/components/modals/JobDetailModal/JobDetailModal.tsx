@@ -8,7 +8,7 @@ import {
 	DocumentTextIcon,
 	BellIcon,
 	ClipboardDocumentCheckIcon,
-	ArrowUturnLeftIcon,
+	ArrowPathIcon,
 	XMarkIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,6 +56,7 @@ const JobDetailModal: React.FC = () => {
 	const job = jobResponse?.data;
 	const filename = job?.input?.file_name || job?.input?.url?.split("/").pop() || "Unknown";
 	const specs: string[] = [];
+	const showRetryButton = job && ["CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(job.status);
 
 	// Resolution
 	const width = job?.input?.video_width;
@@ -133,12 +134,12 @@ const JobDetailModal: React.FC = () => {
 							</div>
 						</div>
 						<div className="flex items-center gap-3 shrink-0 ml-4">
-							{["CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(job?.status as string) && (
+							{showRetryButton && (
 								<Button
 									variant="secondary"
 									size="xs"
 									onClick={handleRetry}>
-									<ArrowUturnLeftIcon className="w-3 h-3" />
+									<ArrowPathIcon className="w-3 h-3" />
 									Retry
 								</Button>
 							)}
@@ -175,16 +176,26 @@ const JobDetailModal: React.FC = () => {
 			</Modal>
 
 			{/* Retry Confirmation Modal */}
-			<ConfirmModal
-				isOpen={showRetryModal}
-				onClose={handleCloseRetryModal}
-				onConfirm={handleConfirmRetry}
-				title="Retry Job"
-				message={`Are you sure you want to retry this job?`}
-				confirmText="Retry"
-				variant="info"
-				isLoading={retryJobMutation.isPending}
-			/>
+			{job && (
+				<ConfirmModal
+					isOpen={showRetryModal}
+					onClose={handleCloseRetryModal}
+					onConfirm={handleConfirmRetry}
+					title="Retry Job"
+					message={
+						<>
+							<p className="mb-4">Are you sure you want to retry this job?</p>
+							<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+								<li>{job.key}</li>
+							</ul>
+							<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
+						</>
+					}
+					confirmText="Retry"
+					variant="info"
+					isLoading={retryJobMutation.isPending}
+				/>
+			)}
 		</>
 	);
 };

@@ -185,7 +185,8 @@ function ModalContent({ children, className = "", noPadding = false }: ModalCont
 
 function ModalFooter({ children, className = "" }: ModalFooterProps) {
 	return (
-		<div className={`shrink-0 flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-neutral-700 ${className}`}>
+		<div
+			className={`shrink-0 flex items-center justify-end gap-3 py-4.5 px-6 border-t border-gray-200 dark:border-neutral-700 ${className}`}>
 			{children}
 		</div>
 	);

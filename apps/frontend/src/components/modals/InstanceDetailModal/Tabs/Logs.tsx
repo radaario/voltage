@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useOutletContext, useNavigate, Outlet } from "react-router-dom";
 import { Label, Tooltip, Button, Pagination, JobCard, WorkerCard, TimeAgo, LoadingSpinner } from "@/components";
 import { EyeIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Instance } from "@/interfaces";
 import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +27,7 @@ const Logs: React.FC = () => {
 	const { instance } = useOutletContext<OutletContext>();
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
+	const queryClient = useQueryClient();
 
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchInput, setSearchInput] = useState("");
@@ -50,8 +51,15 @@ const Logs: React.FC = () => {
 			});
 		},
 		enabled: !!authToken && !!instance.key,
-		placeholderData: (previousData) => previousData
+		placeholderData: (previousData) => previousData,
+		refetchOnMount: "always",
+		refetchOnWindowFocus: false
 	});
+
+	// effects
+	useEffect(() => {
+		queryClient.invalidateQueries({ queryKey: ["instance", instance.key] });
+	}, [instance.key]);
 
 	// Debounce search input (500ms)
 	useEffect(() => {

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import type { Notification } from "@/interfaces/notification";
 import NotificationsTable from "@/components/pages/Notifications/Table/Table";
-import { SearchInput, LoadingSpinner, Page, ErrorAlert } from "@/components";
+import { SearchInput, LoadingSpinner, Page, ErrorAlert, Button, Tooltip, ConfirmModal } from "@/components";
+import { TrashIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
 	total: number;
@@ -29,12 +30,14 @@ const Notifications: React.FC = () => {
 	const [statusFilter, setStatusFilter] = useState<string>("");
 	const previousDataRef = useRef<Notification[]>([]);
 	const [newNotificationKeys, setNewNotificationKeys] = useState<Set<string>>(new Set());
+	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
 	// queries
 	const {
 		data: notificationsResponse,
 		isLoading,
 		error,
+		refetch,
 		dataUpdatedAt
 	} = useQuery<ApiResponse<Notification[]>>({
 		queryKey: ["notifications", currentPage, currentLimit, searchQuery, statusFilter, authToken],
@@ -49,6 +52,18 @@ const Notifications: React.FC = () => {
 		enabled: !!authToken,
 		refetchInterval: 5000, // 5 saniyede bir otomatik refresh
 		placeholderData: (previousData) => previousData
+	});
+
+	// mutations
+	const deleteAllNotificationsMutation = useMutation({
+		mutationFn: async () => {
+			return await api.delete("/jobs/notifications", { token: authToken, all: "true" });
+		},
+		onSuccess: async () => {
+			setShowDeleteAllModal(false);
+			await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+			await refetch();
+		}
 	});
 
 	// actions
@@ -72,6 +87,20 @@ const Notifications: React.FC = () => {
 	const handleStatusFilterChange = (status: string) => {
 		setStatusFilter(status);
 		setCurrentPage(1);
+	};
+
+	const handleDeleteAllNotifications = () => {
+		setShowDeleteAllModal(true);
+	};
+
+	const handleConfirmDeleteAll = () => {
+		deleteAllNotificationsMutation.mutate();
+	};
+
+	const handleCloseDeleteAllModal = () => {
+		if (!deleteAllNotificationsMutation.isPending) {
+			setShowDeleteAllModal(false);
+		}
 	};
 
 	// effects
@@ -168,6 +197,18 @@ const Notifications: React.FC = () => {
 					placeholder="Search notifications..."
 					className="h-[38px]"
 				/>
+				<Tooltip content="Delete All">
+					<Button
+						variant="soft"
+						hover="danger"
+						size="md"
+						iconOnly
+						onClick={handleDeleteAllNotifications}
+						disabled={deleteAllNotificationsMutation.isPending || (notificationsResponse?.data?.length || 0) === 0}
+						isLoading={deleteAllNotificationsMutation.isPending}>
+						<TrashIcon className="h-5 w-5" />
+					</Button>
+				</Tooltip>
 			</Page.Header>
 
 			{/* Error Alert */}
@@ -190,6 +231,29 @@ const Notifications: React.FC = () => {
 				onLimitChange={handleLimitChange}
 				newNotificationKeys={newNotificationKeys}
 			/>
+
+			{/* Delete All Confirmation Modal */}
+			{showDeleteAllModal && (
+				<ConfirmModal
+					isOpen={showDeleteAllModal}
+					onClose={handleCloseDeleteAllModal}
+					onConfirm={handleConfirmDeleteAll}
+					title="Delete All Notifications"
+					message={
+						<>
+							<p className="mb-4">
+								Are you sure you want to delete{" "}
+								<strong className="text-red-600 dark:text-red-400">all notifications</strong>?
+							</p>
+							<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
+						</>
+					}
+					confirmText="Delete All"
+					variant="danger"
+					isLoading={deleteAllNotificationsMutation.isPending}
+					loadingText="Deleting"
+				/>
+			)}
 
 			{/* Nested Route Outlet for NotificationDetailModal */}
 			<Outlet />

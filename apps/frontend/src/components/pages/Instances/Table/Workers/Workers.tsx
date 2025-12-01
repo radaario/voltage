@@ -93,7 +93,7 @@ const WorkersTable = ({ workers }: WorkersTableProps) => {
 	});
 
 	return (
-		<div className="overflow-x-auto border border-gray-200 rounded-lg">
+		<div className="overflow-x-auto border border-gray-200 dark:border-neutral-700 rounded-lg">
 			<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
 				<thead className="bg-gray-100 dark:bg-neutral-900/80">
 					{table.getHeaderGroups().map((headerGroup) => (

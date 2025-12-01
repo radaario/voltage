@@ -10,24 +10,54 @@ import {
 	ExclamationTriangleIcon,
 	Bars3Icon,
 	XMarkIcon,
-	PresentationChartLineIcon
+	PresentationChartLineIcon,
+	TrashIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { NavLink } from "react-router-dom";
-import { Logo, Button, Tooltip } from "@/components";
+import { Logo, Button, Tooltip, ConfirmModal } from "@/components";
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/utils";
 
 function Header() {
 	const { theme, toggleTheme } = useTheme();
-	const { isAuthenticated, logout } = useAuth();
+	const { isAuthenticated, logout, authToken } = useAuth();
 	const { config, configError, refetchConfig } = useGlobalStateContext();
+	const queryClient = useQueryClient();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const [showFactoryResetModal, setShowFactoryResetModal] = useState(false);
 
 	const showLogout = isAuthenticated && config?.frontend?.is_authentication_required;
 
+	const factoryResetMutation = useMutation({
+		mutationFn: async () => {
+			return await api.delete("/all", { token: authToken });
+		},
+		onSuccess: async () => {
+			setShowFactoryResetModal(false);
+			// Invalidate all queries to refresh data
+			await queryClient.invalidateQueries();
+		}
+	});
+
 	const handleNavClick = () => {
 		setIsMobileMenuOpen(false);
+	};
+
+	const handleFactoryReset = () => {
+		setShowFactoryResetModal(true);
+	};
+
+	const handleConfirmFactoryReset = () => {
+		factoryResetMutation.mutate();
+	};
+
+	const handleCloseFactoryResetModal = () => {
+		if (!factoryResetMutation.isPending) {
+			setShowFactoryResetModal(false);
+		}
 	};
 
 	return (
@@ -132,7 +162,25 @@ function Header() {
 						</>
 					)}
 
-					<Tooltip content={`Switch to ${theme === "light" ? "dark" : "light"} mode`}>
+					{isAuthenticated && (
+						<>
+							<Tooltip content="Delete All Data">
+								<Button
+									variant="soft"
+									hover="text-danger"
+									size="md"
+									iconOnly
+									onClick={handleFactoryReset}
+									disabled={factoryResetMutation.isPending}
+									isLoading={factoryResetMutation.isPending}>
+									<TrashIcon className="w-5 h-5" />
+								</Button>
+							</Tooltip>
+							<div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2"></div>
+						</>
+					)}
+
+					<Tooltip content={`${theme === "light" ? "Dark" : "Light"} Mode`}>
 						<Button
 							variant="soft"
 							size="md"
@@ -141,9 +189,10 @@ function Header() {
 							{theme === "light" ? <MoonIcon className="w-5 h-5" /> : <SunIcon className="w-5 h-5" />}
 						</Button>
 					</Tooltip>
+
 					{showLogout && (
 						<>
-							<div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2"></div>
+							{/* <div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2"></div> */}
 							<Tooltip content="Sign Out">
 								<Button
 									variant="soft"
@@ -240,8 +289,37 @@ function Header() {
 					</div>
 				</div>
 			)}
+
+			{/* Factory Reset Confirmation Modal */}
+			{showFactoryResetModal && (
+				<ConfirmModal
+					isOpen={showFactoryResetModal}
+					onClose={handleCloseFactoryResetModal}
+					onConfirm={handleConfirmFactoryReset}
+					title="Delete All Data"
+					message={
+						<>
+							<p className="mb-4">
+								Are you sure you want to delete <strong className="text-red-600 dark:text-red-400">all data</strong>? All
+								data, including these, will be permanently deleted:
+							</p>
+							<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+								<li>All Statistics</li>
+								<li>All Logs</li>
+								<li>All Instances & Workers</li>
+								<li>All Jobs</li>
+								<li>All Notifications</li>
+							</ul>
+							<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
+						</>
+					}
+					confirmText="Delete Everything"
+					variant="danger"
+					isLoading={factoryResetMutation.isPending}
+					loadingText="Deleting All Data"
+				/>
+			)}
 		</>
 	);
 }
-
 export default Header;

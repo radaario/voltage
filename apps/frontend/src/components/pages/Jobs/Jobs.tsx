@@ -5,8 +5,7 @@ import type { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import JobsTable from "@/components/pages/Jobs/Table/Table";
-import DeleteConfirmModal from "@/components/modals/DeleteConfirmModal/DeleteConfirmModal";
-import { ConfirmModal, Button, Tooltip, SearchInput, LoadingSpinner, Page, ErrorAlert } from "@/components";
+import { ConfirmModal, Button, Tooltip, SearchInput, LoadingSpinner, Page, ErrorAlert, JsonViewer } from "@/components";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
 interface PaginationInfo {
@@ -34,6 +33,7 @@ const Jobs: React.FC = () => {
 	const previousDataRef = useRef<Job[]>([]);
 	const [newJobKeys, setNewJobKeys] = useState<Set<string>>(new Set());
 	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+	const [showCreateJobModal, setShowCreateJobModal] = useState(false);
 
 	// queries
 	const {
@@ -57,51 +57,21 @@ const Jobs: React.FC = () => {
 	});
 
 	// mutations
-	const createJobMutation = useMutation({
-		mutationFn: async () => {
-			const payload = {
-				input: {
-					type: "HTTP",
-					url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4",
-					nsfw: true,
-					nsfw_model: "MOBILE_NET_V2_MID",
-					nsfw_size: 299,
-					nfsw_type: "GRAPH",
-					nsfw_threshold: 0.7
-				},
-				outputs: [
-					{
-						type: "VIDEO",
-						format: "MP4",
-						path: "Big_Buck_Bunny_1080_10s_20MB.mp4",
-						destination: {
-							type: "HTTPS",
-							method: "POST",
-							url: "https://httpbin.org/post",
-							headers: {
-								"X-Output-Type": "720p-webm"
-							}
-						}
-					},
-					{
-						type: "AUDIO",
-						format: "MP3",
-						path: "Big_Buck_Bunny_1080_10s_20MB.mp3"
-					},
-					{
-						type: "THUMBNAIL",
-						format: "PNG",
-						path: "Big_Buck_Bunny_1080_10s_20MB.png"
-					},
-					{
-						type: "SUBTITLE",
-						format: "SRT",
-						path: "Big_Buck_Bunny_1080_10s_20MB.srt",
-						whisper_model: "BASE",
-						whisper_cuda: false,
-						language: "AUTO"
-					}
-				],
+	const testJobPayload = {
+		input: {
+			type: "HTTP",
+			url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4",
+			nsfw_is_disabled: false,
+			nsfw_model: "MOBILE_NET_V2_MID",
+			nsfw_size: 299,
+			nfsw_type: "GRAPH",
+			nsfw_threshold: 0.7
+		},
+		outputs: [
+			{
+				type: "VIDEO",
+				format: "MP4",
+				path: "Big_Buck_Bunny_1080_10s_20MB.mp4",
 				destination: {
 					type: "HTTPS",
 					method: "POST",
@@ -109,21 +79,52 @@ const Jobs: React.FC = () => {
 					headers: {
 						"X-Output-Type": "720p-webm"
 					}
-				},
-				notification: {
-					type: "HTTPS",
-					url: "https://httpbin.org/post"
-				},
-				metadata: {
-					string: "String",
-					number: 123,
-					timestamp: new Date().toISOString()
 				}
-			};
+			},
+			{
+				type: "AUDIO",
+				format: "MP3",
+				path: "Big_Buck_Bunny_1080_10s_20MB.mp3"
+			},
+			{
+				type: "THUMBNAIL",
+				format: "PNG",
+				path: "Big_Buck_Bunny_1080_10s_20MB.png"
+			},
+			{
+				type: "SUBTITLE",
+				format: "SRT",
+				path: "Big_Buck_Bunny_1080_10s_20MB.srt",
+				whisper_model: "BASE",
+				whisper_cuda: false,
+				language: "AUTO"
+			}
+		],
+		destination: {
+			type: "HTTPS",
+			method: "POST",
+			url: "https://httpbin.org/post",
+			headers: {
+				"X-Output-Type": "720p-webm"
+			}
+		},
+		notification: {
+			type: "HTTPS",
+			url: "https://httpbin.org/post"
+		},
+		metadata: {
+			string: "String",
+			number: 123,
+			timestamp: new Date().toISOString()
+		}
+	};
 
-			return await api.put("/jobs", payload, { params: { token: authToken } });
+	const createJobMutation = useMutation({
+		mutationFn: async () => {
+			return await api.put("/jobs", testJobPayload, { params: { token: authToken } });
 		},
 		onSuccess: () => {
+			setShowCreateJobModal(false);
 			setCurrentPage(1);
 			queryClient.invalidateQueries({ queryKey: ["jobs"] });
 		}
@@ -153,7 +154,7 @@ const Jobs: React.FC = () => {
 
 	const deleteAllJobsMutation = useMutation({
 		mutationFn: async () => {
-			return await api.delete("/jobs/all", { token: authToken });
+			return await api.delete("/jobs", { token: authToken, all: "true", hard_delete: "true" });
 		},
 		onSuccess: async () => {
 			setShowDeleteAllModal(false);
@@ -198,7 +199,17 @@ const Jobs: React.FC = () => {
 	};
 
 	const handleCreateExampleJob = () => {
+		setShowCreateJobModal(true);
+	};
+
+	const handleConfirmCreateJob = () => {
 		createJobMutation.mutate();
+	};
+
+	const handleCloseCreateJobModal = () => {
+		if (!createJobMutation.isPending) {
+			setShowCreateJobModal(false);
+		}
 	};
 
 	const handleRefresh = () => {
@@ -325,20 +336,19 @@ const Jobs: React.FC = () => {
 				<Button
 					variant="secondary"
 					size="sm"
-					onClick={handleCreateExampleJob}
-					disabled={createJobMutation.isPending}
-					isLoading={createJobMutation.isPending}>
-					{createJobMutation.isPending ? "Creating…" : "+ Create Test Job"}
+					onClick={handleCreateExampleJob}>
+					+ Create Test Job
 				</Button>
-				<Tooltip content="Delete All Jobs">
+				<Tooltip content="Delete All">
 					<Button
 						variant="soft"
+						hover="danger"
 						size="md"
 						iconOnly
 						onClick={handleDeleteAllJobs}
 						disabled={deleteAllJobsMutation.isPending || (jobsResponse?.data?.length || 0) === 0}
 						isLoading={deleteAllJobsMutation.isPending}>
-						<TrashIcon className="h-5 w-5 text-red-600 dark:text-white" />
+						<TrashIcon className="h-5 w-5 " />
 					</Button>
 				</Tooltip>
 			</Page.Header>
@@ -361,27 +371,24 @@ const Jobs: React.FC = () => {
 
 			{/* Delete Confirmation Modal */}
 			{jobToDelete && (
-				<DeleteConfirmModal
+				<ConfirmModal
 					isOpen={!!jobToDelete}
 					onClose={handleCloseDeleteModal}
 					onConfirm={handleConfirmDelete}
 					title="Delete Job"
 					message={
 						<>
-							Are you sure you want to delete{" "}
-							{jobToDelete.input?.file_name || jobToDelete.input?.url?.split("/").pop() ? (
-								<>
-									<strong>{jobToDelete.input?.file_name || jobToDelete.input?.url?.split("/").pop()}</strong>
-									<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({jobToDelete.key})</div>
-								</>
-							) : (
-								<strong>{jobToDelete.key}</strong>
-							)}
-							? This action cannot be undone.
+							<p className="mb-4">Are you sure you want to delete this job?</p>
+							<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+								<li>{jobToDelete.key}</li>
+							</ul>
+							<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
 						</>
 					}
-					confirmText="Delete Job"
-					isDeleting={deleteJobMutation.isPending}
+					confirmText="Delete All"
+					variant="danger"
+					isLoading={deleteJobMutation.isPending}
+					loadingText="Deleting"
 				/>
 			)}
 
@@ -394,19 +401,13 @@ const Jobs: React.FC = () => {
 					title="Retry Job"
 					message={
 						<>
-							Are you sure you want to retry{" "}
-							{jobToRetry.input?.file_name || jobToRetry.input?.url?.split("/").pop() ? (
-								<>
-									<strong>{jobToRetry.input?.file_name || jobToRetry.input?.url?.split("/").pop()}</strong>
-									<div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">({jobToRetry.key})</div>
-								</>
-							) : (
-								<strong>{jobToRetry.key}</strong>
-							)}
-							?
+							<p className="mb-4">Are you sure you want to retry this job?</p>
+							<ul className="list-disc list-inside space-y-1 mb-4 text-sm">
+								<li>{jobToRetry.key}</li>
+							</ul>
 						</>
 					}
-					confirmText="Retry Job"
+					confirmText="Retry"
 					variant="info"
 					isLoading={retryJobMutation.isPending}
 					loadingText="Retrying"
@@ -422,14 +423,43 @@ const Jobs: React.FC = () => {
 					title="Delete All Jobs"
 					message={
 						<>
-							Are you sure you want to delete <strong>ALL jobs</strong>? This action cannot be undone and will permanently
-							remove all Job entries from the system.
+							<p className="mb-4">
+								Are you sure you want to delete <strong className="text-red-600 dark:text-red-400">all jobs</strong>?
+							</p>
+							<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
 						</>
 					}
-					confirmText="Delete All Jobs"
+					confirmText="Delete All"
 					variant="danger"
 					isLoading={deleteAllJobsMutation.isPending}
 					loadingText="Deleting"
+				/>
+			)}
+
+			{/* Create Test Job Modal */}
+			{showCreateJobModal && (
+				<ConfirmModal
+					isOpen={showCreateJobModal}
+					onClose={handleCloseCreateJobModal}
+					onConfirm={handleConfirmCreateJob}
+					title="Test Job Payload"
+					size="xl"
+					message={
+						<div className="space-y-4">
+							<div>
+								{/* <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Endpoint</h3> */}
+								<code className="block px-3 py-2 bg-gray-100 dark:bg-neutral-800 rounded text-sm">PUT /jobs</code>
+							</div>
+							<div className="max-h-130 overflow-y-auto">
+								<JsonViewer data={testJobPayload} />
+							</div>
+						</div>
+					}
+					confirmText="Post"
+					variant="info"
+					noIcon={true}
+					isLoading={createJobMutation.isPending}
+					loadingText="Posting"
 				/>
 			)}
 

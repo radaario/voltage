@@ -27,6 +27,7 @@ function MemoizedTableRowComponent<T>({ row, isNew = false, onClick, className =
 			{row.getVisibleCells().map((cell: any) => (
 				<td
 					key={cell.id}
+					data-label={cell.column.columnDef.header}
 					className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
 					{flexRender(cell.column.columnDef.cell, cell.getContext())}
 				</td>

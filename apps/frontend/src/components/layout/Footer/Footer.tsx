@@ -7,7 +7,7 @@ const Footer: React.FC = () => {
 						{new Date().getFullYear()},{" "}
 						<a
 							href="https://github.com/radaario/voltage"
-							title="RADAAR: Social Media Management Tool"
+							title="Voltage Video Encoder"
 							target="_blank">
 							Voltage Video Encoder
 						</a>
@@ -18,8 +18,8 @@ const Footer: React.FC = () => {
 						target="_blank"
 						className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity ml-1.5">
 						<img
-							src="/radaar-developed-by.svg"
-							alt="RADAAR"
+							src={import.meta.env.BASE_URL + "radaar-developed-by.svg"}
+							alt="Developed by RADAAR"
 							className="h-6 w-auto"
 						/>
 					</a>
