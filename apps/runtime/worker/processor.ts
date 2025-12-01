@@ -49,7 +49,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
 				const { nodewhisper } = await import("nodejs-whisper"); /* ! */
 
 				const outputFormat = (output.specs.format || "srt").toLowerCase();
-				const modelName = (output.specs.model || config.utils.whisper.model || "BASE")
+				const modelName = (output.specs.whisper_model || config.utils.whisper.model || "BASE")
 					.toLowerCase()
 					.replace("_en", ".en")
 					.replace("_", "-");
@@ -58,7 +58,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
 					modelName: modelName,
 					autoDownloadModelName: modelName,
 					// removeWavFileAfterTranscription: true,
-					withCuda: config.utils.whisper.cuda || false,
+					withCuda: output.specs.whisper_cuda || config.utils.whisper.cuda || false,
 					// logger: null,
 					whisperOptions: {
 						outputInSrt: outputFormat === "srt",
@@ -67,7 +67,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
 						outputInJson: outputFormat === "json",
 						outputInText: outputFormat === "txt",
 						// translateToEnglish: output.specs.translate || false,
-						language: output.specs.language || "auto",
+						language: (output.specs.language || "auto").toLowerCase(),
 						wordTimestamps: false,
 						timestamps_length: 20,
 						splitOnWord: true

@@ -62,13 +62,26 @@ const Jobs: React.FC = () => {
 			const payload = {
 				input: {
 					type: "HTTP",
-					url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4"
+					url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4",
+					nsfw: true,
+					nsfw_model: "MOBILE_NET_V2_MID",
+					nsfw_size: 299,
+					nfsw_type: "GRAPH",
+					nsfw_threshold: 0.7
 				},
 				outputs: [
 					{
 						type: "VIDEO",
 						format: "MP4",
-						path: "Big_Buck_Bunny_1080_10s_20MB.mp4"
+						path: "Big_Buck_Bunny_1080_10s_20MB.mp4",
+						destination: {
+							type: "HTTPS",
+							method: "POST",
+							url: "https://httpbin.org/post",
+							headers: {
+								"X-Output-Type": "720p-webm"
+							}
+						}
 					},
 					{
 						type: "AUDIO",
@@ -79,6 +92,14 @@ const Jobs: React.FC = () => {
 						type: "THUMBNAIL",
 						format: "PNG",
 						path: "Big_Buck_Bunny_1080_10s_20MB.png"
+					},
+					{
+						type: "SUBTITLE",
+						format: "SRT",
+						path: "Big_Buck_Bunny_1080_10s_20MB.srt",
+						whisper_model: "BASE",
+						whisper_cuda: false,
+						language: "AUTO"
 					}
 				],
 				destination: {
@@ -90,10 +111,14 @@ const Jobs: React.FC = () => {
 					}
 				},
 				notification: {
-					type: "HTTP",
+					type: "HTTPS",
 					url: "https://httpbin.org/post"
 				},
-				metadata: { client: "FRONTEND", example: true, timestamp: new Date().toISOString() }
+				metadata: {
+					string: "String",
+					number: 123,
+					timestamp: new Date().toISOString()
+				}
 			};
 
 			return await api.put("/jobs", payload, { params: { token: authToken } });
