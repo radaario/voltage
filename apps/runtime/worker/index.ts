@@ -3,12 +3,12 @@ import { config } from "@voltage/config";
 import { database, logger, stats } from "@voltage/utils";
 import { getNow, addNow } from "@voltage/utils";
 
-import { downloadInput } from "./downloader";
-import { analyzeInputMetadata } from "./analyzer";
-import { generateInputPreview } from "./thumbnailer";
-import { processOutput } from "./processor";
-import { uploadOutput } from "./uploader";
-import { createJobNotification } from "./notifier";
+import { downloadInput } from "./downloader.js";
+import { analyzeInputMetadata } from "./analyzer.js";
+import { generateInputPreview } from "./thumbnailer.js";
+import { processOutput } from "./processor.js";
+import { uploadOutput } from "./uploader.js";
+import { createJobNotification } from "./notifier.js";
 
 import path from "path";
 import fs from "fs/promises";
@@ -24,6 +24,8 @@ const nsfwjs = require("nsfwjs");
 
 async function run() {
 	await logger.insert("INFO", "Worker starts running...");
+
+	let workerStatusInterval = null;
 
 	const tempJobDir = path.join(config.temp_dir, "jobs", jobKey);
 	await fs.mkdir(tempJobDir, { recursive: true }).catch(() => {});
@@ -55,11 +57,16 @@ async function run() {
 	};
 
 	try {
-		await updateWorkerStatus("BUSY");
-
 		// JOB: SELECT
 		job = await database.table("jobs").where("key", jobKey).first();
 		if (!job) throw new Error("Job couldn't be found!");
+
+		workerStatusInterval = setInterval(
+			async () => {
+				await updateWorkerStatus("BUSY", jobKey);
+			},
+			config.runtime.workers.busy_interval || 1 * 1 * 1000 // in milliseconds, default 1 seconds
+		);
 
 		// JOB: STARTING
 		await logger.insert("INFO", "Job found, starting processing...", { job_key: job.key });
@@ -99,7 +106,6 @@ async function run() {
 
 		await updateJob(job);
 		await createJobNotification(job, job.status);
-		// await updateWorkerStatus("BUSY");
 
 		const jobInput = await downloadInput(job);
 
@@ -128,7 +134,6 @@ async function run() {
 
 		await updateJob(job);
 		await createJobNotification(job, job.status);
-		// await updateWorkerStatus("BUSY");
 
 		const jobInputMetadata = await analyzeInputMetadata(job);
 		if (!jobInputMetadata) {
@@ -222,7 +227,6 @@ async function run() {
 
 		await updateJob(job);
 		await createJobNotification(job, job.status);
-		// await updateWorkerStatus("BUSY");
 
 		// JOB: OUTPUTs: PROCESSING
 		for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
@@ -263,7 +267,6 @@ async function run() {
 			job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
 
 			await updateJob(job);
-			// await updateWorkerStatus("BUSY");
 		}
 
 		if (jobOutputsProcessedCount > 0) {
@@ -282,7 +285,6 @@ async function run() {
 
 			await updateJob(job);
 			await createJobNotification(job, job.status);
-			// await updateWorkerStatus("BUSY");
 
 			for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
 				if (job.outputs[index].status == "PROCESSED") {
@@ -340,7 +342,6 @@ async function run() {
 				job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
 
 				await updateJob(job);
-				// await updateWorkerStatus("BUSY");
 			}
 
 			if (jobOutputsUploadedCount > 0) {
@@ -400,7 +401,8 @@ async function run() {
 	await fs.rm(tempJobDir, { recursive: true }).catch(() => {});
 
 	await updateJob(job);
-	// await updateWorkerStatus('IDLE');
+	if (workerStatusInterval) clearInterval(workerStatusInterval);
+	await updateWorkerStatus("IDLE");
 	await stats.update(jobStats);
 
 	if (job.status === "COMPLETED") {
@@ -437,7 +439,7 @@ async function updateJob(job: any): Promise<void> {
 	}
 }
 
-async function updateWorkerStatus(status: string): Promise<void> {
+async function updateWorkerStatus(status: string, jobKey: string | null = null): Promise<void> {
 	try {
 		await database.table("instances_workers").where("key", workerKey).update({
 			job_key: jobKey,

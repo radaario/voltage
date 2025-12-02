@@ -103,7 +103,7 @@ async function maintainInstancesAndWorkers() {
 
 		// INSTANCEs: UPDATE: OFFLINE
 		try {
-			const offlineTimeout = config.runtime.online_timeout || 1 * 60 * 1000; // in milliseconds, default 1 minute
+			const offlineTimeout = config.runtime.online_timeout || 1 * 15 * 1000; // in milliseconds, default 15 seconds
 
 			const inactiveInstances = await database
 				.table("instances")
@@ -170,51 +170,6 @@ async function initInstance(instanceKey: string, instance: any = null): Promise<
 
 	const now = getNow();
 
-	// INSTANCE: WORKERs: MISSINGs
-	try {
-		// INSTANCE: WORKERs: COUNT
-		const existsWorkersCount = await database
-			.table("instances_workers")
-			.where("instance_key", instanceKey)
-			.count("* as count")
-			.first()
-			.then((result: any) => result?.count || 0);
-		const missingWorkersCount = config.runtime.workers.max - existsWorkersCount;
-
-		// INSTANCE: WORKERs: INSERT
-		if (missingWorkersCount > 0) {
-			const newWorkers = Array.from({ length: missingWorkersCount }, (_, index) => ({
-				key: hash(`${instanceKey}:${existsWorkersCount + index}`),
-				index: existsWorkersCount + index,
-				instance_key: instanceKey,
-				job_key: null,
-				status: "IDLE",
-				updated_at: now,
-				created_at: now
-			}));
-
-			await database.table("instances_workers").insert(newWorkers);
-
-			logger.console(
-				"INFO",
-				`${missingWorkersCount} new workers initialized for instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""}!`
-			);
-		}
-	} catch (error: Error | any) {}
-
-	// INSTANCE: WORKERs: EXISTs
-	try {
-		await database
-			.table("instances_workers")
-			.where("instance_key", instanceKey)
-			.update({
-				job_key: null,
-				outcome: null,
-				status: database.knex.raw(`CASE WHEN \`index\` < ? THEN 'IDLE' ELSE 'TERMINATED' END`, [config.runtime.workers.max]),
-				updated_at: now
-			});
-	} catch (error: Error | any) {}
-
 	try {
 		if (!instance) {
 			// INSTANCE: INSERT
@@ -227,6 +182,8 @@ async function initInstance(instanceKey: string, instance: any = null): Promise<
 			});
 
 			await logger.insert("INFO", `Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} created!`);
+
+			await maintainInstanceWorkers(instanceKey);
 
 			return await database.table("instances").where("key", instanceKey).first();
 		}
@@ -266,6 +223,8 @@ async function restartInstance(instanceKey: string, instance: any): Promise<any>
 				);
 			});
 
+		await maintainInstanceWorkers(instanceKey);
+
 		return instance;
 	} catch (error: Error | any) {}
 }
@@ -297,6 +256,78 @@ async function maintainInstance(instanceKey: string): Promise<void> {
 	}
 }
 
+async function maintainInstanceWorkers(instanceKey: string): Promise<void> {
+	logger.console("INFO", `Maintaining instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} workers...`);
+
+	let now = getNow();
+
+	// INSTANCE: WORKERs: MISSINGs
+	try {
+		// INSTANCE: WORKERs: COUNT
+		const existsWorkersCount = await database
+			.table("instances_workers")
+			.where("instance_key", instanceKey)
+			.count("* as count")
+			.first()
+			.then((result: any) => result?.count || 0);
+		const missingWorkersCount = config.runtime.workers.max - existsWorkersCount;
+
+		// INSTANCE: WORKERs: INSERT
+		if (missingWorkersCount > 0) {
+			const newWorkers = Array.from({ length: missingWorkersCount }, (_, index) => ({
+				key: hash(`${instanceKey}:${existsWorkersCount + index}`),
+				index: existsWorkersCount + index,
+				instance_key: instanceKey,
+				job_key: null,
+				status: "IDLE",
+				updated_at: now,
+				created_at: now
+			}));
+
+			await database.table("instances_workers").insert(newWorkers);
+
+			logger.console(
+				"INFO",
+				`${missingWorkersCount} new workers initialized for instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""}!`
+			);
+		}
+	} catch (error: Error | any) {
+		await logger.insert(
+			"ERROR",
+			`Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} workers maintenance failed!`,
+			{
+				error
+			}
+		);
+	}
+
+	// INSTANCE: WORKERs: EXISTs
+	try {
+		await database
+			.table("instances_workers")
+			.where("instance_key", instanceKey)
+			.update({
+				job_key: null,
+				outcome: null,
+				status: database.knex.raw(`CASE WHEN \`index\` < ? THEN 'IDLE' ELSE 'TERMINATED' END`, [config.runtime.workers.max]),
+				updated_at: now
+			});
+
+		logger.console(
+			"INFO",
+			`Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} workers successfully maintained!`
+		);
+	} catch (error: Error | any) {
+		await logger.insert(
+			"ERROR",
+			`Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} workers maintenance failed!`,
+			{
+				error
+			}
+		);
+	}
+}
+
 async function getMasterInstance(instances: any[]): Promise<any | null> {
 	try {
 		if (!instances.length) {
@@ -304,7 +335,7 @@ async function getMasterInstance(instances: any[]): Promise<any | null> {
 			return null;
 		}
 
-		const offlineTimeout = config.runtime.online_timeout || 1 * 60 * 1000; // in milliseconds, default 1 minute
+		const offlineTimeout = config.runtime.online_timeout || 1 * 15 * 1000; // in milliseconds, default 15 seconds
 
 		const activeInstances = instances.filter(
 			(instance: any) => instance.status === "ONLINE" && instance.updated_at > subtractNow(offlineTimeout, "milliseconds")
@@ -356,7 +387,7 @@ async function processJobs(): Promise<void> {
 		await database
 			.table("jobs")
 			.where("status", "QUEUED")
-			.where("updated_at", "<=", subtractNow(config.jobs.queue_timeout || 10 * 60 * 1000, "milliseconds")) // in milliseconds, default 10 minutes
+			.where("updated_at", "<=", subtractNow(config.jobs.queue_timeout || 5 * 60 * 1000, "milliseconds")) // in milliseconds, default 5 minutes
 			.update({
 				outcome: database.knex.raw(
 					`CASE WHEN \`try_count\` >= \`try_max\` THEN '{"message":"Job queue didn\\'t processed and it failed!"}' ELSE \`outcome\` END`
@@ -583,6 +614,7 @@ async function spawnWorkerForJob(instanceKey: string, workerKey: string, jobKey:
 			child = spawn("node", [workerScriptPath, instanceKey, workerKey, jobKey], {
 				stdio: ["inherit", "inherit", "inherit"],
 				cwd: process.cwd()
+				// shell: true
 			});
 		}
 
