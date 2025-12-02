@@ -238,7 +238,7 @@ const JobsTable = ({
 									hover="danger"
 									size="md"
 									iconOnly
-									disabled={!["RECEIVED", "PENDING", "RETRYING", "DELETED"].includes(job?.status as string)}
+									// disabled={!["RECEIVED", "PENDING", "RETRYING", "DELETED"].includes(job?.status as string)}
 									onClick={(e) => {
 										e.stopPropagation();
 										onDeleteJob(job);

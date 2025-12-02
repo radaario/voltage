@@ -128,7 +128,7 @@ app.get("/stats", authMiddleware(), async (req, res) => {
 
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL", since_at, until_at }, data: sanitizeData(stats) });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch logs!", { error });
+		await logger.insert("ERROR", "Failed to fetch logs!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -187,7 +187,7 @@ app.delete("/stats", authMiddleware(), async (req, res) => {
 			message: "Some stats successfully deleted!"
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete stats!", { error });
+		await logger.insert("ERROR", "Failed to delete stats!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -287,7 +287,7 @@ app.get("/logs", authMiddleware(), async (req, res) => {
 			}
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch logs!", { error });
+		await logger.insert("ERROR", "Failed to fetch logs!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -337,7 +337,7 @@ app.delete("/logs", authMiddleware(), async (req, res) => {
 			message: "Some logs successfully deleted!"
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete logs!", { error });
+		await logger.insert("ERROR", "Failed to delete logs!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -423,7 +423,7 @@ app.get("/instances", authMiddleware(), async (req, res) => {
 
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(result) });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch instances!", { error });
+		await logger.insert("ERROR", "Failed to fetch instances!", { ...error });
 		res.status(500).json({
 			metadata: {
 				...responseMetadata,
@@ -457,7 +457,7 @@ app.delete("/instances", authMiddleware(), async (req, res) => {
 
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "Instance successfully deleted!" });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete instances!", { error });
+		await logger.insert("ERROR", "Failed to delete instances!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -495,7 +495,7 @@ app.get("/instances/workers", authMiddleware(), async (req, res) => {
 
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(workers) });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch workers!", { error });
+		await logger.insert("ERROR", "Failed to fetch workers!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -534,7 +534,7 @@ app.delete("/instances/workers", authMiddleware(), async (req, res) => {
 
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "Workers successfully deleted!" });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete workers!", { error });
+		await logger.insert("ERROR", "Failed to delete workers!", { ...error });
 		return res.status(500).json({
 			metadata: {
 				...responseMetadata,
@@ -628,7 +628,7 @@ app.get("/jobs", authMiddleware(), async (req, res) => {
 			}
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch jobs!", { error });
+		await logger.insert("ERROR", "Failed to fetch jobs!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -764,7 +764,7 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 									// try_count: 0
 								});
 
-							await logger.insert("ERROR", "Enqueuing received job failed!", { job_key, error });
+							await logger.insert("ERROR", "Enqueuing received job failed!", { job_key, ...error });
 						});
 				}
 
@@ -777,7 +777,7 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 
 		return res.status(202).json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, data: sanitizeData(job) });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Create job failed!", { error });
+		await logger.insert("ERROR", "Create job failed!", { ...error });
 
 		return res.status(500).json({
 			metadata: { ...responseMetadata, status: "ERROR", error: { code: "INTERNAL_ERROR", message: "Job creation failed!" } }
@@ -816,6 +816,7 @@ app.post("/jobs/retry", authMiddleware(), async (req: Request, res: Response) =>
 	if (job.outputs) {
 		for (let index = 0; index < job.outputs.length; index++) {
 			if ((!output_key || output_key == job.outputs[index].key) && !["COMPLETED"].includes(job.outputs[index].status)) {
+				job.outputs[index].outcome = null;
 				job.outputs[index].status = "PENDING";
 				job.outputs[index].updated_at = now;
 				jobOutputsUpdatedCount++;
@@ -909,7 +910,7 @@ app.delete("/jobs", authMiddleware(), async (req, res) => {
 
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "All jobs permanently deleted!" });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete all jobs!", { error });
+		await logger.insert("ERROR", "Failed to delete all jobs!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -1041,7 +1042,7 @@ app.get("/jobs/notifications", authMiddleware(), async (req, res) => {
 			}
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch job notifications!", { error });
+		await logger.insert("ERROR", "Failed to fetch job notifications!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -1080,7 +1081,7 @@ app.post("/jobs/notifications/retry", authMiddleware(), async (req, res) => {
 
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" }, message: "Notification successfully rescheduled!" });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch job notifications!", { error });
+		await logger.insert("ERROR", "Failed to fetch job notifications!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -1134,7 +1135,7 @@ app.delete("/jobs/notifications", authMiddleware(), async (req, res) => {
 			message: "Some job notifications successfully deleted!"
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete job notifications!", { error });
+		await logger.insert("ERROR", "Failed to delete job notifications!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -1176,7 +1177,7 @@ app.delete("/all", authMiddleware(), async (req: Request, res: Response) => {
 
 		return res.json({ metadata: { ...responseMetadata, status: "SUCCESSFUL" } });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete all data!", { error });
+		await logger.insert("ERROR", "Failed to delete all data!", { ...error });
 
 		return res.status(500).json({
 			metadata: {
@@ -1189,7 +1190,7 @@ app.delete("/all", authMiddleware(), async (req: Request, res: Response) => {
 });
 
 app.use((error: any, req: any, res: any, _next: any) => {
-	logger.insert("ERROR", "An error occurred on API service!", { error });
+	logger.insert("ERROR", "An error occurred on API service!", { ...error });
 
 	return res.status(500).json({
 		metadata: {
@@ -1211,6 +1212,6 @@ logger.insert("INFO", "Starting API service on :port...", { instance_key, port: 
 	app.listen(config.api.node_port, () => {
 		logger.insert("INFO", "API service started successfully on :port!", { port: config.api.node_port });
 	}).on("error", (error: Error | any) => {
-		logger.insert("ERROR", "Failed to start API service!", { error });
+		logger.insert("ERROR", "Failed to start API service!", { ...error });
 	});
 })();

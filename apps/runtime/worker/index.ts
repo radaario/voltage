@@ -214,7 +214,14 @@ async function run() {
 					}
 
 					imageTensor.dispose();
-				} catch (error: Error | any) {}
+
+					await logger.insert("INFO", "Job input NSFW analysis completed successfully!", {
+						nsfw: job.input.nsfw,
+						classification: job.input.classification
+					});
+				} catch (error: Error | any) {
+					await logger.insert("ERROR", "Job input NSFW analysis failed!", { ...error });
+				}
 			}
 		} catch (error: Error | any) {
 			throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
@@ -260,7 +267,7 @@ async function run() {
 				await logger.insert("ERROR", "Failed to process job output!", {
 					output_key: job.outputs[index].key,
 					output_index: job.outputs[index].index,
-					error: error.message
+					...error
 				});
 			}
 
@@ -335,7 +342,7 @@ async function run() {
 					await logger.insert("ERROR", "Job output couldn't be uploaded!", {
 						output_key: job.outputs[index].key,
 						output_index: job.outputs[index].index,
-						error: error.message
+						...error
 					});
 				}
 
@@ -409,7 +416,7 @@ async function run() {
 		await createJobNotification(job, job.status);
 		process.exit(0);
 	} else {
-		await logger.insert("ERROR", "Job failed!", { error: job.outcome });
+		await logger.insert("ERROR", "Job failed!", { ...job.outcome });
 		await createJobNotification(job, job.status);
 		process.exit(1);
 	}
@@ -434,7 +441,7 @@ async function updateJob(job: any): Promise<void> {
 				updated_at: getNow()
 			});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to update job!", { error });
+		await logger.insert("ERROR", "Failed to update job!", { ...error });
 	}
 }
 
@@ -446,7 +453,7 @@ async function updateWorkerStatus(status: string, jobKey: string | null = null):
 			updated_at: getNow()
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to update worker!", { error });
+		await logger.insert("ERROR", "Failed to update worker!", { ...error });
 	}
 }
 

@@ -78,7 +78,7 @@ async function maintainInstancesAndWorkers() {
 					});
 			}
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Timing out busy workers failed!", { error });
+			await logger.insert("ERROR", "Timing out busy workers failed!", { ...error });
 		}
 
 		// INSTANCEs: WORKERs: UPDATE: IDLE
@@ -91,12 +91,12 @@ async function maintainInstancesAndWorkers() {
 				.where("updated_at", "<=", subtractNow(idleAfter, "milliseconds"))
 				.update({
 					job_key: null,
+					outcome: JSON.stringify({ message: "Worker is idle again!" }),
 					status: "IDLE",
-					updated_at: now,
-					outcome: JSON.stringify({ message: "Worker is idle again!" })
+					updated_at: now
 				});
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "The worker timed out and could not be updated!", { error });
+			await logger.insert("ERROR", "The worker timed out and could not be updated!", { ...error });
 		}
 
 		logger.console("INFO", "Maintaining instances...");
@@ -119,9 +119,9 @@ async function maintainInstancesAndWorkers() {
 					.whereIn("instance_key", inactiveInstanceKeys)
 					.update({
 						job_key: null,
+						outcome: JSON.stringify({ message: "The worker was terminated because the instance was offline!" }),
 						status: "TERMINATED",
-						updated_at: now,
-						outcome: JSON.stringify({ message: "The worker was terminated because the instance was offline!" })
+						updated_at: now
 					});
 
 				// cpu_usage_percent, memory_usage_percent
@@ -130,15 +130,15 @@ async function maintainInstancesAndWorkers() {
 					.table("instances")
 					.whereIn("key", inactiveInstanceKeys)
 					.update({
-						status: "OFFLINE",
-						updated_at: now,
 						outcome: JSON.stringify({
 							message: "The instance has gone offline because it has not been updated for a long time!"
-						})
+						}),
+						status: "OFFLINE",
+						updated_at: now
 					});
 			}
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Unable to take offline instances that were not updated!", { error });
+			await logger.insert("ERROR", "Unable to take offline instances that were not updated!", { ...error });
 		}
 
 		// INSTANCEs: DELETE: PURGE
@@ -158,7 +158,7 @@ async function maintainInstancesAndWorkers() {
 				await database.table("instances").whereIn("key", offlineInstanceKeys).delete();
 			}
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Purging offline instances failed!", { error });
+			await logger.insert("ERROR", "Purging offline instances failed!", { ...error });
 		}
 	}
 
@@ -193,7 +193,7 @@ async function initInstance(instanceKey: string, instance: any = null): Promise<
 		return instance;
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", `Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} initialization failed!`, {
-			error
+			...error
 		});
 	}
 }
@@ -211,8 +211,8 @@ async function restartInstance(instanceKey: string, instance: any): Promise<any>
 			.where("key", instanceKey)
 			.update({
 				specs: JSON.stringify(getInstanceSpecs()),
-				status: "ONLINE",
 				outcome: null,
+				status: "ONLINE",
 				updated_at: getNow(),
 				restart_count: database.knex.raw("restart_count + 1")
 			})
@@ -251,7 +251,7 @@ async function maintainInstance(instanceKey: string): Promise<void> {
 		logger.console("INFO", `Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} successfully maintained!`);
 	} catch (error: Error | any) {
 		await logger.insert("ERROR", `Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} maintenance failed!`, {
-			error
+			...error
 		});
 	}
 }
@@ -412,7 +412,7 @@ async function spawnInstanceWorkerForJob(instanceKey: string, workerKey: string,
 				instace_key: instanceKey,
 				worker_key: workerKey,
 				job_key: jobKey,
-				error
+				...error
 			});
 
 			workersProcessMap.delete(workerKey);
@@ -424,7 +424,7 @@ async function spawnInstanceWorkerForJob(instanceKey: string, workerKey: string,
 
 		logger.console("INFO", "Worker successfully spawned for the job!", { worker_key: workerKey, job_key: jobKey });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to spawn worker for the job!", { job_key: jobKey, error });
+		await logger.insert("ERROR", "Failed to spawn worker for the job!", { job_key: jobKey, ...error });
 		throw error;
 	}
 }
@@ -437,14 +437,14 @@ async function idleInstanceWorker(instanceKey: string, workerKey: string, outcom
 			.where("key", workerKey)
 			.update({
 				job_key: null,
+				outcome: outcome ? JSON.stringify(outcome) : null,
 				status: "IDLE",
-				updated_at: getNow(),
-				outcome: JSON.stringify(outcome)
+				updated_at: getNow()
 			});
 
 		await logger.insert("INFO", "Worker idled successfully!", { instace_key: instanceKey, worker_key: workerKey, outcome });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to idle worker!", { instace_key: instanceKey, worker_key: workerKey, outcome, error });
+		await logger.insert("ERROR", "Failed to idle worker!", { instace_key: instanceKey, worker_key: workerKey, outcome, ...error });
 	}
 }
 
@@ -490,7 +490,7 @@ async function processJobs(): Promise<void> {
 			.limit(config.jobs.enqueue_limit || 10) // default 10
 			.update({ updated_at: now, locked_by: selfInstanceKey });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to select pending jobs!", { error });
+		await logger.insert("ERROR", "Failed to select pending jobs!", { ...error });
 	}
 
 	try {
@@ -533,14 +533,14 @@ async function processJobs(): Promise<void> {
 							// try_count: pendingJob.try_count
 						});
 
-					await logger.insert("ERROR", "Enqueuing pending job failed!", { job_key: pendingJob.key, error });
+					await logger.insert("ERROR", "Enqueuing pending job failed!", { job_key: pendingJob.key, ...error });
 				});
 		}
 
 		// JOBs: PENDINGs: RELEASE
 		await database.table("jobs").where("locked_by", selfInstanceKey).update({ updated_at: now, locked_by: null });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to enqueuing pending jobs!", { error });
+		await logger.insert("ERROR", "Failed to enqueuing pending jobs!", { ...error });
 	}
 
 	// JOBs: QUEUEDs: PROCESSING
@@ -589,7 +589,7 @@ async function processJobs(): Promise<void> {
 					await logger.insert("ERROR", "Failed to spawn worker for job!", {
 						worker_key: idleWorker.key,
 						job_key: queuedJob.key,
-						error
+						...error
 					});
 				}
 			}
@@ -599,7 +599,7 @@ async function processJobs(): Promise<void> {
 				await database.table("jobs_queue").where("locked_by", selfInstanceKey).update({ locked_by: null });
 			}
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Failed to poll jobs!", { error });
+			await logger.insert("ERROR", "Failed to poll jobs!", { ...error });
 		}
 	}
 
@@ -621,7 +621,7 @@ async function processJobs(): Promise<void> {
 					updated_at: now
 				});
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Jobs could not be timed out!", { error });
+			await logger.insert("ERROR", "Jobs could not be timed out!", { ...error });
 		}
 	}
 
@@ -660,7 +660,7 @@ async function processJobsNotifications(): Promise<void> {
 		// JOBs: QUEUEDs: RELEASE
 		await database.table("jobs_notifications_queue").where("locked_by", selfInstanceKey).update({ locked_by: null });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to process jobs notifications queue!", { error });
+		await logger.insert("ERROR", "Failed to process jobs notifications queue!", { ...error });
 	}
 
 	setTimeout(() => processJobsNotifications(), config.jobs.notifications.process_interval || 60000); // default 1 minute
@@ -748,7 +748,7 @@ const gracefulShutdown = async (signal: string) => {
 					outcome: JSON.stringify({ message: "The worker was terminated because the instance was shutdown!", signal })
 				});
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Failed to update workers for instance during shutdown!", { error });
+			await logger.insert("ERROR", "Failed to update workers for instance during shutdown!", { ...error });
 		}
 
 		// DB: INSTANCE: UPDATE
@@ -763,12 +763,12 @@ const gracefulShutdown = async (signal: string) => {
 					outcome: JSON.stringify({ message: "The instance has gone offline due to shutdown!", signal })
 				});
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Failed to update instance during shutdown!", { error });
+			await logger.insert("ERROR", "Failed to update instance during shutdown!", { ...error });
 		}
 
 		await logger.insert("INFO", "Runtime shutdown completed!");
 	} catch (error: Error | any) {
-		logger.insert("ERROR", "Error during runtime shutdown!", { error });
+		logger.insert("ERROR", "Error during runtime shutdown!", { ...error });
 	}
 
 	process.exit(0);
@@ -791,7 +791,7 @@ async function init() {
 		await processJobsNotifications();
 		await cleanup();
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to start runtime service!", { error });
+		await logger.insert("ERROR", "Failed to start runtime service!", { ...error });
 		throw error;
 	}
 }

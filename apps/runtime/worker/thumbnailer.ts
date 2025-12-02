@@ -45,11 +45,24 @@ export async function generateInputPreview(job: any, options: any): Promise<any>
 		];
 
 		await new Promise<void>((resolve, reject) => {
-			const proc = spawn(config.utils.ffmpeg.path, args, { stdio: "ignore" }); // inherit || ignore
+			let stderrData = "";
+
+			const proc = spawn(config.utils.ffmpeg.path, args, { stdio: ["ignore", "pipe", "pipe"] }); // inherit || ignore
+
+			proc.stderr.on("data", (chunk) => {
+				stderrData += chunk.toString();
+			});
+
 			proc.on("error", reject);
+
 			proc.on("exit", (code) => {
 				if (code === 0) resolve();
-				else reject(new Error(`FFmpeg preview generation exited with code ${code}! ffmpeg_args: ${args.join(" ")}`));
+				else
+					reject(
+						new Error(
+							`FFmpeg preview generation exited with code ${code}! Command: ffmpeg ${args.join(" ")}; Stderr: ${stderrData}`
+						)
+					);
 			});
 		});
 
@@ -61,7 +74,7 @@ export async function generateInputPreview(job: any, options: any): Promise<any>
 		// logger.console("INFO", "Preview generated from job input!");
 		return { temp_path: tempJobInputPreviewFilePath, format: tempJobInputPreviewFileFormat, ffmpeg_args: args };
 	} catch (error: Error | any) {
-		// await logger.insert("ERROR", "Job input preview couldn't be generated!", { error });
+		// await logger.insert("ERROR", "Job input preview couldn't be generated!", { ...error });
 		throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
 		// return { ...error || { message: 'Job input preview couldn't be generated!' } };
 	}

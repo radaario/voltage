@@ -36,22 +36,16 @@ export async function analyzeInputMetadata(job: any): Promise<any[]> {
 		// logger.console("INFO", "Job input successfully analyzed!");
 		return metadata;
 	} catch (error: Error | any) {
-		// await logger.insert("ERROR", "Job input couldn't be analyzed!", { error });
+		// await logger.insert("ERROR", "Job input couldn't be analyzed!", { ...error });
 		throw new Error(`Job input couldn't be analyzed! ${error.message || ""}`.trim());
 	}
 }
 
 async function runFfprobe(filePath: string): Promise<any[]> {
 	return new Promise((resolve, reject) => {
-		const ffprobe = spawn(config.utils.ffprobe.path, [
-			"-v",
-			"quiet",
-			"-print_format",
-			"json",
-			"-show_format",
-			"-show_streams",
-			filePath
-		]);
+		const args = ["-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", filePath];
+
+		const ffprobe = spawn(config.utils.ffprobe.path, args, { stdio: ["ignore", "pipe", "pipe"] });
 
 		let stdout = "";
 		let stderr = "";
@@ -70,10 +64,12 @@ async function runFfprobe(filePath: string): Promise<any[]> {
 					const result = JSON.parse(stdout);
 					resolve(result);
 				} catch (error: Error | any) {
-					reject(new Error(`Failed to parse FFProbe output: ${error.message}`));
+					reject(
+						new Error(`Failed to parse FFProbe output: ${error.message}! Command: ffprobe ${args.join(" ")}; Stderr: ${stderr}`)
+					);
 				}
 			} else {
-				reject(new Error(`FFProbe failed with code ${code}: ${stderr}`));
+				reject(new Error(`FFProbe failed with code ${code}! Command: ffprobe ${args.join(" ")}; Stderr: ${stderr}`));
 			}
 		});
 
