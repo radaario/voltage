@@ -140,30 +140,32 @@
 
 	/* responsive table */
 	@media (max-width: 640px) {
-		.responsive-table thead {
+		.responsive-table > thead {
 			display: none;
 		}
 
-		.responsive-table tbody tr {
+		.responsive-table > tbody > tr {
 			display: block;
 			margin-bottom: 0;
 			border-bottom: 1px solid rgb(229 231 235);
 		}
 
-		.dark .responsive-table tbody tr {
+		.dark .responsive-table > tbody > tr {
 			border-bottom-color: rgb(38 38 38);
 		}
 
-		.responsive-table tbody td {
+		.responsive-table > tbody > tr > td {
 			display: flex;
 			justify-content: space-between;
 			align-items: flex-start;
 			padding: 0.75rem 1rem;
 			border: none;
 			gap: 0.75rem;
+			word-break: break-word;
+			overflow: hidden;
 		}
 
-		.responsive-table tbody td:before {
+		.responsive-table > tbody > tr > td:not([data-no-label="true"]):before {
 			content: attr(data-label);
 			font-weight: 500;
 			text-transform: uppercase;
@@ -175,16 +177,16 @@
 			padding-top: 0.25rem;
 		}
 
-		.dark .responsive-table tbody td:before {
+		.dark .responsive-table > tbody > tr > td:before {
 			color: rgb(156 163 175);
 		}
 
-		.responsive-table tbody td > div {
+		.responsive-table > tbody > tr > td > div {
 			flex: 1;
 			min-width: 0;
 		}
 
-		.responsive-table tbody tr {
+		.responsive-table > tbody tr {
 			border-bottom-width: 2px !important;
 		}
 	}

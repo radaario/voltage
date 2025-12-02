@@ -87,7 +87,7 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 								size="sm">
 								{log.type || "UNKNOWN"}
 							</Label>
-							<div className="font-medium text-gray-900 dark:text-white truncate">{log.message || "-"}</div>
+							<div className="font-medium text-gray-900 dark:text-white sm:truncate">{log.message || "-"}</div>
 							<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{log.key}</span>
 						</>
 					);

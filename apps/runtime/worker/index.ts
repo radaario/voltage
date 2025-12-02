@@ -3,12 +3,12 @@ import { config } from "@voltage/config";
 import { database, logger, stats } from "@voltage/utils";
 import { getNow, addNow } from "@voltage/utils";
 
-import { downloadInput } from "./downloader";
-import { analyzeInputMetadata } from "./analyzer";
-import { generateInputPreview } from "./thumbnailer";
-import { processOutput } from "./processor";
-import { uploadOutput } from "./uploader";
-import { createJobNotification } from "./notifier";
+import { downloadInput } from "./downloader.js";
+import { analyzeInputMetadata } from "./analyzer.js";
+import { generateInputPreview } from "./thumbnailer.js";
+import { processOutput } from "./processor.js";
+import { uploadOutput } from "./uploader.js";
+import { createJobNotification } from "./notifier.js";
 
 import path from "path";
 import fs from "fs/promises";

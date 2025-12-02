@@ -34,6 +34,7 @@ const JsonViewer = ({ data, emptyMessage = "No data available", collapsed = fals
 				displayDataTypes={false}
 				displayObjectSize={true}
 				enableClipboard={true}
+				shortenTextAfterLength={0} // text ellipsis false
 			/>
 		</div>
 	);

@@ -110,7 +110,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 				cell: (info) => {
 					const notification = info.row.original;
 					return (
-						<>
+						<div className="flex flex-col items-start">
 							<Label
 								status={notification.payload.status}
 								statusColor={false}
@@ -118,7 +118,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 								{notification.payload.status || "UNKNOWN"}
 							</Label>
 							<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{notification.key}</div>
-						</>
+						</div>
 					);
 				}
 			}),
@@ -271,7 +271,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 				<LoadingOverlay show={loading} />
 
 				<div className="overflow-x-auto">
-					<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+					<table className="responsive-table min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
 						<thead className="bg-gray-50 dark:bg-neutral-800">
 							{table.getHeaderGroups().map((headerGroup) => (
 								<tr key={headerGroup.id}>

@@ -42,9 +42,22 @@ export interface ApiResponse<T = any> {
 
 class ApiClient {
 	private baseUrl: string;
+	private onUnauthorized?: () => void;
 
 	constructor(baseUrl: string) {
 		this.baseUrl = baseUrl;
+	}
+
+	/**
+	 * Set callback for 401 Unauthorized responses
+	 */
+	setUnauthorizedCallback(callback: () => void): void {
+		// Prevent overwriting existing callback
+		if (this.onUnauthorized) {
+			return;
+		}
+
+		this.onUnauthorized = callback;
 	}
 
 	/**
@@ -123,6 +136,11 @@ class ApiClient {
 			});
 
 			if (!response.ok) {
+				// Handle 401 Unauthorized
+				if (response.status === 401 && this.onUnauthorized) {
+					this.onUnauthorized();
+				}
+
 				const errorData = await response.json().catch(() => ({}));
 				throw new Error(errorData.message || errorData.error || `HTTP Error: ${response.status}`);
 			}

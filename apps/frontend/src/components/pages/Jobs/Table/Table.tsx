@@ -69,7 +69,7 @@ const JobsTable = ({
 					}
 
 					return (
-						<div className="flex items-center gap-3">
+						<div className="flex items-center gap-3 overflow-hidden">
 							<JobPreviewImage
 								jobKey={job.key}
 								authToken={authToken}
@@ -77,7 +77,7 @@ const JobsTable = ({
 								version={job.updated_at}
 							/>
 							<div className="flex flex-col min-w-0">
-								<div className="font-medium text-gray-900 dark:text-white truncate">{filename}</div>
+								<div className="font-medium text-gray-900 dark:text-white sm:truncate">{filename}</div>
 								<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{job.key}</div>
 								{specs.length > 0 && (
 									<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{specs.join(", ")}</span>

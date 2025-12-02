@@ -234,6 +234,19 @@ function Header() {
 						{/* Navigation Links */}
 						<nav className="flex flex-col p-4 space-y-2">
 							<NavLink
+								to="/"
+								onClick={handleNavClick}
+								className={({ isActive }: { isActive: boolean }) =>
+									`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all duration-200 ${
+										isActive
+											? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md"
+											: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 hover:text-gray-900 dark:hover:text-white"
+									}`
+								}>
+								<PresentationChartLineIcon className="h-5 w-5" />
+								Overview
+							</NavLink>
+							<NavLink
 								to="/jobs"
 								onClick={handleNavClick}
 								className={({ isActive }: { isActive: boolean }) =>

@@ -56,7 +56,7 @@ const JobCard = ({ jobKey, title, onClick }: JobCardProps) => {
 				{/* Content */}
 				<div className="flex-1 min-w-0">
 					{displayTitle && (
-						<div className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+						<div className="text-sm font-medium text-gray-900 dark:text-white sm:truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
 							{displayTitle}
 						</div>
 					)}

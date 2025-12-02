@@ -46,5 +46,12 @@ export const useAuth = () => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
+	// 401 hatası geldiğinde otomatik logout
+	useEffect(() => {
+		api.setUnauthorizedCallback(() => {
+			logout();
+		});
+	}, [logout]);
+
 	return { ...authState, login, logout };
 };

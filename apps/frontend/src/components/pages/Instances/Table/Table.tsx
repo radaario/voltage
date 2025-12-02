@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, Fragment } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, getExpandedRowModel } from "@tanstack/react-table";
 import { useNavigate } from "react-router-dom";
 import { Instance } from "@/interfaces/instance";
-import { TimeAgo, Tooltip, Button, Label, EmptyState, LoadingOverlay } from "@/components";
+import { TimeAgo, Tooltip, Button, Label, EmptyState, LoadingOverlay, ProgressBar } from "@/components";
 import { ChevronDownIcon, ChevronRightIcon, EyeIcon } from "@heroicons/react/24/outline";
 import { getInstanceName } from "@/utils/naming";
 import { getCountryFromIP } from "@/utils";
@@ -63,6 +63,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 									variant="ghost"
 									size="sm"
 									iconOnly
+									className="hidden sm:flex"
 									onClick={(e) => {
 										e.stopPropagation();
 										const rowId = info.row.id;
@@ -144,20 +145,10 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 					const cores = specs.cpu_core_count;
 
 					return (
-						<div className="space-y-1">
-							<div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2 overflow-hidden">
-								<div
-									className={`h-full rounded-full transition-all ${
-										usage > 80 ? "bg-red-500" : usage > 60 ? "bg-yellow-500" : "bg-green-500"
-									}`}
-									style={{ width: `${Math.min(usage, 100)}%` }}
-								/>
-							</div>
-							<div className="flex items-center justify-between gap-2">
-								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">{usage.toFixed(1)}%</span>
-								<span className="text-xs text-gray-500 dark:text-gray-400">{cores} cores</span>
-							</div>
-						</div>
+						<ProgressBar
+							value={usage}
+							subLabel={`${cores} cores`}
+						/>
 					);
 				}
 			}),
@@ -175,22 +166,10 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 					const usagePercent = specs.memory_usage_percent;
 
 					return (
-						<div className="space-y-1">
-							<div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2 overflow-hidden">
-								<div
-									className={`h-full rounded-full transition-all ${
-										usagePercent > 80 ? "bg-red-500" : usagePercent > 60 ? "bg-yellow-500" : "bg-green-500"
-									}`}
-									style={{ width: `${Math.min(usagePercent, 100)}%` }}
-								/>
-							</div>
-							<div className="flex items-center justify-between gap-2">
-								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">{usagePercent.toFixed(1)}%</span>
-								<span className="text-xs text-gray-500 dark:text-gray-400">
-									{usedGB.toFixed(1)} / {totalGB.toFixed(1)} GB
-								</span>
-							</div>
-						</div>
+						<ProgressBar
+							value={usagePercent}
+							subLabel={`${usedGB.toFixed(1)} / ${totalGB.toFixed(1)} GB`}
+						/>
 					);
 				}
 			}),
@@ -281,7 +260,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 				<LoadingOverlay show={loading} />
 
 				<div className="overflow-x-auto">
-					<table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+					<table className="responsive-table min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
 						<thead className="bg-gray-50 dark:bg-neutral-800">
 							{table.getHeaderGroups().map((headerGroup) => (
 								<tr key={headerGroup.id}>
@@ -311,6 +290,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 											{row.getVisibleCells().map((cell) => (
 												<td
 													key={cell.id}
+													data-label={cell.column.columnDef.header}
 													className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
 													{flexRender(cell.column.columnDef.cell, cell.getContext())}
 												</td>
@@ -322,9 +302,10 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 											<tr key={`${row.id}-workers`}>
 												<td
 													colSpan={8}
+													data-no-label="true"
 													className="relative px-6 py-0 bg-gray-50 dark:bg-neutral-900/50">
-													<div className="absolute left-8.75 top-5 bottom-5 rounded-sm border-4 border-gray-100 bg-gray-100 dark:border-neutral-700 dark:bg-neutral-700" />
-													<div className="py-4 pl-10 pr-2">
+													<div className="absolute left-3 left-sm-8.75 top-5 bottom-5 rounded-sm border-4 border-gray-100 bg-gray-100 dark:border-neutral-700 dark:bg-neutral-700" />
+													<div className="py-4 pl-2 pl-sm-10 pr-2">
 														<WorkersTable workers={row.original.workers} />
 													</div>
 												</td>

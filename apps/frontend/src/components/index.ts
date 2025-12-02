@@ -13,6 +13,7 @@ export { MemoizedTableRow } from "./base/MemoizedTableRow/MemoizedTableRow";
 export { default as Modal } from "./base/Modal/Modal";
 export { default as Page } from "./base/Page/Page";
 export { default as Pagination } from "./base/Pagination/Pagination";
+export { default as ProgressBar } from "./base/ProgressBar/ProgressBar";
 export { default as SearchInput } from "./base/SearchInput/SearchInput";
 export { default as TableKeyValuePreview } from "./base/TableKeyValuePreview/TableKeyValuePreview";
 export { default as TabsNavigation } from "./base/TabsNavigation/TabsNavigation";

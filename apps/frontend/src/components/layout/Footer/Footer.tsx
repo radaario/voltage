@@ -1,3 +1,5 @@
+import radaarLogoSvg from "@/assets/radaar-developed-by.svg";
+
 const Footer: React.FC = () => {
 	return (
 		<footer className="layout-footer">
@@ -16,9 +18,10 @@ const Footer: React.FC = () => {
 					<a
 						href="https://www.radaar.io/"
 						target="_blank"
+						rel="noopener noreferrer"
 						className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity ml-1.5">
 						<img
-							src={import.meta.env.BASE_URL + "radaar-developed-by.svg"}
+							src={radaarLogoSvg}
 							alt="Developed by RADAAR"
 							className="h-6 w-auto"
 						/>

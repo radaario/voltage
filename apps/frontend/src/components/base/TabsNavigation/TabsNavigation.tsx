@@ -13,8 +13,8 @@ interface TabsNavigationProps {
 
 const TabsNavigation: React.FC<TabsNavigationProps> = ({ tabs, className = "" }) => {
 	return (
-		<div className={`shrink-0 overflow-x-auto border-b border-gray-200 dark:border-neutral-700 ${className}`}>
-			<nav className="flex px-6 gap-8">
+		<div className={`shrink-0 border-b border-gray-200 dark:border-neutral-700 ${className}`}>
+			<nav className="flex overflow-x-auto px-6 gap-8">
 				{tabs.map((tab) => (
 					<NavLink
 						key={tab.path}
