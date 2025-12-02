@@ -24,7 +24,7 @@ const WorkerDetailModal = () => {
 	// Nested: /instances/:instanceKey/workers/:workerKey (from instance modal)
 	const isStandalone = location.pathname.includes("/instances/workers/");
 
-	// Standalone modda tüm instance'ları çek
+	// Nested modda outlet context'ten instance'ı kullan
 	const { data: instancesResponse, isLoading: instancesLoading } = useQuery<ApiResponse<Instance[]>>({
 		queryKey: ["instances", authToken],
 		queryFn: () =>

@@ -45,17 +45,17 @@ const AuthSafeRoute = () => {
 	const { isAuthenticated } = useAuth();
 	const { config, configLoading } = useGlobalStateContext();
 
-	// Config yüklenene kadar bekle
+	// Wait until config is loaded
 	if (configLoading) {
 		return <ScreenLoading />;
 	}
 
-	// Authentication gerekli değilse direkt içeri al
+	// If authentication is not required, allow access directly
 	if (!config?.frontend?.is_authentication_required) {
 		return <Outlet />;
 	}
 
-	// Authentication gerekli ve kullanıcı giriş yapmamışsa login'e yönlendir
+	// If authentication is required and the user is not authenticated, redirect to login
 	if (!isAuthenticated) {
 		return (
 			<Navigate
@@ -72,12 +72,12 @@ const AuthRedirect = () => {
 	const { isAuthenticated } = useAuth();
 	const { config, configLoading } = useGlobalStateContext();
 
-	// Config yüklenene kadar bekle
+	// Wait until config is loaded
 	if (configLoading) {
 		return <ScreenLoading />;
 	}
 
-	// Authentication gerekli değilse direkt dashboard'a yönlendir
+	// If authentication is not required, redirect to dashboard
 	if (!config?.frontend?.is_authentication_required) {
 		return (
 			<Navigate
@@ -87,7 +87,7 @@ const AuthRedirect = () => {
 		);
 	}
 
-	// Authentication gerekli ve kullanıcı giriş yapmışsa dashboard'a yönlendir
+	// If authentication is required and the user is authenticated, redirect to dashboard
 	if (isAuthenticated) {
 		return (
 			<Navigate

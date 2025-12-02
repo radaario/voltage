@@ -14,7 +14,7 @@ export const useAuth = () => {
 		isAuthenticated: !!localStorage.getItem("authToken")
 	});
 
-	// Authentication gerekli değilse otomatik olarak authenticated olarak işaretle
+	// If authentication is not required, automatically mark as authenticated
 	useEffect(() => {
 		if (!configLoading && config?.frontend?.is_authentication_required === false) {
 			setAuthState({
@@ -46,7 +46,7 @@ export const useAuth = () => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// 401 hatası geldiğinde otomatik logout
+	// Automatically logout on 401 error
 	useEffect(() => {
 		api.setUnauthorizedCallback(() => {
 			logout();

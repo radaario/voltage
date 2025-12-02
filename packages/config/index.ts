@@ -1,13 +1,8 @@
 import os from "os";
 import path from "path";
-// import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import fs from "fs";
-// import { dir } from "console";
 
-// ES module ortamında __filename ve __dirname yerine:
-// const __file = fileURLToPath(import.meta.url);
-// const __dir = path.dirname(__file);
 const __dir = process.cwd();
 
 // Load environment specific .env files and override

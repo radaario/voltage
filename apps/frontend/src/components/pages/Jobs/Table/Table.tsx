@@ -102,8 +102,8 @@ const JobsTable = ({
 				id: "outputs",
 				header: "Outputs",
 				cell: () => {
-					// Backend'de outputs bilgisi metadata içinde olabilir veya ayrı bir field olarak
-					// Şimdilik 1 gösterelim, gerekirse backend'den outputs sayısını alabiliriz
+					// The outputs information might be in metadata or as a separate field in the backend
+					// For now, let's show 1, we can fetch the outputs count from the backend if needed
 					return <span>1</span>;
 				}
 			}),
@@ -134,29 +134,29 @@ const JobsTable = ({
 					const job = info.row.original;
 
 					const duration = (() => {
-						// Job henüz başlamadıysa
+						// If the job has not started yet
 						if (!job.started_at || !job.completed_at) {
 							return null; //<span className="text-gray-400">-</span>;
 						}
 
-						// Her iki tarih de varsa süreyi hesapla
+						// If both dates are present, calculate the duration
 						try {
 							const started_at = new Date(job.started_at).getTime();
 							const completed_at = new Date(job.completed_at).getTime();
 
-							// Geçersiz tarih kontrolü
+							// Invalid date check
 							if (isNaN(started_at) || isNaN(completed_at)) {
 								return null; //<span className="text-gray-400">-</span>;
 							}
 
-							// Negatif veya çok büyük değer kontrolü
-							const duration = (completed_at - started_at) / 1000; // saniye cinsinden
+							// Negative or too large value check
+							const duration = (completed_at - started_at) / 1000; // duration in seconds
 							if (duration < 0 || duration > 86400) {
-								// 24 saatten fazla ise
+								// If more than 24 hours
 								return <span className="text-gray-400">Invalid</span>;
 							}
 
-							// Süreyi formatla
+							// Format the duration
 							if (duration < 60) {
 								return <span>{Math.round(duration)}s</span>;
 							} else if (duration < 3600) {

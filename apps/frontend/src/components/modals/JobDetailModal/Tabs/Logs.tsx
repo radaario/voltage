@@ -78,7 +78,7 @@ const Logs: React.FC = () => {
 			return;
 		}
 
-		// İlk yükleme: sadece ref'i set et, animasyon gösterme
+		// First load: just set the ref, do not show animation
 		if (previousDataRef.current.length === 0) {
 			previousDataRef.current = logs || [];
 			return;
