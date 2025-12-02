@@ -145,6 +145,21 @@ export async function processOutput(job: any, output: any): Promise<any> {
 		}
 
 		if (["VIDEO"].includes(output.specs.type) && job.input.video) {
+			// Video first frame
+			if (output.specs.video_first_frame_image_url) {
+				args.push("-i", output.specs.video_first_frame_image_url);
+				args.push(
+					"-filter_complex",
+					"[0:v]format=yuv420p,drawbox=0:0:iw:ih:black:t=fill:enable='eq(n,0)'[bg];[1:v]scale=w=min(iw\,in_w):h=min(ih\,in_h):force_original_aspect_ratio=decrease[scaled];[bg][scaled]overlay=(W-w)/2:(H-h)/2:enable='eq(n,0)'[v]"
+				);
+				args.push("-map", "[v]");
+			}
+
+			// Video subtitle burn-in
+			if (output.specs.video_subtitle_embed) {
+				args.push("-vf", "subtitles=subtitle.srt:force_style='FontName=Arial,FontSize=24,PrimaryColour=&H00FFFF,Bold=1'");
+			}
+
 			// Video codec and bitrate
 			if (output.specs.video_codec) args.push("-c:v", output.specs.video_codec);
 			if (output.specs.video_bitrate) args.push("-b:v", output.specs.video_bitrate);
