@@ -369,8 +369,9 @@ async function run() {
 		jobStats.outputs_completed_duration =
 			job.outputs?.reduce((sum: number, output: any) => sum + (output?.duration || 0.0), 0.0) || 0.0;
 	} catch (error: Error | any) {
-		if (job.try_count < job.try_max) {
+		if (job.try_count + 1 < job.try_max) {
 			job.status = "RETRYING";
+			// job.try_count += 1;
 			job.retry_at = addNow(job.retry_in || 0, "milliseconds");
 
 			// JOB: STATs: UPDATE
