@@ -707,7 +707,7 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 			created_at: now,
 			locked_by: null,
 			try_max: body.try_max ? body.try_max : config.jobs.try_count || 3,
-			try_count: 0,
+			try_count: config.jobs.enqueue_on_receive ? 1 : 0,
 			retry_in: body.retry_in ? body.retry_in : config.jobs.retry_in || 60 * 1000,
 			retry_at: null
 		};
@@ -748,13 +748,23 @@ app.put("/jobs", authMiddleware(), async (req: Request, res: Response) => {
 						.insert({ key: job.key, priority: job.priority, created_at: job.created_at })
 						.then(async (result) => {
 							// await stats.update({ jobs_queued_count: 1 });
-							await logger.insert("INFO", "Job successfully queued!", { job_key });
+							await logger.insert("INFO", "Received job successfully queued!", { job_key });
 						})
 						.catch(async (error) => {
 							// JOB: UPDATE: PENDING
 							job.status = "PENDING";
-							await database.table("jobs").where("key", job_key).update({ status: job.status, updated_at: getNow() });
-							await logger.insert("ERROR", "Enqueuing job failed!", { job_key, error });
+
+							await database
+								.table("jobs")
+								.where("key", job_key)
+								.update({
+									outcome: JSON.stringify({ message: "Enqueuing received job failed!" }),
+									status: job.status,
+									updated_at: getNow()
+									// try_count: 0
+								});
+
+							await logger.insert("ERROR", "Enqueuing received job failed!", { job_key, error });
 						});
 				}
 

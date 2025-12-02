@@ -77,7 +77,7 @@ async function run() {
 		job.progress = 0.0;
 		job.started_at = getNow();
 		job.completed_at = null;
-		job.try_count = parseInt(job.try_count as string) + 1;
+		job.try_count = parseInt(job.try_count as string); // + 1;
 		job.retry_at = null;
 
 		await updateJob(job);

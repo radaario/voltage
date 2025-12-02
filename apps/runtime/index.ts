@@ -366,7 +366,7 @@ async function processJobs(): Promise<void> {
 				completed_at: null,
 				updated_at: now,
 				locked_by: null,
-				// try_count: database.knex.raw(`CASE WHEN \`try_count\` < \`try_max\` THEN \`try_count\` + 1 ELSE \`try_count\` END`),
+				try_count: database.knex.raw(`CASE WHEN \`try_count\` < \`try_max\` THEN \`try_count\` + 1 ELSE \`try_count\` END`),
 				retry_at: null
 			});
 	} catch (error: Error | any) {}
@@ -395,23 +395,40 @@ async function processJobs(): Promise<void> {
 		const pendingJobs = await database.table("jobs").where("locked_by", selfInstanceKey);
 
 		for (const pendingJob of pendingJobs) {
+			pendingJob.try_count = pendingJob.try_count + 1;
+
 			// JOB: UPDATE: QUEUED
-			await database.table("jobs").where("key", pendingJob.key).update({ status: "QUEUED", updated_at: now, locked_by: null });
+			await database.table("jobs").where("key", pendingJob.key).update({
+				status: "QUEUED",
+				updated_at: now,
+				locked_by: null,
+				try_count: pendingJob.try_count
+			});
 
 			// JOB: QUEUE: INSERT
 			await database
 				.table("jobs_queue")
-				.insert({ key: pendingJob.key, priority: pendingJob.priority, created_at: pendingJob.created_at })
+				.insert({
+					key: pendingJob.key,
+					priority: pendingJob.priority,
+					created_at: pendingJob.created_at
+				})
 				.then(async (result) => {
 					await createJobNotification(pendingJob, "QUEUED");
-					await logger.insert("INFO", "Job successfully queued!", { job_key: pendingJob.key });
+					await logger.insert("INFO", "Pending job successfully queued!", { job_key: pendingJob.key });
 				})
 				.catch(async (error) => {
-					// JOB: UPDATE: PENDING
+					// JOB: UPDATE: PENDING || FAILED
 					await database
 						.table("jobs")
 						.where("key", pendingJob.key)
-						.update({ status: "PENDING", updated_at: now, locked_by: null });
+						.update({
+							outcome: JSON.stringify({ message: "Enqueuing pending job failed!" }),
+							status: pendingJob.try_count < pendingJob.try_max ? "PENDING" : "FAILED",
+							updated_at: now,
+							locked_by: null
+							// try_count: pendingJob.try_count
+						});
 
 					await logger.insert("ERROR", "Enqueuing pending job failed!", { job_key: pendingJob.key, error });
 				});
