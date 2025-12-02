@@ -376,6 +376,78 @@ async function setMasterInstance(instanceKey: string): Promise<void> {
 	}
 }
 
+async function spawnInstanceWorkerForJob(instanceKey: string, workerKey: string, jobKey: string): Promise<any> {
+	try {
+		// JOB: NOTIFICATIONs: UPDATE
+		// await database.table('jobs_notifications').where('job_key', job_key).update({ instance_key, worker_key: worker_key });
+
+		// WORKER: CREATE
+		let child: ChildProcess;
+
+		if (config.env === "local") {
+			const workerScriptPath = path.join(process.cwd(), "worker", "index.ts");
+			child = spawn("npx", ["tsx", workerScriptPath, instanceKey, workerKey, jobKey], {
+				stdio: ["inherit", "inherit", "inherit"],
+				cwd: process.cwd(),
+				shell: true
+			});
+		} else {
+			const workerScriptPath = path.join(process.cwd(), "dist", "worker", "index.js");
+			child = spawn("node", [workerScriptPath, instanceKey, workerKey, jobKey], {
+				stdio: ["inherit", "inherit", "inherit"],
+				cwd: process.cwd()
+				// shell: true
+			});
+		}
+
+		// WORKER: EVENTs
+		child.on("exit", async (code, signal) => {
+			logger.console("INFO", "Worker exited!", { instace_key: instanceKey, worker_key: workerKey, job_key: jobKey, code, signal });
+			workersProcessMap.delete(workerKey);
+			await idleInstanceWorker(instanceKey, workerKey, { message: "Worker exited!", exit_code: code, exit_signal: signal });
+		});
+
+		child.on("error", async (error: Error | any) => {
+			await logger.insert("ERROR", "Worker exited due error!", {
+				instace_key: instanceKey,
+				worker_key: workerKey,
+				job_key: jobKey,
+				error
+			});
+
+			workersProcessMap.delete(workerKey);
+
+			await idleInstanceWorker(instanceKey, workerKey, { message: error.message || "Unknown error occurred!", exit_signal: "ERROR" });
+		});
+
+		workersProcessMap.set(workerKey, child);
+
+		logger.console("INFO", "Worker successfully spawned for the job!", { worker_key: workerKey, job_key: jobKey });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to spawn worker for the job!", { job_key: jobKey, error });
+		throw error;
+	}
+}
+
+async function idleInstanceWorker(instanceKey: string, workerKey: string, outcome: any = null): Promise<any> {
+	try {
+		// WORKER: UPDATE
+		await database
+			.table("instances_workers")
+			.where("key", workerKey)
+			.update({
+				job_key: null,
+				status: "IDLE",
+				updated_at: getNow(),
+				outcome: JSON.stringify(outcome)
+			});
+
+		await logger.insert("INFO", "Worker idled successfully!", { instace_key: instanceKey, worker_key: workerKey, outcome });
+	} catch (error: Error | any) {
+		await logger.insert("ERROR", "Failed to idle worker!", { instace_key: instanceKey, worker_key: workerKey, outcome, error });
+	}
+}
+
 async function processJobs(): Promise<void> {
 	// JOBs: PENDINGs
 	logger.console("INFO", "Enqueuing pending jobs...");
@@ -448,7 +520,7 @@ async function processJobs(): Promise<void> {
 					await createJobNotification(pendingJob, "QUEUED");
 					await logger.insert("INFO", "Pending job successfully queued!", { job_key: pendingJob.key });
 				})
-				.catch(async (error) => {
+				.catch(async (error: Error | any) => {
 					// JOB: UPDATE: PENDING || FAILED
 					await database
 						.table("jobs")
@@ -504,7 +576,7 @@ async function processJobs(): Promise<void> {
 					// WORKER: UPDATE: BUSY
 					await database.table("instances_workers").where("key", idleWorker.key).update({ status: "BUSY", updated_at: now });
 
-					await spawnWorkerForJob(selfInstanceKey, idleWorker.key, queuedJob.key);
+					await spawnInstanceWorkerForJob(selfInstanceKey, idleWorker.key, queuedJob.key);
 
 					// JOB: QUEUE: DELETE
 					await database.table("jobs_queue").where("key", queuedJob.key).delete();
@@ -592,78 +664,6 @@ async function processJobsNotifications(): Promise<void> {
 	}
 
 	setTimeout(() => processJobsNotifications(), config.jobs.notifications.process_interval || 60000); // default 1 minute
-}
-
-async function spawnWorkerForJob(instanceKey: string, workerKey: string, jobKey: string): Promise<any> {
-	try {
-		// JOB: NOTIFICATIONs: UPDATE
-		// await database.table('jobs_notifications').where('job_key', job_key).update({ instance_key, worker_key: worker_key });
-
-		// WORKER: CREATE
-		let child: ChildProcess;
-
-		if (config.env === "local") {
-			const workerScriptPath = path.join(process.cwd(), "worker", "index.ts");
-			child = spawn("npx", ["tsx", workerScriptPath, instanceKey, workerKey, jobKey], {
-				stdio: ["inherit", "inherit", "inherit"],
-				cwd: process.cwd(),
-				shell: true
-			});
-		} else {
-			const workerScriptPath = path.join(process.cwd(), "dist", "worker", "index.js");
-			child = spawn("node", [workerScriptPath, instanceKey, workerKey, jobKey], {
-				stdio: ["inherit", "inherit", "inherit"],
-				cwd: process.cwd()
-				// shell: true
-			});
-		}
-
-		// WORKER: EVENTs
-		child.on("exit", async (code, signal) => {
-			logger.console("INFO", "Worker exited!", { worker_key: workerKey, job_key: jobKey, code, signal });
-			workersProcessMap.delete(workerKey);
-
-			// WORKER: UPDATE
-			await database
-				.table("instances_workers")
-				.where("key", workerKey)
-				.update({
-					job_key: null,
-					status: "IDLE",
-					updated_at: getNow(),
-					outcome: JSON.stringify({ message: "Worker exited!", exit_code: code, exit_signal: signal })
-				})
-				.catch((error) => {
-					logger.insert("ERROR", "Failed to idle worker!", { worker_key: workerKey, job_key: jobKey, error });
-				});
-		});
-
-		child.on("error", async (error) => {
-			await logger.insert("ERROR", "Worker exited due error!", { worker_key: workerKey, job_key: jobKey, error });
-			workersProcessMap.delete(workerKey);
-
-			// WORKER: UPDATE
-			await database
-				.table("instances_workers")
-				.where("key", workerKey)
-				.update({
-					job_key: null,
-					status: "IDLE",
-					updated_at: getNow(),
-					outcome: JSON.stringify({ message: error.message || "Unknown error occurred!", exit_signal: "ERROR" })
-				})
-				.catch((error) => {
-					logger.insert("ERROR", "Failed to idle worker!", { worker_key: workerKey, job_key: jobKey, error });
-				});
-		});
-
-		workersProcessMap.set(workerKey, child);
-
-		logger.console("INFO", "Worker successfully spawned for the job!", { worker_key: workerKey, job_key: jobKey });
-	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to spawn worker for the job!", { job_key: jobKey, error });
-		throw error;
-	}
 }
 
 async function cleanup() {

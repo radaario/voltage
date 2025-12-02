@@ -402,7 +402,6 @@ async function run() {
 
 	await updateJob(job);
 	if (workerStatusInterval) clearInterval(workerStatusInterval);
-	await updateWorkerStatus("IDLE");
 	await stats.update(jobStats);
 
 	if (job.status === "COMPLETED") {
