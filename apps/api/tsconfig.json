@@ -13,7 +13,7 @@
 			"@voltage/runtime/*": ["../runtime/*"]
 		}
 	},
-	"include": ["./*.ts"],
+	"include": ["./**/*.ts"],
 	"exclude": ["node_modules", "dist"],
 	"references": [{ "path": "../runtime" }]
 }

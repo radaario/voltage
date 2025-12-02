@@ -3,11 +3,11 @@ import { config } from "@voltage/config";
 import { database, logger, stats } from "@voltage/utils";
 import { getNow, addNow } from "@voltage/utils";
 
-import { downloadInput } from "./downloader.js";
-import { analyzeInputMetadata } from "./analyzer.js";
-import { generateInputPreview } from "./thumbnailer.js";
-import { processOutput } from "./processor.js";
-import { uploadOutput } from "./uploader.js";
+import { JobDownloader } from "./downloader.js";
+import { JobAnalyzer } from "./analyzer.js";
+import { JobThumbnailer } from "./thumbnailer.js";
+import { JobProcessor } from "./processor.js";
+import { JobUploader } from "./uploader.js";
 import { createJobNotification } from "./notifier.js";
 
 import path from "path";
@@ -65,10 +65,8 @@ async function run() {
 			async () => {
 				await updateWorkerStatus("BUSY", jobKey);
 			},
-			config.runtime.workers.busy_interval || 1 * 1 * 1000 // in milliseconds, default 1 seconds
-		);
-
-		// JOB: STARTING
+			1 * 1 * 1000 // in milliseconds, default 1 seconds
+		); // JOB: STARTING
 		await logger.insert("INFO", "Job found, starting processing...", { job_key: job.key });
 
 		// JOB: PARSE
@@ -107,7 +105,8 @@ async function run() {
 		await updateJob(job);
 		await createJobNotification(job, job.status);
 
-		const jobInput = await downloadInput(job);
+		const downloader = new JobDownloader(job);
+		const jobInput = await downloader.download();
 
 		try {
 			await fs.access(jobInput.temp_path);
@@ -135,7 +134,8 @@ async function run() {
 		await updateJob(job);
 		await createJobNotification(job, job.status);
 
-		const jobInputMetadata = await analyzeInputMetadata(job);
+		const analyzer = new JobAnalyzer(job);
+		const jobInputMetadata = await analyzer.analyze();
 		if (!jobInputMetadata) {
 			// JOB: STATs: UPDATE
 			jobStats.inputs_failed_count = 1;
@@ -157,7 +157,8 @@ async function run() {
 		// JOB: INPUT: PREVIEW GENERATING
 		await logger.insert("INFO", "Generating job input preview...");
 
-		const jobInputPreview = await generateInputPreview(job, config.jobs.preview);
+		const thumbnailer = new JobThumbnailer(job);
+		const jobInputPreview = await thumbnailer.generate(config.jobs.preview);
 
 		try {
 			await fs.access(jobInputPreview.temp_path);
@@ -248,7 +249,8 @@ async function run() {
 			await updateJob(job);
 
 			try {
-				job.outputs[index].outcome = await processOutput(job, job.outputs[index]);
+				const processor = new JobProcessor(job);
+				job.outputs[index].outcome = await processor.process(job.outputs[index]);
 				job.outputs[index].status = "PROCESSED";
 				job.outputs[index].updated_at = getNow();
 				job.outputs[index].duration = job.outputs[index].outcome?.duration || 0.0;
@@ -321,7 +323,8 @@ async function run() {
 				await updateJob(job);
 
 				try {
-					job.outputs[index].outcome = await uploadOutput(job, job.outputs[index]);
+					const uploader = new JobUploader(job);
+					job.outputs[index].outcome = await uploader.upload(job.outputs[index]);
 					job.outputs[index].status = "COMPLETED";
 					job.outputs[index].updated_at = getNow();
 					job.outputs[index].path = job.outputs[index].outcome?.path;
