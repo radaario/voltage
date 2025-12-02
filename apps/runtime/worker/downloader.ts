@@ -54,7 +54,7 @@ export async function downloadInput(job: any): Promise<any> {
 
 		throw new Error(`Unsupported job input type: ${job.input.type}!`);
 	} catch (error: Error | any) {
-		// await logger.insert("ERROR", "Job input couldn't be downloaded!", { error });
+		// await logger.insert("ERROR", "Job input couldn't be downloaded!", { ...error });
 		throw new Error(`Job input couldn't be downloaded! ${error.message || ""}`.trim());
 	}
 }

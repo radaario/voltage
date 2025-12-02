@@ -25,6 +25,8 @@ const nsfwjs = require("nsfwjs");
 async function run() {
 	await logger.insert("INFO", "Worker starts running...");
 
+	let workerStatusInterval = null;
+
 	const tempJobDir = path.join(config.temp_dir, "jobs", jobKey);
 	await fs.mkdir(tempJobDir, { recursive: true }).catch(() => {});
 
@@ -55,11 +57,16 @@ async function run() {
 	};
 
 	try {
-		await updateWorkerStatus("BUSY");
-
 		// JOB: SELECT
 		job = await database.table("jobs").where("key", jobKey).first();
 		if (!job) throw new Error("Job couldn't be found!");
+
+		workerStatusInterval = setInterval(
+			async () => {
+				await updateWorkerStatus("BUSY", jobKey);
+			},
+			config.runtime.workers.busy_interval || 1 * 1 * 1000 // in milliseconds, default 1 seconds
+		);
 
 		// JOB: STARTING
 		await logger.insert("INFO", "Job found, starting processing...", { job_key: job.key });
@@ -77,7 +84,7 @@ async function run() {
 		job.progress = 0.0;
 		job.started_at = getNow();
 		job.completed_at = null;
-		job.try_count = parseInt(job.try_count as string) + 1;
+		job.try_count = parseInt(job.try_count as string); // + 1;
 		job.retry_at = null;
 
 		await updateJob(job);
@@ -99,7 +106,6 @@ async function run() {
 
 		await updateJob(job);
 		await createJobNotification(job, job.status);
-		// await updateWorkerStatus("BUSY");
 
 		const jobInput = await downloadInput(job);
 
@@ -128,7 +134,6 @@ async function run() {
 
 		await updateJob(job);
 		await createJobNotification(job, job.status);
-		// await updateWorkerStatus("BUSY");
 
 		const jobInputMetadata = await analyzeInputMetadata(job);
 		if (!jobInputMetadata) {
@@ -209,7 +214,14 @@ async function run() {
 					}
 
 					imageTensor.dispose();
-				} catch (error: Error | any) {}
+
+					await logger.insert("INFO", "Job input NSFW analysis completed successfully!", {
+						nsfw: job.input.nsfw,
+						classification: job.input.classification
+					});
+				} catch (error: Error | any) {
+					await logger.insert("ERROR", "Job input NSFW analysis failed!", { ...error });
+				}
 			}
 		} catch (error: Error | any) {
 			throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
@@ -222,7 +234,6 @@ async function run() {
 
 		await updateJob(job);
 		await createJobNotification(job, job.status);
-		// await updateWorkerStatus("BUSY");
 
 		// JOB: OUTPUTs: PROCESSING
 		for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
@@ -256,14 +267,13 @@ async function run() {
 				await logger.insert("ERROR", "Failed to process job output!", {
 					output_key: job.outputs[index].key,
 					output_index: job.outputs[index].index,
-					error: error.message
+					...error
 				});
 			}
 
 			job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
 
 			await updateJob(job);
-			// await updateWorkerStatus("BUSY");
 		}
 
 		if (jobOutputsProcessedCount > 0) {
@@ -282,7 +292,6 @@ async function run() {
 
 			await updateJob(job);
 			await createJobNotification(job, job.status);
-			// await updateWorkerStatus("BUSY");
 
 			for (let index = 0; index < (job.outputs?.length ?? 0); index++) {
 				if (job.outputs[index].status == "PROCESSED") {
@@ -333,14 +342,13 @@ async function run() {
 					await logger.insert("ERROR", "Job output couldn't be uploaded!", {
 						output_key: job.outputs[index].key,
 						output_index: job.outputs[index].index,
-						error: error.message
+						...error
 					});
 				}
 
 				job.progress += parseFloat((jobProgressForEachStep / job.outputs.length).toFixed(2));
 
 				await updateJob(job);
-				// await updateWorkerStatus("BUSY");
 			}
 
 			if (jobOutputsUploadedCount > 0) {
@@ -369,8 +377,9 @@ async function run() {
 		jobStats.outputs_completed_duration =
 			job.outputs?.reduce((sum: number, output: any) => sum + (output?.duration || 0.0), 0.0) || 0.0;
 	} catch (error: Error | any) {
-		if (job.try_count < job.try_max) {
+		if (job.try_count + 1 < job.try_max) {
 			job.status = "RETRYING";
+			// job.try_count += 1;
 			job.retry_at = addNow(job.retry_in || 0, "milliseconds");
 
 			// JOB: STATs: UPDATE
@@ -399,7 +408,7 @@ async function run() {
 	await fs.rm(tempJobDir, { recursive: true }).catch(() => {});
 
 	await updateJob(job);
-	// await updateWorkerStatus('IDLE');
+	if (workerStatusInterval) clearInterval(workerStatusInterval);
 	await stats.update(jobStats);
 
 	if (job.status === "COMPLETED") {
@@ -407,7 +416,7 @@ async function run() {
 		await createJobNotification(job, job.status);
 		process.exit(0);
 	} else {
-		await logger.insert("ERROR", "Job failed!", { error: job.outcome });
+		await logger.insert("ERROR", "Job failed!", { ...job.outcome });
 		await createJobNotification(job, job.status);
 		process.exit(1);
 	}
@@ -432,11 +441,11 @@ async function updateJob(job: any): Promise<void> {
 				updated_at: getNow()
 			});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to update job!", { error });
+		await logger.insert("ERROR", "Failed to update job!", { ...error });
 	}
 }
 
-async function updateWorkerStatus(status: string): Promise<void> {
+async function updateWorkerStatus(status: string, jobKey: string | null = null): Promise<void> {
 	try {
 		await database.table("instances_workers").where("key", workerKey).update({
 			job_key: jobKey,
@@ -444,7 +453,7 @@ async function updateWorkerStatus(status: string): Promise<void> {
 			updated_at: getNow()
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to update worker!", { error });
+		await logger.insert("ERROR", "Failed to update worker!", { ...error });
 	}
 }
 

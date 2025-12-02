@@ -37,11 +37,24 @@ export async function processOutput(job: any, output: any): Promise<any> {
 
 			try {
 				await new Promise<void>((resolve, reject) => {
-					const proc = spawn(config.utils.ffmpeg.path, wavArgs, { stdio: "ignore" }); // inherit || ignore
+					let stderrData = "";
+
+					const proc = spawn(config.utils.ffmpeg.path, wavArgs, { stdio: ["ignore", "pipe", "pipe"] }); // inherit || ignore
+
+					proc.stderr.on("data", (chunk) => {
+						stderrData += chunk.toString();
+					});
+
 					proc.on("error", reject);
+
 					proc.on("exit", (code) => {
 						if (code === 0) resolve();
-						else reject(new Error(`FFmpeg WAV conversion exited with code ${code}! ffmpeg_args. ${wavArgs.join(" ")}`));
+						else
+							reject(
+								new Error(
+									`FFmpeg WAV conversion exited with code ${code}! Command: ffmpeg ${wavArgs.join(" ")}; Stderr: ${stderrData}`
+								)
+							);
 					});
 				});
 
@@ -87,7 +100,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
 
 				return { temp_path: tempJobOutputFilePath, ffmpeg_args: wavArgs };
 			} catch (error: Error | any) {
-				// await logger.insert("ERROR", "Failed to generate subtitle!", { output_key: output.key, output_index: output.index, error });
+				// await logger.insert("ERROR", "Failed to generate subtitle!", { output_key: output.key, output_index: output.index, ...error });
 				throw new Error(
 					`Failed to generate subtitle! ${error.message || "Unknown error occurred!"}. ffmpeg_args: ${wavArgs.join(" ")}`.trim()
 				);
@@ -98,7 +111,15 @@ export async function processOutput(job: any, output: any): Promise<any> {
 		const args: string[] = ["-y", "-i", tempJobInputFilePath];
 
 		if (["AUDIO"].includes(output.specs.type)) {
-			args.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
+			// args.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
+			args.push(
+				"-f",
+				"lavfi",
+				"-i",
+				"anullsrc=channel_layout=stereo:sample_rate=44100",
+				"-filter_complex",
+				"[0:a][1:a]amix=inputs=2:duration=longest"
+			);
 		}
 
 		if (output.specs.duration > job.input.duration) {
@@ -124,6 +145,21 @@ export async function processOutput(job: any, output: any): Promise<any> {
 		}
 
 		if (["VIDEO"].includes(output.specs.type) && job.input.video) {
+			// Video first frame
+			if (output.specs.video_first_frame_image_url) {
+				args.push("-i", output.specs.video_first_frame_image_url);
+				args.push(
+					"-filter_complex",
+					"[0:v]format=yuv420p,drawbox=0:0:iw:ih:black:t=fill:enable='eq(n,0)'[bg];[1:v]scale=w=min(iw\,in_w):h=min(ih\,in_h):force_original_aspect_ratio=decrease[scaled];[bg][scaled]overlay=(W-w)/2:(H-h)/2:enable='eq(n,0)'[v]"
+				);
+				args.push("-map", "[v]");
+			}
+
+			// Video subtitle burn-in
+			if (output.specs.video_subtitle) {
+				// args.push("-vf", "subtitles=subtitle.srt:force_style='FontName=Arial,FontSize=24,PrimaryColour=&H00FFFF,Bold=1'");
+			}
+
 			// Video codec and bitrate
 			if (output.specs.video_codec) args.push("-c:v", output.specs.video_codec);
 			if (output.specs.video_bitrate) args.push("-b:v", output.specs.video_bitrate);
@@ -231,11 +267,24 @@ export async function processOutput(job: any, output: any): Promise<any> {
 		args.push(tempJobOutputFilePath);
 
 		await new Promise<void>((resolve, reject) => {
-			const proc = spawn(config.utils.ffmpeg.path, args, { stdio: "ignore" }); // inherit || ignore
+			let stderrData = "";
+
+			const proc = spawn(config.utils.ffmpeg.path, args, { stdio: ["ignore", "pipe", "pipe"] }); // inherit || ignore
+
+			proc.stderr.on("data", (chunk) => {
+				stderrData += chunk.toString();
+			});
+
 			proc.on("error", reject);
+
 			proc.on("exit", (code) => {
 				if (code === 0) resolve();
-				else reject(new Error(`FFmpeg processing job output exited with code ${code}! ffmpeg_args: ${args.join(" ")}`));
+				else
+					reject(
+						new Error(
+							`FFmpeg processing job output exited with code ${code}! Command: ffmpeg ${args.join(" ")}; Stderr: ${stderrData}`
+						)
+					);
 			});
 		});
 
@@ -243,7 +292,7 @@ export async function processOutput(job: any, output: any): Promise<any> {
 
 		return { temp_path: tempJobOutputFilePath, duration: output.specs.duration || job.input.duration || 0.0, ffmpeg_args: args };
 	} catch (error: Error | any) {
-		// await logger.insert("ERROR", "Failed to process job output!", { output_key: output.key, output_index: output.index, error });
+		// await logger.insert("ERROR", "Failed to process job output!", { output_key: output.key, output_index: output.index, ...error });
 		throw new Error(`Failed to process job output! ${error.message || ""}!`.trim());
 		// return { message: error.message || "Failed to process job output!", args };
 	}

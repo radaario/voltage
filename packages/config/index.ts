@@ -39,7 +39,7 @@ const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? null;
 
 export const config = {
 	name: process.env.VOLTAGE_NAME ?? "VOLTAGE",
-	version: process.env.VOLTAGE_VERSION ?? "1.0.5",
+	version: process.env.VOLTAGE_VERSION ?? "1.0.8",
 	env: process.env.VOLTAGE_ENV ?? "local",
 	ngnix_port: Number(process.env.VOLTAGE_NGINX_PORT ?? 8080),
 	url: appUrl,
@@ -116,11 +116,12 @@ export const config = {
 		is_disabled: process.env.VOLTAGE_RUNTIME_IS_DISABLED === "true",
 		key_method: (process.env.VOLTAGE_INSTANCES_KEY_METHOD ?? "IP_ADDRESS") as "IP_ADDRESS" | "UNIQUE_KEY",
 		maintain_interval: Number(process.env.VOLTAGE_INSTANCES_MAINTAIN_INTERVAL ?? 1 * 10 * 1000), // in milliseconds, default 10 seconds
-		online_timeout: Number(process.env.VOLTAGE_INSTANCES_ONLINE_TIMEOUT ?? 1 * 60 * 1000), // in milliseconds, default 1 minute
+		online_timeout: Number(process.env.VOLTAGE_INSTANCES_ONLINE_TIMEOUT ?? 1 * 15 * 1000), // in milliseconds, default 15 seconds
 		purge_after: Number(process.env.VOLTAGE_INSTANCES_PURGE_AFTER ?? 1 * 60 * 1000), // in milliseconds, default 1 minute
 		workers: {
 			per_cpu_core: Number(process.env.VOLTAGE_WORKERS_PER_CPU_CORE ?? 1), // number of workers to run per CPU core
 			max: cpuCoresCount * Number(process.env.VOLTAGE_WORKERS_PER_CPU_CORE ?? 1), // maximum number of workers
+			busy_interval: Number(process.env.VOLTAGE_WORKERS_BUSY_INTERVAL ?? 1 * 1 * 1000), // in milliseconds, default 1 seconds
 			busy_timeout: Number(process.env.VOLTAGE_WORKERS_BUSY_TIMEOUT ?? 5 * 60 * 1000), // in milliseconds, default 5 minutes
 			idle_after: Number(process.env.VOLTAGE_WORKERS_IDLE_AFTER ?? 1 * 10 * 1000) // in milliseconds, default 10 seconds
 		}
@@ -150,7 +151,7 @@ export const config = {
 		retention: Number(process.env.VOLTAGE_LOGS_RETENTION ?? 60 * 60 * 1000) // in milliseconds, default 1 hour
 	},
 	jobs: {
-		queue_timeout: Number(process.env.VOLTAGE_JOBS_QUEUE_TIMEOUT ?? 10 * 60 * 1000), // in milliseconds, default 10 minutes
+		queue_timeout: Number(process.env.VOLTAGE_JOBS_QUEUE_TIMEOUT ?? 5 * 60 * 1000), // in milliseconds, default 5 minutes
 		process_interval: Number(process.env.VOLTAGE_JOBS_PROCESS_INTERVAL ?? 1 * 1 * 1000), // in milliseconds, default 1 second
 		process_timeout: Number(process.env.VOLTAGE_JOBS_PROCESS_TIMEOUT ?? 30 * 60 * 1000), // in milliseconds, default 30 minutes
 		enqueue_on_receive: process.env.VOLTAGE_JOBS_ENQUEUE_ON_RECEIVE ?? true, // enqueue job immediately when received

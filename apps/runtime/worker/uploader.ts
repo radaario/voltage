@@ -101,7 +101,7 @@ export async function uploadOutput(job: any, output: any): Promise<Record<string
 
 		return { path: `/${key}`, location, url };
 	} catch (error: Error | any) {
-		// await logger.insert("ERROR", "Failed to upload job output!", { output_key: output.key, output_index: output.index, error });
+		// await logger.insert("ERROR", "Failed to upload job output!", { output_key: output.key, output_index: output.index, ...error });
 		throw new Error(`Failed to upload job output! ${error.message || ""}`.trim());
 		// return { ...error || { message: 'Failed to upload job output!' } };
 	}
