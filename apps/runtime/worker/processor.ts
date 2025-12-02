@@ -156,8 +156,8 @@ export async function processOutput(job: any, output: any): Promise<any> {
 			}
 
 			// Video subtitle burn-in
-			if (output.specs.video_subtitle_embed) {
-				args.push("-vf", "subtitles=subtitle.srt:force_style='FontName=Arial,FontSize=24,PrimaryColour=&H00FFFF,Bold=1'");
+			if (output.specs.video_subtitle) {
+				// args.push("-vf", "subtitles=subtitle.srt:force_style='FontName=Arial,FontSize=24,PrimaryColour=&H00FFFF,Bold=1'");
 			}
 
 			// Video codec and bitrate
