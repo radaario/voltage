@@ -13,7 +13,7 @@ export function PageHeader({ title, onRefresh, isRefreshing = false, children }:
 	return (
 		<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 			<div className="flex items-center gap-3">
-				<h3 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h3>
+				<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{title}</h3>
 				{onRefresh && (
 					<Tooltip content="Reload">
 						<Button

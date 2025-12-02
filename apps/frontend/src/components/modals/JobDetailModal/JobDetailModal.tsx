@@ -112,7 +112,7 @@ const JobDetailModal: React.FC = () => {
 							{/* Preview Image */}
 							{job && (
 								<JobPreviewImage
-									className="w-24 h-16 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden"
+									className="w-20 h-12 sm:w-24 sm:h-16 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden"
 									jobKey={job.key}
 									authToken={authToken}
 									duration={job?.input?.duration}
@@ -122,22 +122,23 @@ const JobDetailModal: React.FC = () => {
 							<div className="flex flex-col min-w-0">
 								{job ? (
 									<div className="flex flex-col min-w-0">
-										<h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">{filename}</h3>
+										<h3 className="text-md sm:text-lg font-bold text-gray-900 dark:text-white truncate">{filename}</h3>
 										<p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{job?.key}</p>
 										{specs.length > 0 && (
 											<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{specs.join(", ")}</span>
 										)}
 									</div>
 								) : (
-									<h3 className="text-xl font-bold text-gray-900 dark:text-white">Loading...</h3>
+									<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>
 								)}
 							</div>
 						</div>
-						<div className="flex items-center gap-3 shrink-0 ml-4">
+						<div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 ml-4">
 							{showRetryButton && (
 								<Button
 									variant="secondary"
 									size="xs"
+									className="order-3 sm:order-1"
 									onClick={handleRetry}>
 									<ArrowPathIcon className="w-3 h-3" />
 									Retry
@@ -147,6 +148,7 @@ const JobDetailModal: React.FC = () => {
 							{job && (
 								<Label
 									status={job.status}
+									className="order-2"
 									hidden="sm">
 									{job.status}
 								</Label>
@@ -155,6 +157,7 @@ const JobDetailModal: React.FC = () => {
 								<Button
 									variant="ghost"
 									size="md"
+									className="order-1 sm:order-3"
 									iconOnly
 									onClick={modalProps.handleClose}>
 									<XMarkIcon className="h-6 w-6" />

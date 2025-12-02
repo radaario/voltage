@@ -99,26 +99,29 @@ const NotificationDetailModal: React.FC = () => {
 								{notification && (
 									<>
 										<div className="flex items-center gap-3">
-											<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Notification</h3>
+											<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Notification</h3>
 											<Label
 												status={notification.payload.status}
 												statusColor={false}>
 												{notification.payload.status || "UNKNOWN"}
 											</Label>
 										</div>
-										<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono truncate">
+										<p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono truncate">
 											{notification.key}
 										</p>
 									</>
 								)}
-								{!notification && <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
+								{!notification && (
+									<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>
+								)}
 							</div>
 						</div>
-						<div className="flex items-center gap-3 shrink-0 ml-4">
+						<div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 ml-4">
 							{["FAILED"].includes(notification?.status as string) && (
 								<Button
 									variant="secondary"
 									size="xs"
+									className="order-3 sm:order-1"
 									onClick={handleRetry}>
 									<ArrowPathIcon className="w-4 h-4" />
 									Retry
@@ -139,6 +142,7 @@ const NotificationDetailModal: React.FC = () => {
 									variant="ghost"
 									size="md"
 									iconOnly
+									className="order-1 sm:order-3"
 									onClick={modalProps.handleClose}>
 									<XMarkIcon className="h-6 w-6" />
 								</Button>

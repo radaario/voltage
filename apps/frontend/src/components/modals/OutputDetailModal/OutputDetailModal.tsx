@@ -101,7 +101,7 @@ const OutputDetailModal: React.FC = () => {
 										<p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{output.key}</p>
 									</div>
 								)}
-								{!output && <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
+								{!output && <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
 							</div>
 						</div>
 						<div className="flex items-center gap-3 shrink-0 ml-4">

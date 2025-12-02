@@ -92,7 +92,7 @@ const WorkerDetailModal = () => {
 						) : worker ? (
 							<div className="flex flex-col min-w-0">
 								<div className="flex items-center gap-2">
-									<h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+									<h2 className="text-xl sm:font-bold text-gray-900 dark:text-white">
 										{instance?.workers ? getWorkerName(instance.workers, worker as any) : `Worker ${worker.index + 1}`}
 									</h2>
 									{workerInstanceName && (

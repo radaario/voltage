@@ -81,13 +81,13 @@ const LogDetailModal: React.FC = () => {
 							{log ? (
 								<>
 									<div className="flex items-center gap-3">
-										<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Log</h3>
+										<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Log</h3>
 										<Label status={log.type}>{log.type || "UNKNOWN"}</Label>
 									</div>
 									<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono truncate">{log.key}</p>
 								</>
 							) : (
-								<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+								<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
 									{isError ? "Failed to load log. The log may not exist." : "Loading..."}
 								</h3>
 							)}

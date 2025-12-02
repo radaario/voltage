@@ -55,7 +55,7 @@ const InstanceDetailModal: React.FC = () => {
 							{instance && instancesResponse?.data ? (
 								<>
 									<div className="flex items-center gap-3 flex-wrap">
-										<h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+										<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
 											{getInstanceName(instancesResponse.data, instance)}
 										</h3>
 										<Label status={instance.type}>{instance.type}</Label>
@@ -63,7 +63,7 @@ const InstanceDetailModal: React.FC = () => {
 									<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono truncate">{instance.key}</p>
 								</>
 							) : (
-								<h3 className="text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>
+								<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>
 							)}
 						</div>
 					</div>

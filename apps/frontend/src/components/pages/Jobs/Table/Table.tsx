@@ -69,16 +69,20 @@ const JobsTable = ({
 					}
 
 					return (
-						<div className="flex items-center gap-3 overflow-hidden">
+						<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 overflow-hidden">
 							<JobPreviewImage
 								jobKey={job.key}
 								authToken={authToken}
 								duration={job?.input?.duration}
 								version={job.updated_at}
 							/>
-							<div className="flex flex-col min-w-0">
+							<div
+								className="flex flex-col items-start min-w-0"
+								style={{ wordBreak: "break-all" }}>
 								<div className="font-medium text-gray-900 dark:text-white sm:truncate">{filename}</div>
-								<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{job.key}</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400 font-mono sm:truncate hidden sm:block">
+									{job.key}
+								</div>
 								{specs.length > 0 && (
 									<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{specs.join(", ")}</span>
 								)}
