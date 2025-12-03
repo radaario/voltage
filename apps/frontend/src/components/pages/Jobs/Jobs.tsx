@@ -72,6 +72,25 @@ const Jobs: React.FC = () => {
 				type: "VIDEO",
 				format: "MP4",
 				path: "Big_Buck_Bunny_1080_10s_20MB.mp4",
+				offset: 1,
+				duration: 3,
+				width: 1280,
+				height: 720,
+				fit: "PAD",
+				quality: 3,
+				rotate: 180,
+				flip: "HORIZONTAL",
+				video_codec: "",
+				video_bit_rate: 5000000,
+				video_pixel_format: "yuv420p",
+				video_frame_rate: 25,
+				video_profile: "baseline",
+				video_level: 4.0,
+				video_deinterlace: true,
+				audio_codec: "libmp3lame",
+				audio_bit_rate: 128000,
+				audio_sample_rate: 48000,
+				audio_channels: 2,
 				destination: {
 					type: "HTTPS",
 					method: "POST",
@@ -84,12 +103,19 @@ const Jobs: React.FC = () => {
 			{
 				type: "AUDIO",
 				format: "MP3",
-				path: "Big_Buck_Bunny_1080_10s_20MB.mp3"
+				path: "Big_Buck_Bunny_1080_10s_20MB.mp3",
+				audio_codec: "libmp3lame",
+				audio_bit_rate: 128000,
+				audio_sample_rate: 48000,
+				audio_channels: 2
 			},
 			{
 				type: "THUMBNAIL",
 				format: "PNG",
-				path: "Big_Buck_Bunny_1080_10s_20MB.png"
+				path: "Big_Buck_Bunny_1080_10s_20MB.png",
+				width: 1280,
+				height: 720,
+				offset: 1
 			},
 			{
 				type: "SUBTITLE",

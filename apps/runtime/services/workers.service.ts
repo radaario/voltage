@@ -150,6 +150,7 @@ export const spawnInstanceWorkerForJob = async (
 			});
 		} else {
 			const workerScriptPath = path.join(process.cwd(), "dist", "worker", "index.js");
+			console.log("Spawning worker with tsx:", workerScriptPath);
 			child = spawn("node", [workerScriptPath, instanceKey, workerKey, jobKey], {
 				stdio: ["inherit", "inherit", "inherit"],
 				cwd: process.cwd()

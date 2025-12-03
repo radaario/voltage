@@ -102,21 +102,21 @@ export class JobAnalyzer {
 		const audioStream = streams.find((s: any) => s.codec_type === "audio");
 
 		// DURATION: CALCULATION
-		const duration = parseFloat(format.duration || "0");
-		const durationInTimestamp = Math.round(duration * 1000000); // Convert to microseconds
+		const duration = format.duration ? parseFloat(format.duration) : null;
+		const durationInTimestamp = duration ? Math.round(duration * 1000000) : null; // Convert to microseconds
 
 		/* VIDEO: INFO: PARSE */
 		let videoInfo = { video: false } as any;
 
 		if (videoStream) {
-			const videoWidth = parseInt(videoStream.width || "0");
-			const videoHeight = parseInt(videoStream.height || "0");
-			const videoCodedWidth = parseInt(videoStream.coded_width || videoStream.width || "0");
-			const videoCodedHeight = parseInt(videoStream.coded_height || videoStream.height || "0");
+			const videoWidth = videoStream.width ? parseInt(videoStream.width) : null;
+			const videoHeight = videoStream.height ? parseInt(videoStream.height) : null;
+			const videoCodedWidth = videoStream.coded_width ? parseInt(videoStream.coded_width) : videoWidth;
+			const videoCodedHeight = videoStream.coded_height ? parseInt(videoStream.coded_height) : videoHeight;
 
 			// Calculate aspect ratio
-			const videoAspectRatioDecimal = videoWidth > 0 && videoHeight > 0 ? videoWidth / videoHeight : 0;
-			const videoAspectRatio = this.getAspectRatio(videoAspectRatioDecimal);
+			const videoAspectRatioDecimal = videoWidth && videoHeight ? videoWidth / videoHeight : null;
+			const videoAspectRatio = videoAspectRatioDecimal ? this.getAspectRatio(videoAspectRatioDecimal) : null;
 
 			videoInfo = {
 				video: true,
@@ -126,16 +126,18 @@ export class JobAnalyzer {
 				video_height_coded: videoCodedHeight,
 				video_aspect_ratio: videoAspectRatio,
 				video_aspect_ratio_in_decimal: videoAspectRatioDecimal,
-				video_frames: parseInt(videoStream.nb_frames || "0"),
-				video_frame_rate:
-					parseFloat(videoStream.r_frame_rate?.split("/")[0] || "0") / parseFloat(videoStream.r_frame_rate?.split("/")[1] || "1"),
-				video_codec: videoStream.codec_name || "",
-				video_profile: videoStream.profile || "",
-				video_level: videoStream.level || "",
-				video_bit_rate: parseInt(videoStream.bit_rate || "0"),
-				video_has_b_frames: parseInt(videoStream.has_b_frames || "0"),
-				video_pixel_format: videoStream.pix_fmt || "",
-				video_chroma_location: videoStream.chroma_location || ""
+				video_frames: videoStream.nb_frames ? parseInt(videoStream.nb_frames) : null,
+				video_frame_rate: videoStream.r_frame_rate
+					? parseFloat(videoStream.r_frame_rate?.split("/")[0] || "0") /
+						parseFloat(videoStream.r_frame_rate?.split("/")[1] || "1")
+					: null,
+				video_codec: videoStream.codec_name || null,
+				video_profile: videoStream.profile || null,
+				video_level: videoStream.level || null,
+				video_bit_rate: videoStream.bit_rate ? parseInt(videoStream.bit_rate) : null,
+				video_has_b_frames: videoStream.has_b_frames ? parseInt(videoStream.has_b_frames) : null,
+				video_pixel_format: videoStream.pix_fmt || null,
+				video_chroma_location: videoStream.chroma_location || null
 			};
 		}
 
@@ -145,12 +147,12 @@ export class JobAnalyzer {
 		if (audioStream) {
 			audioInfo = {
 				audio: true,
-				audio_codec: audioStream.codec_name || "",
-				audio_profile: audioStream.profile || "",
-				audio_channels: parseInt(audioStream.channels || "0"),
-				audio_channel_layout: audioStream.channel_layout || "",
-				audio_sample_rate: parseInt(audioStream.sample_rate || "0"),
-				audio_bit_rate: parseInt(audioStream.bit_rate || "0")
+				audio_codec: audioStream.codec_name || null,
+				audio_profile: audioStream.profile || null,
+				audio_channels: audioStream.channels ? parseInt(audioStream.channels) : null,
+				audio_channel_layout: audioStream.channel_layout || null,
+				audio_sample_rate: audioStream.sample_rate ? parseInt(audioStream.sample_rate) : null,
+				audio_bit_rate: audioStream.bit_rate ? parseInt(audioStream.bit_rate) : null
 			};
 		}
 

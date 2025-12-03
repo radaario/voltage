@@ -286,7 +286,7 @@ type OutputSpecsImage = {
 
 type OutputSpecsAudio = {
 	audio_codec?: string;
-	audio_bitrate?: string; // e.g. '128k'
+	audio_bit_rate?: number | string; // e.g. '128k'
 	audio_sample_rate?: number; // in Hz
 	audio_channels?: number; // e.g. 2
 };
@@ -312,10 +312,10 @@ export type OutputSpecs =
 				| "RAW"
 				| string;
 			video_codec?: string;
-			video_bitrate?: string; // e.g. '2500k'
-			video_pix_fmt?: string; // e.g. 'yuv420p'
-			video_fps?: number;
-			video_vprofile?: string; // e.g. 'high', 'main', 'baseline'
+			video_bit_rate?: number | string; // e.g. '2500k'
+			video_pixel_format?: string; // e.g. 'yuv420p'
+			video_frame_rate?: number | string;
+			video_profile?: string; // e.g. 'high', 'main', 'baseline'
 			video_level?: string; // e.g. '4.0', '4.1', '5.0'
 			video_deinterlace?: boolean;
 	  } & OutputSpecsAudio &

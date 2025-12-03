@@ -20,10 +20,28 @@ export class JobProcessor {
 		try {
 			// logger.setMetadata({ instance_key: this.job.instance_key, worker_key: this.job.worker_key, job_key: this.job.key });
 
-			const tempJobOutputFilePath = path.join(
-				this.tempJobDir,
-				`output.${output.index}.${(output.specs.format || "mp4").toLowerCase()}`
-			);
+			// Validate and set defaults for output specs
+			output.specs.format = (output.specs.format || "MP4").toUpperCase();
+			output.specs.type = (output.specs.type || "VIDEO").toUpperCase();
+
+			if (this.job.input.duration && output.specs.offset && parseInt(output.specs.offset) >= parseInt(this.job.input.duration)) {
+				output.specs.offset = parseInt(this.job.input.duration) - 1;
+			}
+
+			if (this.job.input.duration && !output.specs.duration && output.specs.offset && parseInt(output.specs.offset) > 0) {
+				output.specs.duration = parseInt(this.job.input.duration) - parseInt(output.specs.offset || 0);
+			}
+
+			if (
+				this.job.input.duration &&
+				(!output.specs.duration ||
+					parseInt(output.specs.duration) > parseInt(this.job.input.duration) - parseInt(output.specs.offset || 0))
+			) {
+				output.specs.duration = parseInt(this.job.input.duration) - parseInt(output.specs.offset || 0);
+			}
+
+			// Temporary output file path
+			const tempJobOutputFilePath = path.join(this.tempJobDir, `output.${output.index}.${output.specs.format.toLowerCase()}`);
 
 			// logger.console("INFO", "Processing job output...", { output_key: output.key, output_index: output.index });
 
@@ -60,13 +78,21 @@ export class JobProcessor {
 		const jobInputAudioFilePath = path.join(this.tempJobDir, "audio.wav");
 
 		// Convert input to WAV
-		const wavArgs = ["-y", "-i", this.tempJobInputFilePath, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", jobInputAudioFilePath];
+		const ffmpegArgs = ["-y", "-i", this.tempJobInputFilePath, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le"];
+
+		// Offset
+		if (output.specs.offset) ffmpegArgs.push("-ss", String(output.specs.offset));
+
+		// Duration
+		if (output.specs.duration) ffmpegArgs.push("-t", String(output.specs.duration));
+
+		ffmpegArgs.push(jobInputAudioFilePath);
 
 		try {
 			await new Promise<void>((resolve, reject) => {
 				let stderrData = "";
 
-				const proc = spawn(config.utils.ffmpeg.path, wavArgs, { stdio: ["ignore", "pipe", "pipe"] }); // inherit || ignore
+				const proc = spawn(config.utils.ffmpeg.path, ffmpegArgs, { stdio: ["ignore", "pipe", "pipe"] }); // inherit || ignore
 
 				proc.stderr.on("data", (chunk) => {
 					stderrData += chunk.toString();
@@ -79,7 +105,7 @@ export class JobProcessor {
 					else
 						reject(
 							new Error(
-								`FFmpeg WAV conversion exited with code ${code}! Command: ffmpeg ${wavArgs.join(" ")}; Stderr: ${stderrData}`
+								`FFmpeg WAV conversion exited with code ${code}! Command: ffmpeg ${ffmpegArgs.join(" ")}; Stderr: ${stderrData}`
 							)
 						);
 				});
@@ -88,7 +114,7 @@ export class JobProcessor {
 			// Generate subtitles using whisper-node
 			const { nodewhisper } = await import("nodejs-whisper"); /* ! */
 
-			const outputFormat = (output.specs.format || "srt").toLowerCase();
+			const outputFormat = (output.specs.format || "SRT").toLowerCase();
 			const modelName = (output.specs.whisper_model || config.utils.whisper.model || "BASE")
 				.toLowerCase()
 				.replace("_en", ".en")
@@ -107,7 +133,7 @@ export class JobProcessor {
 					outputInJson: outputFormat === "json",
 					outputInText: outputFormat === "txt",
 					// translateToEnglish: output.specs.translate || false,
-					language: (output.specs.language || "auto").toLowerCase(),
+					language: (output.specs.language || "AUTO").toLowerCase(),
 					wordTimestamps: false,
 					timestamps_length: 20,
 					splitOnWord: true
@@ -125,11 +151,11 @@ export class JobProcessor {
 
 			// logger.console("INFO", "Subtitle generated!", { output_key: output.key, output_index: output.index });
 
-			return { temp_path: tempJobOutputFilePath, ffmpeg_args: wavArgs };
+			return { temp_path: tempJobOutputFilePath, ffmpeg_args: ffmpegArgs };
 		} catch (error: Error | any) {
 			// await logger.insert("ERROR", "Failed to generate subtitle!", { output_key: output.key, output_index: output.index, ...error });
 			throw new Error(
-				`Failed to generate subtitle! ${error.message || "Unknown error occurred!"}. ffmpeg_args: ${wavArgs.join(" ")}`.trim()
+				`Failed to generate subtitle! ${error.message || "Unknown error occurred!"}. ffmpeg_args: ${ffmpegArgs.join(" ")}`.trim()
 			);
 			// return { message: error.message || "Failed to process job output!" };
 		}
@@ -150,46 +176,40 @@ export class JobProcessor {
 			return { temp_path: tempJobOutputFilePath, message: "There is no video in the input file!" };
 		}
 
-		const args: string[] = ["-y", "-i", this.tempJobInputFilePath];
+		const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
 
-		if (output.specs.duration > this.job.input.duration) {
-			output.specs.duration = this.job.input.duration;
-		}
+		// Offset
+		if (output.specs.offset) ffmpegArgs.push("-ss", String(output.specs.offset));
 
-		if (!output.specs.duration && this.job.input.duration) {
-			output.specs.duration = this.job.input.duration - (output.specs.offset || 0);
-		}
+		// Image format
+		ffmpegArgs.push("-quality", String(output.specs.quality || 75));
 
-		if (output.specs.offset) {
-			args.push("-ss", String(output.specs.offset));
-		}
-
-		if (output.specs.duration) args.push("-t", String(output.specs.duration));
-
-		args.push("-quality", String(output.specs.quality || 75));
-		args.push("-vframes", "1");
+		// Extract only one frame
+		ffmpegArgs.push("-vframes", "1");
 
 		// Video filters for thumbnail
 		const videoFilters = this.buildVideoFilters(output);
-		if (videoFilters.length > 0) {
-			args.push("-vf", videoFilters.join(","));
-		}
+		if (videoFilters.length > 0) ffmpegArgs.push("-vf", videoFilters.join(","));
 
-		args.push(tempJobOutputFilePath);
+		ffmpegArgs.push(tempJobOutputFilePath);
 
-		await this.runFfmpeg(args);
+		await this.runFfmpeg(ffmpegArgs);
 
 		// logger.console("INFO", "Job output processed!", { output_key: output.key, output_index: output.index });
 
-		return { temp_path: tempJobOutputFilePath, duration: output.specs.duration || this.job.input.duration || 0.0, ffmpeg_args: args };
+		return {
+			temp_path: tempJobOutputFilePath,
+			duration: output.specs.duration || this.job.input.duration || 0.0,
+			ffmpeg_args: ffmpegArgs
+		};
 	}
 
 	private async processVideoOrAudio(output: any, tempJobOutputFilePath: string): Promise<any> {
-		const args: string[] = ["-y", "-i", this.tempJobInputFilePath];
+		const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
 
-		if (["AUDIO"].includes(output.specs.type)) {
+		if (["AUDIO"].includes(output.specs.type) && !this.job.input.audio) {
 			// args.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
-			args.push(
+			ffmpegArgs.push(
 				"-f",
 				"lavfi",
 				"-i",
@@ -199,79 +219,83 @@ export class JobProcessor {
 			);
 		}
 
-		if (output.specs.duration > this.job.input.duration) {
-			output.specs.duration = this.job.input.duration;
-		}
+		// Offset
+		if (output.specs.offset) ffmpegArgs.push("-ss", String(output.specs.offset));
 
-		if (!output.specs.duration && this.job.input.duration) {
-			output.specs.duration = this.job.input.duration - (output.specs.offset || 0);
-		}
-
-		if (output.specs.offset) {
-			args.push("-ss", String(output.specs.offset));
-		}
-
-		if (output.specs.duration) args.push("-t", String(output.specs.duration));
+		// Duration
+		if (output.specs.duration) ffmpegArgs.push("-t", String(output.specs.duration));
 
 		// Audio codec and settings
 		if (this.job.input.audio) {
-			if (output.specs.audio_codec) args.push("-c:a", output.specs.audio_codec);
-			if (output.specs.audio_bit_rate) args.push("-b:a", output.specs.audio_bit_rate);
-			if (output.specs.audio_sample_rate) args.push("-ar", String(output.specs.audio_sample_rate));
-			if (output.specs.audio_channels) args.push("-ac", String(output.specs.audio_channels));
+			// Audio codec
+			if (output.specs.audio_codec) ffmpegArgs.push("-c:a", output.specs.audio_codec);
+
+			// Audio bit rate
+			if (output.specs.audio_bit_rate) ffmpegArgs.push("-b:a", this.parseBitRate(output.specs.audio_bit_rate));
+
+			// Audio sample rate
+			if (output.specs.audio_sample_rate) ffmpegArgs.push("-ar", this.parseSampleRate(output.specs.audio_sample_rate));
+
+			// Audio channels
+			if (output.specs.audio_channels) ffmpegArgs.push("-ac", String(output.specs.audio_channels));
 		}
 
 		if (["VIDEO"].includes(output.specs.type) && this.job.input.video) {
-			// Video first frame
+			// Video first frame image overlay
 			if (output.specs.video_first_frame_image_url) {
-				args.push("-i", output.specs.video_first_frame_image_url);
-				args.push(
+				ffmpegArgs.push("-i", output.specs.video_first_frame_image_url);
+				ffmpegArgs.push(
 					"-filter_complex",
 					"[0:v]format=yuv420p,drawbox=0:0:iw:ih:black:t=fill:enable='eq(n,0)'[bg];[1:v]scale=w=min(iw\,in_w):h=min(ih\,in_h):force_original_aspect_ratio=decrease[scaled];[bg][scaled]overlay=(W-w)/2:(H-h)/2:enable='eq(n,0)'[v]"
 				);
-				args.push("-map", "[v]");
+				ffmpegArgs.push("-map", "[v]");
 			}
 
 			// Video subtitle burn-in
 			if (output.specs.video_subtitle) {
-				// args.push("-vf", "subtitles=subtitle.srt:force_style='FontName=Arial,FontSize=24,PrimaryColour=&H00FFFF,Bold=1'");
+				// ffmpegArgs.push("-vf", "subtitles=subtitle.srt:force_style='FontName=Arial,FontSize=24,PrimaryColour=&H00FFFF,Bold=1'");
 			}
 
-			// Video codec and bitrate
-			if (output.specs.video_codec) args.push("-c:v", output.specs.video_codec);
-			if (output.specs.video_bit_rate) args.push("-b:v", output.specs.video_bit_rate);
+			// Video codec
+			if (output.specs.video_codec) ffmpegArgs.push("-c:v", output.specs.video_codec);
 
-			// Video profile and level
-			if (output.specs.video_v_profile) args.push("-profile:v", output.specs.video_v_profile);
-			if (output.specs.video_level) args.push("-level", output.specs.video_level);
+			// Video bit rate
+			if (output.specs.video_bit_rate) ffmpegArgs.push("-b:v", this.parseBitRate(output.specs.video_bit_rate));
+
+			// Video profile
+			if (output.specs.video_profile) ffmpegArgs.push("-profile:v", output.specs.video_profile);
+
+			// Video level
+			if (output.specs.video_level) ffmpegArgs.push("-level", output.specs.video_level);
 
 			// Video pixel format
-			if (output.specs.video_pixel_format) args.push("-pix_fmt", output.specs.video_pixel_format);
+			if (output.specs.video_pixel_format) ffmpegArgs.push("-pix_fmt", output.specs.video_pixel_format);
 
 			// Video frame rate
-			if (output.specs.video_frame_rate) args.push("-r", String(output.specs.video_frame_rate));
+			if (output.specs.video_frame_rate) ffmpegArgs.push("-r", this.parseFrameRate(output.specs.video_frame_rate));
 
 			// Deinterlace
-			if (output.specs.video_deinterlace) args.push("-vf", "yadif");
+			if (output.specs.video_deinterlace) ffmpegArgs.push("-vf", "yadif");
 
-			if (output.specs.quality !== undefined) {
-				args.push("-q:v", String(output.specs.quality));
-			}
+			// Video quality
+			if (output.specs.quality !== undefined) ffmpegArgs.push("-q:v", String(output.specs.quality));
 
 			// Video filters
 			const videoFilters = this.buildVideoFilters(output);
-			if (videoFilters.length > 0) {
-				args.push("-vf", videoFilters.join(","));
-			}
+			if (videoFilters.length > 0) ffmpegArgs.push("-vf", videoFilters.join(","));
 		}
 
-		args.push(tempJobOutputFilePath);
+		ffmpegArgs.push(tempJobOutputFilePath);
 
-		await this.runFfmpeg(args);
+		await this.runFfmpeg(ffmpegArgs);
 
 		// logger.console("INFO", "Job output processed!", { output_key: output.key, output_index: output.index });
 
-		return { temp_path: tempJobOutputFilePath, duration: output.specs.duration || this.job.input.duration || 0.0, ffmpeg_args: args };
+		return {
+			temp_path: tempJobOutputFilePath,
+			duration: output.specs.duration || this.job.input.duration || 0.0,
+			ffmpeg_args: ffmpegArgs
+		};
 	}
 
 	private buildVideoFilters(output: any): string[] {
@@ -304,7 +328,7 @@ export class JobProcessor {
 		}
 
 		if (output.specs.rotate) {
-			switch (output.specs.rotate) {
+			switch (parseInt(output.specs.rotate)) {
 				case 90:
 					videoFilters.push("transpose=1");
 					break;
@@ -319,7 +343,7 @@ export class JobProcessor {
 		}
 
 		if (output.specs.flip) {
-			switch (output.specs.flip) {
+			switch (output.specs.flip.toUpperCase()) {
 				case "HORIZONTAL":
 					videoFilters.push("hflip");
 					break;
@@ -357,6 +381,73 @@ export class JobProcessor {
 					);
 			});
 		});
+	}
+
+	private parseFrameRate(value: string | number): string {
+		// Convert to string and remove spaces
+		let str = String(value).replace(/\s+/g, "").toLowerCase();
+		// Extract numeric part and unit
+		const match = str.match(/^(\d+(?:\.\d+)?)(fps)?$/);
+		if (!match) {
+			return String(value);
+		}
+		const [, numStr] = match;
+		let num = parseFloat(numStr);
+		return String(num);
+	}
+
+	private parseBitRate(value: string | number): string {
+		// Convert to string and remove spaces
+		let str = String(value).replace(/\s+/g, "").toLowerCase();
+
+		// Extract numeric part and unit
+		const match = str.match(/^(\d+(?:\.\d+)?)(k|m)?$/);
+		if (!match) {
+			return String(value);
+		}
+
+		const [, numStr, unit] = match;
+		let num = parseFloat(numStr);
+
+		// Convert to base number
+		if (unit === "k") {
+			num *= 1000;
+		} else if (unit === "m") {
+			num *= 1000000;
+		}
+
+		// Convert back to optimal unit
+		if (num >= 1000000 && num % 1000000 === 0) {
+			return `${num / 1000000}m`;
+		} else if (num >= 1000 && num % 1000 === 0) {
+			return `${num / 1000}k`;
+		}
+
+		return String(num);
+	}
+
+	private parseSampleRate(value: string | number): string {
+		// Convert to string and remove spaces
+		let str = String(value).replace(/\s+/g, "").toLowerCase();
+
+		// Extract numeric part and unit
+		const match = str.match(/^(\d+(?:\.\d+)?)(k|khz|hz)?$/);
+		if (!match) {
+			return String(value);
+		}
+
+		const [, numStr, unit] = match;
+		let num = parseFloat(numStr);
+
+		// Convert to Hz (base unit)
+		if (unit === "k" || unit === "khz") {
+			num *= 1000;
+		}
+		// if unit is "hz" or undefined, num is already in Hz
+
+		// Return as integer Hz value (FFmpeg expects sample rate in Hz)
+		// Common values: 8000, 11025, 16000, 22050, 44100, 48000, 96000, 192000
+		return String(Math.round(num));
 	}
 
 	private async createBlackImageBuffer(format: string, width: number, height: number): Promise<Buffer> {
