@@ -1,180 +1,203 @@
-import os from "os";
-import path from "path";
-import dotenv from "dotenv";
-import fs from "fs";
+import type { Config, StorageType, DatabaseType, InstanceKeyMethod, NSFWModel, WhisperModel, PreviewFormat } from "./types";
+import { loadEnvironmentFiles, getEnv, getEnvNumber, getEnvBoolean } from "./loader";
+import { validateEnvironment, validateConfig } from "./validators";
+import {
+	getAppDir,
+	SYSTEM_DEFAULTS,
+	APP_DEFAULTS,
+	STORAGE_DEFAULTS,
+	DATABASE_DEFAULTS,
+	RUNTIME_DEFAULTS,
+	API_DEFAULTS,
+	FRONTEND_DEFAULTS,
+	STATS_DEFAULTS,
+	LOGS_DEFAULTS,
+	JOBS_DEFAULTS,
+	UTILS_DEFAULTS
+} from "./defaults";
 
-const __dir = process.cwd();
+// =====================================================
+// ENVIRONMENT SETUP
+// =====================================================
 
-// Load environment specific .env files and override
-let envFiles = [".env", ".env.local"];
-if (process.env.VOLTAGE_ENV && !envFiles.includes(`.env.${process.env.VOLTAGE_ENV.toLowerCase()}`))
-	envFiles.push(`.env.${process.env.VOLTAGE_ENV.toLowerCase()}`);
+// Load environment variables
+loadEnvironmentFiles();
+validateEnvironment();
 
-for (const envFile of envFiles) {
-	const envPath = path.resolve(__dir, "../..", envFile);
-	if (fs.existsSync(envPath)) {
-		dotenv.config({ path: envPath, override: true });
-	}
-}
+// =====================================================
+// APPLICATION VARIABLES
+// =====================================================
 
-const appDir = path.resolve(__dir, "../..");
-const appProtocol = process.env.VOLTAGE_PROTOCOL ?? "http";
-const appHost = process.env.VOLTAGE_HOST ?? "localhost";
-const appPort = Number(process.env.VOLTAGE_PORT ?? 8080);
-const appPath = process.env.VOLTAGE_PATH ?? "/";
+const appDir = getAppDir();
+const appProtocol = getEnv("VOLTAGE_PROTOCOL", APP_DEFAULTS.protocol);
+const appHost = getEnv("VOLTAGE_HOST", APP_DEFAULTS.host);
+const appPort = getEnvNumber("VOLTAGE_PORT", APP_DEFAULTS.port);
+const appPath = getEnv("VOLTAGE_PATH", APP_DEFAULTS.path);
 const appUrl = `${appProtocol}://${appHost}${appPort !== 80 ? `:${appPort}` : ""}${appPath}`;
 
-const isWindows = os.platform() === "win32";
-const cpuCoresCount = os.cpus().length;
+const frontendPassword = getEnv("VOLTAGE_FRONTEND_PASSWORD") || null;
 
-const ffmpegPathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffmpeg" : "ffmpeg";
-const ffprobePathDefault = isWindows ? "C:\\ffmpeg\\bin\\ffprobe" : "ffprobe";
+// =====================================================
+// CONFIGURATION OBJECT
+// =====================================================
 
-const frontendPassword = process.env.VOLTAGE_FRONTEND_PASSWORD ?? null;
-
-export const config = {
-	name: process.env.VOLTAGE_NAME ?? "VOLTAGE",
-	version: process.env.VOLTAGE_VERSION ?? "1.0.8",
-	env: process.env.VOLTAGE_ENV ?? "local",
-	ngnix_port: Number(process.env.VOLTAGE_NGINX_PORT ?? 8080),
+export const config: Config = {
+	// Application basics
+	name: getEnv("VOLTAGE_NAME", APP_DEFAULTS.name),
+	version: getEnv("VOLTAGE_VERSION", APP_DEFAULTS.version),
+	env: getEnv("VOLTAGE_ENV", APP_DEFAULTS.env),
+	ngnix_port: getEnvNumber("VOLTAGE_NGINX_PORT", APP_DEFAULTS.nginxPort),
 	url: appUrl,
 	protocol: appProtocol,
 	host: appHost,
 	path: appPath,
 	port: appPort,
-	timezone: process.env.VOLTAGE_TIMEZONE ?? "UTC",
+	timezone: getEnv("VOLTAGE_TIMEZONE", APP_DEFAULTS.timezone),
 	dir: appDir,
-	temp_dir: process.env.VOLTAGE_TEMP_DIR ?? `${appDir}/storage/tmp`, // os.tmpdir(),
+	temp_dir: getEnv("VOLTAGE_TEMP_DIR", `${appDir}/storage/tmp`),
+
+	// Utilities configuration
 	utils: {
 		ffmpeg: {
-			path: process.env.FFMPEG_PATH ?? ffmpegPathDefault
+			path: getEnv("FFMPEG_PATH", SYSTEM_DEFAULTS.ffmpegPath)
 		},
 		ffprobe: {
-			path: process.env.FFPROBE_PATH ?? ffprobePathDefault
+			path: getEnv("FFPROBE_PATH", SYSTEM_DEFAULTS.ffprobePath)
 		},
 		nsfw: {
-			is_disabled: process.env.NSFW_IS_DISABLED === "true",
-			model: process.env.NSFW_MODEL ?? "MOBILE_NET_V2_MID", // MOBILE_NET_V2 || MOBILE_NET_V2_MID || INCEPTION_V3
-			size: Number(process.env.NSFW_SIZE ?? 299),
-			type: process.env.NSFW_TYPE ?? "GRAPH", // GRAPH
-			threshold: Number(process.env.NSFW_THRESHOLD ?? 0.7)
+			is_disabled: getEnvBoolean("NSFW_IS_DISABLED", UTILS_DEFAULTS.nsfw.isDisabled),
+			model: getEnv("NSFW_MODEL", UTILS_DEFAULTS.nsfw.model) as NSFWModel,
+			size: getEnvNumber("NSFW_SIZE", UTILS_DEFAULTS.nsfw.size),
+			type: getEnv("NSFW_TYPE", UTILS_DEFAULTS.nsfw.type) as "GRAPH",
+			threshold: getEnvNumber("NSFW_THRESHOLD", UTILS_DEFAULTS.nsfw.threshold)
 		},
 		whisper: {
-			model: process.env.WHISPER_MODEL ?? "BASE", // TINY || SMALL || MEDIUM || LARGE || TINY_EN || BASE_EN || SMALL_EN || MEDIUM_EN || LARGE_V1 || LARGE_V3_TURBO
-			cuda: process.env.WHISPER_CUDA === "true"
+			model: getEnv("WHISPER_MODEL", UTILS_DEFAULTS.whisper.model) as WhisperModel,
+			cuda: getEnvBoolean("WHISPER_CUDA", UTILS_DEFAULTS.whisper.cuda)
 		}
 	},
+
+	// Storage configuration
 	storage: {
-		type: (process.env.VOLTAGE_STORAGE_TYPE ?? "LOCAL") as
-			| "LOCAL"
-			| "AWS_S3"
-			| "GOOGLE_CLOUD_STORAGE"
-			| "DO_SPACES"
-			| "LINODE"
-			| "WASABI"
-			| "BACKBLAZE"
-			| "RACKSPACE"
-			| "MICROSOFT_AZURE"
-			| "OTHER_S3"
-			| "FTP"
-			| "SFTP",
-		endpoint: process.env.VOLTAGE_STORAGE_ENDPOINT ?? "", // for S3-compatible types
-		access_key: process.env.VOLTAGE_STORAGE_ACCESS_KEY ?? "", // Access Key ID for S3-compatible types
-		access_secret: process.env.VOLTAGE_STORAGE_ACCESS_SECRET ?? "", // Access Key Secret for S3-compatible types
-		region: process.env.VOLTAGE_STORAGE_REGION ?? "", // for S3-compatible types
-		bucket: process.env.VOLTAGE_STORAGE_BUCKET ?? "", // for S3-compatible types
-		host: process.env.VOLTAGE_STORAGE_HOST ?? "", // for FTP/SFTP
-		username: process.env.VOLTAGE_STORAGE_USERNAME ?? "", // for FTP/SFTP
-		password: process.env.VOLTAGE_STORAGE_PASSWORD ?? "", // for FTP/SFTP
-		secure: process.env.VOLTAGE_STORAGE_SECURE === "true", // for FTP (FTPS with explicit TLS)
-		base_path: process.env.VOLTAGE_STORAGE_BASE_PATH ?? `${appDir}/storage`
+		type: getEnv("VOLTAGE_STORAGE_TYPE", STORAGE_DEFAULTS.type) as StorageType,
+		endpoint: getEnv("VOLTAGE_STORAGE_ENDPOINT", STORAGE_DEFAULTS.endpoint),
+		access_key: getEnv("VOLTAGE_STORAGE_ACCESS_KEY", STORAGE_DEFAULTS.accessKey),
+		access_secret: getEnv("VOLTAGE_STORAGE_ACCESS_SECRET", STORAGE_DEFAULTS.accessSecret),
+		region: getEnv("VOLTAGE_STORAGE_REGION", STORAGE_DEFAULTS.region),
+		bucket: getEnv("VOLTAGE_STORAGE_BUCKET", STORAGE_DEFAULTS.bucket),
+		host: getEnv("VOLTAGE_STORAGE_HOST", STORAGE_DEFAULTS.host),
+		username: getEnv("VOLTAGE_STORAGE_USERNAME", STORAGE_DEFAULTS.username),
+		password: getEnv("VOLTAGE_STORAGE_PASSWORD", STORAGE_DEFAULTS.password),
+		secure: getEnvBoolean("VOLTAGE_STORAGE_SECURE", STORAGE_DEFAULTS.secure),
+		base_path: getEnv("VOLTAGE_STORAGE_BASE_PATH", `${appDir}/storage`)
 	},
+
+	// Database configuration
 	database: {
-		type: (process.env.VOLTAGE_DATABASE_TYPE ?? "SQLITE") as
-			| "SQLITE"
-			| "MYSQL"
-			| "MARIADB"
-			| "POSTGRESQL"
-			| "MSSQL"
-			| "AWS_REDSHIFT"
-			| "COCKROACHDB",
-		host: process.env.VOLTAGE_DATABASE_HOST ?? "localhost",
-		port: Number(process.env.VOLTAGE_DATABASE_PORT ?? 3306),
-		username: process.env.VOLTAGE_DATABASE_USERNAME ?? "root",
-		password: process.env.VOLTAGE_DATABASE_PASSWORD ?? "",
-		name: process.env.VOLTAGE_DATABASE_NAME ?? "voltage",
-		table_prefix: process.env.VOLTAGE_DATABASE_TABLE_PREFIX ?? "",
-		file_name: process.env.VOLTAGE_DATABASE_FILE_NAME ?? "db.sqlite", // SQLite specific
-		cleanup_interval: Number(process.env.VOLTAGE_DATABASE_CLEANUP_INTERVAL ?? 60 * 60 * 1000) // in milliseconds, default 1 hour
+		type: getEnv("VOLTAGE_DATABASE_TYPE", DATABASE_DEFAULTS.type) as DatabaseType,
+		host: getEnv("VOLTAGE_DATABASE_HOST", DATABASE_DEFAULTS.host),
+		port: getEnvNumber("VOLTAGE_DATABASE_PORT", DATABASE_DEFAULTS.port),
+		username: getEnv("VOLTAGE_DATABASE_USERNAME", DATABASE_DEFAULTS.username),
+		password: getEnv("VOLTAGE_DATABASE_PASSWORD", DATABASE_DEFAULTS.password),
+		name: getEnv("VOLTAGE_DATABASE_NAME", DATABASE_DEFAULTS.name),
+		table_prefix: getEnv("VOLTAGE_DATABASE_TABLE_PREFIX", DATABASE_DEFAULTS.tablePrefix),
+		file_name: getEnv("VOLTAGE_DATABASE_FILE_NAME", DATABASE_DEFAULTS.fileName),
+		cleanup_interval: getEnvNumber("VOLTAGE_DATABASE_CLEANUP_INTERVAL", DATABASE_DEFAULTS.cleanupInterval)
 	},
+
+	// Runtime configuration
 	runtime: {
-		is_disabled: process.env.VOLTAGE_RUNTIME_IS_DISABLED === "true",
-		key_method: (process.env.VOLTAGE_INSTANCES_KEY_METHOD ?? "IP_ADDRESS") as "IP_ADDRESS" | "UNIQUE_KEY",
-		maintain_interval: Number(process.env.VOLTAGE_INSTANCES_MAINTAIN_INTERVAL ?? 1 * 10 * 1000), // in milliseconds, default 10 seconds
-		online_timeout: Number(process.env.VOLTAGE_INSTANCES_ONLINE_TIMEOUT ?? 1 * 15 * 1000), // in milliseconds, default 15 seconds
-		purge_after: Number(process.env.VOLTAGE_INSTANCES_PURGE_AFTER ?? 1 * 60 * 1000), // in milliseconds, default 1 minute
+		is_disabled: getEnvBoolean("VOLTAGE_RUNTIME_IS_DISABLED", RUNTIME_DEFAULTS.isDisabled),
+		key_method: getEnv("VOLTAGE_INSTANCES_KEY_METHOD", RUNTIME_DEFAULTS.keyMethod) as InstanceKeyMethod,
+		maintain_interval: getEnvNumber("VOLTAGE_INSTANCES_MAINTAIN_INTERVAL", RUNTIME_DEFAULTS.maintainInterval),
+		online_timeout: getEnvNumber("VOLTAGE_INSTANCES_ONLINE_TIMEOUT", RUNTIME_DEFAULTS.onlineTimeout),
+		purge_after: getEnvNumber("VOLTAGE_INSTANCES_PURGE_AFTER", RUNTIME_DEFAULTS.purgeAfter),
 		workers: {
-			per_cpu_core: Number(process.env.VOLTAGE_WORKERS_PER_CPU_CORE ?? 1), // number of workers to run per CPU core
-			max: cpuCoresCount * Number(process.env.VOLTAGE_WORKERS_PER_CPU_CORE ?? 1), // maximum number of workers
-			busy_interval: Number(process.env.VOLTAGE_WORKERS_BUSY_INTERVAL ?? 1 * 1 * 1000), // in milliseconds, default 1 seconds
-			busy_timeout: Number(process.env.VOLTAGE_WORKERS_BUSY_TIMEOUT ?? 5 * 60 * 1000), // in milliseconds, default 5 minutes
-			idle_after: Number(process.env.VOLTAGE_WORKERS_IDLE_AFTER ?? 1 * 10 * 1000) // in milliseconds, default 10 seconds
+			per_cpu_core: getEnvNumber("VOLTAGE_WORKERS_PER_CPU_CORE", RUNTIME_DEFAULTS.workers.perCpuCore),
+			max: SYSTEM_DEFAULTS.cpuCoresCount * getEnvNumber("VOLTAGE_WORKERS_PER_CPU_CORE", RUNTIME_DEFAULTS.workers.perCpuCore),
+			busy_interval: getEnvNumber("VOLTAGE_WORKERS_BUSY_INTERVAL", RUNTIME_DEFAULTS.workers.busyInterval),
+			busy_timeout: getEnvNumber("VOLTAGE_WORKERS_BUSY_TIMEOUT", RUNTIME_DEFAULTS.workers.busyTimeout),
+			idle_after: getEnvNumber("VOLTAGE_WORKERS_IDLE_AFTER", RUNTIME_DEFAULTS.workers.idleAfter)
 		}
 	},
+
+	// API configuration
 	api: {
-		is_disabled: process.env.VOLTAGE_API_IS_DISABLED === "true",
-		url: process.env.VOLTAGE_HOST ? `${appUrl}/api` : `http://localhost:${Number(process.env.VOLTAGE_API_NODE_PORT ?? 4000)}`,
-		node_port: Number(process.env.VOLTAGE_API_NODE_PORT ?? 4000),
-		key: process.env.VOLTAGE_API_KEY ?? null,
-		request_body_limit: process.env.VOLTAGE_API_REQUEST_BODY_LIMIT ?? 0, // in MB, 0 means no limit
-		sensitive_fields: process.env.VOLTAGE_API_SENSITIVE_FIELDS ?? "password,access_secret"
+		is_disabled: getEnvBoolean("VOLTAGE_API_IS_DISABLED", API_DEFAULTS.isDisabled),
+		url: getEnv("VOLTAGE_HOST") ? `${appUrl}/api` : `http://localhost:${getEnvNumber("VOLTAGE_API_NODE_PORT", API_DEFAULTS.nodePort)}`,
+		node_port: getEnvNumber("VOLTAGE_API_NODE_PORT", API_DEFAULTS.nodePort),
+		key: getEnv("VOLTAGE_API_KEY") || API_DEFAULTS.key,
+		request_body_limit: getEnvNumber("VOLTAGE_API_REQUEST_BODY_LIMIT", API_DEFAULTS.requestBodyLimit),
+		sensitive_fields: getEnv("VOLTAGE_API_SENSITIVE_FIELDS", API_DEFAULTS.sensitiveFields)
 	},
+
+	// Frontend configuration
 	frontend: {
-		is_disabled: process.env.VOLTAGE_FRONTEND_IS_DISABLED === "true",
-		url: process.env.VOLTAGE_HOST ? appUrl : `http://localhost:${Number(process.env.VOLTAGE_FRONTEND_NODE_PORT ?? 3000)}`,
-		node_port: Number(process.env.VOLTAGE_FRONTEND_NODE_PORT ?? 3000),
-		is_authentication_required: frontendPassword ? true : false,
+		is_disabled: getEnvBoolean("VOLTAGE_FRONTEND_IS_DISABLED", FRONTEND_DEFAULTS.isDisabled),
+		url: getEnv("VOLTAGE_HOST") ? appUrl : `http://localhost:${getEnvNumber("VOLTAGE_FRONTEND_NODE_PORT", FRONTEND_DEFAULTS.nodePort)}`,
+		node_port: getEnvNumber("VOLTAGE_FRONTEND_NODE_PORT", FRONTEND_DEFAULTS.nodePort),
+		is_authentication_required: frontendPassword !== null,
 		password: frontendPassword,
-		data_refetch_interval: Number(process.env.VOLTAGE_FRONTEND_DATA_REFETCH_INTERVAL ?? 10000), // in milliseconds, default 10 seconds
-		datetime_format: process.env.VOLTAGE_FRONTEND_DATETIME_FORMAT ?? "YYYY-MM-DD HH:mm:ss"
+		data_refetch_interval: getEnvNumber("VOLTAGE_FRONTEND_DATA_REFETCH_INTERVAL", FRONTEND_DEFAULTS.dataRefetchInterval),
+		datetime_format: getEnv("VOLTAGE_FRONTEND_DATETIME_FORMAT", FRONTEND_DEFAULTS.datetimeFormat),
+		local_storage: {
+			prefix: getEnv("VOLTAGE_FRONTEND_LOCAL_STORAGE_PREFIX") || FRONTEND_DEFAULTS.localStorage.prefix
+		}
 	},
+
+	// Stats configuration
 	stats: {
-		retention: Number(process.env.VOLTAGE_STATS_RETENTION ?? 365 * 24 * 60 * 60 * 1000) // in milliseconds, default 365 days
+		retention: getEnvNumber("VOLTAGE_STATS_RETENTION", STATS_DEFAULTS.retention)
 	},
+
+	// Logs configuration
 	logs: {
-		is_disabled: process.env.VOLTAGE_LOGS_IS_DISABLED === "true",
-		retention: Number(process.env.VOLTAGE_LOGS_RETENTION ?? 60 * 60 * 1000) // in milliseconds, default 1 hour
+		is_disabled: getEnvBoolean("VOLTAGE_LOGS_IS_DISABLED", LOGS_DEFAULTS.isDisabled),
+		retention: getEnvNumber("VOLTAGE_LOGS_RETENTION", LOGS_DEFAULTS.retention)
 	},
+
+	// Jobs configuration
 	jobs: {
-		queue_timeout: Number(process.env.VOLTAGE_JOBS_QUEUE_TIMEOUT ?? 5 * 60 * 1000), // in milliseconds, default 5 minutes
-		process_interval: Number(process.env.VOLTAGE_JOBS_PROCESS_INTERVAL ?? 1 * 1 * 1000), // in milliseconds, default 1 second
-		process_timeout: Number(process.env.VOLTAGE_JOBS_PROCESS_TIMEOUT ?? 30 * 60 * 1000), // in milliseconds, default 30 minutes
-		enqueue_on_receive: process.env.VOLTAGE_JOBS_ENQUEUE_ON_RECEIVE ?? true, // enqueue job immediately when received
-		enqueue_limit: Number(process.env.VOLTAGE_JOBS_ENQUEUE_LIMIT ?? 10), // default 10 jobs per enqueue
-		retention: Number(process.env.VOLTAGE_JOBS_RETENTION ?? 24 * 60 * 60 * 1000), // in milliseconds, default 24 hours || 7 days = 24 * 7
-		try_min: Number(process.env.VOLTAGE_JOBS_TRY_MIN ?? 1), // default 0
-		try_max: Number(process.env.VOLTAGE_JOBS_TRY_MAX ?? 3), // default 3
-		try_count: Number(process.env.VOLTAGE_JOBS_TRY_COUNT ?? 3), // default 0 (no retry)
-		retry_in_min: Number(process.env.VOLTAGE_JOBS_RETRY_IN_MIN ?? 1 * 60 * 1000), // in milliseconds, default 60 seconds
-		retry_in_max: Number(process.env.VOLTAGE_JOBS_RETRY_IN_MAX ?? 60 * 60 * 1000), // in milliseconds, default 60 minutes
-		retry_in: Number(process.env.VOLTAGE_JOBS_RETRY_IN ?? 1 * 60 * 1000), // in milliseconds, default 60 seconds
+		queue_timeout: getEnvNumber("VOLTAGE_JOBS_QUEUE_TIMEOUT", JOBS_DEFAULTS.queueTimeout),
+		process_interval: getEnvNumber("VOLTAGE_JOBS_PROCESS_INTERVAL", JOBS_DEFAULTS.processInterval),
+		process_timeout: getEnvNumber("VOLTAGE_JOBS_PROCESS_TIMEOUT", JOBS_DEFAULTS.processTimeout),
+		enqueue_on_receive: getEnvBoolean("VOLTAGE_JOBS_ENQUEUE_ON_RECEIVE", JOBS_DEFAULTS.enqueueOnReceive),
+		enqueue_limit: getEnvNumber("VOLTAGE_JOBS_ENQUEUE_LIMIT", JOBS_DEFAULTS.enqueueLimit),
+		retention: getEnvNumber("VOLTAGE_JOBS_RETENTION", JOBS_DEFAULTS.retention),
+		try_min: getEnvNumber("VOLTAGE_JOBS_TRY_MIN", JOBS_DEFAULTS.tryMin),
+		try_max: getEnvNumber("VOLTAGE_JOBS_TRY_MAX", JOBS_DEFAULTS.tryMax),
+		try_count: getEnvNumber("VOLTAGE_JOBS_TRY_COUNT", JOBS_DEFAULTS.tryCount),
+		retry_in_min: getEnvNumber("VOLTAGE_JOBS_RETRY_IN_MIN", JOBS_DEFAULTS.retryInMin),
+		retry_in_max: getEnvNumber("VOLTAGE_JOBS_RETRY_IN_MAX", JOBS_DEFAULTS.retryInMax),
+		retry_in: getEnvNumber("VOLTAGE_JOBS_RETRY_IN", JOBS_DEFAULTS.retryIn),
 		preview: {
-			format: process.env.VOLTAGE_JOBS_PREVIEW_FORMAT ?? "PNG", // format of the generated preview thumbnail: PNG || JPG || BMP || WEBP, NSFW is not supporting WEBP!
-			quality: process.env.VOLTAGE_JOBS_PREVIEW_QUALITY ?? 75
+			format: getEnv("VOLTAGE_JOBS_PREVIEW_FORMAT", JOBS_DEFAULTS.preview.format) as PreviewFormat,
+			quality: getEnvNumber("VOLTAGE_JOBS_PREVIEW_QUALITY", JOBS_DEFAULTS.preview.quality)
 		},
 		notifications: {
-			process_interval: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_PROCESS_INTERVAL ?? 1 * 1000), // in milliseconds, default 1 second
-			process_limit: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_PROCESS_LIMIT ?? 10), // default 10 poll
-			notify_on: process.env.VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON ?? "RECEIVED,COMPLETED,FAILED,TIMEOUT",
-			notify_on_alloweds:
-				process.env.VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON_ALLOWEDS ??
-				"RECEIVED,PENDING,RETRYING,QUEUED,STARTED,DOWNLOADING,DOWNLOADED,ANALYZING,ANALYZED,PROCESSING,PROCESSED,UPLOADING,UPLOADED,COMPLETED,CANCELLED,DELETED,FAILED,TIMEOUT",
-			timeout: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT ?? 1 * 10 * 1000), // in milliseconds, default 10 seconds
-			timeout_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX ?? 1 * 30 * 1000), // in milliseconds, default 30 seconds
-			try: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TRY ?? 3), // default 3
-			try_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_TRY_MAX ?? 3), // default 3
-			retry_in: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN ?? 1 * 60 * 1000), // in milliseconds, default 1 minute
-			retry_in_max: Number(process.env.VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MAX ?? 60 * 60 * 1000) // in milliseconds, default 60 minutes
+			process_interval: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_PROCESS_INTERVAL", JOBS_DEFAULTS.notifications.processInterval),
+			process_limit: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_PROCESS_LIMIT", JOBS_DEFAULTS.notifications.processLimit),
+			notify_on: getEnv("VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON", JOBS_DEFAULTS.notifications.notifyOn),
+			notify_on_alloweds: getEnv("VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON_ALLOWEDS", JOBS_DEFAULTS.notifications.notifyOnAlloweds),
+			timeout: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT", JOBS_DEFAULTS.notifications.timeout),
+			timeout_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX", JOBS_DEFAULTS.notifications.timeoutMax),
+			try: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TRY", JOBS_DEFAULTS.notifications.try),
+			try_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TRY_MAX", JOBS_DEFAULTS.notifications.tryMax),
+			retry_in: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN", JOBS_DEFAULTS.notifications.retryIn),
+			retry_in_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MAX", JOBS_DEFAULTS.notifications.retryInMax)
 		}
 	}
 };
+
+// =====================================================
+// VALIDATE CONFIGURATION
+// =====================================================
+
+validateConfig(config);
+
+// =====================================================
+// EXPORTS
+// =====================================================
+
+// Re-export types for convenience
+export * from "./types";

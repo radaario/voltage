@@ -1,20 +1,49 @@
 // import { logger } from "./logger";
 import knex, { Knex } from "knex";
 
+/**
+ * Database configuration interface
+ */
+export interface DatabaseConfig {
+	type: string;
+	host?: string;
+	port?: number;
+	username?: string;
+	password?: string;
+	name?: string;
+	table_prefix?: string;
+	file_name?: string;
+	timezone?: string;
+}
+
 class Database {
-	private _config: any = null;
+	private _config: DatabaseConfig | null = null;
 	private _knex: Knex | null = null;
 
-	config(cfg: any) {
+	/**
+	 * Configure database connection
+	 * @param cfg Database configuration
+	 */
+	config(cfg: DatabaseConfig): void {
 		this._config = cfg;
 		this._knex = this.createKnexInstance();
 	}
 
+	/**
+	 * Get Knex instance
+	 * @throws Error if database not configured
+	 */
 	get knex(): Knex {
-		if (!this._knex) throw new Error("Database not configured. Call database.config(config.database) first.");
+		if (!this._knex) {
+			throw new Error("Database not configured. Call database.config(config.database) first.");
+		}
 		return this._knex;
 	}
 
+	/**
+	 * Get table prefix (normalized)
+	 * @returns Table prefix with trailing underscore
+	 */
 	getTablePrefix(): string {
 		if (!this._config) throw new Error("Database not configured.");
 		const raw = this._config.table_prefix;
@@ -24,17 +53,50 @@ class Database {
 		return transformed + "_";
 	}
 
-	table(tableName: string) {
+	/**
+	 * Get table query builder with prefix
+	 * @param tableName Table name (without prefix)
+	 * @returns Knex query builder
+	 */
+	table(tableName: string): Knex.QueryBuilder {
 		return this.knex(this.getTablePrefix() + tableName);
 	}
 
-	async verifySchemaExists() {
-		// logger.console("INFO", "Ensuring database schema exists...", { type: this._config.type?.toUpperCase() });
+	/**
+	 * Execute operations within a transaction
+	 * @param callback Transaction callback
+	 * @returns Promise with callback result
+	 */
+	async transaction<T>(callback: (trx: Knex.Transaction) => Promise<T>): Promise<T> {
+		return this.knex.transaction(callback);
+	}
 
+	/**
+	 * Check if a table exists
+	 * @param tableName Table name (without prefix)
+	 * @returns Promise<boolean>
+	 */
+	async hasTable(tableName: string): Promise<boolean> {
+		return this.knex.schema.hasTable(this.getTablePrefix() + tableName);
+	}
+
+	/**
+	 * Drop a table if it exists
+	 * @param tableName Table name (without prefix)
+	 */
+	async dropTableIfExists(tableName: string): Promise<void> {
+		await this.knex.schema.dropTableIfExists(this.getTablePrefix() + tableName);
+	}
+
+	/**
+	 * Verify and create database schema if needed
+	 * Creates all required tables (stats, logs, instances, workers, jobs, etc.)
+	 */
+	async verifySchemaExists(): Promise<void> {
 		try {
 			const prefix = this.getTablePrefix();
 
-			// Create logs table
+			// Create stats table
 			const hasStats = await this.knex.schema.hasTable(`${prefix}stats`);
 			if (!hasStats) {
 				await this.knex.schema.createTable(`${prefix}stats`, (table) => {
@@ -149,12 +211,10 @@ class Database {
 					table.integer("priority").notNullable().defaultTo(1000);
 					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 					table.string("locked_by", 40).nullable();
-					// table.index(['priority']);
-					// table.foreign("key").references("key").inTable(`${prefix}jobs`).onDelete("CASCADE");
 				});
 			}
 
-			// Create jobs_notifications table
+			// Create jobs_notifications tables
 			for (const jobsNotificationsTable of ["jobs_notifications", "jobs_notifications_queue"]) {
 				const hasJobsNotifications = await this.knex.schema.hasTable(`${prefix}${jobsNotificationsTable}`);
 				if (!hasJobsNotifications) {
@@ -178,24 +238,30 @@ class Database {
 						table.integer("try_count").notNullable().defaultTo(1);
 						table.integer("retry_in").nullable();
 						table.datetime("retry_at", { precision: 3 }).nullable();
-						// table.foreign("job_key").references("key").inTable(`${prefix}jobs`).onDelete("CASCADE");
 					});
 				}
 			}
-
-			// logger.console("INFO", "Database schema verified successfully!");
-		} catch (error: Error | any) {
-			// logger.console("ERROR", "Failed to verify database schema!", { error });
+		} catch (error) {
 			throw error;
 		}
 	}
 
+	/**
+	 * Create Knex instance based on database type
+	 * @returns Knex instance
+	 * @private
+	 */
 	private createKnexInstance(): Knex {
+		if (!this._config) {
+			throw new Error("Database config is null");
+		}
+
 		const type = this._config.type.toUpperCase();
 
-		let knexConfig: Knex.Config = {
+		const knexConfig: Knex.Config = {
 			client: this.getKnexClient(type),
-			useNullAsDefault: type === "SQLITE"
+			useNullAsDefault: type === "SQLITE",
+			pool: { min: 2, max: 10 } // Connection pooling
 		};
 
 		switch (type) {
@@ -203,6 +269,8 @@ class Database {
 				knexConfig.connection = {
 					filename: this._config.file_name ? `./${this._config.file_name}` : "./db.sqlite"
 				};
+				// SQLite doesn't need connection pooling
+				knexConfig.pool = { min: 1, max: 1 };
 				break;
 
 			case "MYSQL":
@@ -216,7 +284,6 @@ class Database {
 					timezone: this._config.timezone ? this._config.timezone.replace("UTC", "+00:00") : "+00:00",
 					dateStrings: true
 				};
-				knexConfig.pool = { min: 0, max: 10 };
 				break;
 
 			case "POSTGRESQL":
@@ -229,20 +296,13 @@ class Database {
 					password: this._config.password,
 					database: this._config.name
 				};
-				knexConfig.pool = { min: 0, max: 10 };
 				if (this._config.timezone) {
+					const timezone = this._config.timezone; // Capture for closure
 					knexConfig.pool = {
-						...knexConfig.pool,
+						min: 2,
+						max: 10,
 						afterCreate: (conn: any, done: any) => {
-							conn.query(`SET TIME ZONE '${this._config.timezone}'`, (err: any) => {
-								if (err) {
-									/*
-									logger.console("ERROR", "Failed to set PostgreSQL timezone", {
-										timezone: this._config.timezone,
-										error: err
-									});
-									*/
-								}
+							conn.query(`SET TIME ZONE '${timezone}'`, (err: any) => {
 								done(err, conn);
 							});
 						}
@@ -263,7 +323,6 @@ class Database {
 						enableArithAbort: true
 					}
 				};
-				knexConfig.pool = { min: 0, max: 10 };
 				if (this._config.timezone) {
 					/*
 					logger.console(
@@ -282,6 +341,12 @@ class Database {
 		return knex(knexConfig);
 	}
 
+	/**
+	 * Get Knex client name based on database type
+	 * @param type Database type
+	 * @returns Knex client name
+	 * @private
+	 */
 	private getKnexClient(type: string): string {
 		switch (type) {
 			case "SQLITE":

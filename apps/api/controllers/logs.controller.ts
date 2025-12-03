@@ -21,6 +21,13 @@ export const getLog = async (req: Request, res: Response) => {
 
 export const getLogs = async (req: Request, res: Response) => {
 	try {
+		const log_key = (req.query.log_key || req.body.log_key || "").trim();
+
+		// if log_key provided, fetch only that instance and return as object (not array)
+		if (log_key) {
+			return getLog(req, res);
+		}
+
 		const pagination = getPaginationParams(req);
 		const filters = {
 			instance_key: (req.query.instance_key || req.body.instance_key || "").trim(),

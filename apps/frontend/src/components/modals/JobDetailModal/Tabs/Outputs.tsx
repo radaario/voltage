@@ -129,12 +129,14 @@ const Outputs: React.FC = () => {
 										</div>
 									</td>
 									<td className="px-6 py-4 text-sm">
-										{output.specs?.path && (
-											<div className="text-gray-500 dark:text-gray-400 text-xs mt-1">{output.specs.path}</div>
-										)}
-										{output.specs?.format && (
-											<div className="text-gray-500 dark:text-gray-400 text-xs mt-1">{output.specs.format}</div>
-										)}
+										<div className="max-w-60 break-words">
+											{output.specs?.path && (
+												<div className="text-gray-500 dark:text-gray-400 text-xs mt-1">{output.specs.path}</div>
+											)}
+											{output.specs?.format && (
+												<div className="text-gray-500 dark:text-gray-400 text-xs mt-1">{output.specs.format}</div>
+											)}
+										</div>
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
 										<Label status={output.status}>{output.status}</Label>

@@ -1,3 +1,186 @@
+// =====================================================
+// CONFIGURATION TYPES
+// =====================================================
+
+export type StorageType =
+	| "LOCAL"
+	| "OTHER_S3"
+	| "AWS_S3"
+	| "GOOGLE_CLOUD_STORAGE"
+	| "DO_SPACES"
+	| "LINODE"
+	| "WASABI"
+	| "BACKBLAZE"
+	| "RACKSPACE"
+	| "MICROSOFT_AZURE"
+	| "FTP"
+	| "SFTP";
+
+export type DatabaseType = "SQLITE" | "MYSQL" | "MARIADB" | "POSTGRESQL" | "MSSQL" | "AWS_REDSHIFT" | "COCKROACHDB";
+
+export type InstanceKeyMethod = "IP_ADDRESS" | "UNIQUE_KEY";
+
+export type NSFWModel = "MOBILE_NET_V2" | "MOBILE_NET_V2_MID" | "INCEPTION_V3";
+
+export type NSFWType = "GRAPH";
+
+export type WhisperModel =
+	| "TINY"
+	| "SMALL"
+	| "MEDIUM"
+	| "LARGE"
+	| "TINY_EN"
+	| "BASE"
+	| "BASE_EN"
+	| "SMALL_EN"
+	| "MEDIUM_EN"
+	| "LARGE_V1"
+	| "LARGE_V3_TURBO";
+
+export type PreviewFormat = "PNG" | "JPG" | "BMP" | "WEBP";
+
+export interface Config {
+	name: string;
+	version: string;
+	env: string;
+	ngnix_port: number;
+	url: string;
+	protocol: string;
+	host: string;
+	path: string;
+	port: number;
+	timezone: string;
+	dir: string;
+	temp_dir: string;
+
+	utils: {
+		ffmpeg: {
+			path: string;
+		};
+		ffprobe: {
+			path: string;
+		};
+		nsfw: {
+			is_disabled: boolean;
+			model: NSFWModel;
+			size: number;
+			type: NSFWType;
+			threshold: number;
+		};
+		whisper: {
+			model: WhisperModel;
+			cuda: boolean;
+		};
+	};
+
+	storage: {
+		type: StorageType;
+		endpoint: string;
+		access_key: string;
+		access_secret: string;
+		region: string;
+		bucket: string;
+		host: string;
+		username: string;
+		password: string;
+		secure: boolean;
+		base_path: string;
+	};
+
+	database: {
+		type: DatabaseType;
+		host: string;
+		port: number;
+		username: string;
+		password: string;
+		name: string;
+		table_prefix: string;
+		file_name: string;
+		cleanup_interval: number;
+	};
+
+	runtime: {
+		is_disabled: boolean;
+		key_method: InstanceKeyMethod;
+		maintain_interval: number;
+		online_timeout: number;
+		purge_after: number;
+		workers: {
+			per_cpu_core: number;
+			max: number;
+			busy_interval: number;
+			busy_timeout: number;
+			idle_after: number;
+		};
+	};
+
+	api: {
+		is_disabled: boolean;
+		url: string;
+		node_port: number;
+		key: string | null;
+		request_body_limit: number | string;
+		sensitive_fields: string;
+	};
+
+	frontend: {
+		is_disabled: boolean;
+		url: string;
+		node_port: number;
+		is_authentication_required: boolean;
+		password: string | null;
+		data_refetch_interval: number;
+		datetime_format: string;
+		local_storage: {
+			prefix: string | null;
+		};
+	};
+
+	stats: {
+		retention: number;
+	};
+
+	logs: {
+		is_disabled: boolean;
+		retention: number;
+	};
+
+	jobs: {
+		queue_timeout: number;
+		process_interval: number;
+		process_timeout: number;
+		enqueue_on_receive: boolean | string;
+		enqueue_limit: number;
+		retention: number;
+		try_min: number;
+		try_max: number;
+		try_count: number;
+		retry_in_min: number;
+		retry_in_max: number;
+		retry_in: number;
+		preview: {
+			format: PreviewFormat;
+			quality: number | string;
+		};
+		notifications: {
+			process_interval: number;
+			process_limit: number;
+			notify_on: string;
+			notify_on_alloweds: string;
+			timeout: number;
+			timeout_max: number;
+			try: number;
+			try_max: number;
+			retry_in: number;
+			retry_in_max: number;
+		};
+	};
+}
+
+// =====================================================
+// JOB TYPES
+// =====================================================
+
 export type AWS_S3_ACL =
 	| "PUBLIC_READ"
 	| "PUBLIC_READ_WRITE"

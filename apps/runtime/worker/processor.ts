@@ -216,7 +216,7 @@ export class JobProcessor {
 		// Audio codec and settings
 		if (this.job.input.audio) {
 			if (output.specs.audio_codec) args.push("-c:a", output.specs.audio_codec);
-			if (output.specs.audio_bitrate) args.push("-b:a", output.specs.audio_bitrate);
+			if (output.specs.audio_bit_rate) args.push("-b:a", output.specs.audio_bit_rate);
 			if (output.specs.audio_sample_rate) args.push("-ar", String(output.specs.audio_sample_rate));
 			if (output.specs.audio_channels) args.push("-ac", String(output.specs.audio_channels));
 		}
@@ -239,17 +239,17 @@ export class JobProcessor {
 
 			// Video codec and bitrate
 			if (output.specs.video_codec) args.push("-c:v", output.specs.video_codec);
-			if (output.specs.video_bitrate) args.push("-b:v", output.specs.video_bitrate);
+			if (output.specs.video_bit_rate) args.push("-b:v", output.specs.video_bit_rate);
 
 			// Video profile and level
-			if (output.specs.video_vprofile) args.push("-profile:v", output.specs.video_vprofile);
+			if (output.specs.video_v_profile) args.push("-profile:v", output.specs.video_v_profile);
 			if (output.specs.video_level) args.push("-level", output.specs.video_level);
 
 			// Video pixel format
-			if (output.specs.video_pix_fmt) args.push("-pix_fmt", output.specs.video_pix_fmt);
+			if (output.specs.video_pixel_format) args.push("-pix_fmt", output.specs.video_pixel_format);
 
 			// Video frame rate
-			if (output.specs.video_fps) args.push("-r", String(output.specs.video_fps));
+			if (output.specs.video_frame_rate) args.push("-r", String(output.specs.video_frame_rate));
 
 			// Deinterlace
 			if (output.specs.video_deinterlace) args.push("-vf", "yadif");
@@ -278,7 +278,8 @@ export class JobProcessor {
 		const videoFilters: string[] = [];
 
 		if (output.specs.width && output.specs.height) {
-			const fit = output.specs.fit || "PAD";
+			const fit = (output.specs.fit || "PAD").toUpperCase();
+
 			switch (fit) {
 				case "STRETCH":
 					videoFilters.push(`scale=${output.specs.width}:${output.specs.height}`);

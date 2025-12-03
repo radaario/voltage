@@ -21,6 +21,13 @@ export const getNotification = async (req: Request, res: Response) => {
 
 export const getNotifications = async (req: Request, res: Response) => {
 	try {
+		const notification_key = (req.query.notification_key || req.body.notification_key || "").trim();
+
+		// if notification_key provided, fetch only that instance and return as object (not array)
+		if (notification_key) {
+			return getNotification(req, res);
+		}
+
 		const pagination = getPaginationParams(req);
 		const filters = {
 			instance_key: (req.query.instance_key || req.body.instance_key || "").trim(),

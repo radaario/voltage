@@ -11,13 +11,37 @@ interface StorageOptions {
  * like expiration times and automatic JSON parsing/stringification.
  */
 class LocalStorageUtil {
+	private prefix: string;
+
+	constructor() {
+		// Get prefix from environment variable
+		const envPrefix = import.meta.env.VITE_LOCAL_STORAGE_PREFIX;
+
+		if (envPrefix) {
+			// If prefix ends with underscore, use as is, otherwise add underscore
+			this.prefix = envPrefix.endsWith("_") ? envPrefix : `${envPrefix}_`;
+		} else {
+			// Default prefix
+			this.prefix = "voltage_";
+		}
+	}
+
+	/**
+	 * Adds the configured prefix to a key
+	 * @param key - The base key name
+	 * @returns The prefixed key name
+	 */
+	private getPrefixedKey(key: string): string {
+		return this.prefix + key;
+	}
+
 	/**
 	 * Generates the expiration key name for a given storage key
 	 * @param key - The base key name
-	 * @returns The expiration key name (key_expiresIn)
+	 * @returns The expiration key name (prefixed_key_expiresIn)
 	 */
 	private getKeyWithExpiration(key: string): string {
-		return key + "_expiresIn";
+		return this.getPrefixedKey(key) + "_expiresIn";
 	}
 
 	/**
@@ -27,7 +51,8 @@ class LocalStorageUtil {
 	 */
 	public remove(key: string): boolean {
 		try {
-			localStorage.removeItem(key);
+			const prefixedKey = this.getPrefixedKey(key);
+			localStorage.removeItem(prefixedKey);
 			localStorage.removeItem(this.getKeyWithExpiration(key));
 		} catch (err) {
 			console.warn(`remove: Error removing key [${key}] from localStorage: ${err}`);
@@ -46,6 +71,7 @@ class LocalStorageUtil {
 	 * @returns The retrieved value, or null if expired/not found
 	 */
 	public get(key: string, params?: StorageOptions): any {
+		const prefixedKey = this.getPrefixedKey(key);
 		let expiresIn = localStorage.getItem(this.getKeyWithExpiration(key));
 
 		if (expiresIn) {
@@ -64,7 +90,7 @@ class LocalStorageUtil {
 		}
 
 		try {
-			const value = localStorage.getItem(key);
+			const value = localStorage.getItem(prefixedKey);
 
 			if (!!params?.json) {
 				return JSON.parse(value!);
@@ -97,11 +123,13 @@ class LocalStorageUtil {
 	 */
 	public set(key: string, value: any, expires?: number): boolean {
 		try {
+			const prefixedKey = this.getPrefixedKey(key);
+
 			if (isPlainObject(value) || isArray(value)) {
 				value = JSON.stringify(value);
 			}
 
-			localStorage.setItem(key, value);
+			localStorage.setItem(prefixedKey, value);
 
 			if (expires !== undefined && expires !== null) {
 				expires = 24 * 60 * 60; // default: seconds for 1 day

@@ -20,6 +20,13 @@ export const getInstance = async (req: Request, res: Response) => {
 
 export const getInstances = async (req: Request, res: Response) => {
 	try {
+		const instance_key = (req.query.instance_key || req.body.instance_key || "").trim();
+
+		// if instance_key provided, fetch only that instance and return as object (not array)
+		if (instance_key) {
+			return getInstance(req, res);
+		}
+
 		const q = req.query.q ? String(req.query.q).trim() : "";
 		const instances = await instancesService.getInstances(q);
 

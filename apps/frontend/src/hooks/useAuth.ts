@@ -3,6 +3,7 @@ import { AuthState } from "@/interfaces/auth";
 import { useNavigate } from "react-router-dom";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { api } from "@/utils";
+import { localStorage } from "@/utils";
 
 export const useAuth = () => {
 	const navigate = useNavigate();
@@ -10,8 +11,8 @@ export const useAuth = () => {
 
 	// states
 	const [authState, setAuthState] = useState<AuthState>({
-		authToken: localStorage.getItem("authToken"),
-		isAuthenticated: !!localStorage.getItem("authToken")
+		authToken: localStorage.get("authToken"),
+		isAuthenticated: !!localStorage.get("authToken")
 	});
 
 	// If authentication is not required, automatically mark as authenticated
@@ -30,7 +31,7 @@ export const useAuth = () => {
 			const response = await api.post("/auth", { password });
 			const authToken = response.data?.token;
 
-			localStorage.setItem("authToken", authToken);
+			localStorage.set("authToken", authToken);
 			setAuthState({ authToken, isAuthenticated: true });
 			return true;
 		} catch (error) {
@@ -40,7 +41,7 @@ export const useAuth = () => {
 	}, []);
 
 	const logout = useCallback(() => {
-		localStorage.removeItem("authToken");
+		localStorage.remove("authToken");
 		setAuthState({ authToken: null, isAuthenticated: false });
 		navigate("/login");
 		// eslint-disable-next-line react-hooks/exhaustive-deps

@@ -21,6 +21,13 @@ export const getWorker = async (req: Request, res: Response) => {
 
 export const getWorkers = async (req: Request, res: Response) => {
 	try {
+		const worker_key = (req.query.worker_key || req.body.worker_key || "").trim();
+
+		// if worker_key provided, fetch only that instance and return as object (not array)
+		if (worker_key) {
+			return getWorker(req, res);
+		}
+
 		const instance_key = (req.query.instance_key || req.body.instance_key || "").trim();
 		const workers = await workersService.getWorkers(instance_key);
 

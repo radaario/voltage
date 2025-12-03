@@ -23,6 +23,13 @@ export const getJob = async (req: Request, res: Response) => {
 
 export const getJobs = async (req: Request, res: Response) => {
 	try {
+		const job_key = (req.query.job_key || req.body.job_key || "").trim();
+
+		// if job_key provided, fetch only that job and return as object (not array)
+		if (job_key) {
+			return getJob(req, res);
+		}
+
 		const pagination = getPaginationParams(req);
 		const filters = {
 			instance_key: (req.query.instance_key || req.body.instance_key || "").trim(),
