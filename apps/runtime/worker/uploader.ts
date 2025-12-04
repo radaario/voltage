@@ -19,11 +19,11 @@ export class JobUploader {
 
 			const tempJobOutputFilePath = path.join(
 				this.tempJobDir,
-				`output.${output.index}.${(output.specs.format || "mp4").toLowerCase()}`
+				`output.${output.index}.${(output.specs?.format || "MP4").toLowerCase()}`
 			);
 
 			// Use output's destination if available, otherwise fall back to global destination
-			const destination = output?.specs?.destination || this.job?.destination;
+			const destination = output.specs?.destination || this.job?.destination;
 
 			if (!destination) {
 				throw new Error("No destination specified for job output!");
@@ -92,16 +92,16 @@ export class JobUploader {
 	}
 
 	private async uploadToStorage(destination: any, output: any, tempJobOutputFilePath: string): Promise<Record<string, unknown>> {
-		if (!output?.specs?.path) {
+		if (!output.specs?.path) {
 			throw new Error("Path is required in output.specs for remote upload destinations!");
 		}
 
 		// Initialize storage based on destination
 		const key = String(output.specs.path).replace(/^\/+/, "");
 		const contentType = guessContentType(key);
-		const acl = output.specs.acl || output.specs.destination.acl || destination.acl || null;
-		const expires = output.specs.expires || output.specs.destination.expires || destination.expires || null;
-		const cacheControl = output.specs.cache_control || output.specs.destination.cache_control || destination.cache_control || null;
+		const acl = output.specs?.acl || output.specs?.destination?.acl || destination?.acl || null;
+		const expires = output.specs?.expires || output.specs?.destination?.expires || destination?.expires || null;
+		const cacheControl = output.specs?.cache_control || output.specs?.destination?.cache_control || destination?.cache_control || null;
 
 		await storage.config(destination);
 		await storage.upload(tempJobOutputFilePath, key, contentType, acl, expires, cacheControl);

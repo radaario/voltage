@@ -24,7 +24,7 @@ export class JobThumbnailer {
 		try {
 			// logger.setMetadata({ instance_key: this.job.instance_key, worker_key: this.job.worker_key, job_key: this.job.key });
 
-			if (!this.job.input.video) {
+			if (!this.job.input?.video) {
 				return { message: "There is no video in the input file!" };
 			}
 
@@ -38,9 +38,9 @@ export class JobThumbnailer {
 			// logger.console("INFO", "Generating preview from job input...");
 
 			// Calculate the middle timestamp of the video
-			let offset = (this.job.input.duration || 0) / 2;
+			let offset = (this.job.input?.duration || 0) / 2;
 			if (options.offset !== undefined) offset = options.offset;
-			if (this.job.input.duration && offset > this.job.input.duration) offset = this.job.input.duration;
+			if (this.job.input?.duration && offset > this.job.input?.duration) offset = this.job.input?.duration;
 
 			// Use ffmpeg to extract a frame at the middle timestamp and convert it to the desired format
 			const args = [

@@ -14,8 +14,8 @@
 		}
 	},
 	"scripts": {
-		"build": "tsup ./index.ts --format cjs,esm --dts",
-		"dev": "tsup ./index.ts --format cjs,esm --dts --watch",
+		"build": "rimraf dist && tsup ./index.ts --format cjs,esm --dts",
+		"dev": "rimraf dist && tsup ./index.ts --format cjs,esm --dts --watch",
 		"typecheck": "tsc --noEmit",
 		"clean": "rm -rf ./dist"
 	},
