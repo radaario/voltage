@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { logger } from "@voltage/utils";
-import { sendError } from "@/utils/response.util";
+import { sendError } from "@/utils/response.util.js";
 
 export const errorHandler = (error: any, req: Request, res: Response, next: NextFunction) => {
 	logger.insert("ERROR", "An error occurred on API service!", { ...error });

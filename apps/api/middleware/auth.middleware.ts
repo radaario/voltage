@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { config } from "@voltage/config";
 import { hash } from "@voltage/utils";
-import { sendError } from "@/utils/response.util";
+import { sendError } from "@/utils/response.util.js";
 
 export const authMiddleware = (options: {} = {}) => {
 	return (req: Request, res: Response, next: NextFunction) => {

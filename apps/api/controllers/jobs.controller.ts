@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { sanitizeData, logger, storage } from "@voltage/utils";
 import { config } from "@voltage/config";
-import { sendSuccess, sendError, sendPaginatedSuccess } from "@/utils/response.util";
-import { getPaginationParams } from "@/utils/pagination.util";
-import * as jobsService from "@/services/jobs.service";
+import { sendSuccess, sendError, sendPaginatedSuccess } from "@/utils/response.util.js";
+import { getPaginationParams } from "@/utils/pagination.util.js";
+import * as jobsService from "@/services/jobs.service.js";
 import path from "path";
 
 export const getJob = async (req: Request, res: Response) => {

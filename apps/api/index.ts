@@ -4,8 +4,8 @@ import express from "express";
 import cors from "cors";
 import { config } from "@voltage/config";
 import { storage, database, logger, getInstanceKey } from "@voltage/utils";
-import { registerRoutes } from "@/routes";
-import { errorHandler } from "@/middleware/error.middleware";
+import { registerRoutes } from "@/routes/index.js";
+import { errorHandler } from "@/middleware/error.middleware.js";
 
 const instanceKey = getInstanceKey();
 

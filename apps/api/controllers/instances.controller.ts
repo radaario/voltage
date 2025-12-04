@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { sanitizeData, logger } from "@voltage/utils";
-import { sendSuccess, sendError } from "@/utils/response.util";
-import * as instancesService from "@/services/instances.service";
+import { sendSuccess, sendError } from "@/utils/response.util.js";
+import * as instancesService from "@/services/instances.service.js";
 
 export const getInstance = async (req: Request, res: Response) => {
 	try {

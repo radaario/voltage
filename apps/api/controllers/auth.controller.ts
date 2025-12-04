@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { sanitizeData } from "@voltage/utils";
-import { sendSuccess, sendError } from "@/utils/response.util";
-import * as authService from "@/services/auth.service";
+import { sendSuccess, sendError } from "@/utils/response.util.js";
+import * as authService from "@/services/auth.service.js";
 
 export const authenticate = async (req: Request, res: Response) => {
 	try {

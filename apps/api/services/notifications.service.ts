@@ -1,6 +1,6 @@
 import { database } from "@voltage/utils";
 import { getDate, getNow } from "@voltage/utils";
-import { PaginationParams } from "@/types";
+import { PaginationParams } from "@/types/index.js";
 
 export const getNotification = async (notification_key: string) => {
 	const notification = await database.table("jobs_notifications").where("key", notification_key).first();

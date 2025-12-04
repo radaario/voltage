@@ -1,17 +1,17 @@
 import { Express, Request, Response } from "express";
 import { config } from "@voltage/config";
 import { sanitizeData } from "@voltage/utils";
-import { sendSuccess } from "@/utils/response.util";
+import { sendSuccess } from "@/utils/response.util.js";
 
 // Import routes
-import authRoutes from "./auth.routes";
-import statsRoutes from "./stats.routes";
-import logsRoutes from "./logs.routes";
-import instancesRoutes from "./instances.routes";
-import workersRoutes from "./workers.routes";
-import jobsRoutes from "./jobs.routes";
-import notificationsRoutes from "./notifications.routes";
-import systemRoutes from "./system.routes";
+import authRoutes from "@/routes/auth.routes.js";
+import statsRoutes from "@/routes/stats.routes.js";
+import logsRoutes from "@/routes/logs.routes.js";
+import instancesRoutes from "@/routes/instances.routes.js";
+import workersRoutes from "@/routes/workers.routes.js";
+import jobsRoutes from "@/routes/jobs.routes.js";
+import notificationsRoutes from "@/routes/notifications.routes.js";
+import systemRoutes from "@/routes/system.routes.js";
 
 export const registerRoutes = (app: Express) => {
 	// Health & Status endpoints

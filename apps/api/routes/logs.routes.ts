@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authMiddleware } from "@/middleware/auth.middleware";
-import * as logsController from "@/controllers/logs.controller";
+import { authMiddleware } from "@/middleware/auth.middleware.js";
+import * as logsController from "@/controllers/logs.controller.js";
 
 const router = Router();
 

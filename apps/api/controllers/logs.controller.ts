@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { sanitizeData, logger } from "@voltage/utils";
-import { sendSuccess, sendError, sendPaginatedSuccess } from "@/utils/response.util";
-import { getPaginationParams } from "@/utils/pagination.util";
-import * as logsService from "@/services/logs.service";
+import { sendSuccess, sendError, sendPaginatedSuccess } from "@/utils/response.util.js";
+import { getPaginationParams } from "@/utils/pagination.util.js";
+import * as logsService from "@/services/logs.service.js";
 
 export const getLog = async (req: Request, res: Response) => {
 	try {

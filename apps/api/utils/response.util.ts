@@ -1,6 +1,6 @@
 import { config } from "@voltage/config";
 import { Response } from "express";
-import { ApiResponse } from "@/types";
+import { ApiResponse } from "@/types/index.js";
 
 export const responseMetadata = {
 	version: config.version,

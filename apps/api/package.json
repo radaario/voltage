@@ -6,17 +6,17 @@
 	"types": "./dist/index.d.ts",
 	"scripts": {
 		"dev": "tsx watch index.ts",
-		"build": "tsc --build tsconfig.json",
+		"build": "tsc --build tsconfig.json && tsc-alias",
 		"start": "node dist/index.js",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@voltage/config": "workspace:*",
-		"@voltage/utils": "workspace:*",
-		"@voltage/runtime": "workspace:*",
 		"@aws-sdk/client-s3": "^3.901.0",
 		"@aws-sdk/client-sns": "^3.906.0",
 		"@aws-sdk/s3-request-presigner": "^3.901.0",
+		"@voltage/config": "workspace:*",
+		"@voltage/runtime": "workspace:*",
+		"@voltage/utils": "workspace:*",
 		"axios": "^1.7.2",
 		"basic-ftp": "^5.0.5",
 		"better-sqlite3": "^11.7.0",
@@ -46,6 +46,8 @@
 		"@types/pg": "^8.11.10",
 		"@types/ssh2-sftp-client": "^9.0.5",
 		"@types/uuid": "^9.0.7",
+		"tsc-alias": "^1.8.16",
+		"tsc-esm-fix": "^3.1.2",
 		"tsx": "^4.19.1",
 		"typescript": "^5.5.4"
 	},

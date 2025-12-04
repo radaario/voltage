@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { logger } from "@voltage/utils";
-import { sendSuccess, sendError } from "@/utils/response.util";
-import * as systemService from "@/services/system.service";
+import { sendSuccess, sendError } from "@/utils/response.util.js";
+import * as systemService from "@/services/system.service.js";
 
 export const deleteAllData = async (req: Request, res: Response) => {
 	try {

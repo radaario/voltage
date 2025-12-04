@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { sanitizeData, logger } from "@voltage/utils";
-import { sendSuccess, sendError, sendPaginatedSuccess } from "@/utils/response.util";
-import { getPaginationParams } from "@/utils/pagination.util";
-import * as notificationsService from "@/services/notifications.service";
+import { sendSuccess, sendError, sendPaginatedSuccess } from "@/utils/response.util.js";
+import { getPaginationParams } from "@/utils/pagination.util.js";
+import * as notificationsService from "@/services/notifications.service.js";
 
 export const getNotification = async (req: Request, res: Response) => {
 	try {

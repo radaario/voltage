@@ -4,7 +4,7 @@ import { database, storage } from "@voltage/utils";
 import { uukey, getNow, getDate } from "@voltage/utils";
 import { createJobNotification } from "@voltage/runtime/worker/notifier";
 import { stats, logger } from "@voltage/utils";
-import { PaginationParams } from "@/types";
+import { PaginationParams } from "@/types/index.js";
 
 export const getJob = async (job_key: string) => {
 	const job = await database.table("jobs").where("key", job_key).first();

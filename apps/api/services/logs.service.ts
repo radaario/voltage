@@ -1,6 +1,6 @@
 import { database } from "@voltage/utils";
 import { getDate } from "@voltage/utils";
-import { PaginationParams } from "@/types";
+import { PaginationParams } from "@/types/index.js";
 
 export const getLog = async (log_key: string) => {
 	const log = await database.table("logs").where("key", log_key).first();

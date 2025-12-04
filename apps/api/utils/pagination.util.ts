@@ -1,5 +1,5 @@
 import { Request } from "express";
-import { PaginationParams } from "@/types";
+import { PaginationParams } from "@/types/index.js";
 
 export const getPaginationParams = (req: Request, defaultLimit: number = 25): PaginationParams => {
 	const rawLimit = req.query.limit;
