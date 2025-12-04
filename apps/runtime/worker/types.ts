@@ -1,4 +1,5 @@
 export interface JobStats {
+	[key: string]: any;
 	jobs_completed_count: number;
 	jobs_retried_count: number;
 	jobs_failed_count: number;
