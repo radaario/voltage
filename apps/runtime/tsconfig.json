@@ -1,15 +1,15 @@
 {
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
-		"composite": true,
 		"declaration": true,
 		"declarationMap": true,
+		"composite": true,
 		"outDir": "./dist",
 		"rootDir": "./",
 		"paths": {
+			"@/*": ["./*"],
 			"@voltage/config": ["../../packages/config"],
-			"@voltage/utils": ["../../packages/utils"],
-			"@/*": ["./*"]
+			"@voltage/utils": ["../../packages/utils"]
 		}
 	},
 	"include": ["**/*.ts"],

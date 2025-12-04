@@ -1,6 +1,6 @@
 import { config } from "@voltage/config";
 import { database, logger, getInstanceKey, getInstanceSpecs, getNow } from "@voltage/utils";
-import { Instance } from "@/types";
+import { Instance } from "@/types/index.js";
 
 const selfInstanceKey = getInstanceKey();
 

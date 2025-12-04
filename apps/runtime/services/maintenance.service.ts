@@ -1,7 +1,7 @@
 import { config } from "@voltage/config";
 import { database, logger, getInstanceKey, getNow, subtractNow } from "@voltage/utils";
-import { initInstance, maintainInstance, getMasterInstance, setMasterInstance } from "./instances.service.js";
-import { timeoutBusyWorkers, idleTimeoutWorkers, terminateInactiveInstanceWorkers } from "./workers.service.js";
+import { initInstance, maintainInstance, getMasterInstance, setMasterInstance } from "@/services/instances.service.js";
+import { timeoutBusyWorkers, idleTimeoutWorkers, terminateInactiveInstanceWorkers } from "@/services/workers.service.js";
 
 const selfInstanceKey = getInstanceKey();
 

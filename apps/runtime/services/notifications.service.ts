@@ -1,6 +1,6 @@
 import { config } from "@voltage/config";
 import { database, logger, getInstanceKey, getNow } from "@voltage/utils";
-import { retryJobNotification } from "@/worker/notifier";
+import { retryJobNotification } from "@/worker/notifier.js";
 
 const selfInstanceKey = getInstanceKey();
 

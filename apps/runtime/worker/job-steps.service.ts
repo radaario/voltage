@@ -1,12 +1,12 @@
 import { config } from "@voltage/config";
 import { logger, getNow } from "@voltage/utils";
-import { JobDownloader } from "./downloader.js";
-import { JobAnalyzer } from "./analyzer.js";
-import { JobThumbnailer } from "./thumbnailer.js";
-import { JobProcessor } from "./processor.js";
-import { JobUploader } from "./uploader.js";
-import { NSFWDetector } from "./nsfw-detector.js";
-import { JobContext, JobStats, JOB_PROGRESS_PER_STEP, ProcessingResult } from "./types.js";
+import { JobDownloader } from "@/worker/downloader.js";
+import { JobAnalyzer } from "@/worker/analyzer.js";
+import { JobThumbnailer } from "@/worker/thumbnailer.js";
+import { JobProcessor } from "@/worker/processor.js";
+import { JobUploader } from "@/worker/uploader.js";
+import { NSFWDetector } from "@/worker/nsfw-detector.js";
+import { JobContext, JobStats, JOB_PROGRESS_PER_STEP, ProcessingResult } from "@/worker/types.js";
 import fs from "fs/promises";
 import path from "path";
 

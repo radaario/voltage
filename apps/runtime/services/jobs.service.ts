@@ -1,8 +1,8 @@
 import { config } from "@voltage/config";
 import { database, logger, getInstanceKey, getNow, subtractNow } from "@voltage/utils";
-import { createJobNotification } from "@/worker/notifier";
-import { WorkersProcessMap } from "@/types";
-import { spawnInstanceWorkerForJob } from "./workers.service.js";
+import { createJobNotification } from "@/worker/notifier.js";
+import { WorkersProcessMap } from "@/types/index.js";
+import { spawnInstanceWorkerForJob } from "@/services/workers.service.js";
 
 const selfInstanceKey = getInstanceKey();
 

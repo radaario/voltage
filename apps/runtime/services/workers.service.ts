@@ -1,6 +1,6 @@
 import { config } from "@voltage/config";
 import { database, logger, getInstanceKey, hash, getNow, subtractNow } from "@voltage/utils";
-import { Worker, WorkerOutcome, WorkersProcessMap } from "@/types";
+import { Worker, WorkerOutcome, WorkersProcessMap } from "@/types/index.js";
 import path from "path";
 import { spawn, ChildProcess } from "child_process";
 

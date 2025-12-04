@@ -1,13 +1,13 @@
 import "dotenv/config";
 import { config } from "@voltage/config";
 import { storage, database, logger, getInstanceKey, getInstanceSpecs, getNow } from "@voltage/utils";
-import { WorkersProcessMap } from "@/types";
-import { restartInstance } from "@/services/instances.service";
-import { maintainInstancesAndWorkers } from "@/services/maintenance.service";
-import { timeoutQueuedJobs, enqueuePendingJobs, processJobsQueue, timeoutProcessingJobs } from "@/services/jobs.service";
-import { processJobsNotifications } from "@/services/notifications.service";
-import { cleanupCompletedJobs, cleanupStats, cleanupLogs } from "@/services/cleanup.service";
-import { terminateInstanceWorkers } from "@/services/workers.service";
+import { WorkersProcessMap } from "@/types/index.js";
+import { restartInstance } from "@/services/instances.service.js";
+import { maintainInstancesAndWorkers } from "@/services/maintenance.service.js";
+import { timeoutQueuedJobs, enqueuePendingJobs, processJobsQueue, timeoutProcessingJobs } from "@/services/jobs.service.js";
+import { processJobsNotifications } from "@/services/notifications.service.js";
+import { cleanupCompletedJobs, cleanupStats, cleanupLogs } from "@/services/cleanup.service.js";
+import { terminateInstanceWorkers } from "@/services/workers.service.js";
 
 const selfInstanceKey = getInstanceKey();
 const workersProcessMap: WorkersProcessMap = new Map();

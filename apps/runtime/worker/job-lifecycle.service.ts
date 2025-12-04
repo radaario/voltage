@@ -1,8 +1,8 @@
 import { config } from "@voltage/config";
 import { database, logger, stats } from "@voltage/utils";
 import { getNow, addNow } from "@voltage/utils";
-import { createJobNotification } from "./notifier.js";
-import { JobContext, JobStats, JOB_PROGRESS_PER_STEP } from "./types.js";
+import { createJobNotification } from "@/worker/notifier.js";
+import { JobContext, JobStats, JOB_PROGRESS_PER_STEP } from "@/worker/types.js";
 import fs from "fs/promises";
 import path from "path";
 
