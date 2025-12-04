@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { router } from "@/routes";
 import { GlobalStateProvider } from "@/contexts/GlobalStateContext";
 import { ModalProvider } from "@/contexts/ModalContext";
+import { ErrorBoundary } from "@/components";
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -25,18 +26,20 @@ const queryClient = new QueryClient({
 
 function App() {
 	return (
-		<QueryClientProvider client={queryClient}>
-			<GlobalStateProvider>
-				<ThemeProvider>
-					<ModalProvider>
-						<RouterProvider
-							router={router}
-							future={{ v7_startTransition: true }}
-						/>
-					</ModalProvider>
-				</ThemeProvider>
-			</GlobalStateProvider>
-		</QueryClientProvider>
+		<ErrorBoundary>
+			<QueryClientProvider client={queryClient}>
+				<GlobalStateProvider>
+					<ThemeProvider>
+						<ModalProvider>
+							<RouterProvider
+								router={router}
+								future={{ v7_startTransition: true }}
+							/>
+						</ModalProvider>
+					</ThemeProvider>
+				</GlobalStateProvider>
+			</QueryClientProvider>
+		</ErrorBoundary>
 	);
 }
 

@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useOutletContext, useNavigate, useParams, Outlet } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
-import { api } from "@/utils";
+import { api, getFilenameFromPath } from "@/utils";
 import { ArrowPathIcon, EyeIcon, VideoCameraIcon, PhotoIcon, MusicalNoteIcon, LanguageIcon } from "@heroicons/react/24/outline";
 import { ConfirmModal, Label, Tooltip, TimeAgo } from "@/components";
 
@@ -123,18 +123,24 @@ const Outputs: React.FC = () => {
 										{output.index + 1}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-										<div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded border bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800">
+										<Label>
 											{getOutputTypeIcon(output.specs?.type)}
 											{output.specs?.type || "UNKNOWN"}
-										</div>
+										</Label>
 									</td>
 									<td className="px-6 py-4 text-sm">
-										<div className="max-w-60 break-words">
+										<div className="max-w-60">
 											{output.specs?.path && (
-												<div className="text-gray-500 dark:text-gray-400 text-xs mt-1">{output.specs.path}</div>
+												<Tooltip content={output.specs.path}>
+													<div className="text-gray-500 dark:text-gray-400 text-xs mt-1 truncate">
+														{getFilenameFromPath(output.specs.path)}
+													</div>
+												</Tooltip>
 											)}
 											{output.specs?.format && (
-												<div className="text-gray-500 dark:text-gray-400 text-xs mt-1">{output.specs.format}</div>
+												<div className="text-gray-500 dark:text-gray-400 text-xs font-bold mt-0.25">
+													{output.specs.format}
+												</div>
 											)}
 										</div>
 									</td>

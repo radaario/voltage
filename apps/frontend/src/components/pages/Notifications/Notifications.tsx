@@ -7,6 +7,7 @@ import type { Notification } from "@/interfaces/notification";
 import NotificationsTable from "@/components/pages/Notifications/Table/Table";
 import { SearchInput, LoadingSpinner, Page, ErrorAlert, Button, Tooltip, ConfirmModal } from "@/components";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 
 interface PaginationInfo {
 	total: number;
@@ -21,12 +22,13 @@ interface PaginationInfo {
 const Notifications: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
+	const { pageResetCounters } = useGlobalStateContext();
 
 	// states
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchInput, setSearchInput] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
-	const [currentLimit, setCurrentLimit] = useState(25);
+	const [currentLimit, setCurrentLimit] = useState(10);
 	const [statusFilter, setStatusFilter] = useState<string>("");
 	const previousDataRef = useRef<Notification[]>([]);
 	const [newNotificationKeys, setNewNotificationKeys] = useState<Set<string>>(new Set());
@@ -154,6 +156,11 @@ const Notifications: React.FC = () => {
 			setCurrentPage(1);
 		}
 	}, [searchQuery]);
+
+	// reset pagination when header link is clicked from header
+	useEffect(() => {
+		currentPage ? refetch() : setCurrentPage(1);
+	}, [pageResetCounters]);
 
 	// Prepare pagination data
 	const pagination: PaginationInfo = {

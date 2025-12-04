@@ -50,6 +50,7 @@ export class JobLifecycleService {
 			status: "STARTED",
 			progress: 0.0,
 			started_at: getNow(),
+			analyzed_at: null,
 			completed_at: null,
 			try_count: parseInt(job.try_count as string),
 			retry_at: null

@@ -1,23 +1,23 @@
 import { useNavigate } from "react-router-dom";
+import voltageLightLogoPng from "@/assets/voltage-logo-light.png";
+import voltageDarkLogoPng from "@/assets/voltage-logo-dark.png";
 
 interface LogoProps {
 	size?: "sm" | "md" | "lg" | "xl";
+	variant?: "light" | "dark";
 	className?: string;
 	clickable?: boolean;
 }
 
-const sizeClasses = {
-	sm: "text-xl sm:text-2xl",
-	md: "text-2xl sm:text-3xl",
-	lg: "text-3xl sm:text-4xl",
-	xl: "text-4xl sm:text-5xl"
+const sizeWidths = {
+	sm: 100,
+	md: 150,
+	lg: 180,
+	xl: 250
 };
 
-function Logo({ size = "md", className = "", clickable = true }: LogoProps) {
+function Logo({ size = "md", variant = "dark", className = "", clickable = true }: LogoProps) {
 	const navigate = useNavigate();
-
-	const baseClasses =
-		"select-none leading-none font-medium tracking-wider uppercase bg-neutral-700 dark:bg-white text-transparent bg-clip-text drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]";
 
 	const handleClick = () => {
 		if (clickable) {
@@ -26,12 +26,14 @@ function Logo({ size = "md", className = "", clickable = true }: LogoProps) {
 	};
 
 	return (
-		<h2
+		<img
+			src={variant === "light" ? voltageLightLogoPng : voltageDarkLogoPng}
+			title="Voltage"
+			alt="Voltage Video Encoder"
 			onClick={handleClick}
-			className={`${baseClasses} ${sizeClasses[size]} ${className} ${clickable ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
-			aria-label="Voltage logo text">
-			VOLTAGE
-		</h2>
+			className={`select-none ${className} ${clickable ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+			style={{ width: sizeWidths[size] }}
+		/>
 	);
 }
 

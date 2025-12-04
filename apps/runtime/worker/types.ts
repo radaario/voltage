@@ -28,6 +28,7 @@ export interface JobContext {
 	metadata?: any;
 	outcome?: any;
 	started_at?: string;
+	analyzed_at?: string;
 	completed_at?: string;
 	retry_at?: string | null;
 	retry_in?: number;

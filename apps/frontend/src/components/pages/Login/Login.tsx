@@ -67,7 +67,8 @@ function Login() {
 						</div>
 						<Logo
 							size="lg"
-							className="bg-white! dark:bg-white! mb-2"
+							variant="light"
+							className="mb-2 mx-auto"
 						/>
 						<p className="text-neutral-300 text-sm">Enter your password to continue</p>
 					</div>

@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
+import { RouterErrorBoundary } from "@/components";
 
 import Layout from "@/components/layout/Layout";
 import { ScreenLoading } from "@/components";
@@ -106,6 +107,7 @@ export const router = createBrowserRouter(
 		{
 			path: "/",
 			element: <AuthSafeRoute />,
+			errorElement: <RouterErrorBoundary />,
 			children: [
 				{
 					path: "/",

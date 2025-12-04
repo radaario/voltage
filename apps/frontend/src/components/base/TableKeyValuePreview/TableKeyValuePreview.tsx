@@ -16,6 +16,7 @@ const DEFAULT_LANG_MAP: Record<string, string> = {
 	worker_key: "Worker",
 	created_at: "Created At",
 	updated_at: "Updated At",
+	analyzed_at: "Analyzed At",
 	started_at: "Started At",
 	completed_at: "Completed At"
 };
@@ -110,7 +111,7 @@ const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, exclu
 					<span className="font-mono text-sm text-gray-800 dark:text-gray-200">{value}</span>
 					<button
 						onClick={handleCopy}
-						className="ml-auto p-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+						className="ml-0.5 p-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
 						title="Copy key">
 						<ClipboardDocumentIcon
 							className={`h-4 w-4 ${

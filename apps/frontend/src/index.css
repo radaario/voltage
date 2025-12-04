@@ -90,6 +90,16 @@
 }
 
 @layer components {
+	/* Shimmer animation for loading states */
+	@keyframes shimmer {
+		0% {
+			transform: translateX(-100%) skewX(-20deg);
+		}
+		100% {
+			transform: translateX(200%) skewX(-20deg);
+		}
+	}
+
 	/* layout-container */
 	.layout-container {
 		@apply min-h-screen flex flex-col;
@@ -110,6 +120,11 @@
 	.layout-footer {
 		background-color: var(--color-footer);
 		@apply text-gray-900 dark:text-gray-100 shadow mt-auto;
+	}
+
+	/* table */
+	table tbody tr td {
+		@apply break-words;
 	}
 
 	/* table advanced */

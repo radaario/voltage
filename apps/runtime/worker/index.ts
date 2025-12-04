@@ -1,5 +1,5 @@
 import { config } from "@voltage/config";
-import { database, logger } from "@voltage/utils";
+import { database, logger, getNow } from "@voltage/utils";
 import { JobLifecycleService } from "@/worker/job-lifecycle.service.js";
 import { JobStepsService } from "@/worker/job-steps.service.js";
 import { JobStats, JOB_PROGRESS_PER_STEP } from "@/worker/types.js";
@@ -48,7 +48,9 @@ async function run() {
 		// Step 2: Analyze input
 		await lifecycle.updateJobStatus(job, "ANALYZING", 0);
 		await steps.analyzeInput(job, jobStats);
-		await lifecycle.updateJobStatus(job, "ANALYZED", JOB_PROGRESS_PER_STEP);
+		// job.analyzed_at = getNow();
+		// await lifecycle.updateJobStatus(job, "ANALYZED", JOB_PROGRESS_PER_STEP);
+		await lifecycle.updateJob({ ...job, status: "ANALYZED", progress: job.progress + JOB_PROGRESS_PER_STEP, analyzed_at: getNow() });
 
 		// Step 3: Generate preview and detect NSFW
 		await steps.generatePreviewAndDetectNSFW(job);

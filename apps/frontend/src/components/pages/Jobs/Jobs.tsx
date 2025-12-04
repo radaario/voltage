@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, Outlet } from "react-router-dom";
 import type { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
+import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { api, ApiResponse } from "@/utils";
+import { testJobPayload } from "@/mocks/testJobPayload";
 import JobsTable from "@/components/pages/Jobs/Table/Table";
 import { ConfirmModal, Button, Tooltip, SearchInput, LoadingSpinner, Page, ErrorAlert, JsonViewer } from "@/components";
 import { TrashIcon } from "@heroicons/react/24/outline";
@@ -22,6 +24,7 @@ const Jobs: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
+	const { pageResetCounters } = useGlobalStateContext();
 
 	// states
 	const [searchQuery, setSearchQuery] = useState("");
@@ -57,94 +60,6 @@ const Jobs: React.FC = () => {
 	});
 
 	// mutations
-	const testJobPayload = {
-		input: {
-			type: "HTTP",
-			url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4",
-			nsfw_is_disabled: false,
-			nsfw_model: "MOBILE_NET_V2_MID",
-			nsfw_size: 299,
-			nfsw_type: "GRAPH",
-			nsfw_threshold: 0.7
-		},
-		outputs: [
-			{
-				type: "VIDEO",
-				format: "MP4",
-				path: "Big_Buck_Bunny_1080_10s_20MB.mp4",
-				offset: 1,
-				duration: 3,
-				width: 1280,
-				height: 720,
-				fit: "PAD",
-				quality: 3,
-				rotate: 180,
-				flip: "HORIZONTAL",
-				video_codec: "",
-				video_bit_rate: 5000000,
-				video_pixel_format: "yuv420p",
-				video_frame_rate: 25,
-				video_profile: "baseline",
-				video_level: 4.0,
-				video_deinterlace: true,
-				audio_codec: "libmp3lame",
-				audio_bit_rate: 128000,
-				audio_sample_rate: 48000,
-				audio_channels: 2,
-				destination: {
-					type: "HTTPS",
-					method: "POST",
-					url: "https://httpbin.org/post",
-					headers: {
-						"X-Output-Type": "720p-webm"
-					}
-				}
-			},
-			{
-				type: "AUDIO",
-				format: "MP3",
-				path: "Big_Buck_Bunny_1080_10s_20MB.mp3",
-				audio_codec: "libmp3lame",
-				audio_bit_rate: 128000,
-				audio_sample_rate: 48000,
-				audio_channels: 2
-			},
-			{
-				type: "THUMBNAIL",
-				format: "PNG",
-				path: "Big_Buck_Bunny_1080_10s_20MB.png",
-				width: 1280,
-				height: 720,
-				offset: 1
-			},
-			{
-				type: "SUBTITLE",
-				format: "SRT",
-				path: "Big_Buck_Bunny_1080_10s_20MB.srt",
-				whisper_model: "BASE",
-				whisper_cuda: false,
-				language: "AUTO"
-			}
-		],
-		destination: {
-			type: "HTTPS",
-			method: "POST",
-			url: "https://httpbin.org/post",
-			headers: {
-				"X-Output-Type": "720p-webm"
-			}
-		},
-		notification: {
-			type: "HTTPS",
-			url: "https://httpbin.org/post"
-		},
-		metadata: {
-			string: "String",
-			number: 123,
-			timestamp: new Date().toISOString()
-		}
-	};
-
 	const createJobMutation = useMutation({
 		mutationFn: async () => {
 			return await api.put("/jobs", testJobPayload, { params: { token: authToken } });
@@ -198,6 +113,11 @@ const Jobs: React.FC = () => {
 			return () => clearTimeout(timer);
 		}
 	}, [deleteAllJobsMutation.isSuccess]);
+
+	// reset pagination when header link is clicked from header
+	useEffect(() => {
+		currentPage ? refetch() : setCurrentPage(1);
+	}, [pageResetCounters]);
 
 	// data
 	const pagination: PaginationInfo = {
@@ -411,7 +331,7 @@ const Jobs: React.FC = () => {
 							<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
 						</>
 					}
-					confirmText="Delete All"
+					confirmText="Delete"
 					variant="danger"
 					isLoading={deleteJobMutation.isPending}
 					loadingText="Deleting"
@@ -469,13 +389,10 @@ const Jobs: React.FC = () => {
 					onClose={handleCloseCreateJobModal}
 					onConfirm={handleConfirmCreateJob}
 					title="Test Job Payload"
-					size="xl"
+					size="4xl"
 					message={
 						<div className="space-y-4">
-							<div>
-								{/* <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Endpoint</h3> */}
-								<code className="block px-3 py-2 bg-gray-100 dark:bg-neutral-800 rounded text-sm">PUT /jobs</code>
-							</div>
+							<code className="block px-3 py-2 bg-gray-100 dark:bg-neutral-700 rounded text-sm">PUT /jobs</code>
 							<div className="max-h-130 overflow-y-auto">
 								<JsonViewer data={testJobPayload} />
 							</div>

@@ -35,6 +35,8 @@ interface GlobalStateContextType {
 	configLoading: boolean;
 	configError: any;
 	refetchConfig: () => void;
+	pageResetCounters: number;
+	resetPage: () => void;
 }
 
 export const GlobalStateContext = createContext<GlobalStateContextType>({} as GlobalStateContextType);
@@ -45,6 +47,11 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 	// states
 	const [isLoading, setLoading] = useState(false);
 	const [currentScreenDimension, setCurrentScreenDimension] = useState("desktop");
+	const [pageResetCounters, setPageResetCounters] = useState<number>(0);
+
+	const resetPage = () => {
+		setPageResetCounters((prev) => prev + 1);
+	};
 
 	// queries
 	const {
@@ -55,8 +62,12 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 	} = useQuery({
 		queryKey: ["config"],
 		queryFn: () => api.get<Config>("/config"),
-		staleTime: 5 * 60 * 1000,
-		refetchOnWindowFocus: false
+		staleTime: 5 * 60 * 1000, // accept fresh for 5 minutes
+		gcTime: 10 * 60 * 1000, // keep in cache for 10 minutes
+		refetchOnWindowFocus: false,
+		refetchOnMount: false,
+		refetchOnReconnect: false,
+		refetchInterval: false
 	});
 
 	// context value
@@ -68,7 +79,9 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 		config: configData?.data,
 		configLoading,
 		configError,
-		refetchConfig
+		refetchConfig,
+		pageResetCounters,
+		resetPage
 	};
 
 	return <GlobalStateContext.Provider value={context}>{children}</GlobalStateContext.Provider>;

@@ -74,7 +74,7 @@ const JobsTable = ({
 								jobKey={job.key}
 								authToken={authToken}
 								duration={job?.input?.duration}
-								version={job.updated_at}
+								version={job.analyzed_at}
 							/>
 							<div
 								className="flex flex-col items-start min-w-0"

@@ -192,6 +192,7 @@ class Database {
 						.defaultTo("RECEIVED");
 					table.decimal("progress", 10, 2).notNullable().defaultTo(0.0);
 					table.datetime("started_at", { precision: 3 }).nullable();
+					table.datetime("analyzed_at", { precision: 3 }).nullable();
 					table.datetime("completed_at", { precision: 3 }).nullable();
 					table.datetime("updated_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());

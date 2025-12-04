@@ -418,6 +418,7 @@ export type JobRow = {
 		| "TIMEOUT";
 	progress?: number | 0.0; // STARTED = 0; DOWNLOADING = 20; ANALYZING = 40; PROCESSING = 60; UPLOADING = 80; COMPLETED = 100;
 	started_at?: string | null;
+	analyzed_at?: string | null;
 	completed_at?: string | null;
 	updated_at?: string;
 	created_at?: string;

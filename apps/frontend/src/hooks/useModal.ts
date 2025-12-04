@@ -38,7 +38,7 @@ export function useModal({ isOpen, onClose, id }: UseModalOptions) {
 			// Wait for animation to complete before unmounting
 			const timeout = setTimeout(() => {
 				setShouldRender(false);
-			}, 100); // Match transition duration
+			}, 130); // Match transition duration
 
 			return () => clearTimeout(timeout);
 		}
@@ -70,7 +70,7 @@ export function useModal({ isOpen, onClose, id }: UseModalOptions) {
 			if (onClose) {
 				const timer = setTimeout(() => {
 					onClose();
-				}, 100);
+				}, 130);
 				// Note: We can't cleanup this timeout because the component will unmount
 				// but it's safe because onClose typically triggers navigation/unmount anyway
 				return timer;

@@ -116,7 +116,7 @@ const JobDetailModal: React.FC = () => {
 									jobKey={job.key}
 									authToken={authToken}
 									duration={job?.input?.duration}
-									version={job.updated_at}
+									version={job.analyzed_at}
 								/>
 							)}
 							<div className="flex flex-col min-w-0">

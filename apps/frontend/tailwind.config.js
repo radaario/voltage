@@ -8,5 +8,7 @@ export default {
 		require("@tailwindcss/container-queries")
 	],
 	darkMode: "class",
-	theme: { extend: {} }
+	theme: {
+		extend: {}
+	}
 };

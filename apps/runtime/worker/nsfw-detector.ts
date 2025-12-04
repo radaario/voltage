@@ -41,6 +41,8 @@ export class NSFWDetector {
 		}
 
 		try {
+			await logger.insert("INFO", "Starting NSFW analysis for job input...");
+
 			const modelName = this.config.nsfw_model || config.utils.nsfw.model;
 			const size = this.config.nsfw_size || config.utils.nsfw.size || 299;
 			const type = this.config.nsfw_type || config.utils.nsfw.type || "GRAPH";
@@ -97,14 +99,14 @@ export class NSFWDetector {
 			// Cleanup
 			imageTensor.dispose();
 
-			await logger.insert("INFO", "NSFW analysis completed successfully!", {
+			await logger.insert("INFO", "NSFW analysis for job input completed successfully!", {
 				nsfw: result.nsfw,
 				classification: result.classification
 			});
 
 			return result;
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "NSFW analysis failed!", { ...error });
+			await logger.insert("ERROR", "NSFW analysis for job input failed!", { ...error });
 			return null;
 		}
 	}

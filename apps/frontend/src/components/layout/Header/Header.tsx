@@ -24,7 +24,7 @@ import { api } from "@/utils";
 function Header() {
 	const { theme, toggleTheme } = useTheme();
 	const { isAuthenticated, logout, authToken } = useAuth();
-	const { config, configError, refetchConfig } = useGlobalStateContext();
+	const { config, configError, refetchConfig, resetPage } = useGlobalStateContext();
 	const queryClient = useQueryClient();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [showFactoryResetModal, setShowFactoryResetModal] = useState(false);
@@ -64,12 +64,16 @@ function Header() {
 		<>
 			<header className="layout-header">
 				<div className="flex items-center">
-					<Logo size="md" />
+					<Logo
+						variant={theme === "dark" ? "light" : "dark"}
+						size="md"
+					/>
 				</div>
 				{isAuthenticated && (
 					<nav className="hidden md:flex items-center gap-3">
 						<NavLink
 							to="/"
+							onClick={resetPage}
 							className={({ isActive }: { isActive: boolean }) =>
 								`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
 									isActive
@@ -82,6 +86,7 @@ function Header() {
 						</NavLink>
 						<NavLink
 							to="/jobs"
+							onClick={resetPage}
 							className={({ isActive }: { isActive: boolean }) =>
 								`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
 									isActive
@@ -94,6 +99,7 @@ function Header() {
 						</NavLink>
 						<NavLink
 							to="/notifications"
+							onClick={resetPage}
 							className={({ isActive }: { isActive: boolean }) =>
 								`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
 									isActive
@@ -106,6 +112,7 @@ function Header() {
 						</NavLink>
 						<NavLink
 							to="/instances"
+							onClick={resetPage}
 							className={({ isActive }: { isActive: boolean }) =>
 								`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
 									isActive
@@ -118,6 +125,7 @@ function Header() {
 						</NavLink>
 						<NavLink
 							to="/logs"
+							onClick={resetPage}
 							className={({ isActive }: { isActive: boolean }) =>
 								`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
 									isActive

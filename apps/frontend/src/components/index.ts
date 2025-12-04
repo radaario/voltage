@@ -33,3 +33,7 @@ export { default as Layout } from "./layout/Layout";
 
 // Modals
 export { default as ConfirmModal } from "./modals/ConfirmModal/ConfirmModal";
+
+// Utility Components
+export { default as ErrorBoundary } from "./utility/ErrorBoundary/ErrorBoundary";
+export { default as RouterErrorBoundary } from "./utility/ErrorBoundary/RouterErrorBoundary";

@@ -42,7 +42,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 // Label Component Types
 export type LabelSize = "sm" | "md" | "lg";
-export type LabelVariant = "success" | "error" | "warning" | "info" | "gray" | "blue" | "purple" | "green" | "red" | "yellow";
+export type LabelVariant = "success" | "error" | "warning" | "info" | "gray" | "neutral" | "blue" | "purple" | "green" | "red" | "yellow";
 
 export interface LabelProps {
 	children: React.ReactNode;

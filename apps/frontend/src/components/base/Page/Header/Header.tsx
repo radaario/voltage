@@ -11,7 +11,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, onRefresh, isRefreshing = false, children }: PageHeaderProps) {
 	return (
-		<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+		<div className="flex flex-row flex-wrap justify-between items-start sm:items-center gap-4">
 			<div className="flex items-center gap-3">
 				<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{title}</h3>
 				{onRefresh && (
@@ -20,6 +20,7 @@ export function PageHeader({ title, onRefresh, isRefreshing = false, children }:
 							variant="ghost"
 							size="md"
 							iconOnly
+							className="mt-1"
 							onClick={onRefresh}
 							disabled={isRefreshing}>
 							<ArrowPathIcon className={`h-5 w-5 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -27,7 +28,7 @@ export function PageHeader({ title, onRefresh, isRefreshing = false, children }:
 					</Tooltip>
 				)}
 			</div>
-			{children && <div className="flex sm:flex-row gap-3 w-full sm:w-auto">{children}</div>}
+			{children && <div className="flex sm:flex-row gap-3 w-auto">{children}</div>}
 		</div>
 	);
 }

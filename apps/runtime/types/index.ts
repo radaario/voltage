@@ -51,6 +51,7 @@ export interface Job {
 	progress?: number;
 	outcome?: string | null;
 	started_at?: number | null;
+	analyzed_at?: number | null;
 	completed_at?: number | null;
 	updated_at: number;
 	created_at: number;

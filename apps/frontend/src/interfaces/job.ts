@@ -78,6 +78,7 @@ export interface Job {
 	completed_at: string | null;
 	updated_at: string;
 	created_at: string;
+	analyzed_at: string;
 	try_max: number;
 	try_count: number;
 	retry_in: number;

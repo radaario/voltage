@@ -14,7 +14,7 @@ interface ConfirmModalProps {
 	variant?: ConfirmModalVariant;
 	isLoading?: boolean;
 	noIcon?: boolean;
-	size?: "sm" | "md" | "lg" | "xl";
+	size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 	loadingText?: string;
 }
 
@@ -50,7 +50,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 			iconBg: "bg-blue-100 dark:bg-blue-900/20",
 			iconColor: "text-blue-600 dark:text-blue-400",
 			icon: ArrowPathIcon,
-			buttonVariant: "info" as const
+			buttonVariant: "primary" as const
 		}
 	};
 
@@ -100,6 +100,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 				<Button
 					variant={config.buttonVariant}
 					size="sm"
+					className="min-w-21"
 					isLoading={isLoading}
 					onClick={onConfirm}
 					disabled={isLoading}>

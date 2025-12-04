@@ -29,6 +29,7 @@ const Logs: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
 
+	// states
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchInput, setSearchInput] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);

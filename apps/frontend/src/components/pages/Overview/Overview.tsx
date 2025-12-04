@@ -72,7 +72,7 @@ const Overview: React.FC = () => {
 			}),
 		enabled: !!authToken,
 		refetchOnWindowFocus: true,
-		refetchInterval: 30_000 // 30 saniyede bir otomatik refresh
+		refetchInterval: 15_000 // 15 saniyede bir otomatik refresh
 	});
 
 	const deleteAllStatsMutation = useMutation({
@@ -228,7 +228,8 @@ const Overview: React.FC = () => {
 					message={
 						<>
 							<p className="mb-4">
-								Are you sure you want to delete <strong className="text-red-600 dark:text-red-400">all stats</strong>?
+								Are you sure you want to delete <strong>all stats</strong> for <strong>{option.label.toLowerCase()}</strong>
+								?
 							</p>
 							<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
 						</>
