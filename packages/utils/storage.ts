@@ -13,7 +13,8 @@ import {
 	DeleteObjectCommand,
 	DeleteObjectsCommand,
 	HeadObjectCommand,
-	ListObjectsV2Command
+	ListObjectsV2Command,
+	ObjectCannedACL
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Client as FTPClient } from "basic-ftp";
@@ -65,8 +66,8 @@ export interface StorageDriver {
 	list(prefix?: string): Promise<string[]>; // returns object keys relative to root/base
 	exists(key: string): Promise<boolean>;
 	read(key: string): Promise<Buffer>;
-	write(key: string, data: Buffer | string, contentType?: string): Promise<void>;
-	upload(localFilePath: string, key: string, contentType?: string): Promise<void>;
+	write(key: string, data: Buffer | string, contentType?: string, acl?: string, expires?: string, cacheControl?: string): Promise<void>;
+	upload(localFilePath: string, key: string, contentType?: string, acl?: string, expires?: string, cacheControl?: string): Promise<void>;
 	download(key: string, localFilePath: string): Promise<void>;
 	copy(srcKey: string, destKey: string): Promise<void>;
 	move(srcKey: string, destKey: string): Promise<void>;
@@ -143,14 +144,28 @@ class LocalStorageDriver implements StorageDriver {
 		return fs.readFile(this.withBasePath(key));
 	}
 
-	async write(key: string, data: Buffer | string, contentType?: string): Promise<void> {
+	async write(
+		key: string,
+		data: Buffer | string,
+		contentType?: string,
+		acl?: string,
+		expires?: string,
+		cacheControl?: string
+	): Promise<void> {
 		// contentType ignored for local
 		const filePath = this.withBasePath(key);
 		await ensureDir(path.dirname(filePath));
 		await fs.writeFile(filePath, typeof data === "string" ? Buffer.from(data) : data);
 	}
 
-	async upload(localFilePath: string, key: string): Promise<void> {
+	async upload(
+		localFilePath: string,
+		key: string,
+		contentType?: string,
+		acl?: string,
+		expires?: string,
+		cacheControl?: string
+	): Promise<void> {
 		const dest = this.withBasePath(key);
 		await ensureDir(path.dirname(dest));
 		await fs.copyFile(localFilePath, dest);
@@ -338,25 +353,45 @@ class S3StorageDriver implements StorageDriver {
 		return Buffer.concat(chunks);
 	}
 
-	async write(key: string, data: Buffer | string, contentType?: string): Promise<void> {
+	async write(
+		key: string,
+		data: Buffer | string,
+		contentType?: string,
+		accessControlList?: string,
+		expires?: string,
+		cacheControl?: string
+	): Promise<void> {
 		await this.client.send(
 			new PutObjectCommand({
 				Bucket: this.bucket,
 				Key: this.withBasePath(key),
 				Body: typeof data === "string" ? Buffer.from(data) : data,
-				ContentType: contentType || guessContentType(key)
+				ContentType: contentType || guessContentType(key),
+				ACL: this.validateACL(accessControlList),
+				Expires: this.validateDate(expires),
+				CacheControl: cacheControl
 			})
 		);
 	}
 
-	async upload(localFilePath: string, key: string, contentType?: string): Promise<void> {
+	async upload(
+		localFilePath: string,
+		key: string,
+		contentType?: string,
+		accessControlList?: string,
+		expires?: string,
+		cacheControl?: string
+	): Promise<void> {
 		const stream = fssync.createReadStream(localFilePath);
 		await this.client.send(
 			new PutObjectCommand({
 				Bucket: this.bucket,
 				Key: this.withBasePath(key),
 				Body: stream,
-				ContentType: contentType || guessContentType(key)
+				ContentType: contentType || guessContentType(key),
+				ACL: this.validateACL(accessControlList),
+				Expires: this.validateDate(expires),
+				CacheControl: cacheControl
 			})
 		);
 	}
@@ -457,6 +492,31 @@ class S3StorageDriver implements StorageDriver {
 			etag: head.ETag || null,
 			raw: head
 		};
+	}
+
+	private validateACL(acl?: string): ObjectCannedACL | undefined {
+		if (!acl) return ObjectCannedACL.public_read;
+
+		const normalizedACL = acl.toLowerCase().replace(/_/g, "-");
+
+		const aclMap: Record<string, ObjectCannedACL> = {
+			private: ObjectCannedACL.private,
+			"public-read": ObjectCannedACL.public_read,
+			"public-read-write": ObjectCannedACL.public_read_write,
+			"authenticated-read": ObjectCannedACL.authenticated_read,
+			"aws-exec-read": ObjectCannedACL.aws_exec_read,
+			"bucket-owner-read": ObjectCannedACL.bucket_owner_read,
+			"bucket-owner-full-control": ObjectCannedACL.bucket_owner_full_control
+		};
+
+		return aclMap[normalizedACL] || ObjectCannedACL.public_read;
+	}
+
+	private validateDate(date?: string): Date | undefined {
+		if (!date) return undefined;
+		const parsed = new Date(date);
+		if (isNaN(parsed.getTime())) return undefined;
+		return parsed;
 	}
 }
 
@@ -633,7 +693,14 @@ class FTPStorageDriver implements StorageDriver {
 		}
 	}
 
-	async write(key: string, data: Buffer | string, contentType?: string): Promise<void> {
+	async write(
+		key: string,
+		data: Buffer | string,
+		contentType?: string,
+		acl?: string,
+		expires?: string,
+		cacheControl?: string
+	): Promise<void> {
 		await this.connect();
 		try {
 			const remotePath = this.withBasePath(key);
@@ -662,7 +729,14 @@ class FTPStorageDriver implements StorageDriver {
 		}
 	}
 
-	async upload(localFilePath: string, key: string, contentType?: string): Promise<void> {
+	async upload(
+		localFilePath: string,
+		key: string,
+		contentType?: string,
+		acl?: string,
+		expires?: string,
+		cacheControl?: string
+	): Promise<void> {
 		await this.connect();
 		try {
 			const remotePath = this.withBasePath(key);
@@ -853,13 +927,13 @@ class StorageFacade implements StorageDriver {
 		this.assertReady();
 		return this.driver!.read(key);
 	}
-	write(key: string, data: Buffer | string, contentType?: string): Promise<void> {
+	write(key: string, data: Buffer | string, contentType?: string, acl?: string, expires?: string, cacheControl?: string): Promise<void> {
 		this.assertReady();
-		return this.driver!.write(key, data, contentType);
+		return this.driver!.write(key, data, contentType, acl, expires, cacheControl);
 	}
-	upload(localFilePath: string, key: string, contentType?: string): Promise<void> {
+	upload(localFilePath: string, key: string, contentType?: string, acl?: string, expires?: string, cacheControl?: string): Promise<void> {
 		this.assertReady();
-		return this.driver!.upload(localFilePath, key, contentType);
+		return this.driver!.upload(localFilePath, key, contentType, acl, expires, cacheControl);
 	}
 	download(key: string, localFilePath: string): Promise<void> {
 		this.assertReady();

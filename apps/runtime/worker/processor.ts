@@ -21,8 +21,8 @@ export class JobProcessor {
 			// logger.setMetadata({ instance_key: this.job.instance_key, worker_key: this.job.worker_key, job_key: this.job.key });
 
 			// Validate and set defaults for output specs
-			output.specs.format = (output.specs.format || "MP4").toUpperCase();
 			output.specs.type = (output.specs.type || "VIDEO").toUpperCase();
+			output.specs.format = (output.specs.format || "MP4").toUpperCase();
 
 			if (this.job.input.duration && output.specs.offset && parseInt(output.specs.offset) >= parseInt(this.job.input.duration)) {
 				output.specs.offset = parseInt(this.job.input.duration) - 1;

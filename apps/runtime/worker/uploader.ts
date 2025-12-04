@@ -99,9 +99,12 @@ export class JobUploader {
 		// Initialize storage based on destination
 		const key = String(output.specs.path).replace(/^\/+/, "");
 		const contentType = guessContentType(key);
+		const acl = output.specs.acl || output.specs.destination.acl || destination.acl || null;
+		const expires = output.specs.expires || output.specs.destination.expires || destination.expires || null;
+		const cacheControl = output.specs.cache_control || output.specs.destination.cache_control || destination.cache_control || null;
 
 		await storage.config(destination);
-		await storage.upload(tempJobOutputFilePath, key, contentType);
+		await storage.upload(tempJobOutputFilePath, key, contentType, acl, expires, cacheControl);
 
 		// Build a result similar to previous S3 uploader
 		const location = (destination as any).bucket ? `s3://${(destination as any).bucket}/${key}` : key;
