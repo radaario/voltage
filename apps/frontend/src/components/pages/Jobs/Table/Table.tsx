@@ -50,7 +50,7 @@ const JobsTable = ({
 				header: "Job",
 				cell: (info) => {
 					const job = info.row.original;
-					const filename = job.input?.file_name || job.input?.url?.split("/").pop() || "Unknown";
+					const filename = job.input?.file_name || job.input?.url?.split("/").pop() || null;
 
 					const specs: string[] = [];
 
@@ -79,7 +79,7 @@ const JobsTable = ({
 							<div
 								className="flex flex-col items-start min-w-0"
 								style={{ wordBreak: "break-all" }}>
-								<div className="font-medium text-gray-900 dark:text-white sm:truncate">{filename}</div>
+								{filename && <div className="font-medium text-gray-900 dark:text-white sm:truncate">{filename}</div>}
 								<div className="text-xs text-gray-500 dark:text-gray-400 font-mono sm:truncate hidden sm:block">
 									{job.key}
 								</div>

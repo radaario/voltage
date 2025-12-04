@@ -54,7 +54,7 @@ const JobDetailModal: React.FC = () => {
 
 	// data
 	const job = jobResponse?.data;
-	const filename = job?.input?.file_name || job?.input?.url?.split("/").pop() || "Unknown";
+	const filename = job?.input?.file_name || job?.input?.url?.split("/").pop() || null;
 	const specs: string[] = [];
 	const showRetryButton = job && ["CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(job.status);
 
@@ -122,7 +122,11 @@ const JobDetailModal: React.FC = () => {
 							<div className="flex flex-col min-w-0">
 								{job ? (
 									<div className="flex flex-col min-w-0">
-										<h3 className="text-md sm:text-lg font-bold text-gray-900 dark:text-white truncate">{filename}</h3>
+										{filename && (
+											<h3 className="text-md sm:text-lg font-bold text-gray-900 dark:text-white truncate">
+												{filename}
+											</h3>
+										)}
 										<p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{job?.key}</p>
 										{specs.length > 0 && (
 											<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{specs.join(", ")}</span>
