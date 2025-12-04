@@ -49,20 +49,20 @@ export const getInstances = async (q?: string) => {
 	}
 
 	// Parse instance.specs JSON and attach workers array to each instance
-	const result = instances.map((instance) => {
-		instance = {
+	const result = instances.map((instance: any) => {
+		const newInstance = {
 			...instance,
 			specs: instance.specs ? JSON.parse(instance.specs) : "{}",
 			workers: workersByInstance[instance.key] || []
 		};
 
-		if (instance.specs && instance.status !== "ONLINE") {
-			instance.specs.cpu_usage_percent = 0.0;
-			instance.specs.memory_free = instance.specs.memory_total;
-			instance.specs.memory_usage_percent = 0.0;
+		if (newInstance.specs && newInstance.status !== "ONLINE") {
+			newInstance.specs.cpu_usage_percent = 0.0;
+			newInstance.specs.memory_free = newInstance.specs.memory_total;
+			newInstance.specs.memory_usage_percent = 0.0;
 		}
 
-		return instance;
+		return newInstance;
 	});
 
 	return result;
