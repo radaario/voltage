@@ -1,10 +1,10 @@
-<p align="center">
+<div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="assets/logo-light.png">
-    <img alt="Project Logo" src="assets/logo-light.png" width="200">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/voltage-logo-light.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/voltage-logo-dark.png">
+    <img alt="Voltage Logo" src="assets/voltage-logo-light.png" width="200">
   </picture>
-</p>
+</div>
 
 <div align="center">
 
@@ -786,5 +786,11 @@ If you find Voltage useful, please consider giving it a star on GitHub!
 ---
 
 <div align="center">
-Made with ⚡ by RADAAR
+  <a href="https://radaar.io" title="RADAAR" target="_blank">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/radaar-developed-by-light.svg">
+      <source media="(prefers-color-scheme: light)" srcset="assets/radaar-developed-by-dark.svg">
+      <img alt="Voltage Logo" src="assets/radaar-developed-by-light.svg" width="200">
+    </picture>  
+  </a>
 </div>
