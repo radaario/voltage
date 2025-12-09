@@ -1,0 +1,265 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *)); /* @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *)); */
+@custom-variant light (&:where([.light], [.light] *));
+
+@layer base {
+	html,
+	body {
+		min-width: 320px;
+	}
+
+	html,
+	body,
+	#root {
+		@apply h-full;
+	}
+
+	body {
+		background-color: var(--color-background);
+		color: var(--color-header);
+	}
+
+	button:not(:disabled) {
+		cursor: pointer;
+	}
+
+	/* Scrollbar styling for light mode */
+	::-webkit-scrollbar {
+		width: 12px;
+		height: 12px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: #f1f1f1;
+		border-radius: 10px;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: #c1c1c1;
+		border-radius: 10px;
+		border: 2px solid #f1f1f1;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: #a8a8a8;
+	}
+
+	/* Scrollbar styling for dark mode */
+	.dark ::-webkit-scrollbar-track {
+		background: #2a2a2a;
+	}
+
+	.dark ::-webkit-scrollbar-thumb {
+		background: #4a4a4a;
+		border: 2px solid #2a2a2a;
+	}
+
+	.dark ::-webkit-scrollbar-thumb:hover {
+		background: #5a5a5a;
+	}
+
+	/* Firefox scrollbar */
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: #c1c1c1 #f1f1f1;
+	}
+
+	.dark * {
+		scrollbar-color: #4a4a4a #2a2a2a;
+	}
+}
+
+.light {
+	--color-background: var(--color-white);
+	--color-header: var(--color-neutral-100);
+	--color-footer: var(--color-neutral-100);
+	--color-table: var(--color-neutral-200);
+	--color-thead: var(--color-neutral-300);
+	--color-tbody: var(--color-neutral-100);
+	--color-tr-border: var(--color-neutral-100);
+}
+
+.dark {
+	--color-background: #212121;
+	--color-header: #181818;
+	--color-footer: #1e1e1e;
+	--color-table: #181818;
+	--color-thead: #232323;
+	--color-tbody: #313131;
+	--color-tr-border: #474747;
+}
+
+@theme {
+	/* --color-background: var(--color-background); */
+}
+
+@layer components {
+	/* Shimmer animation for loading states */
+	@keyframes shimmer {
+		0% {
+			transform: translateX(-100%) skewX(-20deg);
+		}
+		100% {
+			transform: translateX(200%) skewX(-20deg);
+		}
+	}
+
+	/* layout-container */
+	.layout-container {
+		@apply min-h-screen flex flex-col;
+	}
+
+	/* layout-main */
+	.layout-main {
+		@apply grow container mx-auto px-4 py-8 text-gray-900 dark:text-gray-100;
+	}
+
+	/* header */
+	.layout-header {
+		background-color: var(--color-header);
+		@apply relative flex items-center justify-between gap-2.5 text-gray-900 dark:text-gray-100 px-6 py-4 shadow-sm;
+	}
+
+	/* fooer */
+	.layout-footer {
+		background-color: var(--color-footer);
+		@apply text-gray-900 dark:text-gray-100 shadow mt-auto;
+	}
+
+	/* table */
+	table tbody tr td {
+		@apply break-words;
+	}
+
+	/* table advanced */
+	.table-advanced {
+		background-color: var(--color-table);
+		@apply shadow rounded-lg;
+	}
+
+	.table-advanced-header {
+		@apply px-4 py-5 sm:px-6 text-gray-900 dark:text-white;
+	}
+
+	.table-advanced thead {
+		background-color: var(--color-thead);
+	}
+
+	.table-advanced thead th {
+		@apply px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider;
+	}
+
+	.table-advanced tbody {
+		background-color: var(--color-tbody);
+	}
+
+	.table-advanced tr {
+		border-color: var(--color-tr-border);
+	}
+
+	/* responsive table */
+	@media (max-width: 640px) {
+		.responsive-table > thead {
+			display: none;
+		}
+
+		.responsive-table > tbody > tr {
+			display: block;
+			margin-bottom: 0;
+			border-bottom: 1px solid rgb(229 231 235);
+		}
+
+		.dark .responsive-table > tbody > tr {
+			border-bottom-color: rgb(38 38 38);
+		}
+
+		.responsive-table > tbody > tr > td {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			padding: 0.75rem 1rem;
+			border: none;
+			gap: 0.75rem;
+			word-break: break-word;
+			overflow: hidden;
+		}
+
+		.responsive-table > tbody > tr > td:not([data-no-label="true"]):before {
+			content: attr(data-label);
+			font-weight: 500;
+			text-transform: uppercase;
+			font-size: 0.75rem;
+			line-height: 1rem;
+			color: rgb(107 114 128);
+			width: 5rem;
+			flex-shrink: 0;
+			padding-top: 0.25rem;
+		}
+
+		.dark .responsive-table > tbody > tr > td:before {
+			color: rgb(156 163 175);
+		}
+
+		.responsive-table > tbody > tr > td > div {
+			flex: 1;
+			min-width: 0;
+		}
+
+		.responsive-table > tbody tr {
+			border-bottom-width: 2px !important;
+		}
+	}
+
+	/* New job animation - slide in from top with highlight */
+	@keyframes slideInHighlight {
+		0% {
+			transform: translateY(-20px);
+			opacity: 0;
+		}
+		50% {
+			transform: translateY(0);
+			opacity: 1;
+		}
+		100% {
+			transform: translateY(0);
+			opacity: 1;
+		}
+	}
+
+	@keyframes highlightPulse {
+		0% {
+			background-color: rgb(59 130 246 / 0.15);
+		}
+		50% {
+			background-color: rgb(59 130 246 / 0.25);
+		}
+		100% {
+			background-color: transparent;
+		}
+	}
+
+	@keyframes highlightPulseDark {
+		0% {
+			background-color: rgb(59 130 246 / 0.2);
+		}
+		50% {
+			background-color: rgb(59 130 246 / 0.3);
+		}
+		100% {
+			background-color: transparent;
+		}
+	}
+
+	.animate-slide-in-highlight {
+		animation:
+			slideInHighlight 0.5s ease-out,
+			highlightPulse 2s ease-out;
+	}
+
+	.dark .animate-slide-in-highlight {
+		animation:
+			slideInHighlight 0.5s ease-out,
+			highlightPulseDark 2s ease-out;
+	}
+}

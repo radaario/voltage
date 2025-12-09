@@ -1,0 +1,13 @@
+node_modules
+dist
+storage
+db.sqlite*
+npm-debug.log*
+.DS_Store
+notes.txt
+
+# locale env files
+.env.local
+.env.dev
+.env.test
+.env.prod

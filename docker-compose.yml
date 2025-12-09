@@ -1,0 +1,20 @@
+# docker-compose up -d --no-deps --build
+# docker-compose stop
+
+version: "3"
+services:
+    app:
+        restart: always
+        build:
+            context: .
+            dockerfile: .deploy/Dockerfile
+        image: voltage:latest
+        environment:
+            # - VOLTAGE_ENV=prod
+            # - VOLTAGE_NGINX_PORT=${VOLTAGE_NGINX_PORT:-8080}
+            # - VOLTAGE_PROTOCOL=${VOLTAGE_PROTOCOL:"http"}
+            # - VOLTAGE_HOST=${VOLTAGE_HOST:"localhost"}
+            # - VOLTAGE_PORT=${VOLTAGE_PORT:-80}
+            # - VOLTAGE_PATH=${VOLTAGE_PATH:"/"}
+        ports:
+            - "8080:8080"

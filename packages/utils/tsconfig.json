@@ -1,0 +1,26 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"target": "es2022",
+		"module": "esnext",
+		"moduleResolution": "node",
+		"outDir": "dist",
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"resolveJsonModule": true,
+		"composite": false,
+		"declaration": false,
+		"types": [],
+		"baseUrl": "./",
+		"paths": {
+			"@voltage/utils": ["./"],
+			"@voltage/utils/*": ["./*"],
+			"@voltage/config": ["../config"],
+			"@voltage/config/*": ["../config/*"]
+		}
+	},
+	"include": ["./*.ts"],
+	"exclude": ["node_modules", "dist"],
+	"files": ["index.ts", "storage.ts", "database.ts", "logger.ts", "stats.ts"]
+}

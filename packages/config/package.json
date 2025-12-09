@@ -1,0 +1,30 @@
+{
+	"name": "@voltage/config",
+	"version": "1.0.0",
+	"type": "module",
+	"private": true,
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"require": "./dist/index.cjs",
+			"import": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"build": "rimraf dist && tsup ./index.ts --format cjs,esm --dts",
+		"dev": "rimraf dist && tsup ./index.ts --format cjs,esm --dts --watch",
+		"typecheck": "tsc --noEmit",
+		"clean": "rm -rf ./dist"
+	},
+	"dependencies": {
+		"dotenv": "^17.2.3",
+		"tsup": "^8.0.1",
+		"typescript": "^5.3.3"
+	},
+	"devDependencies": {
+		"@types/node": "^24.10.1"
+	}
+}

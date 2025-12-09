@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+
+hoistPattern:
+  - typescript
+  - eslint*
+  - prettier
+
+ignoredBuiltDependencies:
+  - '@tensorflow/tfjs-node'
+  - core-js

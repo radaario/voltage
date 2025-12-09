@@ -1,0 +1,46 @@
+{
+	"name": "voltage",
+	"description": "An open-source, FFmpeg-based video encoding API that supports multiple concurrent instances. Easily scale video processing with parallel encoding, efficient resource management, and flexible API endpoints for a reliable, production-ready solution.",
+	"version": "1.0.2",
+	"private": true,
+	"author": {
+		"name": "RADAAR",
+		"email": "dev@radaar.io",
+		"url": "http://www.radaar.io/"
+	},
+	"contributors": [
+		{
+			"name": "Mustafa Ercan Zirh",
+			"url": "https://github.com/ercanzirh"
+		},
+		{
+			"name": "Faruk Gercek",
+			"url": "https://github.com/favger"
+		}
+	],
+	"scripts": {
+		"dev": "pnpm --parallel --filter @voltage/frontend --filter @voltage/api --filter @voltage/runtime dev",
+		"dev:runtime": "pnpm --filter @voltage/runtime dev",
+		"dev:api": "pnpm --filter @voltage/api dev",
+		"dev:frontend": "pnpm --filter @voltage/frontend dev",
+		"build": "pnpm --filter @voltage/config build && pnpm --filter @voltage/utils build && pnpm --filter @voltage/frontend --filter @voltage/api --filter @voltage/runtime build",
+		"build:packages": "pnpm --filter @voltage/config --filter @voltage/utils build",
+		"build:runtime": "pnpm --filter @voltage/runtime build",
+		"build:api": "pnpm --filter @voltage/api build",
+		"build:frontend": "pnpm --filter @voltage/frontend build",
+		"start": "pnpm run start:api & pnpm run start:runtime & pnpm run start:frontend",
+		"start:runtime": "pnpm --filter @voltage/runtime start",
+		"start:api": "pnpm --filter @voltage/api start",
+		"start:frontend": "pnpm --filter @voltage/frontend preview",
+		"clean": "pnpm -r exec rm -rf dist node_modules",
+		"typecheck": "pnpm -r --parallel run typecheck",
+		"lint": "pnpm -r lint",
+		"format": "prettier --write \"**/*.{js,ts,tsx,md,json}\"",
+		"format:check": "prettier --check \"**/*.{js,ts,tsx,md,json}\""
+	},
+	"devDependencies": {
+		"prettier": "^3.0.0",
+		"rimraf": "^6.1.0",
+		"typescript": "^5.3.3"
+	}
+}
