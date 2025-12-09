@@ -16,6 +16,10 @@
 
 ---
 
+![Screenshot 1](assets/voltage-frontend-overview-ss-001.webp) ![Screenshot 2](assets/voltage-frontend-overview-ss-002.webp) ![Screenshot 3](assets/voltage-frontend-overview-ss-003.webp)
+
+---
+
 ## 📖 Introduction
 
 **Voltage** is an enterprise-grade, open-source video encoding API service built for scale and flexibility. Designed and developed by **Mustafa Ercan Zırh** ([@ercanzirh](https://github.com/ercanzirh)) and **Faruk Gerçek** ([@favger](https://github.com/favger)) from [**RADAAR**](https://www.radaar.io/) — an AI-powered social media management and automation platform.
