@@ -773,9 +773,40 @@ Developed with ⚡ by the RADAAR team:
 
 ---
 
-## 🤝 Contributing
+# Contributing to Voltage
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/radaar/voltage/issues).
+## 🙏 Welcome Contributors!
+
+Thank you for your interest in contributing to Voltage!
+
+## How to Contribute
+
+### Reporting Bugs
+
+- Use GitHub Issues
+- Include reproduction steps
+- Provide system info (OS, Node version, etc.)
+
+### Feature Requests
+
+- Open an issue with [FEATURE] tag
+- Describe use case
+- Explain expected behavior
+
+### Pull Requests
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+### Coding Standards
+
+- Use TypeScript
+- Follow existing code style
+- Add tests for new features
+- Update documentation
 
 ---
 
