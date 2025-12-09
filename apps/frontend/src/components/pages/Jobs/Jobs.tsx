@@ -42,6 +42,7 @@ const Jobs: React.FC = () => {
 	const {
 		data: jobsResponse,
 		isLoading,
+		isFetching,
 		error,
 		refetch,
 		dataUpdatedAt
@@ -272,7 +273,7 @@ const Jobs: React.FC = () => {
 			<Page.Header
 				title="Jobs"
 				onRefresh={handleRefresh}
-				isRefreshing={isLoading}>
+				isRefreshing={isLoading || isFetching}>
 				<SearchInput
 					value={searchInput}
 					onChange={setSearchInput}

@@ -54,12 +54,20 @@ async function run() {
 		await lifecycle.updateJob(job, { status: "DOWNLOADED", downloaded_at: getNow() }, JOB_PROGRESS_PER_STEP);
 
 		// Step 2: Analyze input
-		await lifecycle.updateJob(job, { status: "ANALYZING" });
-		await steps.analyzeInput(job, jobStats);
+		if (!job.input?.analyze_is_disabled) {
+			await lifecycle.updateJob(job, { status: "ANALYZING" });
+			await steps.analyzeInput(job, jobStats);
+		}
 
 		// Step 3: Generate preview and detect NSFW
-		const jobInputPreview = await steps.generateInputPreview(job, jobStats);
-		await steps.detectInputNSFW(job, jobInputPreview?.temp_path, jobStats);
+		if (!job.input?.generate_preview_is_disabled) {
+			const jobInputPreview = await steps.generateInputPreview(job, jobStats);
+
+			if (jobInputPreview?.temp_path) {
+				await steps.detectInputNSFW(job, jobInputPreview?.temp_path, jobStats);
+			}
+		}
+
 		await lifecycle.updateJob(job, { status: "ANALYZED", analyzed_at: getNow() }, JOB_PROGRESS_PER_STEP);
 
 		jobStats.inputs_completed_count = 1;

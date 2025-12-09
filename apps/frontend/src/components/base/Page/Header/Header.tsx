@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { Button, Tooltip } from "@/components";
 
@@ -10,6 +10,20 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ title, onRefresh, isRefreshing = false, children }: PageHeaderProps) {
+	const [isSpinning, setIsSpinning] = useState(false);
+
+	useEffect(() => {
+		if (!isRefreshing) {
+			setIsSpinning(true);
+
+			const timer = setTimeout(() => {
+				setIsSpinning(false);
+			}, 1000);
+
+			return () => clearTimeout(timer);
+		}
+	}, [isRefreshing]);
+
 	return (
 		<div className="flex flex-row flex-wrap justify-between items-start sm:items-center gap-4">
 			<div className="flex items-center gap-3">
@@ -23,7 +37,7 @@ export function PageHeader({ title, onRefresh, isRefreshing = false, children }:
 							className="mt-1"
 							onClick={onRefresh}
 							disabled={isRefreshing}>
-							<ArrowPathIcon className={`h-5 w-5 ${isRefreshing ? "animate-spin" : ""}`} />
+							<ArrowPathIcon className={`h-5 w-5 ${isSpinning ? "animate-spin" : ""}`} />
 						</Button>
 					</Tooltip>
 				)}

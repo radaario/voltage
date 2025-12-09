@@ -38,6 +38,7 @@ const Logs: React.FC = () => {
 	const {
 		data: logsResponse,
 		isLoading,
+		isFetching,
 		error,
 		refetch,
 		dataUpdatedAt
@@ -192,7 +193,7 @@ const Logs: React.FC = () => {
 			<Page.Header
 				title="Logs"
 				onRefresh={handleRefresh}
-				isRefreshing={isLoading}>
+				isRefreshing={isLoading || isFetching}>
 				{/* Type Filter */}
 				<select
 					value={typeFilter}

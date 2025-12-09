@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/utils";
+import { api, localStorage } from "@/utils";
 
 interface FrontendConfig {
 	is_authentication_required?: boolean;
@@ -61,7 +61,10 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 		refetch: refetchConfig
 	} = useQuery({
 		queryKey: ["config"],
-		queryFn: () => api.get<Config>("/config"),
+		queryFn: () =>
+			api.get<Config>(`/config`, {
+				token: localStorage.get("authToken")
+			}),
 		staleTime: 5 * 60 * 1000, // accept fresh for 5 minutes
 		gcTime: 10 * 60 * 1000, // keep in cache for 10 minutes
 		refetchOnWindowFocus: false,

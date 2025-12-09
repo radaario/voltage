@@ -5,10 +5,14 @@ import { Layout, ScreenLoading } from "@/components";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo, Button, Input } from "@/components";
 import { LockClosedIcon } from "@heroicons/react/24/outline";
+import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
+
+const fakeDelay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function Login() {
 	const { login } = useAuth();
 	const navigate = useNavigate();
+	const { refetchConfig } = useGlobalStateContext();
 
 	// states
 	const [password, setPassword] = useState(import.meta.env.VITE_PASSWORD || "");
@@ -19,9 +23,10 @@ function Login() {
 	const onSubmit = async (e: any) => {
 		e.preventDefault();
 
-		const focusPasswordEl = () => {
+		const focusPasswordEl = async () => {
+			await fakeDelay(50);
 			const passwordEl: any = document.querySelector("form input[type='password']");
-			setTimeout(() => passwordEl?.focus(), 1);
+			passwordEl?.focus();
 		};
 
 		// if the password is empty
@@ -34,6 +39,11 @@ function Login() {
 		try {
 			const success = await login(password);
 			if (success) {
+				refetchConfig();
+
+				// this is for refetching the config after login
+				await fakeDelay(300);
+
 				navigate("/", { replace: true });
 			} else {
 				setErrorMessage("Invalid password");

@@ -21,6 +21,7 @@ const Instances: React.FC = () => {
 	const {
 		data: instancesResponse,
 		isLoading,
+		isFetching,
 		error,
 		refetch
 	} = useQuery<ApiResponse<Instance[]>>({
@@ -89,7 +90,7 @@ const Instances: React.FC = () => {
 			<Page.Header
 				title="Instances"
 				onRefresh={handleRefresh}
-				isRefreshing={isLoading}>
+				isRefreshing={isLoading || isFetching}>
 				<SearchInput
 					value={searchInput}
 					onChange={setSearchInput}

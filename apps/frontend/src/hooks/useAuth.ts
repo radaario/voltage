@@ -6,8 +6,8 @@ import { api } from "@/utils";
 import { localStorage } from "@/utils";
 
 export const useAuth = () => {
-	const navigate = useNavigate();
-	const { config, configLoading } = useGlobalStateContext();
+	const navigate = useNavigate() || (() => {});
+	const { config, refetchConfig, configLoading } = useGlobalStateContext();
 
 	// states
 	const [authState, setAuthState] = useState<AuthState>({
@@ -43,6 +43,7 @@ export const useAuth = () => {
 	const logout = useCallback(() => {
 		localStorage.remove("authToken");
 		setAuthState({ authToken: null, isAuthenticated: false });
+		refetchConfig();
 		navigate("/login");
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);

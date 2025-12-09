@@ -326,11 +326,20 @@ export const deleteJobs = async (params: {
 		await database.table("jobs_notifications").whereIn("job_key", jobsKeysToHardDelete).delete();
 		await database.table("jobs_notifications_queue").whereIn("job_key", jobsKeysToHardDelete).delete();
 		await database.table("logs").whereIn("job_key", jobsKeysToHardDelete).delete();
-
-		await logger.insert("INFO", "All jobs permanently deleted!", { count: jobsKeysToHardDelete.length });
 	}
 
-	return { message: "All jobs permanently deleted!" };
+	if (params.all) {
+		await logger.insert("WARNING", "All jobs permanently deleted!");
+		return { message: "All jobs permanently deleted!" };
+	}
+
+	if (params.job_key) {
+		await logger.insert("WARNING", "Job permanently deleted!", { ...params });
+		return { message: "Job permanently deleted!" };
+	}
+
+	await logger.insert("WARNING", "Some jobs permanently deleted!", { ...params, count: jobsKeysToHardDelete.length });
+	return { message: "Some jobs permanently deleted!" };
 };
 
 export const getOutput = async (output_key: string) => {
@@ -470,6 +479,7 @@ export const retryNotification = async (notification_key: string) => {
 export const deleteNotifications = async (params: { all?: boolean; notification_key?: string; since_at?: string; until_at?: string }) => {
 	if (params.all) {
 		await database.table("jobs_notifications").delete();
+		await logger.insert("WARNING", "All job notifications successfully deleted!");
 		return { message: "All job notifications successfully deleted!" };
 	}
 
@@ -491,6 +501,8 @@ export const deleteNotifications = async (params: { all?: boolean; notification_
 	}
 
 	await query.delete();
+
+	await logger.insert("WARNING", "Some job notifications successfully deleted!", { ...params });
 
 	return {
 		message: "Some job notifications successfully deleted!",

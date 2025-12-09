@@ -87,7 +87,7 @@ export const FRONTEND_DEFAULTS = {
 	dataRefetchInterval: 10000, // 10 seconds
 	datetimeFormat: "YYYY-MM-DD HH:mm:ss",
 	localStorage: {
-		prefix: null
+		prefix: "voltage"
 	}
 };
 

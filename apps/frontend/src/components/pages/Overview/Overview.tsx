@@ -60,6 +60,7 @@ const Overview: React.FC = () => {
 
 	const {
 		data: statsResponse,
+		isFetching,
 		isLoading,
 		error,
 		refetch
@@ -166,7 +167,7 @@ const Overview: React.FC = () => {
 			<Page.Header
 				title="Overview"
 				onRefresh={handleRefresh}
-				isRefreshing={isLoading}>
+				isRefreshing={isLoading || isFetching}>
 				<div className="flex items-center gap-2">
 					<label
 						htmlFor="date-range"

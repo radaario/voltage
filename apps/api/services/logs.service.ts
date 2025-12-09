@@ -61,11 +61,13 @@ export const getLogs = async (
 export const deleteLogs = async (params: { all?: boolean; log_key?: string; since_at?: string; until_at?: string }) => {
 	if (params.all) {
 		await database.table("logs").delete();
+		await logger.insert("WARNING", "All logs successfully deleted!");
 		return { message: "All logs successfully deleted!" };
 	}
 
 	if (params.log_key) {
 		await database.table("logs").where("key", params.log_key).delete();
+		await logger.insert("WARNING", "Log successfully deleted!", { ...params });
 		return { message: "Log successfully deleted!" };
 	}
 
@@ -82,6 +84,8 @@ export const deleteLogs = async (params: { all?: boolean; log_key?: string; sinc
 	}
 
 	await query.delete();
+
+	await logger.insert("WARNING", "Some logs successfully deleted!", { ...params });
 
 	return {
 		message: "Some logs successfully deleted!",

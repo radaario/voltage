@@ -38,9 +38,9 @@ export class JobThumbnailer {
 			// logger.console("INFO", "Generating preview from job input...");
 
 			// Calculate the middle timestamp of the video
-			let offset = (this.job.input?.duration || 0) / 2;
+			let offset = this.job.input?.duration ? this.job.input.duration / 2 : 0;
 			if (options.offset !== undefined) offset = options.offset;
-			if (this.job.input?.duration && offset > this.job.input?.duration) offset = this.job.input?.duration;
+			if (this.job.input?.duration && offset > this.job.input.duration) offset = this.job.input.duration;
 
 			// Use ffmpeg to extract a frame at the middle timestamp and convert it to the desired format
 			const ffmpegArgs = [

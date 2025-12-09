@@ -38,3 +38,30 @@ export const authMiddleware = (options: {} = {}) => {
 		next();
 	};
 };
+
+// Optional authentication - checks token but doesn't block, sets req.isAuthenticated
+export const optionalAuthMiddleware = () => {
+	return (req: Request, res: Response, next: NextFunction) => {
+		const client = req.query.client?.toString().toUpperCase() || null;
+
+		// Expected tokens
+		const frontendToken = config.frontend.password ? hash(config.frontend.password) : null;
+		const apiToken = client === "FRONTEND" ? frontendToken : config.api.key;
+
+		// Get token from various possible locations
+		const token =
+			req.query.token ||
+			req.query.api_key ||
+			req.body.token ||
+			req.body.api_key ||
+			req.headers.token ||
+			req.headers.api_key ||
+			req.headers["x-api-key"] ||
+			(req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.substring(7) : null);
+
+		// Check if authenticated
+		(req as any).isAuthenticated = !!(apiToken && token && token === apiToken);
+
+		next();
+	};
+};

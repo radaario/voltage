@@ -44,10 +44,6 @@ export class JobStepsService {
 	}
 
 	async analyzeInput(job: JobContext, jobStats: JobStats): Promise<void> {
-		if (job.input?.analyze_is_disabled) {
-			return;
-		}
-
 		await logger.insert("INFO", "Analyzing job input...");
 
 		const analyzer = new JobAnalyzer(job);
@@ -71,10 +67,6 @@ export class JobStepsService {
 	}
 
 	async generateInputPreview(job: JobContext, jobStats: JobStats): Promise<any> {
-		if (job.input?.generate_preview_is_disabled) {
-			return;
-		}
-
 		await logger.insert("INFO", "Generating job input preview...");
 
 		const thumbnailer = new JobThumbnailer(job);

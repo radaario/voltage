@@ -38,6 +38,7 @@ const Notifications: React.FC = () => {
 	const {
 		data: notificationsResponse,
 		isLoading,
+		isFetching,
 		error,
 		refetch,
 		dataUpdatedAt
@@ -184,7 +185,7 @@ const Notifications: React.FC = () => {
 			<Page.Header
 				title="Notifications"
 				onRefresh={handleRefresh}
-				isRefreshing={isLoading}>
+				isRefreshing={isLoading || isFetching}>
 				{/* Status Filter */}
 				<select
 					value={statusFilter}

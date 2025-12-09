@@ -11,12 +11,13 @@ import {
 	Bars3Icon,
 	XMarkIcon,
 	PresentationChartLineIcon,
-	TrashIcon
+	TrashIcon,
+	InformationCircleIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { NavLink } from "react-router-dom";
-import { Logo, Button, Tooltip, ConfirmModal } from "@/components";
+import { Logo, Button, Tooltip, ConfirmModal, ConfigModal } from "@/components";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/utils";
@@ -26,11 +27,16 @@ function Header() {
 	const { isAuthenticated, logout, authToken } = useAuth();
 	const { config, configError, refetchConfig, resetPage } = useGlobalStateContext();
 	const queryClient = useQueryClient();
+
+	// states
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [showFactoryResetModal, setShowFactoryResetModal] = useState(false);
+	const [showConfigModal, setShowConfigModal] = useState(false);
 
+	// data
 	const showLogout = isAuthenticated && config?.frontend?.is_authentication_required;
 
+	// mutations
 	const factoryResetMutation = useMutation({
 		mutationFn: async () => {
 			return await api.delete("/all", { token: authToken });
@@ -42,6 +48,7 @@ function Header() {
 		}
 	});
 
+	// actions
 	const handleNavClick = () => {
 		setIsMobileMenuOpen(false);
 	};
@@ -70,7 +77,7 @@ function Header() {
 					/>
 				</div>
 				{isAuthenticated && (
-					<nav className="hidden lg:flex items-center gap-3">
+					<nav className="hidden lg:flex items-center gap-3 ml-2">
 						<NavLink
 							to="/"
 							onClick={resetPage}
@@ -151,24 +158,20 @@ function Header() {
 						</Button>
 					)}
 
-					{/* Server Error Alert */}
-					{configError && (
-						<>
-							<Tooltip content="Server not responding. Click to retry.">
-								<Button
-									variant="outline-danger"
-									size="md"
-									iconOnly
-									onClick={refetchConfig}>
-									<ExclamationTriangleIcon className="w-5 h-5" />
-								</Button>
-							</Tooltip>
-							<div className="h-6 w-px bg-gray-200 dark:bg-gray-600 mx-2 hidden lg:block"></div>
-						</>
-					)}
+					<Tooltip content={`${theme === "light" ? "Dark" : "Light"} Mode`}>
+						<Button
+							variant="soft"
+							size="md"
+							iconOnly
+							className="hidden lg:flex"
+							onClick={toggleTheme}>
+							{theme === "light" ? <MoonIcon className="w-5 h-5" /> : <SunIcon className="w-5 h-5" />}
+						</Button>
+					</Tooltip>
 
 					{isAuthenticated && (
 						<>
+							<div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2 hidden lg:block"></div>
 							<Tooltip content="Delete All Data">
 								<Button
 									variant="soft"
@@ -182,20 +185,8 @@ function Header() {
 									<TrashIcon className="w-5 h-5" />
 								</Button>
 							</Tooltip>
-							<div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2 hidden lg:block"></div>
 						</>
 					)}
-
-					<Tooltip content={`${theme === "light" ? "Dark" : "Light"} Mode`}>
-						<Button
-							variant="soft"
-							size="md"
-							iconOnly
-							className="hidden lg:flex"
-							onClick={toggleTheme}>
-							{theme === "light" ? <MoonIcon className="w-5 h-5" /> : <SunIcon className="w-5 h-5" />}
-						</Button>
-					</Tooltip>
 
 					{showLogout && (
 						<>
@@ -211,6 +202,40 @@ function Header() {
 								</Button>
 							</Tooltip>
 						</>
+					)}
+
+					{/* Server Error Alert */}
+					{configError ? (
+						<>
+							<div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2 hidden lg:block"></div>
+							<Tooltip content="Server not responding. Click to retry.">
+								<Button
+									variant="outline-danger"
+									size="md"
+									iconOnly
+									onClick={refetchConfig}>
+									<ExclamationTriangleIcon className="w-5 h-5" />
+								</Button>
+							</Tooltip>
+						</>
+					) : (
+						isAuthenticated && (
+							<>
+								<div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2 hidden lg:block"></div>
+								<Tooltip content={`Configuration`}>
+									<Button
+										variant="soft"
+										size="md"
+										iconOnly
+										className="hidden lg:flex"
+										onClick={() => setShowConfigModal(true)}>
+										<InformationCircleIcon className="w-5 h-5" />
+									</Button>
+								</Tooltip>
+								<div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2 hidden lg:block"></div>
+								<span className="text-sm">v{config && config.version}</span>
+							</>
+						)
 					)}
 				</div>
 			</header>
@@ -381,6 +406,15 @@ function Header() {
 					variant="danger"
 					isLoading={factoryResetMutation.isPending}
 					loadingText="Deleting All Data"
+				/>
+			)}
+
+			{/* Config Modal */}
+			{showConfigModal && config && (
+				<ConfigModal
+					isOpen={showConfigModal}
+					onClose={() => setShowConfigModal(false)}
+					config={config}
 				/>
 			)}
 		</>
