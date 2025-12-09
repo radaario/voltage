@@ -1,4 +1,10 @@
-# ⚡ Voltage
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo-light.png">
+    <img alt="Project Logo" src="assets/logo-light.png" width="200">
+  </picture>
+</p>
 
 <div align="center">
 
