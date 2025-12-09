@@ -35,6 +35,10 @@ export class JobOutputProcessor {
 				this.output.specs.offset = null;
 			}
 
+			if (this.output.specs?.offset === null) {
+				delete this.output.specs.offset;
+			}
+
 			// Validate duration
 			if (
 				this.job.input?.duration &&
@@ -63,6 +67,10 @@ export class JobOutputProcessor {
 				parseInt(this.output.specs.duration) == parseInt(this.job.input.duration)
 			) {
 				this.output.specs.duration = null;
+			}
+
+			if (this.output.specs?.duration === null) {
+				delete this.output.specs.duration;
 			}
 
 			this.tempJobDir = path.join(config.temp_dir, "jobs", job.key);

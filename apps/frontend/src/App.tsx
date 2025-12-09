@@ -16,10 +16,11 @@ const queryClient = new QueryClient({
 				return !is404 && failureCount < 3;
 			},
 			refetchInterval: (query) => {
-				// Only refetch every 15 seconds if we have successful data
-				return query.state.data ? import.meta.env.VITE_DATA_REFETCH_INTERVAL || 10_000 : false;
+				// Only refetch every 10 seconds if we have successful data
+				const refetchMs = import.meta.env.VITE_DATA_REFETCH_INTERVAL ? Number(import.meta.env.VITE_DATA_REFETCH_INTERVAL) : 10_000;
+				return query.state.data ? refetchMs : false;
 			},
-			staleTime: import.meta.env.VITE_DATA_REFETCH_INTERVAL || 10_000 // Consider data fresh for 15 seconds
+			staleTime: import.meta.env.VITE_DATA_REFETCH_INTERVAL ? Number(import.meta.env.VITE_DATA_REFETCH_INTERVAL) : 10_000 // Consider data fresh for 10 seconds
 		}
 	}
 });
