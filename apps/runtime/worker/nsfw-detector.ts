@@ -8,11 +8,11 @@ const Jimp = require("jimp");
 const nsfwjs = require("nsfwjs");
 
 interface NSFWConfig {
+	nsfw_is_disabled?: boolean;
 	nsfw_model?: string;
 	nsfw_size?: number;
 	nsfw_type?: string;
 	nsfw_threshold?: number;
-	nsfw_is_disabled?: boolean;
 }
 
 interface NSFWResult {
