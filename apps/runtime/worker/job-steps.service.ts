@@ -171,7 +171,6 @@ export class JobStepsService {
 
 			outputs[index].processed_at = getNow();
 
-			job.status = "PROCESSED";
 			job.progress += parseFloat((JOB_PROGRESS_PER_STEP / (outputs?.length || 1)).toFixed(2));
 
 			await onProgressUpdate({ job, output: outputs[index] });
@@ -255,7 +254,6 @@ export class JobStepsService {
 			outputs[index].uploaded_at = getNow();
 			outputs[index].completed_at = getNow();
 
-			job.status = "UPLOADED";
 			job.progress += parseFloat((JOB_PROGRESS_PER_STEP / (outputs?.length || 1)).toFixed(2));
 
 			await onProgressUpdate({ job, output: outputs[index] });

@@ -139,8 +139,8 @@ export const getJobPreview = async (req: Request, res: Response) => {
 
 				const buffer = await storage.read(`/jobs/${job_key}/preview.${config.jobs.preview.format.toLowerCase()}`);
 
-				res.setHeader("Content-Type", "image/webp");
-				res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+				res.setHeader("Content-Type", `image/${config.jobs.preview.format.toLowerCase()}`);
+				// res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
 
 				return res.send(buffer);
 			} catch (error: Error | any) {}

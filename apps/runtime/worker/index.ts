@@ -83,7 +83,7 @@ async function run() {
 			});
 
 			if (jobOutputsUploadedCount > 0) {
-				await lifecycle.updateJob(job, { status: "UPLOADED" });
+				// await lifecycle.updateJob(job, { status: "UPLOADED" });
 			}
 		}
 
