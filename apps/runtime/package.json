@@ -13,6 +13,9 @@
 		"dev": "tsx watch index.ts",
 		"build": "tsc --build tsconfig.json && tsc-alias",
 		"start": "node dist/index.js",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -57,8 +60,11 @@
 		"@types/pg": "^8.11.10",
 		"@types/ssh2-sftp-client": "^9.0.5",
 		"@types/uuid": "^9.0.7",
+		"@vitest/coverage-v8": "^2.1.8",
+		"nock": "^14.0.0-beta.15",
 		"tsx": "^4.19.1",
-		"typescript": "^5.5.4"
+		"typescript": "^5.5.4",
+		"vitest": "^2.1.8"
 	},
 	"license": "ISC"
 }

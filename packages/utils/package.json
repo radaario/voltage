@@ -36,6 +36,9 @@
 	"scripts": {
 		"build": "rimraf dist && tsup index.ts logger.ts storage.ts database.ts --format cjs,esm --dts",
 		"dev": "rimraf dist && tsup index.ts logger.ts storage.ts database.ts --format cjs,esm --dts --watch",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
 		"typecheck": "tsc --noEmit",
 		"clean": "rimraf ./dist"
 	},
@@ -62,7 +65,10 @@
 		"@types/pg": "^8.11.10",
 		"@types/ssh2-sftp-client": "^9.0.5",
 		"@types/uuid": "^9.0.7",
+		"@vitest/coverage-v8": "^2.1.8",
+		"nock": "^14.0.0-beta.15",
 		"tsup": "^8.0.1",
-		"typescript": "^5.3.3"
+		"typescript": "^5.3.3",
+		"vitest": "^2.1.8"
 	}
 }
