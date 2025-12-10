@@ -120,6 +120,10 @@ export interface Config {
 		node_port: number;
 		key: string | null;
 		request_body_limit: number | string;
+		auth_rate_limit: {
+			window_ms: number;
+			max_requests: number;
+		};
 		sensitive_fields: string;
 	};
 

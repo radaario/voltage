@@ -128,6 +128,10 @@ export const config: Config = {
 		node_port: getEnvNumber("VOLTAGE_API_NODE_PORT", API_DEFAULTS.nodePort),
 		key: getEnv("VOLTAGE_API_KEY") || API_DEFAULTS.key,
 		request_body_limit: getEnvNumber("VOLTAGE_API_REQUEST_BODY_LIMIT", API_DEFAULTS.requestBodyLimit),
+		auth_rate_limit: {
+			window_ms: getEnvNumber("VOLTAGE_API_AUTH_RATE_LIMIT_WINDOW_MS", API_DEFAULTS.authRateLimit.windowMs),
+			max_requests: getEnvNumber("VOLTAGE_API_AUTH_RATE_LIMIT_MAX_REQUESTS", API_DEFAULTS.authRateLimit.maxRequests)
+		},
 		sensitive_fields: getEnv("VOLTAGE_API_SENSITIVE_FIELDS", API_DEFAULTS.sensitiveFields)
 	},
 

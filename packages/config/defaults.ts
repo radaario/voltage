@@ -76,6 +76,10 @@ export const API_DEFAULTS = {
 	nodePort: 4000,
 	key: null,
 	requestBodyLimit: 0,
+	authRateLimit: {
+		windowMs: 15 * 60 * 1000, // 15 minutes
+		maxRequests: 5 // limit each IP to 5 requests per windowMs
+	},
 	sensitiveFields: "password,access_secret"
 };
 

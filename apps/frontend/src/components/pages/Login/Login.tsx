@@ -37,19 +37,13 @@ function Login() {
 
 		setSending(true);
 		try {
-			const success = await login(password);
-			if (success) {
-				refetchConfig();
+			await login(password);
+			refetchConfig();
 
-				// this is for refetching the config after login
-				await fakeDelay(300);
+			// this is for refetching the config after login
+			await fakeDelay(300);
 
-				navigate("/", { replace: true });
-			} else {
-				setErrorMessage("Invalid password");
-				setPassword("");
-				focusPasswordEl();
-			}
+			navigate("/", { replace: true });
 		} catch (err: any) {
 			setErrorMessage(err?.message || "Login failed");
 			setPassword("");
