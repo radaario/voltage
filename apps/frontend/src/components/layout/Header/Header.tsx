@@ -188,22 +188,6 @@ function Header() {
 						</>
 					)}
 
-					{showLogout && (
-						<>
-							<div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2 hidden lg:block"></div>
-							<Tooltip content="Sign Out">
-								<Button
-									variant="soft"
-									size="md"
-									iconOnly
-									className="hidden lg:flex"
-									onClick={logout}>
-									<ArrowRightStartOnRectangleIcon className="w-5 h-5" />
-								</Button>
-							</Tooltip>
-						</>
-					)}
-
 					{/* Server Error Alert */}
 					{configError ? (
 						<>
@@ -230,12 +214,28 @@ function Header() {
 										className="hidden lg:flex"
 										onClick={() => setShowConfigModal(true)}>
 										<InformationCircleIcon className="w-5 h-5" />
+										<span className="text-sm">v{config && config.version}</span>
 									</Button>
 								</Tooltip>
-								<div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2 hidden lg:block"></div>
-								<span className="text-sm">v{config && config.version}</span>
 							</>
 						)
+					)}
+
+					{/* Logout */}
+					{showLogout && (
+						<>
+							<div className="h-6 w-px bg-gray-200 dark:bg-neutral-700 mx-2 hidden lg:block"></div>
+							<Tooltip content="Sign Out">
+								<Button
+									variant="soft"
+									size="md"
+									iconOnly
+									className="hidden lg:flex"
+									onClick={logout}>
+									<ArrowRightStartOnRectangleIcon className="w-5 h-5" />
+								</Button>
+							</Tooltip>
+						</>
 					)}
 				</div>
 			</header>
