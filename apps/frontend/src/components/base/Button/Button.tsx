@@ -66,7 +66,7 @@ function Button({
 
 	return (
 		<button
-			className={`${baseClasses} ${variantClass} ${sizeClass} ${className} rounded-${rounded}`}
+			className={`${baseClasses} ${variantClass} ${sizeClass} ${className} rounded-${rounded} ${!className.includes("justify-") && "justify-center"}`}
 			disabled={disabled || isLoading}
 			{...props}>
 			{isLoading && <div className="animate-spin rounded-full h-5 w-5 border-2 border-current border-t-transparent" />}
