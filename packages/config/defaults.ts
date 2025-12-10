@@ -18,7 +18,7 @@ export const SYSTEM_DEFAULTS = {
 // Application defaults
 export const APP_DEFAULTS = {
 	name: "VOLTAGE",
-	version: "1.1.2",
+	version: "1.1.3",
 	env: "local",
 	protocol: "http",
 	host: "localhost",
