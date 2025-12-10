@@ -27,58 +27,70 @@ export class JobStepsService {
 	}
 
 	async downloadInput(job: JobContext, jobStats: JobStats): Promise<void> {
-		await logger.insert("INFO", "Downloading job input...");
-
-		const downloader = new JobDownloader(job);
-		const jobInput = await downloader.download();
+		await logger.insert("WORKER", "INFO", "Downloading job input...");
 
 		try {
+			const downloader = new JobDownloader(job);
+			const jobInput = await downloader.download();
+
 			await fs.access(jobInput.temp_path);
+
 			jobStats.inputs_downloaded_count = 1;
+			await logger.insert("WORKER", "INFO", "Job input successfully downloaded!");
 		} catch (error: Error | any) {
 			jobStats.inputs_failed_count = 1;
 			throw new Error(`Job input couldn't be downloaded! ${error.message || ""}`.trim());
 		}
-
-		await logger.insert("INFO", "Job input successfully downloaded!");
 	}
 
 	async analyzeInput(job: JobContext, jobStats: JobStats): Promise<void> {
-		await logger.insert("INFO", "Analyzing job input...");
+		if (job.input?.analyze_is_disabled) return;
 
-		const analyzer = new JobAnalyzer(job);
-		const jobInputMetadata = await analyzer.analyze();
+		await logger.insert("WORKER", "INFO", "Analyzing job input...");
 
-		if (!jobInputMetadata) {
-			jobStats.inputs_failed_count = 1;
-			throw new Error("Job input couldn't be analyzed!");
+		try {
+			const analyzer = new JobAnalyzer(job);
+			const jobInputMetadata = await analyzer.analyze();
+
+			if (!jobInputMetadata) {
+				jobStats.inputs_failed_count = 1;
+				throw new Error("Job input couldn't be analyzed!");
+			}
+
+			job.input = {
+				...job.input,
+				...jobInputMetadata,
+				nsfw: false,
+				classification: {}
+			};
+
+			jobStats.inputs_analyzed_count = 1;
+			await logger.insert("WORKER", "INFO", "Job input successfully analyzed!");
+		} catch (error: Error | any) {
+			await logger.insert("WORKER", "ERROR", "Job input couldn't be analyzed!", { ...error });
+			// jobStats.inputs_failed_count = 1;
+			// throw new Error(`Job input couldn't be downloaded! ${error.message || ""}`.trim());
 		}
-
-		job.input = {
-			...job.input,
-			...jobInputMetadata,
-			nsfw: false,
-			classification: {}
-		};
-
-		jobStats.inputs_analyzed_count = 1;
-
-		await logger.insert("INFO", "Job input successfully analyzed!");
 	}
 
 	async generateInputPreview(job: JobContext, jobStats: JobStats): Promise<any> {
-		await logger.insert("INFO", "Generating job input preview...");
+		if (job.input?.generate_preview_is_disabled) return;
 
-		const thumbnailer = new JobThumbnailer(job);
-		const jobInputPreview = await thumbnailer.generate(config.jobs.preview);
+		await logger.insert("WORKER", "INFO", "Generating job input preview...");
 
 		try {
+			const thumbnailer = new JobThumbnailer(job);
+			const jobInputPreview = await thumbnailer.generate(config.jobs.preview);
+
 			await fs.access(jobInputPreview.temp_path);
+
 			jobStats.inputs_preview_generated_count = 1;
-			await logger.insert("INFO", "Job input preview successfully generated!");
+			await logger.insert("WORKER", "INFO", "Job input preview successfully generated!");
+
 			return jobInputPreview;
 		} catch (error: Error | any) {
-			throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
+			await logger.insert("WORKER", "ERROR", "Job input preview couldn't be generated!", { ...error });
+			// throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
 		}
 
 		return null;
@@ -86,8 +98,9 @@ export class JobStepsService {
 
 	async detectInputNSFW(job: JobContext, jobInputPreviewPath: string, jobStats: JobStats): Promise<any> {
 		if (!jobInputPreviewPath) return null;
+		if (job.input?.nsfw_is_disabled || config.utils.nsfw.is_disabled) return null;
 
-		await logger.insert("INFO", "Detecting job input NSFW...");
+		await logger.insert("WORKER", "INFO", "Starting NSFW analysis for job input...");
 
 		try {
 			await fs.access(jobInputPreviewPath);
@@ -97,13 +110,22 @@ export class JobStepsService {
 			const nsfwResult = await nsfwDetector.analyze(jobInputPreviewPath);
 
 			if (nsfwResult) {
-				jobStats.inputs_nsfw_detected_count = 1;
 				job.input.nsfw = nsfwResult.nsfw;
 				job.input.classification = nsfwResult.classification;
+
+				jobStats.inputs_nsfw_detected_count = 1;
+
+				await logger.insert("WORKER", "INFO", "NSFW analysis for job input completed successfully!", {
+					nsfw: nsfwResult.nsfw,
+					classification: nsfwResult.classification
+				});
+
+				return nsfwResult;
 			}
 
-			return nsfwResult;
+			throw new Error("NSFW analysis for job input failed!");
 		} catch (error: Error | any) {
+			await logger.insert("WORKER", "ERROR", "NSFW analysis for job input failed!", { ...error });
 			// throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
 		}
 
@@ -116,7 +138,7 @@ export class JobStepsService {
 		jobStats: JobStats,
 		onProgressUpdate: ({ job, output }: any) => void
 	): Promise<number> {
-		await logger.insert("INFO", "Processing job outputs...");
+		await logger.insert("WORKER", "INFO", "Processing job outputs...");
 
 		let outputsProcessedCount = 0;
 
@@ -125,7 +147,7 @@ export class JobStepsService {
 				continue;
 			}
 
-			await logger.insert("INFO", "Processing job output...", {
+			await logger.insert("WORKER", "INFO", "Processing job output...", {
 				output_key: outputs[index].key,
 				output_index: outputs[index].index
 			});
@@ -149,7 +171,7 @@ export class JobStepsService {
 
 				jobStats.outputs_processed_count = (jobStats.outputs_processed_count || 0) + 1;
 
-				await logger.insert("INFO", "Job output successfully processed!", {
+				await logger.insert("WORKER", "INFO", "Job output successfully processed!", {
 					output_key: outputs[index].key,
 					output_index: outputs[index].index
 				});
@@ -160,7 +182,7 @@ export class JobStepsService {
 				outputs[index].status = "FAILED";
 				outputs[index].updated_at = getNow();
 
-				await logger.insert("ERROR", "Failed to process job output!", {
+				await logger.insert("WORKER", "ERROR", "Failed to process job output!", {
 					output_key: outputs[index].key,
 					output_index: outputs[index].index,
 					...error
@@ -185,7 +207,7 @@ export class JobStepsService {
 		jobStats: JobStats,
 		onProgressUpdate: ({ job, output }: any) => void
 	): Promise<number> {
-		await logger.insert("INFO", "Uploading job outputs...");
+		await logger.insert("WORKER", "INFO", "Uploading job outputs...");
 
 		let outputsUploadedCount = 0;
 
@@ -210,7 +232,7 @@ export class JobStepsService {
 				continue;
 			}
 
-			await logger.insert("INFO", "Uploading job output...", {
+			await logger.insert("WORKER", "INFO", "Uploading job output...", {
 				output_key: outputs[index].key,
 				output_index: outputs[index].index
 			});
@@ -231,7 +253,7 @@ export class JobStepsService {
 
 				jobStats.outputs_uploaded_count = (jobStats.outputs_uploaded_count || 0) + 1;
 
-				await logger.insert("INFO", "Job output successfully uploaded!", {
+				await logger.insert("WORKER", "INFO", "Job output successfully uploaded!", {
 					output_key: outputs[index].key,
 					output_index: outputs[index].index
 				});
@@ -242,7 +264,7 @@ export class JobStepsService {
 				outputs[index].status = "FAILED";
 				outputs[index].updated_at = getNow();
 
-				await logger.insert("ERROR", "Job output couldn't be uploaded!", {
+				await logger.insert("WORKER", "ERROR", "Job output couldn't be uploaded!", {
 					output_key: outputs[index].key,
 					output_index: outputs[index].index,
 					...error

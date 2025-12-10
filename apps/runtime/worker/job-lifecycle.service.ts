@@ -31,7 +31,7 @@ export class JobLifecycleService {
 			throw new Error("Job couldn't be found!");
 		}
 
-		await logger.insert("INFO", "Job found, starting processing...", { job_key: job.key });
+		await logger.insert("WORKER", "INFO", "Job found, starting processing...", { job_key: job.key });
 
 		return job;
 	}
@@ -65,7 +65,7 @@ export class JobLifecycleService {
 			throw new Error("Job outputs couldn't be found!");
 		}
 
-		await logger.insert("INFO", "Job outputs found, starting processing...", { job_key: this.jobKey });
+		// await logger.insert("WORKER", "INFO", "Job outputs found, starting processing...", { job_key: this.jobKey });
 
 		return outputs.map((output: any) => ({
 			...output,
@@ -120,10 +120,10 @@ export class JobLifecycleService {
 
 			if (params.status) {
 				await createJobNotification(job, job.status);
-				await logger.insert("INFO", `Job status updated to ${job.status}`, { job_key: job.key });
+				// await logger.insert("WORKER", "INFO", `Job status updated to ${job.status}`, { job_key: job.key });
 			}
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Failed to update job!", { ...error });
+			await logger.insert("WORKER", "ERROR", "Failed to update job!", { ...error });
 		}
 	}
 
@@ -147,7 +147,7 @@ export class JobLifecycleService {
 					updated_at: getNow()
 				});
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Failed to update job output!", { ...error });
+			await logger.insert("WORKER", "ERROR", "Failed to update job output!", { ...error });
 		}
 	}
 
@@ -161,7 +161,7 @@ export class JobLifecycleService {
 				.where("key", this.workerKey)
 				.update({ ...params, updated_at: getNow() });
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Failed to update worker!", { ...error });
+			await logger.insert("WORKER", "ERROR", "Failed to update worker!", { ...error });
 		}
 	}
 
@@ -175,7 +175,7 @@ export class JobLifecycleService {
 		const jobOutputsFailed = outputs?.filter((output: any) => output.status !== "COMPLETED");
 
 		if (job.status === "FAILED" || jobOutputsFailed.length > 0) {
-			if (job.try_count + 1 < job.try_max) {
+			if (job.try_count < job.try_max) {
 				job.status = "RETRYING";
 				job.retry_at = addNow(job.retry_in || 0, "milliseconds");
 				jobStats.jobs_retried_count = 1;
@@ -191,7 +191,7 @@ export class JobLifecycleService {
 					jobOutputsFailed?.reduce((sum: number, output: any) => sum + (output?.outcome?.duration || 0.0), 0.0) || 0.0;
 			}
 
-			await logger.insert("ERROR", "Job failed!", { ...job.outcome });
+			await logger.insert("WORKER", "ERROR", "Job failed!", { ...job.outcome });
 			await createJobNotification(job, job.status);
 		} else {
 			job.status = "COMPLETED";
@@ -201,7 +201,7 @@ export class JobLifecycleService {
 			jobStats.outputs_completed_duration =
 				outputs?.reduce((sum: number, output: any) => sum + (output?.outcome?.duration || 0.0), 0.0) || 0.0;
 
-			await logger.insert("INFO", "Job successfully completed!");
+			await logger.insert("WORKER", "INFO", "Job successfully completed!");
 			await createJobNotification(job, job.status);
 		}
 	}

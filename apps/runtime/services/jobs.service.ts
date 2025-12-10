@@ -49,7 +49,7 @@ export const enqueuePendingJobs = async (): Promise<void> => {
 			.limit(config.jobs.enqueue_limit || 10) // default 10
 			.update({ updated_at: now, locked_by: selfInstanceKey });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to select pending jobs!", { ...error });
+		await logger.insert("INSTANCE", "ERROR", "Failed to select pending jobs!", { ...error });
 	}
 
 	try {
@@ -77,7 +77,7 @@ export const enqueuePendingJobs = async (): Promise<void> => {
 				})
 				.then(async (result) => {
 					await createJobNotification(pendingJob, "QUEUED");
-					await logger.insert("INFO", "Pending job successfully queued!", { job_key: pendingJob.key });
+					await logger.insert("INSTANCE", "INFO", "Pending job successfully queued!", { job_key: pendingJob.key });
 				})
 				.catch(async (error: Error | any) => {
 					// JOB: UPDATE: PENDING || FAILED
@@ -92,14 +92,14 @@ export const enqueuePendingJobs = async (): Promise<void> => {
 							// try_count: pendingJob.try_count
 						});
 
-					await logger.insert("ERROR", "Enqueuing pending job failed!", { job_key: pendingJob.key, ...error });
+					await logger.insert("INSTANCE", "ERROR", "Enqueuing pending job failed!", { job_key: pendingJob.key, ...error });
 				});
 		}
 
 		// JOBs: PENDINGs: RELEASE
 		await database.table("jobs").where("locked_by", selfInstanceKey).update({ updated_at: now, locked_by: null });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to enqueuing pending jobs!", { ...error });
+		await logger.insert("INSTANCE", "ERROR", "Failed to enqueuing pending jobs!", { ...error });
 	}
 };
 
@@ -131,7 +131,10 @@ export const processJobsQueue = async (workersProcessMap: WorkersProcessMap): Pr
 				const queuedJob = queuedJobs[index];
 
 				try {
-					await logger.insert("INFO", "Spawning worker for job...", { worker_key: idleWorker.key, job_key: queuedJob.key });
+					await logger.insert("INSTANCE", "INFO", "Spawning worker for job...", {
+						worker_key: idleWorker.key,
+						job_key: queuedJob.key
+					});
 
 					// WORKER: UPDATE: BUSY
 					await database.table("instances_workers").where("key", idleWorker.key).update({ status: "BUSY", updated_at: now });
@@ -141,12 +144,15 @@ export const processJobsQueue = async (workersProcessMap: WorkersProcessMap): Pr
 					// JOB: QUEUE: DELETE
 					await database.table("jobs_queue").where("key", queuedJob.key).delete();
 
-					await logger.insert("INFO", "Spawned worker for job...", { worker_key: idleWorker.key, job_key: queuedJob.key });
+					await logger.insert("INSTANCE", "INFO", "Spawned worker for job...", {
+						worker_key: idleWorker.key,
+						job_key: queuedJob.key
+					});
 				} catch (error: Error | any) {
 					// WORKER: UPDATE: BUSY
 					await database.table("instances_workers").where("key", idleWorker.key).update({ status: "IDLE", updated_at: now });
 
-					await logger.insert("ERROR", "Failed to spawn worker for job!", {
+					await logger.insert("INSTANCE", "ERROR", "Failed to spawn worker for job!", {
 						worker_key: idleWorker.key,
 						job_key: queuedJob.key,
 						...error
@@ -159,7 +165,7 @@ export const processJobsQueue = async (workersProcessMap: WorkersProcessMap): Pr
 				await database.table("jobs_queue").where("locked_by", selfInstanceKey).update({ locked_by: null });
 			}
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Failed to poll jobs!", { ...error });
+			await logger.insert("INSTANCE", "ERROR", "Failed to poll jobs!", { ...error });
 		}
 	}
 };
@@ -182,7 +188,7 @@ export const timeoutProcessingJobs = async (): Promise<void> => {
 					updated_at: now
 				});
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Jobs could not be timed out!", { ...error });
+			await logger.insert("INSTANCE", "ERROR", "Jobs could not be timed out!", { ...error });
 		}
 	}
 };

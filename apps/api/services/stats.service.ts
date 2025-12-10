@@ -1,4 +1,4 @@
-import { database } from "@voltage/utils";
+import { database, logger } from "@voltage/utils";
 import { getDate, subtractFrom, getNow } from "@voltage/utils";
 
 export const getStats = async (since_at?: string, until_at?: string) => {
@@ -19,19 +19,19 @@ export const getStats = async (since_at?: string, until_at?: string) => {
 export const deleteStats = async (params: { all?: boolean; stat_key?: string; date?: string; since_at?: string; until_at?: string }) => {
 	if (params.all) {
 		await database.table("stats").delete();
-		await logger.insert("WARNING", "All stats successfully deleted!");
+		await logger.insert("API", "WARNING", "All stats successfully deleted!");
 		return { message: "All stats successfully deleted!" };
 	}
 
 	if (params.stat_key) {
 		await database.table("stats").where("stat_key", params.stat_key).delete();
-		await logger.insert("WARNING", "Stats successfully deleted!", { ...params });
+		await logger.insert("API", "WARNING", "Stats successfully deleted!", { ...params });
 		return { message: "Stats successfully deleted!" };
 	}
 
 	if (params.date) {
 		await database.table("stats").where("date", getDate(params.date, "YYYY-MM-DD")).delete();
-		await logger.insert("WARNING", "Some stats successfully deleted!", { ...params });
+		await logger.insert("API", "WARNING", "Some stats successfully deleted!", { ...params });
 		return { message: "Some stats successfully deleted!" };
 	}
 
@@ -49,7 +49,7 @@ export const deleteStats = async (params: { all?: boolean; stat_key?: string; da
 
 	await query.delete();
 
-	await logger.insert("WARNING", "Some stats successfully deleted!", { ...params });
+	await logger.insert("API", "WARNING", "Some stats successfully deleted!", { ...params });
 
 	return {
 		message: "Some stats successfully deleted!",

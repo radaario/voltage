@@ -8,7 +8,7 @@ export const deleteAllData = async (req: Request, res: Response) => {
 		const result = await systemService.deleteAllData();
 		return sendSuccess(res, undefined, undefined, result.message);
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete all data!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to delete all data!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to delete all data!");
 	}
 };

@@ -12,7 +12,7 @@ export const getStats = async (req: Request, res: Response) => {
 
 		return sendSuccess(res, sanitizeData(result.stats), { since_at: result.since_at, until_at: result.until_at });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch stats!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch stats!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch stats!");
 	}
 };
@@ -35,7 +35,7 @@ export const deleteStats = async (req: Request, res: Response) => {
 
 		return sendSuccess(res, undefined, metadata, result.message);
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete stats!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to delete stats!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to delete stats!");
 	}
 };

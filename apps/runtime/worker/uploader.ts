@@ -50,8 +50,6 @@ export class JobUploader {
 
 	async upload(): Promise<Record<string, unknown>> {
 		try {
-			// logger.setMetadata({ instance_key: this.job.instance_key, worker_key: this.job.worker_key, job_key: this.job.key });
-
 			// DESTINATION: TYPE: HTTP & HTTPS
 			if (["HTTP", "HTTPS"].includes(this.destination.type)) {
 				return await this.uploadHttp();
@@ -60,7 +58,6 @@ export class JobUploader {
 			// DESTINATION: TYPE: OTHERs
 			return await this.uploadToStorage();
 		} catch (error: Error | any) {
-			// await logger.insert("ERROR", "Failed to upload job output!", { output_key: output.key, output_index: output.index, ...error });
 			throw new Error(`Failed to upload job output! ${error.message || ""}`.trim());
 			// return { ...error || { message: 'Failed to upload job output!' } };
 		}
@@ -112,17 +109,6 @@ export class JobUploader {
 		// Build a result similar to previous S3 uploader
 		const location = (this.destination as any).bucket ? `s3://${(this.destination as any).bucket}/${key}` : key;
 		const url = storage.getPublicUrl(key) || null;
-
-		/*
-		logger.console("INFO", "Job output uploaded!", {
-			output_key: this.output.key,
-			output_index: this.output.index,
-			destinationType: this.destination.type,
-			bucket: (this.destination as any).bucket,
-			path: key,
-			url
-		});
-		*/
 
 		return { path: `/${key}`, location, url };
 	}

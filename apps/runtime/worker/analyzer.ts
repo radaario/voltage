@@ -24,10 +24,6 @@ export class JobAnalyzer {
 
 	async analyze(): Promise<any> {
 		try {
-			// logger.setMetadata({ instance_key: this.job.instance_key, worker_key: this.job.worker_key, job_key: this.job.key });
-
-			// logger.console("INFO", "Analyzing from job input file...");
-
 			// FILE: INFO: EXTRACT
 			const fileName = path.basename(this.job.input?.url || this.job.input?.path || "unknown");
 			const fileExtension = path.extname(fileName).toLowerCase().replace(/^\./, "");
@@ -45,11 +41,10 @@ export class JobAnalyzer {
 				file_size: fileStats.size
 			});
 
-			// logger.console("INFO", "Job input successfully analyzed!");
 			return metadata;
 		} catch (error: Error | any) {
-			// await logger.insert("ERROR", "Job input couldn't be analyzed!", { ...error });
-			throw new Error(`Job input couldn't be analyzed! ${error.message || ""}`.trim());
+			throw new Error(`${error.message || "Unknown error!"}`.trim());
+			// throw new Error(`Job input couldn't be analyzed! ${error.message || ""}`.trim());
 		}
 	}
 

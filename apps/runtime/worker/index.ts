@@ -7,7 +7,7 @@ import { JobStats, JOB_PROGRESS_PER_STEP } from "@/worker/types.js";
 database.config(config.database);
 
 async function run() {
-	await logger.insert("INFO", "Worker starts running...");
+	await logger.insert("WORKER", "INFO", "Worker starts running...");
 
 	const lifecycle = new JobLifecycleService(instanceKey, workerKey, jobKey);
 	const steps = new JobStepsService(lifecycle.getTempJobDir());
@@ -54,26 +54,21 @@ async function run() {
 		await lifecycle.updateJob(job, { status: "DOWNLOADED", downloaded_at: getNow() }, JOB_PROGRESS_PER_STEP);
 
 		// Step 2: Analyze input
-		if (!job.input?.analyze_is_disabled) {
-			await lifecycle.updateJob(job, { status: "ANALYZING" });
-			await steps.analyzeInput(job, jobStats);
-		}
+		await lifecycle.updateJob(job, { status: "ANALYZING" });
+		await steps.analyzeInput(job, jobStats);
 
-		// Step 3: Generate preview and detect NSFW
-		if (!job.input?.generate_preview_is_disabled) {
-			const jobInputPreview = await steps.generateInputPreview(job, jobStats);
+		// Step 3: Generate preview
+		const jobInputPreview = await steps.generateInputPreview(job, jobStats);
 
-			if (jobInputPreview?.temp_path) {
-				await steps.detectInputNSFW(job, jobInputPreview?.temp_path, jobStats);
-			}
-		}
+		// Step 4: Detect NSFW
+		await steps.detectInputNSFW(job, jobInputPreview?.temp_path, jobStats);
 
 		await lifecycle.updateJob(job, { status: "ANALYZED", analyzed_at: getNow() }, JOB_PROGRESS_PER_STEP);
 
 		jobStats.inputs_completed_count = 1;
 		jobStats.inputs_completed_duration = job.input?.duration || 0.0;
 
-		// Step 4: Process outputs
+		// Step 5: Process outputs
 		await lifecycle.updateJob(job, { status: "PROCESSING" });
 
 		const jobOutputsProcessedCount = await steps.processOutputs(job, jobOutputs, jobStats, async ({ job, output }) => {
@@ -82,7 +77,7 @@ async function run() {
 		});
 
 		if (jobOutputsProcessedCount > 0) {
-			// Step 5: Upload outputs
+			// Step 6: Upload outputs
 			await lifecycle.updateJob(job, { status: "UPLOADING" });
 
 			const jobOutputsUploadedCount = await steps.uploadOutputs(job, jobOutputs, jobStats, async ({ job, output }) => {
@@ -106,6 +101,7 @@ async function run() {
 		job.outcome = { message: error.message || "Unknown error occurred!" };
 	}
 
+	// Step 7: Finalize job
 	await lifecycle.finalizeJob(job, jobOutputs, jobStats);
 
 	await lifecycle.updateJob(job, { progress: 100.0, completed_at: getNow() });
@@ -121,25 +117,25 @@ const jobKey = process.argv[4];
 
 (async () => {
 	if (!instanceKey) {
-		await logger.insert("ERROR", "Instance key required!");
+		await logger.insert("WORKER", "ERROR", "Instance key required!");
 		process.exit(1);
 	}
 
-	logger.setMetadata({ instance_key: instanceKey });
+	logger.setMetadata("WORKER", { instance_key: instanceKey });
 
 	if (!workerKey) {
-		await logger.insert("ERROR", "Worker key required!");
+		await logger.insert("WORKER", "ERROR", "Worker key required!");
 		process.exit(1);
 	}
 
-	logger.setMetadata({ instance_key: instanceKey, worker_key: workerKey });
+	logger.setMetadata("WORKER", { instance_key: instanceKey, worker_key: workerKey });
 
 	if (!jobKey) {
-		await logger.insert("ERROR", "Job key required!");
+		await logger.insert("WORKER", "ERROR", "Job key required!");
 		process.exit(1);
 	}
 
-	logger.setMetadata({ instance_key: instanceKey, worker_key: workerKey, job_key: jobKey });
+	logger.setMetadata("WORKER", { instance_key: instanceKey, worker_key: workerKey, job_key: jobKey });
 
 	await run();
 })();

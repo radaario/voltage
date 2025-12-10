@@ -1,4 +1,4 @@
-import { database } from "@voltage/utils";
+import { database, logger } from "@voltage/utils";
 
 export const getInstance = async (instance_key: string) => {
 	const instance = await database.table("instances").where("key", instance_key).first();
@@ -73,7 +73,7 @@ export const deleteInstances = async (params: { all?: boolean; instance_key?: st
 		await database.table("instances").delete();
 		await database.table("instances_workers").delete();
 
-		await logger.insert("WARNING", "All instances and workers successfully deleted!");
+		await logger.insert("API", "WARNING", "All instances and workers successfully deleted!");
 		return { message: "All instances and workers successfully deleted!" };
 	}
 
@@ -84,7 +84,7 @@ export const deleteInstances = async (params: { all?: boolean; instance_key?: st
 	await database.table("instances").where("key", params.instance_key).delete();
 	await database.table("instances_workers").where("instance_key", params.instance_key).delete();
 
-	await logger.insert("WARNING", "Instance successfully deleted!", { ...params });
+	await logger.insert("API", "WARNING", "Instance successfully deleted!", { ...params });
 	return { message: "Instance successfully deleted!" };
 };
 
@@ -109,7 +109,7 @@ export const getWorkers = async (instance_key?: string) => {
 export const deleteWorkers = async (params: { all?: boolean; instance_key?: string; worker_key?: string }) => {
 	if (params.all) {
 		await database.table("instances_workers").delete();
-		await logger.insert("WARNING", "All workers successfully deleted!");
+		await logger.insert("API", "WARNING", "All workers successfully deleted!");
 		return { message: "All workers successfully deleted!" };
 	}
 
@@ -121,11 +121,11 @@ export const deleteWorkers = async (params: { all?: boolean; instance_key?: stri
 
 	if (params.instance_key) {
 		await query.where("instance_key", params.instance_key).delete();
-		await logger.insert("WARNING", "Workers successfully deleted!", { ...params });
+		await logger.insert("API", "WARNING", "Workers successfully deleted!", { ...params });
 		return { message: "Workers successfully deleted!" };
 	}
 
 	await query.where("key", params.worker_key).delete();
-	await logger.insert("WARNING", "Worker successfully deleted!", { ...params });
+	await logger.insert("API", "WARNING", "Worker successfully deleted!", { ...params });
 	return { message: "Worker successfully deleted!" };
 };

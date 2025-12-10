@@ -26,7 +26,7 @@ app.use(errorHandler);
 
 async function startApiServer() {
 	// configure services
-	logger.setMetadata({ instance_key: instanceKey });
+	logger.setMetadata("API", { instance_key: instanceKey });
 
 	// configure storage and database
 	await storage.config(config.storage);
@@ -37,12 +37,12 @@ async function startApiServer() {
 
 	// start api server
 	const port = config.api.node_port;
-	logger.insert("INFO", "Starting API service on :port...", { instance_key: instanceKey, port });
+	logger.insert("API", "INFO", "Starting API service...");
 
 	app.listen(port, () => {
-		logger.insert("INFO", "API service started successfully on :port!", { port });
+		logger.insert("API", "INFO", "API service started successfully on :port!", { port });
 	}).on("error", (error: Error) => {
-		logger.insert("ERROR", "Failed to start API service!", {
+		logger.insert("API", "ERROR", "Failed to start API service!", {
 			message: error.message,
 			stack: error.stack
 		});

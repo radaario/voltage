@@ -4,7 +4,7 @@ import { database, logger, storage, subtractNow } from "@voltage/utils";
 export const cleanupCompletedJobs = async (): Promise<void> => {
 	if (config.jobs.retention > 0) {
 		// JOBs: CLEANUP
-		logger.console("INFO", "Cleaning up completed jobs...");
+		logger.console("INSTANCE", "INFO", "Cleaning up completed jobs...");
 
 		const jobsToHardDelete = await database
 			.table("jobs")
@@ -30,7 +30,7 @@ export const cleanupCompletedJobs = async (): Promise<void> => {
 			await database.table("jobs_notifications_queue").whereIn("job_key", jobsKeysToHardDelete).delete();
 			await database.table("logs").whereIn("job_key", jobsKeysToHardDelete).delete();
 
-			logger.console("INFO", "Jobs cleaning completed!", { count: jobsKeysToHardDelete.length });
+			logger.console("INSTANCE", "INFO", "Jobs cleaning completed!", { count: jobsKeysToHardDelete.length });
 		}
 	}
 };
@@ -39,14 +39,14 @@ export const cleanupStats = async (): Promise<void> => {
 	// STATs: CLEANUP
 	if ((config.stats.retention || 365 * 24 * 60 * 60 * 1000) > 0) {
 		// in milliseconds, default 365 days
-		logger.console("INFO", "Cleaning stats...");
+		logger.console("INSTANCE", "INFO", "Cleaning stats...");
 
 		await database
 			.table("stats")
 			.where("date", "<=", subtractNow(config.stats.retention || 365 * 24 * 60 * 60 * 1000, "milliseconds"))
 			.delete(); // in milliseconds, default 365 days
 
-		logger.console("INFO", "Stats cleaning completed!");
+		logger.console("INSTANCE", "INFO", "Stats cleaning completed!");
 	}
 };
 
@@ -54,7 +54,7 @@ export const cleanupLogs = async (): Promise<void> => {
 	// LOGS: CLEANUP
 	if (!config.logs.is_disabled || (config.logs.retention || 60 * 60 * 1000) > 0) {
 		// in milliseconds, default 1 hour
-		logger.console("INFO", "Cleaning logs...");
+		logger.console("INSTANCE", "INFO", "Cleaning logs...");
 
 		await database
 			.table("logs")
@@ -62,6 +62,6 @@ export const cleanupLogs = async (): Promise<void> => {
 			.where("job_key", null) // do not delete job logs
 			.delete(); // in milliseconds, default 1 hour
 
-		logger.console("INFO", "Logs cleaning completed!");
+		logger.console("INSTANCE", "INFO", "Logs cleaning completed!");
 	}
 };

@@ -3,7 +3,7 @@ import { storage } from "@voltage/utils";
 import path from "path";
 import fs from "fs/promises";
 import axios from "axios";
-import { Z_UNKNOWN } from "zlib";
+// import { Z_UNKNOWN } from "zlib";
 
 export class JobDownloader {
 	private job: any;
@@ -18,10 +18,6 @@ export class JobDownloader {
 
 	async download(): Promise<{ temp_path: string }> {
 		try {
-			// logger.setMetadata({ instance_key: this.job.instance_key, worker_key: this.job.worker_key, job_key: this.job.key });
-
-			// logger.console("INFO", "Downloading job input...");
-
 			if (!this.job.input) {
 				throw new Error("No input specified for job!");
 			}
@@ -40,8 +36,8 @@ export class JobDownloader {
 
 			throw new Error(`Unsupported job input type: ${this.job.input?.type || "UNKNOWN"}!`);
 		} catch (error: Error | any) {
-			// await logger.insert("ERROR", "Job input couldn't be downloaded!", { ...error });
-			throw new Error(`Job input couldn't be downloaded! ${error.message || ""}`.trim());
+			throw new Error(`${error.message || "Unknown error!"}`.trim());
+			// throw new Error(`Job input couldn't be downloaded! ${error.message || ""}`.trim());
 		}
 	}
 
@@ -49,7 +45,6 @@ export class JobDownloader {
 		if (!this.job.input?.content) throw new Error("No base64 content found for job input!");
 		const buffer = Buffer.from(this.job.input.content, "base64");
 		await fs.writeFile(this.tempJobInputFilePath, buffer);
-		// logger.console("INFO", "Job input successfully downloaded!");
 		return { temp_path: this.tempJobInputFilePath };
 	}
 
@@ -68,7 +63,6 @@ export class JobDownloader {
 		});
 
 		await fs.writeFile(this.tempJobInputFilePath, Buffer.from(resp.data));
-		// logger.console("INFO", "Job input successfully downloaded!");
 		return { temp_path: this.tempJobInputFilePath };
 	}
 
@@ -76,7 +70,6 @@ export class JobDownloader {
 		if (!this.job.input?.path) throw new Error("No path specified for job input!");
 		await storage.config(this.job.input);
 		await storage.download(this.job.input.path, this.tempJobInputFilePath);
-		// logger.console("INFO", "Job input successfully downloaded!");
 		return { temp_path: this.tempJobInputFilePath };
 	}
 }

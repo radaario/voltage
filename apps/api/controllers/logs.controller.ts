@@ -14,7 +14,7 @@ export const getLog = async (req: Request, res: Response) => {
 		if (error.message === "NOT_FOUND") {
 			return sendError(res, 404, "NOT_FOUND", "Log not found!");
 		}
-		await logger.insert("ERROR", "Failed to fetch log!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch log!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch log!");
 	}
 };
@@ -47,7 +47,7 @@ export const getLogs = async (req: Request, res: Response) => {
 			total: result.total
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch logs!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch logs!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch logs!");
 	}
 };
@@ -69,7 +69,7 @@ export const deleteLogs = async (req: Request, res: Response) => {
 
 		return sendSuccess(res, undefined, metadata, result.message);
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete logs!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to delete logs!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to delete logs!");
 	}
 };

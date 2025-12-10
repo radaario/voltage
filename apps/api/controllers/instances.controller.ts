@@ -9,11 +9,11 @@ export const getInstance = async (req: Request, res: Response) => {
 		const instance = await instancesService.getInstance(instance_key);
 
 		return sendSuccess(res, sanitizeData(instance));
-	} catch (error: any) {
+	} catch (error: Error | any) {
 		if (error.message === "NOT_FOUND") {
 			return sendError(res, 404, "NOT_FOUND", "Instance not found!");
 		}
-		await logger.insert("ERROR", "Failed to fetch instance!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch instance!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch instance!");
 	}
 };
@@ -32,7 +32,7 @@ export const getInstances = async (req: Request, res: Response) => {
 
 		return sendSuccess(res, sanitizeData(instances));
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch instances!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch instances!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch instances!");
 	}
 };
@@ -48,7 +48,7 @@ export const deleteInstances = async (req: Request, res: Response) => {
 
 		return sendSuccess(res, undefined, undefined, result.message);
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete instances!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to delete instances!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to delete instances!");
 	}
 };
@@ -64,7 +64,7 @@ export const getWorker = async (req: Request, res: Response) => {
 			return sendError(res, 404, "NOT_FOUND", "Worker not found!");
 		}
 
-		await logger.insert("ERROR", "Failed to fetch worker!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch worker!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch worker!");
 	}
 };
@@ -83,7 +83,7 @@ export const getWorkers = async (req: Request, res: Response) => {
 
 		return sendSuccess(res, sanitizeData(workers));
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch workers!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch workers!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch workers!");
 	}
 };
@@ -100,7 +100,7 @@ export const deleteWorkers = async (req: Request, res: Response) => {
 
 		return sendSuccess(res, undefined, undefined, result.message);
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete workers!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to delete workers!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to delete workers!");
 	}
 };

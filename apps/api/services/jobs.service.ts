@@ -1,9 +1,8 @@
 import { config } from "@voltage/config";
 import { JobRequest, JobRow, JobOutputRow, JobOutputSpecs } from "@voltage/config/types";
-import { database, storage } from "@voltage/utils";
+import { database, storage, logger, stats } from "@voltage/utils";
 import { uukey, getNow, getDate } from "@voltage/utils";
 import { createJobNotification } from "@voltage/runtime/worker/notifier";
-import { stats, logger } from "@voltage/utils";
 import { PaginationParams } from "@/types/index.js";
 
 export const getJob = async (job_key: string) => {
@@ -177,14 +176,14 @@ export const createJob = async (body: JobRequest) => {
 						outputs_requested_count: outputs.length || 0
 					});
 
-					await logger.insert("INFO", "Job request received!", { job_key });
+					await logger.insert("API", "INFO", "Job request received!", { job_key });
 
 					if (job.status === "QUEUED") {
 						await database
 							.table("jobs_queue")
 							.insert({ key: job.key, priority: job.priority, created_at: job.created_at })
 							.then(async (result) => {
-								await logger.insert("INFO", "Received job successfully queued!", { job_key });
+								await logger.insert("API", "INFO", "Received job successfully queued!", { job_key });
 							})
 							.catch(async (error) => {
 								job.status = "PENDING";
@@ -198,7 +197,7 @@ export const createJob = async (body: JobRequest) => {
 										updated_at: getNow()
 									});
 
-								await logger.insert("ERROR", "Enqueuing received job failed!", { job_key, ...error });
+								await logger.insert("API", "ERROR", "Enqueuing received job failed!", { job_key, ...error });
 							});
 					}
 
@@ -262,7 +261,7 @@ export const retryJob = async (job_key: string, output_key?: string) => {
 		try_count: 0
 	});
 
-	await logger.insert("INFO", "Retrying job!", { job_key, output_key });
+	await logger.insert("API", "INFO", "Retrying job!", { job_key, output_key });
 
 	return { message: "Job retry initiated!" };
 };
@@ -329,16 +328,16 @@ export const deleteJobs = async (params: {
 	}
 
 	if (params.all) {
-		await logger.insert("WARNING", "All jobs permanently deleted!");
+		await logger.insert("API", "WARNING", "All jobs permanently deleted!");
 		return { message: "All jobs permanently deleted!" };
 	}
 
 	if (params.job_key) {
-		await logger.insert("WARNING", "Job permanently deleted!", { ...params });
+		await logger.insert("API", "WARNING", "Job permanently deleted!", { ...params });
 		return { message: "Job permanently deleted!" };
 	}
 
-	await logger.insert("WARNING", "Some jobs permanently deleted!", { ...params, count: jobsKeysToHardDelete.length });
+	await logger.insert("API", "WARNING", "Some jobs permanently deleted!", { ...params, count: jobsKeysToHardDelete.length });
 	return { message: "Some jobs permanently deleted!" };
 };
 
@@ -479,7 +478,7 @@ export const retryNotification = async (notification_key: string) => {
 export const deleteNotifications = async (params: { all?: boolean; notification_key?: string; since_at?: string; until_at?: string }) => {
 	if (params.all) {
 		await database.table("jobs_notifications").delete();
-		await logger.insert("WARNING", "All job notifications successfully deleted!");
+		await logger.insert("API", "WARNING", "All job notifications successfully deleted!");
 		return { message: "All job notifications successfully deleted!" };
 	}
 
@@ -502,7 +501,7 @@ export const deleteNotifications = async (params: { all?: boolean; notification_
 
 	await query.delete();
 
-	await logger.insert("WARNING", "Some job notifications successfully deleted!", { ...params });
+	await logger.insert("API", "WARNING", "Some job notifications successfully deleted!", { ...params });
 
 	return {
 		message: "Some job notifications successfully deleted!",

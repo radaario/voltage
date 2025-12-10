@@ -17,7 +17,7 @@ export const deleteAllData = async () => {
 	await database.table("jobs_notifications").delete();
 	await database.table("jobs_notifications_queue").delete();
 
-	await logger.insert("WARNING", "All data deleted!");
+	await logger.insert("API", "WARNING", "All data deleted!");
 
 	return { message: "All data successfully deleted!" };
 };

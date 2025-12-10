@@ -373,6 +373,7 @@ class Database {
 				if (this._config.timezone) {
 					/*
 					logger.console(
+						"DATABASE",
 						"WARN",
 						"MSSQL does not support setting a session timezone; config.timezone will be ignored for MSSQL connections",
 						{ timezone: this._config.timezone }

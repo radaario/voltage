@@ -6,7 +6,7 @@ import { timeoutBusyWorkers, idleTimeoutWorkers, terminateInactiveInstanceWorker
 const selfInstanceKey = getInstanceKey();
 
 export const maintainInstancesAndWorkers = async (): Promise<void> => {
-	logger.console("INFO", "Maintaining instances and workers...");
+	logger.console("INSTANCE", "INFO", "Maintaining instances and workers...");
 
 	const now = getNow();
 	let instances: any[] = [];
@@ -42,7 +42,7 @@ export const maintainInstancesAndWorkers = async (): Promise<void> => {
 		} catch (error: Error | any) {}
 
 		// INSTANCEs: WORKERs: UPDATE
-		logger.console("INFO", "Maintaining workers...");
+		logger.console("INSTANCE", "INFO", "Maintaining workers...");
 
 		// INSTANCEs: WORKERs: UPDATE: TIMEOUT
 		const timeoutedWorkerKeys = await timeoutBusyWorkers();
@@ -50,7 +50,7 @@ export const maintainInstancesAndWorkers = async (): Promise<void> => {
 		// INSTANCEs: WORKERs: UPDATE: IDLE
 		await idleTimeoutWorkers();
 
-		logger.console("INFO", "Maintaining instances...");
+		logger.console("INSTANCE", "INFO", "Maintaining instances...");
 
 		// INSTANCEs: UPDATE: OFFLINE
 		try {
@@ -81,7 +81,7 @@ export const maintainInstancesAndWorkers = async (): Promise<void> => {
 					});
 			}
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Unable to take offline instances that were not updated!", { ...error });
+			await logger.insert("INSTANCE", "ERROR", "Unable to take offline instances that were not updated!", { ...error });
 		}
 
 		// INSTANCEs: DELETE: PURGE
@@ -101,7 +101,7 @@ export const maintainInstancesAndWorkers = async (): Promise<void> => {
 				await database.table("instances").whereIn("key", offlineInstanceKeys).delete();
 			}
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "Purging offline instances failed!", { ...error });
+			await logger.insert("INSTANCE", "ERROR", "Purging offline instances failed!", { ...error });
 		}
 	}
 };

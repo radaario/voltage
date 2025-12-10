@@ -23,7 +23,7 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 		return { status: "SKIPPED" };
 	}
 
-	logger.setMetadata({ instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
+	logger.setMetadata("NOTIFIER", { instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
 	let outcome: any = {
 		status: "FAILED"
@@ -104,7 +104,7 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 
 		return notificationOutcome;
 	} catch (error: Error | any) {
-		logger.console("ERROR", "Failed to create job notification record!", { notification_key: notification.key, error });
+		logger.console("NOTIFIER", "ERROR", "Failed to create job notification record!", { notification_key: notification.key, ...error });
 		outcome = { status: "FAILED", error: { message: error.message || "Unknown error occurred!" } }; // , outcome: notificationOutcome
 		notificationStats.notifications_failed_count = 1;
 	}
@@ -115,8 +115,13 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 }
 
 export async function retryJobNotification(notification: any): Promise<any> {
-	logger.setMetadata({ instance_key: notification.instance_key, worker_key: notification.worker_key, job_key: notification.job_key });
-	logger.console("INFO", "Retrying job notification...", { notification_key: notification.key });
+	logger.setMetadata("NOTIFIER", {
+		instance_key: notification.instance_key,
+		worker_key: notification.worker_key,
+		job_key: notification.job_key
+	});
+
+	logger.console("NOTIFIER", "INFO", "Retrying job notification...", { notification_key: notification.key });
 
 	let outcome: any = {
 		status: "FAILED"
@@ -184,7 +189,7 @@ export async function retryJobNotification(notification: any): Promise<any> {
 			outcome.error = { message: notificationOutcome.error?.message || "Unknown error occurred!" };
 		}
 	} catch (error: Error | any) {
-		logger.console("ERROR", "Failed to retry job notification!", { notification_key: notification.key, error });
+		logger.console("NOTIFIER", "ERROR", "Failed to retry job notification!", { notification_key: notification.key, ...error });
 		outcome.error = { message: error.message || "Unknown error occurred!" };
 		notificationStats.notifications_failed_count = 1;
 	}
@@ -210,9 +215,7 @@ export async function notify(specs: JobNotificationSpecs, payload: any): Promise
 			throw new Error("Unknown notification type!");
 		}
 	} catch (error: Error | any) {
-		logger.console("WARNING", "Notification couldn't be sent!", {
-			error: { code: error.code, name: error.name, message: error.message || "Unknown error occurred!" }
-		});
+		logger.console("NOTIFIER", "WARNING", "Notification couldn't be sent!", { ...error });
 		outcome.error = { message: error.message || "Unknown error occurred!" };
 	}
 

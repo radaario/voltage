@@ -7,7 +7,7 @@ import { spawn, ChildProcess } from "child_process";
 const selfInstanceKey = getInstanceKey();
 
 export const maintainInstanceWorkers = async (instanceKey: string): Promise<void> => {
-	logger.console("INFO", `Maintaining instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} workers...`);
+	logger.console("INSTANCE", "INFO", `Maintaining instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} workers...`);
 
 	const now = getNow();
 
@@ -37,16 +37,18 @@ export const maintainInstanceWorkers = async (instanceKey: string): Promise<void
 			await database.table("instances_workers").insert(newWorkers);
 
 			logger.console(
+				"INSTANCE",
 				"INFO",
 				`${missingWorkersCount} new workers initialized for instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""}!`
 			);
 		}
 	} catch (error: Error | any) {
 		await logger.insert(
+			"INSTANCE",
 			"ERROR",
 			`Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} workers maintenance failed!`,
 			{
-				error
+				...error
 			}
 		);
 	}
@@ -64,15 +66,17 @@ export const maintainInstanceWorkers = async (instanceKey: string): Promise<void
 			});
 
 		logger.console(
+			"INSTANCE",
 			"INFO",
 			`Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} workers successfully maintained!`
 		);
 	} catch (error: Error | any) {
 		await logger.insert(
+			"INSTANCE",
 			"ERROR",
 			`Instance${instanceKey !== selfInstanceKey ? " (" + instanceKey + ")" : ""} workers maintenance failed!`,
 			{
-				error
+				...error
 			}
 		);
 	}
@@ -104,7 +108,7 @@ export const timeoutBusyWorkers = async (): Promise<string[] | undefined> => {
 			return timeoutedWorkerKeys;
 		}
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Timing out busy workers failed!", { ...error });
+		await logger.insert("INSTANCE", "ERROR", "Timing out busy workers failed!", { ...error });
 	}
 };
 
@@ -124,7 +128,7 @@ export const idleTimeoutWorkers = async (): Promise<void> => {
 				updated_at: now
 			});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "The worker timed out and could not be updated!", { ...error });
+		await logger.insert("INSTANCE", "ERROR", "The worker timed out and could not be updated!", { ...error });
 	}
 };
 
@@ -160,13 +164,20 @@ export const spawnInstanceWorkerForJob = async (
 
 		// WORKER: EVENTs
 		child.on("exit", async (code, signal) => {
-			logger.console("INFO", "Worker exited!", { instace_key: instanceKey, worker_key: workerKey, job_key: jobKey, code, signal });
+			logger.console("INSTANCE", "INFO", "Worker exited!", {
+				instace_key: instanceKey,
+				worker_key: workerKey,
+				job_key: jobKey,
+				code,
+				signal
+			});
+
 			workersProcessMap.delete(workerKey);
 			await idleInstanceWorker(instanceKey, workerKey, { message: "Worker exited!", exit_code: code, exit_signal: signal });
 		});
 
 		child.on("error", async (error: Error | any) => {
-			await logger.insert("ERROR", "Worker exited due error!", {
+			await logger.insert("INSTANCE", "ERROR", "Worker exited due error!", {
 				instace_key: instanceKey,
 				worker_key: workerKey,
 				job_key: jobKey,
@@ -180,9 +191,9 @@ export const spawnInstanceWorkerForJob = async (
 
 		workersProcessMap.set(workerKey, child);
 
-		logger.console("INFO", "Worker successfully spawned for the job!", { worker_key: workerKey, job_key: jobKey });
+		logger.console("INSTANCE", "INFO", "Worker successfully spawned for the job!", { worker_key: workerKey, job_key: jobKey });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to spawn worker for the job!", { job_key: jobKey, ...error });
+		await logger.insert("INSTANCE", "ERROR", "Failed to spawn worker for the job!", { job_key: jobKey, ...error });
 		throw error;
 	}
 };
@@ -200,9 +211,14 @@ export const idleInstanceWorker = async (instanceKey: string, workerKey: string,
 				updated_at: getNow()
 			});
 
-		await logger.insert("INFO", "Worker idled successfully!", { instace_key: instanceKey, worker_key: workerKey, outcome });
+		await logger.insert("INSTANCE", "INFO", "Worker idled successfully!", { instace_key: instanceKey, worker_key: workerKey, outcome });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to idle worker!", { instace_key: instanceKey, worker_key: workerKey, outcome, ...error });
+		await logger.insert("INSTANCE", "ERROR", "Failed to idle worker!", {
+			instace_key: instanceKey,
+			worker_key: workerKey,
+			outcome,
+			...error
+		});
 	}
 };
 
@@ -220,7 +236,7 @@ export const terminateInstanceWorkers = async (instanceKey: string, signal: stri
 				outcome: JSON.stringify({ message: "The worker was terminated because the instance was shutdown!", signal })
 			});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to update workers for instance during shutdown!", { ...error });
+		await logger.insert("INSTANCE", "ERROR", "Failed to update workers for instance during shutdown!", { ...error });
 	}
 };
 

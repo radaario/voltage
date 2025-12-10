@@ -33,6 +33,6 @@ export const processJobsNotifications = async (): Promise<void> => {
 		// JOBs: QUEUEDs: RELEASE
 		await database.table("jobs_notifications_queue").where("locked_by", selfInstanceKey).update({ locked_by: null });
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to process jobs notifications queue!", { ...error });
+		await logger.insert("INSTANCE", "ERROR", "Failed to process jobs notifications queue!", { ...error });
 	}
 };

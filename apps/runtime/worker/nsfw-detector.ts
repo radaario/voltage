@@ -1,5 +1,4 @@
 import { config } from "@voltage/config";
-import { logger } from "@voltage/utils";
 import * as tf from "@tensorflow/tfjs";
 import { createRequire } from "module";
 
@@ -41,8 +40,6 @@ export class NSFWDetector {
 		}
 
 		try {
-			await logger.insert("INFO", "Starting NSFW analysis for job input...");
-
 			const modelName = this.config.nsfw_model || config.utils.nsfw.model;
 			const size = this.config.nsfw_size || config.utils.nsfw.size || 299;
 			const type = this.config.nsfw_type || config.utils.nsfw.type || "GRAPH";
@@ -99,15 +96,11 @@ export class NSFWDetector {
 			// Cleanup
 			imageTensor.dispose();
 
-			await logger.insert("INFO", "NSFW analysis for job input completed successfully!", {
-				nsfw: result.nsfw,
-				classification: result.classification
-			});
-
 			return result;
 		} catch (error: Error | any) {
-			await logger.insert("ERROR", "NSFW analysis for job input failed!", { ...error });
-			return null;
+			throw new Error(`${error.message || "Unknown error!"}`.trim());
+			// throw new Error(`NSFW analysis for job input failed! ${error.message || ""}`.trim());
+			// return null;
 		}
 	}
 }

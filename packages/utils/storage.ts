@@ -92,7 +92,7 @@ class LocalStorageDriver implements StorageDriver {
 	async config(options?: StorageConfigOptions): Promise<void> {
 		this.basePath = options?.base_path ? normalizePath(options?.base_path) : path.resolve("./storage");
 		await ensureDir(this.basePath);
-		logger.console("INFO", "Local storage initialized!", { basePath: this.basePath });
+		logger.console("STORAGE", "INFO", "Local storage initialized!", { basePath: this.basePath });
 	}
 
 	// Prefix provided key with configured basePath (if any)
@@ -300,7 +300,7 @@ class S3StorageDriver implements StorageDriver {
 		}
 
 		this.client = new S3Client(clientConfig);
-		logger.console("INFO", "S3-like storage initialized!", {
+		logger.console("STORAGE", "INFO", "S3-like storage initialized!", {
 			type: this.type,
 			bucket: this.bucket,
 			region: this.region,
@@ -553,7 +553,12 @@ class FTPStorageDriver implements StorageDriver {
 			this.sftpClient = new SFTPClient();
 		}
 
-		logger.console("INFO", "FTP/SFTP storage initialized!", { type: this.type, host: this.host, port: this.port, secure: this.secure });
+		logger.console("STORAGE", "INFO", "FTP/SFTP storage initialized!", {
+			type: this.type,
+			host: this.host,
+			port: this.port,
+			secure: this.secure
+		});
 	}
 
 	private async connect(): Promise<void> {

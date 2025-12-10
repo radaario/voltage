@@ -16,7 +16,7 @@ export const getJob = async (req: Request, res: Response) => {
 		if (error.message === "NOT_FOUND") {
 			return sendError(res, 404, "NOT_FOUND", "Job not found!");
 		}
-		await logger.insert("ERROR", "Failed to fetch job!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch job!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch job!");
 	}
 };
@@ -46,7 +46,7 @@ export const getJobs = async (req: Request, res: Response) => {
 			total: jobs.total
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch jobs!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch jobs!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch jobs!");
 	}
 };
@@ -66,7 +66,7 @@ export const createJob = async (req: Request, res: Response) => {
 		if (error.message === "OUTPUT_REQUIRED") {
 			return sendError(res, 400, "REQUEST_INVALID", "At least one output specification is required!");
 		}
-		await logger.insert("ERROR", "Create job failed!", { ...error });
+		await logger.insert("API", "ERROR", "Create job failed!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", "Job creation failed!");
 	}
 };
@@ -89,7 +89,7 @@ export const retryJob = async (req: Request, res: Response) => {
 		if (error.message === "NOT_ALLOWED") {
 			return sendError(res, 405, "NOT_ALLOWED", "Job cannot be reprocessed!");
 		}
-		await logger.insert("ERROR", "Failed to retry job!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to retry job!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to retry job!");
 	}
 };
@@ -111,7 +111,7 @@ export const deleteJobs = async (req: Request, res: Response) => {
 		if (error.message === "KEY_REQUIRED") {
 			return sendError(res, 400, "KEY_REQUIRED", "Job key required!");
 		}
-		await logger.insert("ERROR", "Failed to delete all jobs!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to delete all jobs!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to delete all jobs!");
 	}
 };
@@ -160,7 +160,7 @@ export const getOutput = async (req: Request, res: Response) => {
 		if (error.message === "NOT_FOUND") {
 			return sendError(res, 404, "NOT_FOUND", "Job output not found!");
 		}
-		await logger.insert("ERROR", "Failed to fetch job output!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch job output!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch job output!");
 	}
 };
@@ -193,7 +193,7 @@ export const getOutputs = async (req: Request, res: Response) => {
 			total: outputs.total
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch jobs!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch jobs!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch jobs!");
 	}
 };
@@ -208,7 +208,7 @@ export const getNotification = async (req: Request, res: Response) => {
 		if (error.message === "NOT_FOUND") {
 			return sendError(res, 404, "NOT_FOUND", "Notification not found!");
 		}
-		await logger.insert("ERROR", "Failed to fetch notification!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch notification!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch notification!");
 	}
 };
@@ -239,7 +239,7 @@ export const getNotifications = async (req: Request, res: Response) => {
 			total: notifications.total
 		});
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to fetch job notifications!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to fetch job notifications!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to fetch job notifications!");
 	}
 };
@@ -257,7 +257,7 @@ export const retryNotification = async (req: Request, res: Response) => {
 		if (error.message === "NOT_FOUND") {
 			return sendError(res, 404, "NOT_FOUND", "Notification not found!");
 		}
-		await logger.insert("ERROR", "Failed to retry notification!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to retry notification!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to retry notification!");
 	}
 };
@@ -279,7 +279,7 @@ export const deleteNotifications = async (req: Request, res: Response) => {
 
 		return sendSuccess(res, undefined, metadata, result.message);
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to delete job notifications!", { ...error });
+		await logger.insert("API", "ERROR", "Failed to delete job notifications!", { ...error });
 		return sendError(res, 500, "INTERNAL_ERROR", error.message || "Failed to delete job notifications!");
 	}
 };

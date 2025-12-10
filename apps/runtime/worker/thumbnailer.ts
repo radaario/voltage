@@ -22,9 +22,7 @@ export class JobThumbnailer {
 
 	async generate(options: ThumbnailerOptions = {}): Promise<any> {
 		try {
-			// logger.setMetadata({ instance_key: this.job.instance_key, worker_key: this.job.worker_key, job_key: this.job.key });
-
-			if (!this.job.input?.video) {
+			if (this.job.input?.video === false) {
 				return { message: "There is no video in the input file!" };
 			}
 
@@ -34,8 +32,6 @@ export class JobThumbnailer {
 			}
 
 			const tempJobInputPreviewFilePath = path.join(this.tempJobDir, `preview.${tempJobInputPreviewFileFormat.toLowerCase()}`);
-
-			// logger.console("INFO", "Generating preview from job input...");
 
 			// Calculate the middle timestamp of the video
 			let offset = this.job.input?.duration ? this.job.input.duration / 2 : 0;
@@ -87,15 +83,16 @@ export class JobThumbnailer {
 				);
 			} catch (error: Error | any) {}
 
-			// logger.console("INFO", "Preview generated from job input!");
+			// logger.console("WORKER", "INFO", "Preview generated from job input!");
 			return {
 				temp_path: tempJobInputPreviewFilePath,
 				format: tempJobInputPreviewFileFormat,
 				ffmpeg_command: `ffmpeg ${ffmpegArgs.join(" ")}`
 			};
 		} catch (error: Error | any) {
-			// await logger.insert("ERROR", "Job input preview couldn't be generated!", { ...error });
-			throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
+			// await logger.insert("WORKER", "ERROR", "Job input preview couldn't be generated!", { ...error });
+			throw new Error(`${error.message || "Unknown error!"}`.trim());
+			// throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
 			// return { ...error || { message: 'Job input preview couldn't be generated!' } };
 		}
 	}

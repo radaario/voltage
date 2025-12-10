@@ -14,18 +14,18 @@ const workersProcessMap: WorkersProcessMap = new Map();
 
 async function processJobs(): Promise<void> {
 	// JOBs: PENDINGs
-	logger.console("INFO", "Enqueuing pending jobs...");
+	logger.console("INSTANCE", "INFO", "Enqueuing pending jobs...");
 
 	await timeoutQueuedJobs();
 	await enqueuePendingJobs();
 
 	// JOBs: QUEUEDs: PROCESSING
-	logger.console("INFO", "Processing jobs queue...");
+	logger.console("INSTANCE", "INFO", "Processing jobs queue...");
 
 	await processJobsQueue(workersProcessMap);
 
 	// JOBs: TIMEOUTs
-	logger.console("INFO", "Jobs are timing out...");
+	logger.console("INSTANCE", "INFO", "Jobs are timing out...");
 
 	await timeoutProcessingJobs();
 
@@ -34,7 +34,7 @@ async function processJobs(): Promise<void> {
 
 async function processNotificationsQueue(): Promise<void> {
 	// JOBs: NOTIFICATIONs: PROCESSING
-	logger.console("INFO", "Processing jobs notifications queue...");
+	logger.console("INSTANCE", "INFO", "Processing jobs notifications queue...");
 
 	await processJobsNotifications();
 
@@ -59,7 +59,7 @@ process.on("SIGTERM", (signal) => gracefulShutdown(signal));
 process.on("SIGQUIT", (signal) => gracefulShutdown(signal));
 
 const gracefulShutdown = async (signal: string) => {
-	await logger.insert("INFO", `Runtime received :signal, shutting down gracefully!`, { signal });
+	await logger.insert("INSTANCE", "INFO", `Runtime received :signal, shutting down gracefully!`, { signal });
 
 	const now = getNow();
 
@@ -81,18 +81,18 @@ const gracefulShutdown = async (signal: string) => {
 		await logger.insert("ERROR", "Failed to update instance during shutdown!", { ...error });
 	}
 
-	await logger.insert("INFO", "Runtime shutdown completed!");
+	await logger.insert("INSTANCE", "INFO", "Runtime shutdown completed!");
 
 	process.exit(0);
 };
 
 async function init() {
-	logger.setMetadata({ instance_key: selfInstanceKey });
+	logger.setMetadata("INSTANCE", { instance_key: selfInstanceKey });
 	await storage.config(config.storage);
 	database.config(config.database);
 	await database.verifySchemaExists();
 
-	await logger.insert("INFO", "Starting runtime service...");
+	await logger.insert("INSTANCE", "INFO", "Starting runtime service...");
 
 	try {
 		const selfInstance = await database.table("instances").where("key", selfInstanceKey).first();
@@ -103,12 +103,12 @@ async function init() {
 		await processNotificationsQueue();
 		await cleanup();
 	} catch (error: Error | any) {
-		await logger.insert("ERROR", "Failed to start runtime service!", { ...error });
+		await logger.insert("INSTANCE", "ERROR", "Failed to start runtime service!", { ...error });
 		throw error;
 	}
 }
 
-init().catch((err) => {
+init().catch((error: Error | any) => {
 	// Final catch to avoid unhandled rejections
-	logger.console("ERROR", "Runtime initialization failed!", { error: err });
+	logger.console("INSTANCE", "ERROR", "Runtime initialization failed!", { ...error });
 });

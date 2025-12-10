@@ -82,7 +82,6 @@ export class JobOutputProcessor {
 				`output.${this.output.index}.${this.output.specs.format.toLowerCase()}`
 			);
 		} catch (error: Error | any) {
-			// await logger.insert("ERROR", "Failed to process job output!", { output_key: this.output.key, output_index: this.output.index, ...error });
 			throw new Error(`Failed to process job output! ${error.message || ""}!`.trim());
 			// return { message: error.message || "Failed to process job output!", args };
 		}
@@ -90,10 +89,6 @@ export class JobOutputProcessor {
 
 	async process(): Promise<any> {
 		try {
-			// logger.setMetadata({ instance_key: this.job.instance_key, worker_key: this.job.worker_key, job_key: this.job.key });
-
-			// logger.console("INFO", "Processing job this.output...", { output_key: this.output.key, output_index: this.output.index });
-
 			// OUTPUT: TYPE: CHECK
 			if (!["VIDEO", "AUDIO", "THUMBNAIL", "SUBTITLE"].includes(this.output.specs.type)) {
 				throw new Error(`Job output type is unsupported: ${this.output.specs.type}!`);
@@ -112,32 +107,32 @@ export class JobOutputProcessor {
 			// OUTPUT: TYPE: VIDEO & AUDIO
 			return await this.processVideoOrAudio();
 		} catch (error: Error | any) {
-			// await logger.insert("ERROR", "Failed to process job output!", { output_key: this.output.key, output_index: this.output.index, ...error });
 			throw new Error(`Failed to process job output! ${error.message || ""}!`.trim());
 			// return { message: error.message || "Failed to process job output!", args };
 		}
 	}
 
 	private async processSubtitle(): Promise<any> {
-		if (!this.job.input?.audio) {
-			// storage.write(this.tempJobOutputFilePath, "There is no sound in the input file!");
-			return { temp_path: this.tempJobOutputFilePath, message: "There is no sound in the input file!" };
-		}
-
-		const jobInputAudioFilePath = path.join(this.tempJobDir, "audio.wav");
-
-		// Convert input to WAV
-		const ffmpegArgs = ["-y", "-i", this.tempJobInputFilePath, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le"];
-
-		// Offset
-		if (this.output.specs?.offset) ffmpegArgs.push("-ss", String(this.output.specs.offset));
-
-		// Duration
-		if (this.output.specs?.duration) ffmpegArgs.push("-t", String(this.output.specs.duration));
-
-		ffmpegArgs.push(jobInputAudioFilePath);
-
 		try {
+			if (this.job.input?.audio === false) {
+				await fs.writeFile(this.tempJobOutputFilePath, "");
+				return { temp_path: this.tempJobOutputFilePath, message: "There is no sound in the input file!" };
+				// throw new Error("There is no sound in the input file!");
+			}
+
+			const jobInputAudioFilePath = path.join(this.tempJobDir, "audio.wav");
+
+			// Convert input to WAV
+			const ffmpegArgs = ["-y", "-i", this.tempJobInputFilePath, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le"];
+
+			// Offset
+			if (this.output.specs?.offset) ffmpegArgs.push("-ss", String(this.output.specs.offset));
+
+			// Duration
+			if (this.output.specs?.duration) ffmpegArgs.push("-t", String(this.output.specs.duration));
+
+			ffmpegArgs.push(jobInputAudioFilePath);
+
 			await new Promise<void>((resolve, reject) => {
 				let stderrData = "";
 
@@ -200,20 +195,44 @@ export class JobOutputProcessor {
 				);
 			}
 
-			// logger.console("INFO", "Subtitle generated!", { output_key: this.output.key, output_index: this.output.index });
-
 			return { temp_path: this.tempJobOutputFilePath, ffmpeg_command: `ffmpeg ${ffmpegArgs.join(" ")}` };
 		} catch (error: Error | any) {
-			// await logger.insert("ERROR", "Failed to generate subtitle!", { output_key: this.output.key, output_index: this.output.index, ...error });
-			throw new Error(
-				`Failed to generate subtitle! ${error.message || "Unknown error occurred!"}. ffmpeg_command: ffmpeg ${ffmpegArgs.join(" ")}`.trim()
-			);
+			throw new Error(`Failed to generate subtitle! ${error.message || "Unknown error occurred!"}`.trim());
 			// return { message: error.message || "Failed to process job output!" };
 		}
 	}
 
 	private async processThumbnail(): Promise<any> {
-		if (!this.job.input?.video) {
+		try {
+			if (this.job.input?.video === false) {
+				throw new Error("There is no video in the input file!");
+			}
+
+			const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
+
+			// Offset
+			if (this.output.specs?.offset) ffmpegArgs.push("-ss", String(this.output.specs.offset));
+
+			// Image format
+			ffmpegArgs.push("-quality", String(this.output.specs.quality || 75));
+
+			// Extract only one frame
+			ffmpegArgs.push("-vframes", "1");
+
+			// Video filters for thumbnail
+			const videoFilters = this.buildVideoFilters();
+			if (videoFilters.length > 0) ffmpegArgs.push("-vf", videoFilters.join(","));
+
+			ffmpegArgs.push(this.tempJobOutputFilePath);
+
+			await this.runFfmpeg(ffmpegArgs);
+
+			return {
+				temp_path: this.tempJobOutputFilePath,
+				duration: this.output.specs?.duration || this.job.input?.duration || 0.0,
+				ffmpeg_command: `ffmpeg ${ffmpegArgs.join(" ")}`
+			};
+		} catch (error: Error | any) {
 			const thubnailBuffer = await this.createBlackImageBuffer(
 				this.output.specs.format || "JPG",
 				this.output.specs?.width || 1920,
@@ -224,60 +243,32 @@ export class JobOutputProcessor {
 				await fs.writeFile(this.tempJobOutputFilePath, thubnailBuffer);
 			} catch (err) {}
 
-			return { temp_path: this.tempJobOutputFilePath, message: "There is no video in the input file!" };
+			return { temp_path: this.tempJobOutputFilePath, message: error.message || "Thumbnail couldn't be processed!" };
 		}
-
-		const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
-
-		// Offset
-		if (this.output.specs?.offset) ffmpegArgs.push("-ss", String(this.output.specs.offset));
-
-		// Image format
-		ffmpegArgs.push("-quality", String(this.output.specs.quality || 75));
-
-		// Extract only one frame
-		ffmpegArgs.push("-vframes", "1");
-
-		// Video filters for thumbnail
-		const videoFilters = this.buildVideoFilters();
-		if (videoFilters.length > 0) ffmpegArgs.push("-vf", videoFilters.join(","));
-
-		ffmpegArgs.push(this.tempJobOutputFilePath);
-
-		await this.runFfmpeg(ffmpegArgs);
-
-		// logger.console("INFO", "Job output processed!", { output_key: this.output.key, output_index: this.output.index });
-
-		return {
-			temp_path: this.tempJobOutputFilePath,
-			duration: this.output.specs?.duration || this.job.input?.duration || 0.0,
-			ffmpeg_command: `ffmpeg ${ffmpegArgs.join(" ")}`
-		};
 	}
 
 	private async processVideoOrAudio(): Promise<any> {
-		const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
+		try {
+			const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
 
-		if (["AUDIO"].includes(this.output.specs.type) && !this.job.input?.audio) {
-			// args.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
-			ffmpegArgs.push(
-				"-f",
-				"lavfi",
-				"-i",
-				"anullsrc=channel_layout=stereo:sample_rate=44100",
-				"-filter_complex",
-				"[0:a][1:a]amix=inputs=2:duration=longest"
-			);
-		}
+			if (["AUDIO"].includes(this.output.specs.type) && this.job.input?.audio === false) {
+				// args.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
+				ffmpegArgs.push(
+					"-f",
+					"lavfi",
+					"-i",
+					"anullsrc=channel_layout=stereo:sample_rate=44100",
+					"-filter_complex",
+					"[0:a][1:a]amix=inputs=2:duration=longest"
+				);
+			}
 
-		// Offset
-		if (this.output.specs?.offset) ffmpegArgs.push("-ss", String(this.output.specs.offset));
+			// Offset
+			if (this.output.specs?.offset) ffmpegArgs.push("-ss", String(this.output.specs.offset));
 
-		// Duration
-		if (this.output.specs?.duration) ffmpegArgs.push("-t", String(this.output.specs.duration));
+			// Duration
+			if (this.output.specs?.duration) ffmpegArgs.push("-t", String(this.output.specs.duration));
 
-		// Audio codec and settings
-		if (this.job.input?.audio) {
 			// Audio codec
 			if (this.output.specs?.audio_codec) ffmpegArgs.push("-c:a", this.output.specs.audio_codec);
 
@@ -289,64 +280,64 @@ export class JobOutputProcessor {
 
 			// Audio channels
 			if (this.output.specs?.audio_channels) ffmpegArgs.push("-ac", String(this.output.specs.audio_channels));
-		}
 
-		if (["VIDEO"].includes(this.output.specs.type) && this.job.input?.video) {
-			// Video first frame image overlay
-			if (this.output.specs?.video_first_frame_image_url) {
-				ffmpegArgs.push("-i", this.output.specs.video_first_frame_image_url);
-				ffmpegArgs.push(
-					"-filter_complex",
-					"[0:v]format=yuv420p,drawbox=0:0:iw:ih:black:t=fill:enable='eq(n,0)'[bg];[1:v]scale=w=min(iw\,in_w):h=min(ih\,in_h):force_original_aspect_ratio=decrease[scaled];[bg][scaled]overlay=(W-w)/2:(H-h)/2:enable='eq(n,0)'[v]"
-				);
-				ffmpegArgs.push("-map", "[v]");
+			if (["VIDEO"].includes(this.output.specs.type)) {
+				// Video first frame image overlay
+				if (this.output.specs?.video_first_frame_image_url) {
+					ffmpegArgs.push("-i", this.output.specs.video_first_frame_image_url);
+					ffmpegArgs.push(
+						"-filter_complex",
+						"[0:v]format=yuv420p,drawbox=0:0:iw:ih:black:t=fill:enable='eq(n,0)'[bg];[1:v]scale=w=min(iw\,in_w):h=min(ih\,in_h):force_original_aspect_ratio=decrease[scaled];[bg][scaled]overlay=(W-w)/2:(H-h)/2:enable='eq(n,0)'[v]"
+					);
+					ffmpegArgs.push("-map", "[v]");
+				}
+
+				// Video subtitle burn-in
+				if (this.output.specs?.video_subtitle) {
+					// ffmpegArgs.push("-vf", "subtitles=subtitle.srt:force_style='FontName=Arial,FontSize=24,PrimaryColour=&H00FFFF,Bold=1'");
+				}
+
+				// Video codec
+				if (this.output.specs?.video_codec) ffmpegArgs.push("-c:v", this.output.specs.video_codec);
+
+				// Video bit rate
+				if (this.output.specs?.video_bit_rate) ffmpegArgs.push("-b:v", this.parseBitRate(this.output.specs.video_bit_rate));
+
+				// Video profile
+				if (this.output.specs?.video_profile) ffmpegArgs.push("-profile:v", this.output.specs.video_profile);
+
+				// Video level
+				if (this.output.specs?.video_level) ffmpegArgs.push("-level", this.output.specs.video_level);
+
+				// Video pixel format
+				if (this.output.specs?.video_pixel_format) ffmpegArgs.push("-pix_fmt", this.output.specs.video_pixel_format);
+
+				// Video frame rate
+				if (this.output.specs?.video_frame_rate) ffmpegArgs.push("-r", this.parseFrameRate(this.output.specs.video_frame_rate));
+
+				// Deinterlace
+				if (this.output.specs?.video_deinterlace) ffmpegArgs.push("-vf", "yadif");
+
+				// Video quality
+				if (this.output.specs?.quality !== undefined) ffmpegArgs.push("-q:v", String(this.output.specs.quality));
+
+				// Video filters
+				const videoFilters = this.buildVideoFilters();
+				if (videoFilters.length > 0) ffmpegArgs.push("-vf", videoFilters.join(","));
 			}
 
-			// Video subtitle burn-in
-			if (this.output.specs?.video_subtitle) {
-				// ffmpegArgs.push("-vf", "subtitles=subtitle.srt:force_style='FontName=Arial,FontSize=24,PrimaryColour=&H00FFFF,Bold=1'");
-			}
+			ffmpegArgs.push(this.tempJobOutputFilePath);
 
-			// Video codec
-			if (this.output.specs?.video_codec) ffmpegArgs.push("-c:v", this.output.specs.video_codec);
+			await this.runFfmpeg(ffmpegArgs);
 
-			// Video bit rate
-			if (this.output.specs?.video_bit_rate) ffmpegArgs.push("-b:v", this.parseBitRate(this.output.specs.video_bit_rate));
-
-			// Video profile
-			if (this.output.specs?.video_profile) ffmpegArgs.push("-profile:v", this.output.specs.video_profile);
-
-			// Video level
-			if (this.output.specs?.video_level) ffmpegArgs.push("-level", this.output.specs.video_level);
-
-			// Video pixel format
-			if (this.output.specs?.video_pixel_format) ffmpegArgs.push("-pix_fmt", this.output.specs.video_pixel_format);
-
-			// Video frame rate
-			if (this.output.specs?.video_frame_rate) ffmpegArgs.push("-r", this.parseFrameRate(this.output.specs.video_frame_rate));
-
-			// Deinterlace
-			if (this.output.specs?.video_deinterlace) ffmpegArgs.push("-vf", "yadif");
-
-			// Video quality
-			if (this.output.specs?.quality !== undefined) ffmpegArgs.push("-q:v", String(this.output.specs.quality));
-
-			// Video filters
-			const videoFilters = this.buildVideoFilters();
-			if (videoFilters.length > 0) ffmpegArgs.push("-vf", videoFilters.join(","));
+			return {
+				temp_path: this.tempJobOutputFilePath,
+				duration: this.output.specs?.duration || this.job.input?.duration || 0.0,
+				ffmpeg_command: `ffmpeg ${ffmpegArgs.join(" ")}`
+			};
+		} catch (error: Error | any) {
+			throw new Error(`Failed to process job output! ${error.message || ""}!`.trim());
 		}
-
-		ffmpegArgs.push(this.tempJobOutputFilePath);
-
-		await this.runFfmpeg(ffmpegArgs);
-
-		// logger.console("INFO", "Job output processed!", { output_key: this.output.key, output_index: this.output.index });
-
-		return {
-			temp_path: this.tempJobOutputFilePath,
-			duration: this.output.specs?.duration || this.job.input?.duration || 0.0,
-			ffmpeg_command: `ffmpeg ${ffmpegArgs.join(" ")}`
-		};
 	}
 
 	private buildVideoFilters(): string[] {
@@ -427,7 +418,7 @@ export class JobOutputProcessor {
 				else
 					reject(
 						new Error(
-							`FFmpeg processing job output exited with code ${code}! Command: ffmpeg ${args.join(" ")}; Stderr: ${stderrData}`
+							`FFmpeg processing job output exited with code ${code}! ffmpeg_command: ffmpeg ${args.join(" ")}; ffmpeg_stderr: ${stderrData}`
 						)
 					);
 			});

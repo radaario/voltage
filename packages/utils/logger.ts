@@ -23,6 +23,10 @@ export interface LogMetadata {
 	[key: string]: any;
 }
 
+export interface MetadataStore {
+	[channelKey: string]: LogMetadata;
+}
+
 /**
  * Create Pino logger instance with environment-based configuration
  */
@@ -51,26 +55,38 @@ const pino = createPinoLogger();
  * Logger class for console and database logging
  */
 class Logger {
-	private _metadata: LogMetadata = {};
+	private _metadata: MetadataStore = {};
 	private pino: PinoLogger;
 
-	constructor() {
+	constructor(channelKey: string = "DEFAULT", metadata: LogMetadata = {}) {
 		this.pino = pino;
+		this.setMetadata(channelKey, metadata);
 	}
 
 	/**
 	 * Set persistent metadata for all future logs
-	 * @param args Metadata to merge
+	 * @param data Metadata to merge
 	 */
-	setMetadata(args: LogMetadata): void {
-		this._metadata = args; // { ...this._metadata, ...args };
+	setMetadata(channelKey: string = "DEFAULT", data: LogMetadata): void {
+		// if channel key is not provided or is empty, do not set metadata
+		if (!channelKey || channelKey === "") {
+			return;
+		}
+
+		// if data is not an object, do not set metadata
+		if (!data || typeof data !== "object") {
+			return;
+		}
+
+		this._metadata[channelKey] = JSON.parse(JSON.stringify(data)); // { ...this._metadata, ...args };
+		// this._metadata[channelKey] = { ...data } // it's bad code cause shallow copy
 	}
 
 	/**
 	 * Clear persistent metadata
 	 */
-	clearMetadata(): void {
-		this._metadata = {};
+	clearMetadata(channelKey: string = "DEFAULT"): void {
+		delete this._metadata[channelKey];
 	}
 
 	/**
@@ -80,37 +96,31 @@ class Logger {
 	 * @param metadata Additional metadata
 	 * @returns Promise with log entry
 	 */
-	async insert(type: string, message: string, metadata: LogMetadata = {}): Promise<any> {
-		metadata = { ...this._metadata, ...metadata };
-
-		const instance_key = metadata.instance_key || null;
-		const worker_key = metadata.worker_key || null;
-		const job_key = metadata.job_key || null;
-		const output_key = metadata.output_key || null;
-		const notification_key = metadata.notification_key || null;
+	async insert(channelKey: string = "DEFAULT", type: string, message: string, metadata: LogMetadata = {}): Promise<any> {
+		const _metadata = { ...this._metadata[channelKey], ...metadata };
 
 		const log = {
 			key: uukey(),
 			type,
-			instance_key,
-			worker_key,
-			job_key,
-			output_key,
-			notification_key,
-			message: this.sanitizeMessage(message, metadata),
-			metadata: metadata ? JSON.stringify(metadata) : null,
+			instance_key: _metadata.instance_key || null,
+			worker_key: _metadata.worker_key || null,
+			job_key: _metadata.job_key || null,
+			output_key: _metadata.output_key || null,
+			notification_key: _metadata.notification_key || null,
+			message: this.sanitizeMessage(message, _metadata),
+			metadata: _metadata ? JSON.stringify(_metadata) : null,
 			created_at: getNow()
 		};
 
 		if (!config.logs.is_disabled) {
 			try {
 				await database.table("logs").insert(log);
-			} catch (error) {
-				this.console("ERROR", "Could not insert log into database!", { error });
+			} catch (error: Error | any) {
+				this.console(channelKey, "ERROR", "Could not insert log into database!", { ...error });
 			}
 		}
 
-		this.console(type, message, metadata);
+		this.console(channelKey, type, message, metadata);
 
 		return log;
 	}
@@ -121,8 +131,8 @@ class Logger {
 	 * @param message Log message
 	 * @param metadata Additional metadata
 	 */
-	console(type: string, message: string, metadata: LogMetadata = {}): void {
-		metadata = { ...this._metadata, ...metadata };
+	console(channelKey: string = "DEFAULT", type: string, message: string, metadata: LogMetadata = {}): void {
+		metadata = { ...this._metadata[channelKey], ...metadata };
 
 		const data = { message: this.sanitizeMessage(message, metadata), ...metadata };
 
@@ -155,28 +165,28 @@ class Logger {
 	/**
 	 * Convenience methods for different log levels
 	 */
-	fatal(message: string, metadata?: LogMetadata): void {
-		this.console("fatal", message, metadata);
+	fatal(channelKey: string = "DEFAULT", message: string, metadata?: LogMetadata): void {
+		this.console(channelKey, "fatal", message, metadata);
 	}
 
-	error(message: string, metadata?: LogMetadata): void {
-		this.console("error", message, metadata);
+	error(channelKey: string = "DEFAULT", message: string, metadata?: LogMetadata): void {
+		this.console(channelKey, "error", message, metadata);
 	}
 
-	warn(message: string, metadata?: LogMetadata): void {
-		this.console("warn", message, metadata);
+	warn(channelKey: string = "DEFAULT", message: string, metadata?: LogMetadata): void {
+		this.console(channelKey, "warn", message, metadata);
 	}
 
-	info(message: string, metadata?: LogMetadata): void {
-		this.console("info", message, metadata);
+	info(channelKey: string = "DEFAULT", message: string, metadata?: LogMetadata): void {
+		this.console(channelKey, "info", message, metadata);
 	}
 
-	debug(message: string, metadata?: LogMetadata): void {
-		this.console("debug", message, metadata);
+	debug(channelKey: string = "DEFAULT", message: string, metadata?: LogMetadata): void {
+		this.console(channelKey, "debug", message, metadata);
 	}
 
-	trace(message: string, metadata?: LogMetadata): void {
-		this.console("trace", message, metadata);
+	trace(channelKey: string = "DEFAULT", message: string, metadata?: LogMetadata): void {
+		this.console(channelKey, "trace", message, metadata);
 	}
 
 	/**
