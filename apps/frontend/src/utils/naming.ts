@@ -77,3 +77,35 @@ export const getWorkerDotColor = (instanceKey: string): string => {
 	const color = getInstanceColor(instanceKey);
 	return `bg-${color}-400`;
 };
+
+/**
+ * Get a human-readable name for a job from its input
+ * Priority: file_name > url (last segment) > path (last segment)
+ */
+export const getJobName = (job: { input?: { file_name?: string; url?: string; path?: string } } | null | undefined): string | null => {
+	// if no job or no input, return null
+	if (!job || !job?.input) {
+		return null;
+	}
+
+	// 1. find input.file_name
+	if (job.input?.file_name) {
+		return job.input.file_name;
+	}
+
+	// 2. find input.url
+	if (job.input?.url) {
+		const urlSegments = job.input.url.split("/");
+		const lastSegment = urlSegments[urlSegments.length - 1];
+		if (lastSegment) return lastSegment;
+	}
+
+	// 3. find input.path
+	if (job.input?.path) {
+		const pathSegments = job.input.path.split("/");
+		const lastSegment = pathSegments[pathSegments.length - 1];
+		if (lastSegment) return lastSegment;
+	}
+
+	return null;
+};

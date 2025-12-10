@@ -4,6 +4,9 @@ import { Job } from "@/interfaces/job";
 import { Label, Button, Tooltip, TimeAgo, MemoizedTableRow, Pagination, LoadingOverlay, EmptyState } from "@/components";
 import { JobPreviewImage } from "@/components";
 import { EyeIcon, TrashIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import { getJobName } from "@/utils/naming";
+import { convertToLocalDate } from "@/utils/formatDate";
+import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 
 interface PaginationInfo {
 	total: number;
@@ -40,6 +43,9 @@ const JobsTable = ({
 	onRetryJob,
 	newJobKeys
 }: JobsTableProps) => {
+	const { config } = useGlobalStateContext();
+	const serverTimezone = config?.timezone || "UTC";
+
 	const columns = useMemo(
 		() => [
 			columnHelper.display({
@@ -47,7 +53,7 @@ const JobsTable = ({
 				header: "Job",
 				cell: (info) => {
 					const job = info.row.original;
-					const filename = job.input?.file_name || job.input?.url?.split("/").pop() || null;
+					const filename = getJobName(job);
 
 					const specs: string[] = [];
 
@@ -131,22 +137,22 @@ const JobsTable = ({
 
 					const duration = (() => {
 						// If the job has not started yet
-						if (!job.started_at || !job.completed_at) {
-							return null; //<span className="text-gray-400">-</span>;
+						if (!job.started_at) {
+							return null;
 						}
 
-						// If both dates are present, calculate the duration
+						// Calculate the duration with timezone conversion
 						try {
-							const started_at = new Date(job.started_at).getTime();
-							const completed_at = new Date(job.completed_at).getTime();
+							const started_at = convertToLocalDate(job.started_at, serverTimezone).getTime();
+							const end_time = job.completed_at ? convertToLocalDate(job.completed_at, serverTimezone).getTime() : Date.now();
 
 							// Invalid date check
-							if (isNaN(started_at) || isNaN(completed_at)) {
-								return null; //<span className="text-gray-400">-</span>;
+							if (isNaN(started_at) || isNaN(end_time)) {
+								return null;
 							}
 
 							// Negative or too large value check
-							const duration = (completed_at - started_at) / 1000; // duration in seconds
+							const duration = (end_time - started_at) / 1000; // duration in seconds
 							if (duration < 0 || duration > 86400) {
 								// If more than 24 hours
 								return <span className="text-gray-400">Invalid</span>;
@@ -158,6 +164,11 @@ const JobsTable = ({
 							} else if (duration < 3600) {
 								const minutes = Math.floor(duration / 60);
 								const seconds = Math.round(duration % 60);
+
+								if (seconds === 0) {
+									return <span>{minutes}m</span>;
+								}
+
 								return (
 									<span>
 										{minutes}m {seconds}s
@@ -166,6 +177,11 @@ const JobsTable = ({
 							} else {
 								const hours = Math.floor(duration / 3600);
 								const minutes = Math.floor((duration % 3600) / 60);
+
+								if (minutes === 0) {
+									return <span>{hours}h</span>;
+								}
+
 								return (
 									<span>
 										{hours}h {minutes}m
@@ -193,13 +209,11 @@ const JobsTable = ({
 					const progress = job.progress || 0;
 
 					return (
-						<div className="relative flex justify-end rounded overflow-hidden">
-							<Label
-								status={status}
-								progress={progress}>
-								{status}
-							</Label>
-						</div>
+						<Label
+							status={status}
+							progress={progress}>
+							{status}
+						</Label>
 					);
 				}
 			}),
@@ -267,7 +281,7 @@ const JobsTable = ({
 				}
 			})
 		],
-		[]
+		[serverTimezone]
 	);
 
 	const table = useReactTable({

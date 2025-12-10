@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { JobPreviewImage, Tooltip } from "@/components";
 import { useQuery } from "@tanstack/react-query";
-import { api, ApiResponse } from "@/utils";
+import { api, ApiResponse, getJobName } from "@/utils";
 import { Job } from "@/interfaces";
 
 interface JobCardProps {
@@ -30,7 +30,7 @@ const JobCard = ({ jobKey, title, onClick, className }: JobCardProps) => {
 	// Use title prop first, then file_name, then fallback to "Job #X" or "Job"
 	const displayTitle = title;
 	const job = jobResponse?.data;
-	const filename = job?.input?.file_name || job?.input?.url?.split("/").pop() || "";
+	const filename = getJobName(job);
 
 	// actions
 	const handleClick = (e: React.MouseEvent) => {

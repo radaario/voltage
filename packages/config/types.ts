@@ -201,12 +201,14 @@ export type JobInputSpecs =
 	| {
 			type: "BASE64";
 			content: string;
+			name?: string;
 	  }
 	| {
 			type: "HTTP" | "HTTPS";
 			username?: string;
 			password?: string;
 			url: string;
+			name?: string;
 	  }
 	| {
 			type:
@@ -224,6 +226,7 @@ export type JobInputSpecs =
 			region: string;
 			bucket: string;
 			path: string;
+			name?: string;
 	  }
 	| {
 			type: "FTP" | "SFTP";
@@ -231,6 +234,7 @@ export type JobInputSpecs =
 			username?: string;
 			password?: string;
 			path: string;
+			name?: string;
 	  };
 
 export type JobDestinationSpecs =

@@ -13,7 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouteModal } from "@/hooks/useRouteModal";
-import { api, ApiResponse } from "@/utils";
+import { api, ApiResponse, getJobName } from "@/utils";
 import { Modal, Label, Button, Tooltip, ConfirmModal, TabsNavigation, LoadingSpinner } from "@/components";
 import type { Job } from "@/interfaces/job";
 import { JobPreviewImage } from "@/components";
@@ -54,7 +54,7 @@ const JobDetailModal: React.FC = () => {
 
 	// data
 	const job = jobResponse?.data;
-	const filename = job?.input?.file_name || job?.input?.url?.split("/").pop() || null;
+	const filename = getJobName(job);
 	const specs: string[] = [];
 	const showRetryButton = job && ["QUEUED", "COMPLETED", "CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(job.status);
 

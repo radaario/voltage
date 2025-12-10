@@ -4,9 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { Job, JobOutput } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
-import { api, getFilenameFromPath, ApiResponse, formatDuration } from "@/utils";
+import { api, getFilenameFromPath, ApiResponse, formatDuration, convertToLocalDate } from "@/utils";
 import { ArrowPathIcon, EyeIcon, VideoCameraIcon, PhotoIcon, MusicalNoteIcon, LanguageIcon } from "@heroicons/react/24/outline";
 import { ConfirmModal, Label, Tooltip, Button, TimeAgo, LoadingOverlay, EmptyState, MemoizedTableRow } from "@/components";
+import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 
 const columnHelper = createColumnHelper<JobOutput>();
 
@@ -21,9 +22,12 @@ const Outputs: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
 
+	const { config } = useGlobalStateContext();
+
 	// states
 	const [outputToRetry, setOutputToRetry] = useState<JobOutput | null>(null);
 
+	// querys
 	// Fetch outputs
 	const { data: outputsResponse, isLoading } = useQuery<ApiResponse<JobOutput[]>>({
 		queryKey: ["outputs", job.key],
@@ -84,7 +88,9 @@ const Outputs: React.FC = () => {
 		}
 	};
 
+	// data
 	const outputs = outputsResponse?.data || [];
+	const serverTimezone = config?.timezone || "UTC";
 
 	const columns = useMemo(
 		() => [
@@ -100,33 +106,39 @@ const Outputs: React.FC = () => {
 				header: "Output",
 				cell: (info) => {
 					const output = info.row.original;
+					const duration = output.outcome?.duration || output.specs?.duration;
+
 					return (
 						<div className="max-w-60">
-							<Tooltip
+							{/*<Tooltip
 								content={
-									<div>
+									<div className="max-w-[500px] py-5 px-5">
 										{output.specs?.name && <div>{output.specs.name}</div>}
+										<hr className="my-2 opacity-40" />
 										<div>{output.key}</div>
+										<hr className="my-2 opacity-40" />
 										{output.specs?.path && <div>{output.specs.path}</div>}
+										<hr className="my-2 opacity-40" />
 										{output.outcome?.url && <div>{output.outcome.url}</div>}
 									</div>
-								}>
-								<div>
-									<div className="text-gray-500 dark:text-gray-400 font-bold text-xs truncate max-w-50">
-										{output.specs?.name || output.key}
-									</div>
-									{output.specs?.path && (
-										<div className="text-gray-500 dark:text-gray-400 text-xs truncate">
-											{getFilenameFromPath(output.specs.path)}
-										</div>
-									)}
-									{/*
+								}>*/}
+							<div>
+								<div className="text-gray-500 dark:text-gray-400 font-bold text-xs truncate max-w-50">
+									{output.specs?.name || output.key}
+								</div>
+								<div className="flex flex-wrap text-gray-500 dark:text-gray-400 text-xs">
+									<span className="truncate">
+										{output.specs?.path && <div>{getFilenameFromPath(output.specs.path)}</div>}
+									</span>
+									<span>{duration ? `, ${formatDuration(duration)}` : ""}</span>
+								</div>
+								{/*
 									{output.specs?.format && (
 										<div className="text-gray-500 dark:text-gray-400 text-xs mt-0.25">{output.specs.format}</div>
 									)}
 									*/}
-								</div>
-							</Tooltip>
+							</div>
+							{/* </Tooltip> */}
 						</div>
 					);
 				}
@@ -143,13 +155,82 @@ const Outputs: React.FC = () => {
 					);
 				}
 			}),
+			// columnHelper.display({
+			// 	id: "duration",
+			// 	header: "Duration",
+			// 	cell: (info) => {
+			// 		const output = info.row.original;
+			// 		const duration = output.outcome?.duration || output.specs?.duration;
+			// 		return duration ? formatDuration(duration) : "-";
+			// 	}
+			// }),
 			columnHelper.display({
-				id: "duration",
-				header: "Duration",
+				id: "process",
+				header: "Process",
 				cell: (info) => {
 					const output = info.row.original;
-					const duration = output.outcome?.duration || output.specs?.duration;
-					return duration ? formatDuration(duration) : "-";
+
+					const duration = (() => {
+						// If the output has not started yet
+						if (!output.started_at) {
+							return null;
+						}
+
+						// Calculate the duration with timezone conversion
+						try {
+							const started_at = convertToLocalDate(output.started_at, serverTimezone).getTime();
+							const end_time = output.processed_at
+								? convertToLocalDate(output.processed_at, serverTimezone).getTime()
+								: Date.now();
+
+							// Invalid date check
+							if (isNaN(started_at) || isNaN(end_time)) {
+								return null;
+							}
+
+							// Negative or too large value check
+							const duration = (end_time - started_at) / 1000; // duration in seconds
+							if (duration < 0 || duration > 86400) {
+								// If more than 24 hours
+								return <span className="text-gray-400">Invalid</span>;
+							}
+
+							// Format the duration
+							if (duration < 60) {
+								return <span>{Math.round(duration)}s</span>;
+							} else if (duration < 3600) {
+								const minutes = Math.floor(duration / 60);
+								const seconds = Math.round(duration % 60);
+
+								if (seconds === 0) {
+									return <span>{minutes}m</span>;
+								}
+
+								return (
+									<span>
+										{minutes}m {seconds}s
+									</span>
+								);
+							} else {
+								const hours = Math.floor(duration / 3600);
+								const minutes = Math.floor((duration % 3600) / 60);
+
+								if (minutes === 0) {
+									return <span>{hours}h</span>;
+								}
+
+								return (
+									<span>
+										{hours}h {minutes}m
+									</span>
+								);
+							}
+						} catch (error) {
+							return <span className="text-gray-400">-</span>;
+						}
+					})();
+
+					return <div className="text-gray-500 dark:text-gray-400 font-mono text-right sm:text-left">{duration}</div>;
 				}
 			}),
 			columnHelper.accessor("status", {

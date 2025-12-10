@@ -57,8 +57,7 @@ function Button({
 	className = "",
 	...props
 }: ButtonProps) {
-	const baseClasses =
-		"font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-2";
+	const baseClasses = `font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center gap-2`;
 
 	const sizeClass = iconOnly ? iconOnlySizeClasses[size] : sizeClasses[size];
 

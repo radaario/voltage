@@ -83,7 +83,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 							{/* Instance Info Card */}
 							<div className="flex-1 space-y-2 flex flex-col items-end sm:items-start">
 								{/* Instance Name & Type Badge */}
-								<div className="flex items-center gap-2">
+								<div className="flex flex-wrap items-center gap-2">
 									<span className="text-sm font-bold text-gray-900 dark:text-white">
 										{getInstanceName(data, instance)}
 									</span>

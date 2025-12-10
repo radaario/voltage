@@ -82,7 +82,7 @@ function Header() {
 							to="/"
 							onClick={resetPage}
 							className={({ isActive }: { isActive: boolean }) =>
-								`flex items-center gap-2 px-4 xl:px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+								`flex items-center gap-2 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-xs xl:text-sm font-semibold transition-all duration-200 ${
 									isActive
 										? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md"
 										: "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700 hover:text-gray-900 dark:hover:text-white"
@@ -95,7 +95,7 @@ function Header() {
 							to="/jobs"
 							onClick={resetPage}
 							className={({ isActive }: { isActive: boolean }) =>
-								`flex items-center gap-2 px-4 xl:px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+								`flex items-center gap-2 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-xs xl:text-sm font-semibold transition-all duration-200 ${
 									isActive
 										? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md"
 										: "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700 hover:text-gray-900 dark:hover:text-white"
@@ -108,7 +108,7 @@ function Header() {
 							to="/notifications"
 							onClick={resetPage}
 							className={({ isActive }: { isActive: boolean }) =>
-								`flex items-center gap-2 px-4 xl:px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+								`flex items-center gap-2 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-xs xl:text-sm font-semibold transition-all duration-200 ${
 									isActive
 										? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md"
 										: "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700 hover:text-gray-900 dark:hover:text-white"
@@ -121,7 +121,7 @@ function Header() {
 							to="/instances"
 							onClick={resetPage}
 							className={({ isActive }: { isActive: boolean }) =>
-								`flex items-center gap-2 px-4 xl:px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+								`flex items-center gap-2 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-xs xl:text-sm font-semibold transition-all duration-200 ${
 									isActive
 										? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md"
 										: "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700 hover:text-gray-900 dark:hover:text-white"
@@ -134,7 +134,7 @@ function Header() {
 							to="/logs"
 							onClick={resetPage}
 							className={({ isActive }: { isActive: boolean }) =>
-								`flex items-center gap-2 px-4 xl:px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+								`flex items-center gap-2 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-xs xl:text-sm font-semibold transition-all duration-200 ${
 									isActive
 										? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md"
 										: "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700 hover:text-gray-900 dark:hover:text-white"
@@ -336,40 +336,63 @@ function Header() {
 						{/* Actions Section */}
 						<div className="px-4 py-6 mt-auto border-t border-gray-200 dark:border-neutral-700">
 							<div className="flex flex-col space-y-2">
+								{/* Server Error Alert */}
+								{configError ? (
+									<Button
+										variant="outline-danger"
+										size="sm"
+										className="w-full justify-between"
+										onClick={refetchConfig}>
+										<ExclamationTriangleIcon className="w-5 h-5" />
+										Refresh Server
+									</Button>
+								) : (
+									isAuthenticated && (
+										<Button
+											variant="ghost"
+											size="sm"
+											className="w-full border border-gray-200 dark:border-neutral-600 justify-between"
+											onClick={() => setShowConfigModal(true)}>
+											<InformationCircleIcon className="w-5 h-5 order-2" />
+											<span className="text-sm">v{config && config.version}</span>
+										</Button>
+									)
+								)}
+
 								<Button
 									variant="soft"
-									size="md"
+									size="sm"
 									onClick={toggleTheme}
-									className="w-full justify-start">
-									{theme === "light" ? <MoonIcon className="w-5 h-5 mr-3" /> : <SunIcon className="w-5 h-5 mr-3" />}
+									className="w-full justify-between">
+									{theme === "light" ? <MoonIcon className="order-2 w-5 h-5" /> : <SunIcon className="order-2 w-5 h-5" />}
 									{theme === "light" ? "Dark" : "Light"} Mode
 								</Button>
 
 								<Button
 									variant="soft"
 									hover="text-danger"
-									size="md"
+									size="sm"
 									onClick={() => {
 										setIsMobileMenuOpen(false);
 										handleFactoryReset();
 									}}
 									disabled={factoryResetMutation.isPending}
 									isLoading={factoryResetMutation.isPending}
-									className="w-full justify-start">
-									<TrashIcon className="w-5 h-5 mr-3" />
+									className="w-full justify-between">
+									<TrashIcon className="order-2 w-5 h-5" />
 									Delete All Data
 								</Button>
 
 								{showLogout && (
 									<Button
 										variant="soft"
-										size="md"
+										size="sm"
 										onClick={() => {
 											setIsMobileMenuOpen(false);
 											logout();
 										}}
-										className="w-full justify-start">
-										<ArrowRightStartOnRectangleIcon className="w-5 h-5 mr-3" />
+										className="w-full justify-between">
+										<ArrowRightStartOnRectangleIcon className="order-2 w-5 h-5" />
 										Sign Out
 									</Button>
 								)}

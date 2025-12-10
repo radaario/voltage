@@ -1,6 +1,7 @@
 interface ServiceConfig {
 	service: string;
 	url?: string;
+	path?: string;
 	region?: string;
 	bucket?: string;
 	file_name?: string;
