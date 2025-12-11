@@ -79,3 +79,72 @@ export const formatDuration = (seconds: number) => {
 		return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
 	}
 };
+
+/**
+ * Formats duration in seconds to a human-readable string
+ * @param durationInSeconds - Duration in seconds
+ * @returns Formatted string (e.g., "5s", "2m 30s", "1h 20m") or null for invalid durations
+ */
+export const formatReadableDuration = (durationInSeconds: number): string | null => {
+	// Negative or too large value check
+	if (durationInSeconds < 0 || durationInSeconds > 86400) {
+		// If more than 24 hours
+		return null;
+	}
+
+	// Format the duration
+	if (durationInSeconds < 60) {
+		return `${Math.round(durationInSeconds)}s`;
+	} else if (durationInSeconds < 3600) {
+		const minutes = Math.floor(durationInSeconds / 60);
+		const seconds = Math.round(durationInSeconds % 60);
+
+		if (seconds === 0) {
+			return `${minutes}m`;
+		}
+
+		return `${minutes}m ${seconds}s`;
+	} else {
+		const hours = Math.floor(durationInSeconds / 3600);
+		const minutes = Math.floor((durationInSeconds % 3600) / 60);
+
+		if (minutes === 0) {
+			return `${hours}h`;
+		}
+
+		return `${hours}h ${minutes}m`;
+	}
+};
+
+/**
+ * Calculates and formats the duration between two dates
+ * @param startDate - Start date string or Date object
+ * @param endDate - End date string or Date object (defaults to current time if not provided)
+ * @param serverTimezone - Server timezone (from config), defaults to UTC
+ * @returns Formatted duration string or null if dates are invalid
+ */
+export const formatDatesToDuration = (
+	startDate: string | Date | null | undefined,
+	endDate?: string | Date | null,
+	serverTimezone: string = "UTC"
+): string | null => {
+	// If start date is not provided, return null
+	if (!startDate) {
+		return null;
+	}
+
+	try {
+		const start = convertToLocalDate(startDate, serverTimezone).getTime();
+		const end = endDate ? convertToLocalDate(endDate, serverTimezone).getTime() : Date.now();
+
+		// Invalid date check
+		if (isNaN(start) || isNaN(end)) {
+			return null;
+		}
+
+		const durationInSeconds = (end - start) / 1000;
+		return formatReadableDuration(durationInSeconds);
+	} catch (error) {
+		return null;
+	}
+};

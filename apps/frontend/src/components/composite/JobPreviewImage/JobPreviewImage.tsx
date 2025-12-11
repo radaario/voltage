@@ -17,6 +17,7 @@ const JobPreviewImage = ({ jobKey, duration, version, className }: JobPreviewIma
 				"w-20 h-14 relative shrink-0 bg-gray-100 dark:bg-neutral-800 group-hover:bg-gray-200 dark:group-hover:bg-neutral-700 rounded overflow-hidden transition-colors border border-gray-100 dark:border-neutral-700"
 			}>
 			<img
+				key={imageUrl}
 				src={imageUrl}
 				alt="Preview"
 				className="w-full h-full object-cover"

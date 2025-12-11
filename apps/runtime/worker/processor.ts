@@ -73,6 +73,18 @@ export class JobOutputProcessor {
 				delete this.output.specs.duration;
 			}
 
+			// preset validation
+			// ultrafast > superfast > veryfast > faster > fast > medium(varsayılan) > slow > slower;
+			// ULTRA_FAST, SUPER_FAST, VERY_FAST, FASTER, FAST, MEDIUM, SLOW, SLOWER
+			if (
+				this.output.specs?.preset &&
+				!["ULTRA_FAST", "SUPER_FAST", "VERY_FAST", "FASTER", "FAST", "MEDIUM", "SLOW", "SLOWER"].includes(
+					this.output.specs.preset.toUpperCase()
+				)
+			) {
+				this.output.specs.preset = null;
+			}
+
 			this.tempJobDir = path.join(config.temp_dir, "jobs", job.key);
 			this.tempJobInputFilePath = path.join(this.tempJobDir, "input");
 
@@ -130,6 +142,9 @@ export class JobOutputProcessor {
 
 			// Duration
 			if (this.output.specs?.duration) ffmpegArgs.push("-t", String(this.output.specs.duration));
+
+			// Preset
+			if (this.output.specs?.preset) ffmpegArgs.push("-preset", this.output.specs.preset.toLocaleLowerCase().replace("_", ""));
 
 			ffmpegArgs.push(jobInputAudioFilePath);
 
@@ -213,6 +228,9 @@ export class JobOutputProcessor {
 			// Offset
 			if (this.output.specs?.offset) ffmpegArgs.push("-ss", String(this.output.specs.offset));
 
+			// Preset
+			if (this.output.specs?.preset) ffmpegArgs.push("-preset", this.output.specs.preset.toLocaleLowerCase().replace("_", ""));
+
 			// Image format
 			ffmpegArgs.push("-quality", String(this.output.specs.quality || 75));
 
@@ -268,6 +286,9 @@ export class JobOutputProcessor {
 
 			// Duration
 			if (this.output.specs?.duration) ffmpegArgs.push("-t", String(this.output.specs.duration));
+
+			// Preset
+			if (this.output.specs?.preset) ffmpegArgs.push("-preset", this.output.specs.preset.toLocaleLowerCase().replace("_", ""));
 
 			// Audio codec
 			if (this.output.specs?.audio_codec) ffmpegArgs.push("-c:a", this.output.specs.audio_codec);

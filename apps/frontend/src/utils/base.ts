@@ -9,12 +9,12 @@
  */
 export const getCountryFromIP = async (ip: string): Promise<{ country: string; countryCode: string } | null> => {
 	try {
-		const response = await fetch(`http://ip-api.com/json/${ip}`);
+		const response = await fetch(`https://ipwhois.app/json/${ip}`);
 		const data = await response.json();
-		if (data.status === "success") {
+		if (data.success) {
 			return {
-				country: data.country || "",
-				countryCode: data.countryCode || ""
+				country: data.country_name || "",
+				countryCode: data.country_code || ""
 			};
 		}
 		return null;
