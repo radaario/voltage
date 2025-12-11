@@ -1,7 +1,7 @@
 {
 	"name": "voltage",
 	"description": "An open-source, FFmpeg-based video encoding API that supports multiple concurrent instances. Easily scale video processing with parallel encoding, efficient resource management, and flexible API endpoints for a reliable, production-ready solution.",
-	"version": "1.1.3",
+	"version": "1.1.4",
 	"private": true,
 	"author": {
 		"name": "RADAAR",

@@ -98,6 +98,7 @@ const Label: React.FC<LabelProps> = ({
 			case "SUCCESS":
 			case "SUCCESSFUL":
 			case "ONLINE":
+			case "PROCESSED":
 			case "COMPLETED":
 				return <CheckIcon className={iconClass} />;
 			case "OFFLINE":
@@ -119,7 +120,6 @@ const Label: React.FC<LabelProps> = ({
 			case "ANALYZED":
 				return <ChartBarIcon className={iconClass} />;
 			case "PROCESSING":
-			case "PROCESSED":
 				return <ChartBarIcon className={iconClass} />;
 			case "UPLOADING":
 			case "UPLOADED":
