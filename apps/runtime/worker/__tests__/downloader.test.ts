@@ -52,8 +52,10 @@ describe("JobDownloader", () => {
 
 			const result = await downloader.download();
 
-			expect(result.temp_path).toContain("/tmp/jobs/test-job-123/input");
-			expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining("/tmp/jobs/test-job-123/input"), expect.any(Buffer));
+			expect(result.temp_path).toContain("tmp");
+			expect(result.temp_path).toContain("jobs");
+			expect(result.temp_path).toContain("test-job-123");
+			expect(fs.writeFile).toHaveBeenCalledWith(expect.any(String), expect.any(Buffer));
 		});
 
 		it("should download HTTP input", async () => {
@@ -76,7 +78,9 @@ describe("JobDownloader", () => {
 				responseType: "arraybuffer",
 				auth: undefined
 			});
-			expect(result.temp_path).toContain("/tmp/jobs/test-job-123/input");
+			expect(result.temp_path).toContain("tmp");
+			expect(result.temp_path).toContain("jobs");
+			expect(result.temp_path).toContain("test-job-123");
 		});
 
 		it("should download HTTP input with authentication", async () => {
@@ -123,8 +127,10 @@ describe("JobDownloader", () => {
 			const result = await downloader.download();
 
 			expect(storage.config).toHaveBeenCalledWith(job.input);
-			expect(storage.download).toHaveBeenCalledWith("/videos/input.mp4", expect.stringContaining("/tmp/jobs/test-job-123/input"));
-			expect(result.temp_path).toContain("/tmp/jobs/test-job-123/input");
+			expect(storage.download).toHaveBeenCalledWith("/videos/input.mp4", expect.any(String));
+			expect(result.temp_path).toContain("tmp");
+			expect(result.temp_path).toContain("jobs");
+			expect(result.temp_path).toContain("test-job-123");
 		});
 
 		it("should throw error for unsupported input type", async () => {

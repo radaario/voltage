@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { config } from "@voltage/config";
 import { authenticateFrontend } from "../auth.service";
 
 // Mock config
@@ -17,16 +18,15 @@ vi.mock("@voltage/utils", () => ({
 }));
 
 describe("Auth Service", () => {
+	beforeEach(() => {
+		// Reset config to default mock values
+		config.frontend.is_authentication_required = true;
+		config.frontend.password = "test-password-123";
+	});
+
 	describe("authenticateFrontend", () => {
 		it("should return null when authentication is not required", () => {
-			vi.doMock("@voltage/config", () => ({
-				config: {
-					frontend: {
-						is_authentication_required: false,
-						password: "test-password"
-					}
-				}
-			}));
+			config.frontend.is_authentication_required = false;
 
 			const result = authenticateFrontend("any-password");
 			expect(result).toBeNull();
