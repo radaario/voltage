@@ -1,11 +1,24 @@
 import os from "os";
 import path from "path";
+import { readFileSync } from "fs";
 
 const isWindows = os.platform() === "win32";
 const cpuCoresCount = os.cpus().length;
 
 // Base paths
 export const getAppDir = () => path.resolve(process.cwd(), "../..");
+
+// Read version from root package.json
+const getRootVersion = () => {
+	try {
+		const rootPackageJsonPath = path.join(getAppDir(), "package.json");
+		const packageJson = JSON.parse(readFileSync(rootPackageJsonPath, "utf-8"));
+		return packageJson.version || "1.0.0";
+	} catch (error) {
+		console.warn("Failed to read version from root package.json, using default");
+		return "1.0.0";
+	}
+};
 
 // System defaults
 export const SYSTEM_DEFAULTS = {
@@ -18,7 +31,7 @@ export const SYSTEM_DEFAULTS = {
 // Application defaults
 export const APP_DEFAULTS = {
 	name: "VOLTAGE",
-	version: "1.1.2",
+	version: getRootVersion(),
 	env: "local",
 	protocol: "http",
 	host: "localhost",

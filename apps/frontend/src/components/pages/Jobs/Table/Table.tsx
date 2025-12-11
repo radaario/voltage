@@ -5,7 +5,7 @@ import { Label, Button, Tooltip, TimeAgo, MemoizedTableRow, Pagination, LoadingO
 import { JobPreviewImage } from "@/components";
 import { EyeIcon, TrashIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import { getJobName } from "@/utils/naming";
-import { convertToLocalDate } from "@/utils/formatDate";
+import { formatDatesToDuration } from "@/utils/formatDate";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 
 interface PaginationInfo {
@@ -135,68 +135,32 @@ const JobsTable = ({
 				cell: (info) => {
 					const job = info.row.original;
 
-					const duration = (() => {
-						// If the job has not started yet
-						if (!job.started_at) {
-							return null;
-						}
+					const progressDurationText = formatDatesToDuration(job.started_at, job.completed_at, serverTimezone);
+					const progressDuration = progressDurationText ? <span>{progressDurationText}</span> : null;
 
-						// Calculate the duration with timezone conversion
-						try {
-							const started_at = convertToLocalDate(job.started_at, serverTimezone).getTime();
-							const end_time = job.completed_at ? convertToLocalDate(job.completed_at, serverTimezone).getTime() : Date.now();
-
-							// Invalid date check
-							if (isNaN(started_at) || isNaN(end_time)) {
-								return null;
-							}
-
-							// Negative or too large value check
-							const duration = (end_time - started_at) / 1000; // duration in seconds
-							if (duration < 0 || duration > 86400) {
-								// If more than 24 hours
-								return <span className="text-gray-400">Invalid</span>;
-							}
-
-							// Format the duration
-							if (duration < 60) {
-								return <span>{Math.round(duration)}s</span>;
-							} else if (duration < 3600) {
-								const minutes = Math.floor(duration / 60);
-								const seconds = Math.round(duration % 60);
-
-								if (seconds === 0) {
-									return <span>{minutes}m</span>;
-								}
-
-								return (
-									<span>
-										{minutes}m {seconds}s
-									</span>
-								);
-							} else {
-								const hours = Math.floor(duration / 3600);
-								const minutes = Math.floor((duration % 3600) / 60);
-
-								if (minutes === 0) {
-									return <span>{hours}h</span>;
-								}
-
-								return (
-									<span>
-										{hours}h {minutes}m
-									</span>
-								);
-							}
-						} catch (error) {
-							return <span className="text-gray-400">-</span>;
-						}
-					})();
+					const fullDurationText = formatDatesToDuration(job.created_at, job.completed_at, serverTimezone);
+					const fullDuration = fullDurationText ? <span>{fullDurationText}</span> : null;
 
 					return (
 						<div className="text-right sm:text-left">
 							<div>%{job.progress || 0}</div>
-							{duration && <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{duration}</div>}
+							{progressDuration && (
+								<Tooltip
+									content={
+										<table className="py-1.5">
+											<tr>
+												<td className="font-light pr-1 py-0.25">Progress Duration</td>
+												<td>: {progressDuration}</td>
+											</tr>
+											<tr>
+												<td className="font-light pr-1 py-0.25">Completed Duration</td>
+												<td>: {fullDuration}</td>
+											</tr>
+										</table>
+									}>
+									<div className="inline-flex text-xs text-gray-500 dark:text-gray-400 font-mono">{progressDuration}</div>
+								</Tooltip>
+							)}
 						</div>
 					);
 				}
@@ -281,7 +245,7 @@ const JobsTable = ({
 				}
 			})
 		],
-		[serverTimezone]
+		[]
 	);
 
 	const table = useReactTable({
