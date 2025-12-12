@@ -7,16 +7,7 @@ import { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/utils";
 import { Label, Button, Tooltip, TimeAgo, Pagination, LoadingOverlay, EmptyState, JobCard, WorkerCard, ConfirmModal } from "@/components";
-
-interface PaginationInfo {
-	total: number;
-	page: number;
-	limit: number;
-	totalPages: number;
-	has_more?: boolean;
-	next_page?: number | null;
-	prev_page?: number | null;
-}
+import type { PaginationInfo } from "@/types";
 
 interface LogsTableProps {
 	data: Log[];
@@ -169,7 +160,7 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
-		pageCount: pagination.totalPages
+		pageCount: pagination.total_pages
 	});
 
 	return (
@@ -230,7 +221,7 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 				{/* Pagination Controls */}
 				<Pagination
 					currentPage={pagination.page}
-					totalPages={pagination.totalPages}
+					totalPages={pagination.total_pages}
 					totalItems={pagination.total}
 					itemsPerPage={pagination.limit}
 					hasNextPage={!!pagination.next_page}

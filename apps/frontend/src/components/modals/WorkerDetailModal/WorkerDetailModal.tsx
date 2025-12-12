@@ -9,7 +9,7 @@ import type { Instance } from "@/interfaces/instance";
 import { Modal, Label, Button, Tooltip, TabsNavigation } from "@/components";
 import { getWorkerName, getInstanceNameForWorker } from "@/utils/naming";
 
-interface OutletContext {
+interface ParentOutletContext {
 	instance?: Instance;
 }
 
@@ -17,7 +17,7 @@ const WorkerDetailModal = () => {
 	const { workerKey, instanceKey } = useParams<{ workerKey: string; instanceKey?: string }>();
 	const location = useLocation();
 	const { authToken } = useAuth();
-	const outletContext = useOutletContext<OutletContext>();
+	const outletContext = useOutletContext<ParentOutletContext>();
 
 	// Determine if we're in standalone mode by checking the URL path
 	// Standalone: /instances/workers/:workerKey (direct from instances page)
@@ -73,7 +73,7 @@ const WorkerDetailModal = () => {
 
 	// Get all instances for naming
 	const allInstances = isStandalone ? instancesResponse?.data || [] : outletContext?.instance ? [outletContext.instance] : [];
-	const workerInstanceName = worker && allInstances.length > 0 ? getInstanceNameForWorker(allInstances, worker as any) : "";
+	const workerInstanceName = worker && allInstances.length > 0 ? getInstanceNameForWorker(allInstances, worker) : "";
 
 	return (
 		<Modal
@@ -93,7 +93,7 @@ const WorkerDetailModal = () => {
 							<div className="flex flex-col min-w-0">
 								<div className="flex items-center gap-2">
 									<h2 className="text-xl sm:font-bold text-gray-900 dark:text-white">
-										{instance?.workers ? getWorkerName(instance.workers, worker as any) : `Worker ${worker.index + 1}`}
+										{instance?.workers ? getWorkerName(instance.workers, worker) : `Worker ${worker.index + 1}`}
 									</h2>
 									{workerInstanceName && (
 										<div className="text-md text-gray-500 dark:text-gray-400">({workerInstanceName})</div>

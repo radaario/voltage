@@ -1,3 +1,5 @@
+import { Outcome } from "@/interfaces/instance";
+
 interface ServiceConfig {
 	service: string;
 	url?: string;
@@ -33,12 +35,22 @@ interface ServiceConfig {
 	audio_bit_rate?: number;
 }
 
+export interface JobOutputSpecs {
+	name?: string;
+	path?: string;
+	type?: string;
+	format?: string;
+	duration?: number;
+	[key: string]: unknown;
+}
+
 export interface JobOutput {
+	[key: string]: unknown;
 	key: string;
 	job_key: string;
 	index: number;
-	specs: any;
-	outcome: any | null;
+	specs: JobOutputSpecs | null;
+	outcome: Outcome | null;
 	status:
 		| "PENDING"
 		| "QUEUED"
@@ -63,6 +75,7 @@ export interface JobOutput {
 }
 
 export interface Job {
+	[key: string]: unknown;
 	key: string;
 	instance_key: string | null;
 	worker_key: string | null;
@@ -70,9 +83,9 @@ export interface Job {
 	input: ServiceConfig;
 	destination: ServiceConfig | null;
 	notification: ServiceConfig | null;
-	metadata: any | null;
-	config: any | null;
-	outcome: any | null;
+	metadata: Record<string, unknown> | null;
+	config: Record<string, unknown> | null;
+	outcome: Outcome | null;
 	status:
 		| "RECEIVED"
 		| "PENDING"

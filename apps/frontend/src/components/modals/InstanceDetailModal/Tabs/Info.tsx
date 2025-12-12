@@ -1,10 +1,6 @@
 import { useOutletContext } from "react-router-dom";
-import type { Instance } from "@/interfaces/instance";
 import { TableKeyValuePreview } from "@/components";
-
-interface OutletContext {
-	instance: Instance;
-}
+import type { InstanceOutletContext } from "@/types/modal";
 
 // Format helper functions
 const formatBytes = (bytes: number): string => {
@@ -22,7 +18,7 @@ const formatMHz = (mhz: number): string => {
 };
 
 const Info: React.FC = () => {
-	const { instance } = useOutletContext<OutletContext>();
+	const { instance } = useOutletContext<InstanceOutletContext>();
 
 	if (!instance) {
 		return (

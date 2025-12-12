@@ -4,19 +4,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
-import type { Job } from "@/interfaces/job";
 import type { Notification } from "@/interfaces/notification";
 import { Label, Tooltip, Button, ConfirmModal, Pagination, TimeAgo, LoadingOverlay, EmptyState, MemoizedTableRow } from "@/components";
 import { ArrowPathIcon, EyeIcon } from "@heroicons/react/24/outline";
+import type { JobOutletContext } from "@/types/modal";
 
 const columnHelper = createColumnHelper<Notification>();
 
-interface OutletContext {
-	job: Job;
-}
-
 const Notifications: React.FC = () => {
-	const { job } = useOutletContext<OutletContext>();
+	const { job } = useOutletContext<JobOutletContext>();
 	const { authToken } = useAuth();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
@@ -77,13 +73,14 @@ const Notifications: React.FC = () => {
 				header: "Notification",
 				cell: (info) => {
 					const notification = info.row.original;
+					const status = notification.payload?.status as string | undefined;
 					return (
 						<div className="flex flex-col items-end sm:items-start gap-0.5">
 							<Label
-								status={notification.payload.status}
+								status={status}
 								statusColor={false}
 								size="sm">
-								{notification.payload.status || "UNKNOWN"}
+								{status || "UNKNOWN"}
 							</Label>
 							<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{notification.key}</span>
 						</div>

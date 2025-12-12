@@ -2,21 +2,18 @@ import { useState, useMemo } from "react";
 import { useOutletContext, useNavigate, useParams, Outlet } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import type { Job, JobOutput } from "@/interfaces/job";
+import type { JobOutput } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
-import { api, getFilenameFromPath, ApiResponse, formatDuration, convertToLocalDate, formatDatesToDuration } from "@/utils";
+import { api, getFilenameFromPath, ApiResponse, formatDuration, formatDatesToDuration } from "@/utils";
 import { ArrowPathIcon, EyeIcon, VideoCameraIcon, PhotoIcon, MusicalNoteIcon, LanguageIcon } from "@heroicons/react/24/outline";
 import { ConfirmModal, Label, Tooltip, Button, TimeAgo, LoadingOverlay, EmptyState, MemoizedTableRow } from "@/components";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
+import type { JobOutletContext } from "@/types/modal";
 
 const columnHelper = createColumnHelper<JobOutput>();
 
-interface OutletContext {
-	job: Job;
-}
-
 const Outputs: React.FC = () => {
-	const { job } = useOutletContext<OutletContext>();
+	const { job } = useOutletContext<JobOutletContext>();
 	const { jobKey } = useParams<{ jobKey: string }>();
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
@@ -72,9 +69,10 @@ const Outputs: React.FC = () => {
 		}
 	};
 
-	const getOutputTypeIcon = (type: string) => {
+	const getOutputTypeIcon = (type: unknown) => {
 		const iconClass = "w-4 h-4";
-		switch (type?.toUpperCase()) {
+		const typeStr = typeof type === "string" ? type : "";
+		switch (typeStr?.toUpperCase()) {
 			case "VIDEO":
 				return <VideoCameraIcon className={iconClass} />;
 			case "THUMBNAIL":
@@ -106,7 +104,7 @@ const Outputs: React.FC = () => {
 				header: "Output",
 				cell: (info) => {
 					const output = info.row.original;
-					const duration = output.outcome?.duration || output.specs?.duration;
+					const duration = (output.outcome?.duration as number | undefined) || (output.specs?.duration as number | undefined);
 
 					return (
 						<div className="max-w-60">
@@ -147,10 +145,11 @@ const Outputs: React.FC = () => {
 				header: "Type",
 				cell: (info) => {
 					const type = info.getValue();
+					const typeStr = typeof type === "string" ? type : "UNKNOWN";
 					return (
 						<Label>
 							{getOutputTypeIcon(type)}
-							{type || "UNKNOWN"}
+							{typeStr}
 						</Label>
 					);
 				}

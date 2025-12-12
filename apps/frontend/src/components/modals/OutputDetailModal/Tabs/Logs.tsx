@@ -4,30 +4,17 @@ import { Label, Tooltip, Button, Pagination, TimeAgo, LoadingOverlay, EmptyState
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import type { JobOutput } from "@/interfaces/job";
 import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import type { OutputOutletContext } from "@/types/modal";
+import type { PaginationInfo } from "@/types";
 
 const columnHelper = createColumnHelper<Log>();
 
-interface OutletContext {
-	output: JobOutput;
-}
-
-interface PaginationInfo {
-	total: number;
-	page: number;
-	limit: number;
-	total_pages: number;
-	has_more?: boolean;
-	next_page?: number | null;
-	prev_page?: number | null;
-}
-
 const Logs: React.FC = () => {
-	const { output } = useOutletContext<OutletContext>();
+	const { output } = useOutletContext<OutputOutletContext>();
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
 
@@ -118,7 +105,7 @@ const Logs: React.FC = () => {
 					return (
 						<div className="flex flex-col items-end sm:items-start gap-0.5 text-right sm:text-left max-w-[300px]">
 							<Label
-								status={log.type as any}
+								status={log.type}
 								size="sm">
 								{log.type || "INFO"}
 							</Label>

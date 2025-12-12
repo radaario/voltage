@@ -4,7 +4,7 @@ import { lightTheme } from "@uiw/react-json-view/light";
 import { useTheme } from "@/contexts/ThemeContext";
 
 interface JsonViewerProps {
-	data: any;
+	data: unknown;
 	emptyMessage?: string;
 	collapsed?: boolean | number;
 }

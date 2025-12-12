@@ -1,13 +1,9 @@
 import { useOutletContext } from "react-router-dom";
-import type { JobOutput } from "@/interfaces/job";
 import { JsonViewer } from "@/components";
-
-interface OutletContext {
-	output: JobOutput;
-}
+import type { OutputOutletContext } from "@/types/modal";
 
 const Outcome: React.FC = () => {
-	const { output } = useOutletContext<OutletContext>();
+	const { output } = useOutletContext<OutputOutletContext>();
 
 	return (
 		<div className="space-y-4">

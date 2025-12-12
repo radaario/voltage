@@ -101,9 +101,9 @@ const NotificationDetailModal: React.FC = () => {
 										<div className="flex items-center gap-3">
 											<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Notification</h3>
 											<Label
-												status={notification.payload.status}
+												status={notification.payload?.status as string | undefined}
 												statusColor={false}>
-												{notification.payload.status || "UNKNOWN"}
+												{(notification.payload?.status as string | undefined) || "UNKNOWN"}
 											</Label>
 										</div>
 										<p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono truncate">

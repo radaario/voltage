@@ -1,11 +1,23 @@
+// Common outcome structure for workers, jobs, notifications, etc.
+export interface Outcome {
+	status?: "SUCCESSFUL" | "FAILED" | "SKIPPED" | string;
+	http_status_code?: number;
+	error?: {
+		message?: string;
+		[key: string]: unknown;
+	};
+	[key: string]: unknown;
+}
+
 export interface Worker {
+	[key: string]: unknown;
 	id: number;
 	key: string;
 	index: number;
 	instance_key: string;
 	job_key?: string;
 	status: string;
-	outcome?: any;
+	outcome?: Outcome | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -26,13 +38,21 @@ export interface InstanceSpecs {
 	workers_max: number;
 }
 
+export interface InstanceSystem {
+	hostname?: string;
+	platform?: string;
+	arch?: string;
+	version?: string;
+	[key: string]: unknown;
+}
+
 export interface Instance {
 	id: number;
 	key: string;
 	type: "MASTER" | "SLAVE";
 	status: string;
-	outcome: any | null;
-	system: any;
+	outcome: Outcome | null;
+	system: InstanceSystem | null;
 	specs: InstanceSpecs | null;
 	workers: Worker[];
 	restart_count?: number;

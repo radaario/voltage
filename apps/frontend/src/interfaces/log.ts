@@ -1,4 +1,5 @@
 export interface Log {
+	[key: string]: unknown;
 	key: string;
 	instance_key?: string | null;
 	worker_key?: string | null;
@@ -7,7 +8,7 @@ export interface Log {
 	notification_key?: string | null;
 	type?: string;
 	message?: string;
-	data?: any;
-	metadata?: any;
+	data?: Record<string, unknown> | null;
+	metadata?: Record<string, unknown> | null;
 	created_at: string;
 }

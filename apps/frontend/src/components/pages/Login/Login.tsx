@@ -20,12 +20,12 @@ function Login() {
 	const [sending, setSending] = useState(false);
 
 	// actions
-	const onSubmit = async (e: any) => {
+	const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
 		const focusPasswordEl = async () => {
 			await fakeDelay(50);
-			const passwordEl: any = document.querySelector("form input[type='password']");
+			const passwordEl = document.querySelector("form input[type='password']") as HTMLInputElement | null;
 			passwordEl?.focus();
 		};
 
@@ -44,8 +44,8 @@ function Login() {
 			await fakeDelay(300);
 
 			navigate("/", { replace: true });
-		} catch (err: any) {
-			setErrorMessage(err?.message || "Login failed");
+		} catch (err) {
+			setErrorMessage(err instanceof Error ? err.message : "Login failed");
 			setPassword("");
 			focusPasswordEl();
 		} finally {
@@ -53,7 +53,7 @@ function Login() {
 		}
 	};
 
-	const onChangePassword = (e: any) => {
+	const onChangePassword = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setPassword(e.target.value || "");
 	};
 

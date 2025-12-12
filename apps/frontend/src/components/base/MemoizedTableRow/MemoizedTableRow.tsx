@@ -1,8 +1,10 @@
 import { memo } from "react";
 import { flexRender } from "@tanstack/react-table";
 
+import type { Row } from "@tanstack/react-table";
+
 interface MemoizedTableRowProps<T> {
-	row: any;
+	row: Row<T>;
 	isNew?: boolean;
 	onClick?: (data: T) => void;
 	className?: string;
@@ -24,7 +26,7 @@ function MemoizedTableRowComponent<T>({ row, isNew = false, onClick, className =
 		<tr
 			onClick={handleClick}
 			className={combinedClassName}>
-			{row.getVisibleCells().map((cell: any) => (
+			{row.getVisibleCells().map((cell) => (
 				<td
 					key={cell.id}
 					data-label={cell.column.columnDef.header}

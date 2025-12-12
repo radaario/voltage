@@ -1,13 +1,9 @@
 import { useOutletContext } from "react-router-dom";
-import type { Log } from "@/interfaces/log";
 import { TableKeyValuePreview } from "@/components";
-
-interface OutletContext {
-	log: Log;
-}
+import type { LogOutletContext } from "@/types/modal";
 
 const Info: React.FC = () => {
-	const { log } = useOutletContext<OutletContext>();
+	const { log } = useOutletContext<LogOutletContext>();
 
 	return (
 		<div className="space-y-6">

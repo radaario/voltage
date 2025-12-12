@@ -9,16 +9,7 @@ import { testJobPayload } from "@/mocks/testJobPayload";
 import JobsTable from "@/components/pages/Jobs/Table/Table";
 import { ConfirmModal, Button, Tooltip, SearchInput, LoadingSpinner, Page, ErrorAlert, JsonViewer } from "@/components";
 import { TrashIcon } from "@heroicons/react/24/outline";
-
-interface PaginationInfo {
-	total: number;
-	page: number;
-	limit: number;
-	totalPages: number;
-	has_more?: boolean;
-	next_page?: number | null;
-	prev_page?: number | null;
-}
+import type { PaginationInfo } from "@/types";
 
 const Jobs: React.FC = () => {
 	const { authToken } = useAuth();
@@ -125,7 +116,7 @@ const Jobs: React.FC = () => {
 		total: jobsResponse?.pagination?.total || 0,
 		page: jobsResponse?.pagination?.page || 1,
 		limit: jobsResponse?.pagination?.limit || 6,
-		totalPages: jobsResponse?.pagination?.total_pages || 0,
+		total_pages: jobsResponse?.pagination?.total_pages || 0,
 		has_more: jobsResponse?.pagination?.has_more,
 		next_page: jobsResponse?.pagination?.next_page,
 		prev_page: jobsResponse?.pagination?.prev_page

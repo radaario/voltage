@@ -8,16 +8,7 @@ import NotificationsTable from "@/components/pages/Notifications/Table/Table";
 import { SearchInput, LoadingSpinner, Page, ErrorAlert, Button, Tooltip, ConfirmModal } from "@/components";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
-
-interface PaginationInfo {
-	total: number;
-	page: number;
-	limit: number;
-	totalPages: number;
-	has_more?: boolean;
-	next_page?: number | null;
-	prev_page?: number | null;
-}
+import type { PaginationInfo } from "@/types";
 
 const Notifications: React.FC = () => {
 	const { authToken } = useAuth();
@@ -168,7 +159,7 @@ const Notifications: React.FC = () => {
 		total: notificationsResponse?.pagination?.total || 0,
 		page: notificationsResponse?.pagination?.page || 1,
 		limit: notificationsResponse?.pagination?.limit || 25,
-		totalPages: notificationsResponse?.pagination?.total_pages || 0,
+		total_pages: notificationsResponse?.pagination?.total_pages || 0,
 		has_more: notificationsResponse?.pagination?.has_more,
 		next_page: notificationsResponse?.pagination?.next_page,
 		prev_page: notificationsResponse?.pagination?.prev_page
@@ -230,7 +221,7 @@ const Notifications: React.FC = () => {
 					total: pagination.total,
 					page: pagination.page,
 					limit: pagination.limit,
-					totalPages: pagination.totalPages,
+					total_pages: pagination.total_pages,
 					has_more: pagination.has_more,
 					next_page: pagination.next_page,
 					prev_page: pagination.prev_page

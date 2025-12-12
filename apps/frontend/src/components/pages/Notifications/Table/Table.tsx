@@ -18,16 +18,7 @@ import {
 	JobCard
 } from "@/components";
 import { ArrowPathIcon, EyeIcon, TrashIcon } from "@heroicons/react/24/outline";
-
-interface PaginationInfo {
-	total: number;
-	page: number;
-	limit: number;
-	totalPages: number;
-	has_more?: boolean;
-	next_page?: number | null;
-	prev_page?: number | null;
-}
+import type { PaginationInfo } from "@/types";
 
 interface NotificationsTableProps {
 	data: Notification[];
@@ -109,13 +100,14 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 				header: "Notification",
 				cell: (info) => {
 					const notification = info.row.original;
+					const status = notification.payload?.status as string | undefined;
 					return (
 						<div className="flex flex-col items-end sm:items-start">
 							<Label
-								status={notification.payload.status}
+								status={status}
 								statusColor={false}
 								size="sm">
-								{notification.payload.status || "UNKNOWN"}
+								{status || "UNKNOWN"}
 							</Label>
 							<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{notification.key}</div>
 						</div>
@@ -257,7 +249,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
-		pageCount: pagination.totalPages
+		pageCount: pagination.total_pages
 	});
 
 	return (
@@ -309,7 +301,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 				{/* Pagination Controls */}
 				<Pagination
 					currentPage={pagination.page}
-					totalPages={pagination.totalPages}
+					totalPages={pagination.total_pages}
 					totalItems={pagination.total}
 					itemsPerPage={pagination.limit}
 					hasNextPage={!!pagination.next_page}

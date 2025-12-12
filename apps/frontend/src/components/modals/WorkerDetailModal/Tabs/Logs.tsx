@@ -3,28 +3,15 @@ import { useOutletContext, useNavigate, Outlet } from "react-router-dom";
 import { Label, Tooltip, Button, Pagination, JobCard, TimeAgo, LoadingSpinner } from "@/components";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Worker } from "@/interfaces";
 import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
-
-interface OutletContext {
-	worker: Worker;
-}
-
-interface PaginationInfo {
-	total: number;
-	page: number;
-	limit: number;
-	total_pages: number;
-	has_more?: boolean;
-	next_page?: number | null;
-	prev_page?: number | null;
-}
+import type { WorkerOutletContext } from "@/types/modal";
+import type { PaginationInfo } from "@/types";
 
 const Logs: React.FC = () => {
-	const { worker } = useOutletContext<OutletContext>();
+	const { worker } = useOutletContext<WorkerOutletContext>();
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
@@ -191,7 +178,7 @@ const Logs: React.FC = () => {
 									}`}>
 									<td className="px-6 py-4 text-sm">
 										<Label
-											status={log.type as any}
+											status={log.type}
 											size="sm">
 											{log.type || "INFO"}
 										</Label>
