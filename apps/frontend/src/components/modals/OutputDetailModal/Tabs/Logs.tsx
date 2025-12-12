@@ -146,10 +146,12 @@ const Logs: React.FC = () => {
 			columnHelper.accessor("created_at", {
 				header: "Created At",
 				cell: (info) => (
-					<TimeAgo
-						datetime={info.getValue()}
-						className="text-right sm:text-left text-xs"
-					/>
+					<div className="text-right sm:text-left sm:min-w-[85px]">
+						<TimeAgo
+							datetime={info.getValue()}
+							className="text-right sm:text-left text-xs"
+						/>
+					</div>
 				)
 			}),
 			columnHelper.display({

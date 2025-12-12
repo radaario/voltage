@@ -146,7 +146,9 @@ const Logs: React.FC = () => {
 				header: "Created At",
 				cell: (info) => (
 					<div className="text-right sm:text-left">
-						<TimeAgo datetime={info.getValue()} />
+						<div className="text-right sm:text-left sm:min-w-[85px]">
+							<TimeAgo datetime={info.getValue()} />
+						</div>
 					</div>
 				)
 			}),

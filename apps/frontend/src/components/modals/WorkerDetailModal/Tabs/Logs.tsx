@@ -202,7 +202,9 @@ const Logs: React.FC = () => {
 										{log.job_key ? <JobCard jobKey={log.job_key} /> : <span className="text-gray-400">-</span>}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-										<TimeAgo datetime={log.created_at} />
+										<div className="text-right sm:text-left sm:min-w-[85px]">
+											<TimeAgo datetime={log.created_at} />
+										</div>
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
 										<Tooltip content="View">

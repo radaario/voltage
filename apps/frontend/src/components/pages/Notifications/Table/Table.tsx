@@ -187,10 +187,12 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 			columnHelper.accessor("updated_at", {
 				header: "Updated At",
 				cell: (info) => (
-					<TimeAgo
-						datetime={info.getValue()}
-						locale="en_US"
-					/>
+					<div className="text-right sm:text-left sm:min-w-[85px]">
+						<TimeAgo
+							datetime={info.getValue()}
+							locale="en_US"
+						/>
+					</div>
 				)
 			}),
 			columnHelper.display({

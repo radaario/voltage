@@ -216,10 +216,12 @@ const Outputs: React.FC = () => {
 			columnHelper.accessor("updated_at", {
 				header: "Updated At",
 				cell: (info) => (
-					<TimeAgo
-						datetime={info.getValue()}
-						className="text-xs"
-					/>
+					<div className="text-right sm:text-left sm:min-w-[85px]">
+						<TimeAgo
+							datetime={info.getValue()}
+							className="text-xs"
+						/>
+					</div>
 				)
 			}),
 			columnHelper.display({

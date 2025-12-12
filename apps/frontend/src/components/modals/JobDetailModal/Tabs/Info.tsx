@@ -14,7 +14,7 @@ const Info: React.FC = () => {
 			{/* Info Table */}
 			<TableKeyValuePreview
 				data={job}
-				excludedKeys={["input", "instance_key", "outputs", "outcome", "destination", "notification", "metadata"]}
+				excludedKeys={["input", "instance_key", "outputs", "outcome", "config", "destination", "notification", "metadata"]}
 			/>
 
 			{/* Destination */}
@@ -32,6 +32,15 @@ const Info: React.FC = () => {
 				<JsonViewer
 					data={job.notification}
 					emptyMessage="No notification available"
+				/>
+			</div>
+
+			{/* Config */}
+			<div>
+				<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Config</h4>
+				<JsonViewer
+					data={job.config}
+					emptyMessage="No config available"
 				/>
 			</div>
 

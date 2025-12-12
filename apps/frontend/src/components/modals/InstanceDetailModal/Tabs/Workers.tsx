@@ -128,7 +128,9 @@ const Workers: React.FC = () => {
 								</Label>
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-								<TimeAgo datetime={worker.updated_at} />
+								<div className="text-right sm:text-left sm:min-w-[85px]">
+									<TimeAgo datetime={worker.updated_at} />
+								</div>
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
 								<div className="flex items-center gap-2">

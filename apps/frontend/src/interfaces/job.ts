@@ -71,6 +71,7 @@ export interface Job {
 	destination: ServiceConfig | null;
 	notification: ServiceConfig | null;
 	metadata: any | null;
+	config: any | null;
 	outcome: any | null;
 	status:
 		| "RECEIVED"
