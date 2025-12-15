@@ -1,4 +1,8 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes } from "react";
+import type { Job } from "@/interfaces/job";
+import type { Instance } from "@/interfaces/instance";
+import type { Log } from "@/interfaces/log";
+import type { Notification } from "@/interfaces/notification";
 
 // Button Component Types
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -111,10 +115,13 @@ export interface AlertProps {
 }
 
 // MemoizedTableRow Component Types
+import type { Row } from "@tanstack/react-table";
+
 export interface MemoizedTableRowProps<T> {
-	data: T;
-	columns: any[];
+	row: Row<T>;
+	isNew?: boolean;
 	onClick?: (data: T) => void;
+	className?: string;
 }
 
 // Modal Component Types
@@ -158,29 +165,40 @@ export interface JobPreviewImageProps {
 	version?: string;
 }
 
+// Pagination Type
+export interface PaginationInfo {
+	total: number;
+	page: number;
+	limit: number;
+	total_pages: number;
+	has_more?: boolean;
+	next_page?: number | null;
+	prev_page?: number | null;
+}
+
 // Table Component Types
 export interface JobsTableProps {
-	data: any[];
+	data: Job[];
 	loading: boolean;
-	pagination?: any;
+	pagination?: PaginationInfo;
 	onPageChange?: (page: number) => void;
 }
 
 export interface InstancesTableProps {
-	data: any[];
+	data: Instance[];
 	loading: boolean;
 }
 
 export interface LogsTableProps {
-	data: any[];
+	data: Log[];
 	loading: boolean;
-	pagination?: any;
+	pagination?: PaginationInfo;
 	onPageChange?: (page: number) => void;
 }
 
 export interface NotificationsTableProps {
-	data: any[];
+	data: Notification[];
 	loading: boolean;
-	pagination?: any;
+	pagination?: PaginationInfo;
 	onPageChange?: (page: number) => void;
 }

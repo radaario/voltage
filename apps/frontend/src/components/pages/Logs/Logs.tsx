@@ -8,16 +8,7 @@ import LogsTable from "@/components/pages/Logs/Table/Table";
 import { ConfirmModal, Alert, Button, Tooltip, SearchInput, LoadingSpinner, Page, ErrorAlert } from "@/components";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
-
-interface PaginationInfo {
-	total: number;
-	page: number;
-	limit: number;
-	totalPages: number;
-	has_more?: boolean;
-	next_page?: number | null;
-	prev_page?: number | null;
-}
+import type { PaginationInfo } from "@/types";
 
 const Logs: React.FC = () => {
 	const { authToken } = useAuth();
@@ -176,7 +167,7 @@ const Logs: React.FC = () => {
 		total: logsResponse?.pagination?.total || 0,
 		page: logsResponse?.pagination?.page || 1,
 		limit: logsResponse?.pagination?.limit || 25,
-		totalPages: logsResponse?.pagination?.total_pages || 0,
+		total_pages: logsResponse?.pagination?.total_pages || 0,
 		has_more: logsResponse?.pagination?.has_more,
 		next_page: logsResponse?.pagination?.next_page,
 		prev_page: logsResponse?.pagination?.prev_page

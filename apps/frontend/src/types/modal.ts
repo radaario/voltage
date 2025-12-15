@@ -1,7 +1,7 @@
 import type { Job } from "@/interfaces/job";
 import type { Log } from "@/interfaces/log";
 import type { Notification } from "@/interfaces/notification";
-import type { Instance } from "@/interfaces/instance";
+import type { Instance, Worker } from "@/interfaces/instance";
 import type { JobOutput } from "@/interfaces/job";
 
 // Generic outlet context for modal tabs
@@ -31,5 +31,5 @@ export interface OutputOutletContext {
 }
 
 export interface WorkerOutletContext {
-	worker: any; // Add proper Worker type when available
+	worker: Worker;
 }

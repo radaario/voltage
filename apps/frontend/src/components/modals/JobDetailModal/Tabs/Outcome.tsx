@@ -1,13 +1,9 @@
 import { useOutletContext } from "react-router-dom";
-import type { Job } from "@/interfaces/job";
 import { JsonViewer } from "@/components";
-
-interface OutletContext {
-	job: Job;
-}
+import type { JobOutletContext } from "@/types/modal";
 
 const Outcome: React.FC = () => {
-	const { job } = useOutletContext<OutletContext>();
+	const { job } = useOutletContext<JobOutletContext>();
 
 	return (
 		<JsonViewer

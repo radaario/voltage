@@ -1,20 +1,16 @@
 import { useOutletContext } from "react-router-dom";
-import type { Job } from "@/interfaces/job";
 import { TableKeyValuePreview, JsonViewer } from "@/components";
-
-interface OutletContext {
-	job: Job;
-}
+import type { JobOutletContext } from "@/types/modal";
 
 const Info: React.FC = () => {
-	const { job } = useOutletContext<OutletContext>();
+	const { job } = useOutletContext<JobOutletContext>();
 
 	return (
 		<div className="space-y-6">
 			{/* Info Table */}
 			<TableKeyValuePreview
 				data={job}
-				excludedKeys={["input", "instance_key", "outputs", "outcome", "destination", "notification", "metadata"]}
+				excludedKeys={["input", "instance_key", "outputs", "outcome", "config", "destination", "notification", "metadata"]}
 			/>
 
 			{/* Config */}
@@ -41,6 +37,15 @@ const Info: React.FC = () => {
 				<JsonViewer
 					data={job.notification}
 					emptyMessage="No notification available"
+				/>
+			</div>
+
+			{/* Config */}
+			<div>
+				<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Config</h4>
+				<JsonViewer
+					data={job.config}
+					emptyMessage="No config available"
 				/>
 			</div>
 

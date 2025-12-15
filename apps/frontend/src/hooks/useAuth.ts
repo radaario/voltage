@@ -11,7 +11,7 @@ export const useAuth = () => {
 
 	// states
 	const [authState, setAuthState] = useState<AuthState>({
-		authToken: localStorage.get("authToken"),
+		authToken: (localStorage.get("authToken") as string) || null,
 		isAuthenticated: !!localStorage.get("authToken")
 	});
 
@@ -29,7 +29,7 @@ export const useAuth = () => {
 	const login = useCallback(async (password: string) => {
 		try {
 			const response = await api.post("/auth", { password });
-			const authToken = response.data?.token;
+			const authToken = (response.data as { token?: string })?.token || null;
 
 			localStorage.set("authToken", authToken);
 			setAuthState({ authToken, isAuthenticated: true });

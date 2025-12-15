@@ -1,13 +1,9 @@
 import { useOutletContext } from "react-router-dom";
-import type { Log } from "@/interfaces/log";
 import { JsonViewer } from "@/components";
-
-interface OutletContext {
-	log: Log;
-}
+import type { LogOutletContext } from "@/types/modal";
 
 const Metadata: React.FC = () => {
-	const { log } = useOutletContext<OutletContext>();
+	const { log } = useOutletContext<LogOutletContext>();
 
 	return (
 		<JsonViewer

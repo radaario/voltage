@@ -1,19 +1,16 @@
 import { useOutletContext, useNavigate, Outlet, useParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import type { Instance } from "@/interfaces/instance";
+import type { Worker as IWorker } from "@/interfaces/instance";
 import { JobCard, Label, Button, Tooltip, TimeAgo, ConfirmModal } from "@/components";
 import { EyeIcon, CpuChipIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { getWorkerName } from "@/utils/naming";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/utils";
-
-interface OutletContext {
-	instance: Instance;
-}
+import type { InstanceOutletContext } from "@/types/modal";
 
 const Workers: React.FC = () => {
-	const { instance } = useOutletContext<OutletContext>();
+	const { instance } = useOutletContext<InstanceOutletContext>();
 	const { instanceKey } = useParams<{ instanceKey: string }>();
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
@@ -31,7 +28,7 @@ const Workers: React.FC = () => {
 		}
 	});
 
-	const handleDeleteWorker = (worker: any) => {
+	const handleDeleteWorker = (worker: IWorker) => {
 		setWorkerToDelete({
 			key: worker.key,
 			name: getWorkerName(instance.workers, worker)
@@ -128,7 +125,9 @@ const Workers: React.FC = () => {
 								</Label>
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-								<TimeAgo datetime={worker.updated_at} />
+								<div className="text-right sm:text-left sm:min-w-[85px]">
+									<TimeAgo datetime={worker.updated_at} />
+								</div>
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
 								<div className="flex items-center gap-2">

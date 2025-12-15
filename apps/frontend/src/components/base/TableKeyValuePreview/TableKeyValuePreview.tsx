@@ -1,10 +1,10 @@
 import { CalendarIcon, ChartBarIcon, KeyIcon, ClipboardDocumentIcon, HashtagIcon } from "@heroicons/react/24/outline";
-import { JobCard, WorkerCard, InstanceCard, Label, TimeAgo, Tooltip } from "@/components";
+import { JobCard, WorkerCard, InstanceCard, Label, TimeAgo } from "@/components";
 import { copyToClipboard, getCountryFromIP } from "@/utils";
 import { useState, useEffect } from "react";
 
 interface TableKeyValuePreviewProps {
-	data: Record<string, any>;
+	data: Record<string, unknown>;
 	excludedKeys?: string[];
 	langMap?: Record<string, string>;
 }
@@ -53,7 +53,7 @@ const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, exclu
 		return key.includes("_at") || key.toLowerCase().includes("date");
 	};
 
-	const renderValue = (key: string, value: unknown, fullData: Record<string, any>) => {
+	const renderValue = (key: string, value: unknown, fullData: Record<string, unknown>): React.ReactNode => {
 		// JobCard for job_key
 		if (key === "job_key" && typeof value === "string") {
 			return <JobCard jobKey={value} />;
@@ -64,7 +64,7 @@ const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, exclu
 			return (
 				<WorkerCard
 					workerKey={value}
-					instanceKey={fullData.instance_key}
+					instanceKey={typeof fullData.instance_key === "string" ? fullData.instance_key : undefined}
 				/>
 			);
 		}

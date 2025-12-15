@@ -1,7 +1,7 @@
 import { isArray, isPlainObject } from "lodash-es";
 
-interface StorageOptions {
-	defaultValue?: any;
+interface StorageOptions<T = unknown> {
+	defaultValue?: T;
 	json?: boolean;
 	boolean?: boolean;
 }
@@ -70,7 +70,7 @@ class LocalStorageUtil {
 	 * @param params.boolean - Parse the value as boolean
 	 * @returns The retrieved value, or null if expired/not found
 	 */
-	public get(key: string, params?: StorageOptions): any {
+	public get<T = unknown>(key: string, params?: StorageOptions<T>): T | string | boolean | null | undefined {
 		const prefixedKey = this.getPrefixedKey(key);
 		let expiresIn = localStorage.getItem(this.getKeyWithExpiration(key));
 
@@ -103,7 +103,7 @@ class LocalStorageUtil {
 					return false;
 				}
 
-				return !!value || params?.defaultValue;
+				return !!value || (params?.defaultValue ?? null);
 			}
 
 			return value || params?.defaultValue;
@@ -121,15 +121,18 @@ class LocalStorageUtil {
 	 * @param expires - Optional expiration time in seconds (defaults to 24 hours if provided without value)
 	 * @returns True if successful, false if an error occurred
 	 */
-	public set(key: string, value: any, expires?: number): boolean {
+	public set(key: string, value: unknown, expires?: number): boolean {
 		try {
 			const prefixedKey = this.getPrefixedKey(key);
 
+			let stringValue: string;
 			if (isPlainObject(value) || isArray(value)) {
-				value = JSON.stringify(value);
+				stringValue = JSON.stringify(value);
+			} else {
+				stringValue = String(value);
 			}
 
-			localStorage.setItem(prefixedKey, value);
+			localStorage.setItem(prefixedKey, stringValue);
 
 			if (expires !== undefined && expires !== null) {
 				expires = 24 * 60 * 60; // default: seconds for 1 day

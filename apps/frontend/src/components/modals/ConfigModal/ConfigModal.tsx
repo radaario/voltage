@@ -5,7 +5,7 @@ import { InformationCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 interface ConfigModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	config: any;
+	config: Record<string, unknown>;
 }
 
 const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, config }) => {
@@ -25,7 +25,7 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, config }) =>
 						<div className="flex flex-col min-w-0">
 							<h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">Configuration</h3>
 							<p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 -mt-0.5 font-mono truncate">
-								v{config?.version || "N/A"}
+								v{(config?.version as string | undefined) || "N/A"}
 							</p>
 						</div>
 					</div>

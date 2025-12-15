@@ -200,10 +200,12 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 				cell: (info) => {
 					const date = info.getValue();
 					return (
-						<TimeAgo
-							datetime={date}
-							className="text-sm text-gray-500 dark:text-gray-400"
-						/>
+						<div className="text-right sm:text-left sm:min-w-[85px]">
+							<TimeAgo
+								datetime={date}
+								className=" text-sm text-gray-500 dark:text-gray-400"
+							/>
+						</div>
 					);
 				}
 			}),

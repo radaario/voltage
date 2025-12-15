@@ -7,16 +7,7 @@ import { EyeIcon, TrashIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import { getJobName } from "@/utils/naming";
 import { formatDatesToDuration } from "@/utils/formatDate";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
-
-interface PaginationInfo {
-	total: number;
-	page: number;
-	limit: number;
-	totalPages: number;
-	has_more?: boolean;
-	next_page?: number | null;
-	prev_page?: number | null;
-}
+import type { PaginationInfo } from "@/types";
 
 interface JobsTableProps {
 	data: Job[];
@@ -184,10 +175,12 @@ const JobsTable = ({
 			columnHelper.accessor("updated_at", {
 				header: "Updated At",
 				cell: (info) => (
-					<TimeAgo
-						datetime={info.getValue()}
-						locale="en_US"
-					/>
+					<div className="text-right sm:text-left sm:min-w-[85px]">
+						<TimeAgo
+							datetime={info.getValue()}
+							locale="en_US"
+						/>
+					</div>
 				)
 			}),
 			columnHelper.display({
@@ -253,7 +246,7 @@ const JobsTable = ({
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
-		pageCount: pagination.totalPages
+		pageCount: pagination.total_pages
 	});
 
 	return (
@@ -308,7 +301,7 @@ const JobsTable = ({
 				{/* Pagination Controls */}
 				<Pagination
 					currentPage={pagination.page}
-					totalPages={pagination.totalPages}
+				totalPages={pagination.total_pages}
 					totalItems={pagination.total}
 					itemsPerPage={pagination.limit}
 					hasNextPage={!!pagination.next_page}

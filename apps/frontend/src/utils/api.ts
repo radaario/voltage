@@ -16,15 +16,15 @@ const getApiBaseUrl = (): string => {
 export interface ApiRequestOptions {
 	params?: Record<string, string | number | boolean | undefined | null>;
 	headers?: Record<string, string>;
-	body?: any;
+	body?: unknown;
 	formData?: boolean;
 	multipart?: boolean;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
 	metadata?: {
 		status: string;
-		[key: string]: any;
+		[key: string]: unknown;
 	};
 	data?: T;
 	pagination?: {
@@ -63,7 +63,7 @@ class ApiClient {
 	/**
 	 * Build URL with query parameters
 	 */
-	private buildUrl(endpoint: string, params?: Record<string, any>): string {
+	private buildUrl(endpoint: string, params?: Record<string, string | number | boolean | undefined | null>): string {
 		const url = new URL(`${this.baseUrl}${endpoint}`);
 
 		// Always append client identifier
@@ -100,7 +100,7 @@ class ApiClient {
 	/**
 	 * Prepare request body
 	 */
-	private prepareBody(body?: any, options?: ApiRequestOptions): BodyInit | undefined {
+	private prepareBody(body?: unknown, options?: ApiRequestOptions): BodyInit | undefined {
 		if (!body) return undefined;
 
 		if (options?.multipart || options?.formData) {
@@ -123,7 +123,7 @@ class ApiClient {
 	/**
 	 * Generic request method
 	 */
-	private async request<T = any>(method: string, endpoint: string, options?: ApiRequestOptions): Promise<ApiResponse<T>> {
+	private async request<T = unknown>(method: string, endpoint: string, options?: ApiRequestOptions): Promise<ApiResponse<T>> {
 		try {
 			const url = this.buildUrl(endpoint, options?.params);
 			const headers = this.prepareHeaders(options);
@@ -162,9 +162,9 @@ class ApiClient {
 	/**
 	 * GET request
 	 */
-	async get<T = any>(
+	async get<T = unknown>(
 		endpoint: string,
-		params?: Record<string, any>,
+		params?: Record<string, string | number | boolean | undefined | null>,
 		options?: Omit<ApiRequestOptions, "params" | "body">
 	): Promise<ApiResponse<T>> {
 		return this.request<T>("GET", endpoint, { ...options, params });
@@ -173,30 +173,30 @@ class ApiClient {
 	/**
 	 * POST request
 	 */
-	async post<T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "body">): Promise<ApiResponse<T>> {
+	async post<T = unknown>(endpoint: string, body?: unknown, options?: Omit<ApiRequestOptions, "body">): Promise<ApiResponse<T>> {
 		return this.request<T>("POST", endpoint, { ...options, body });
 	}
 
 	/**
 	 * PUT request
 	 */
-	async put<T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "body">): Promise<ApiResponse<T>> {
+	async put<T = unknown>(endpoint: string, body?: unknown, options?: Omit<ApiRequestOptions, "body">): Promise<ApiResponse<T>> {
 		return this.request<T>("PUT", endpoint, { ...options, body });
 	}
 
 	/**
 	 * PATCH request
 	 */
-	async patch<T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "body">): Promise<ApiResponse<T>> {
+	async patch<T = unknown>(endpoint: string, body?: unknown, options?: Omit<ApiRequestOptions, "body">): Promise<ApiResponse<T>> {
 		return this.request<T>("PATCH", endpoint, { ...options, body });
 	}
 
 	/**
 	 * DELETE request
 	 */
-	async delete<T = any>(
+	async delete<T = unknown>(
 		endpoint: string,
-		params?: Record<string, any>,
+		params?: Record<string, string | number | boolean | undefined | null>,
 		options?: Omit<ApiRequestOptions, "params" | "body">
 	): Promise<ApiResponse<T>> {
 		return this.request<T>("DELETE", endpoint, { ...options, params });
@@ -205,7 +205,7 @@ class ApiClient {
 	/**
 	 * Get full URL for resources (images, previews, etc.)
 	 */
-	getResourceUrl(endpoint: string, params?: Record<string, any>): string {
+	getResourceUrl(endpoint: string, params?: Record<string, string | number | boolean | undefined | null>): string {
 		return this.buildUrl(endpoint, params);
 	}
 }

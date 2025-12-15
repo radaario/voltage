@@ -1,13 +1,9 @@
 import { useOutletContext } from "react-router-dom";
-import type { Instance } from "@/interfaces/instance";
 import { JsonViewer } from "@/components";
-
-interface OutletContext {
-	instance: Instance;
-}
+import type { InstanceOutletContext } from "@/types/modal";
 
 const Specs: React.FC = () => {
-	const { instance } = useOutletContext<OutletContext>();
+	const { instance } = useOutletContext<InstanceOutletContext>();
 
 	if (!instance) {
 		return (

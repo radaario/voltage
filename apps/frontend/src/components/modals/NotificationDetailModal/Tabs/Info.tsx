@@ -1,13 +1,9 @@
 import { useOutletContext } from "react-router-dom";
-import type { Notification } from "@/interfaces/notification";
 import { TableKeyValuePreview } from "@/components";
-
-interface OutletContext {
-	notification: Notification;
-}
+import type { NotificationOutletContext } from "@/types/modal";
 
 const Info: React.FC = () => {
-	const { notification } = useOutletContext<OutletContext>();
+	const { notification } = useOutletContext<NotificationOutletContext>();
 
 	return (
 		<TableKeyValuePreview
