@@ -149,7 +149,7 @@ function Modal({
 			<div className="flex min-h-full items-center justify-center p-4">
 				{/* Modal Panel */}
 				<div
-					className={`relative w-full ${sizeClasses[adjustedSize]} ${adjustedHeight ? heightClasses[adjustedHeight] : ""} flex flex-col bg-white dark:bg-neutral-800 rounded-2xl shadow-xl transition-all duration-300 ${
+					className={`relative w-full overflow-hidden ${sizeClasses[adjustedSize]} ${adjustedHeight ? heightClasses[adjustedHeight] : ""} flex flex-col bg-white dark:bg-neutral-800 rounded-2xl shadow-xl transition-all duration-300 ${
 						isAnimating ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 					}`}
 					onClick={(e) => e.stopPropagation()}
