@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { database, logger } from "@voltage/utils";
 import { getNow, addNow } from "@voltage/utils";
 import { createJobNotification } from "@/worker/notifier.js";
@@ -17,7 +17,7 @@ export class JobLifecycleService {
 		this.instanceKey = instanceKey;
 		this.workerKey = workerKey;
 		this.jobKey = jobKey;
-		this.tempJobDir = path.join(config.temp_dir, "jobs", jobKey);
+		this.tempJobDir = path.join(appConfig.temp_dir, "jobs", jobKey);
 	}
 
 	async initialize(): Promise<void> {
@@ -39,6 +39,7 @@ export class JobLifecycleService {
 	parseJob(job: any): JobContext {
 		const parsedJob: JobContext = {
 			...job,
+			config: job.config ? JSON.parse(job.config as string) : null,
 			input: job.input ? JSON.parse(job.input as string) : null,
 			destination: job.destination ? JSON.parse(job.destination as string) : null,
 			notification: job.notification ? JSON.parse(job.notification as string) : null,
@@ -69,7 +70,7 @@ export class JobLifecycleService {
 
 		return outputs.map((output: any) => ({
 			...output,
-			specs: output.specs ? JSON.parse(output.specs as string) : null,
+			config: output.config ? JSON.parse(output.config as string) : null,
 			outcome: output.outcome ? JSON.parse(output.outcome as string) : null
 		}));
 	}
@@ -142,7 +143,7 @@ export class JobLifecycleService {
 				.where("key", output.key)
 				.update({
 					...output,
-					specs: output.specs ? JSON.stringify(output.specs) : null,
+					config: output.config ? JSON.stringify(output.config) : null,
 					outcome: output.outcome ? JSON.stringify(output.outcome) : null,
 					updated_at: getNow()
 				});

@@ -1,45 +1,35 @@
+import {
+	STORAGE_TYPES,
+	DATABASE_TYPES,
+	INSTANCE_KEY_METHODS,
+	FFMPEG_PRESETS,
+	NSFW_MODELS,
+	NSFW_TYPES,
+	WHISPER_MODELS,
+	PREVIEW_FORMATS
+} from "./defaults";
+
 // =====================================================
 // CONFIGURATION TYPES
 // =====================================================
 
-export type StorageType =
-	| "LOCAL"
-	| "OTHER_S3"
-	| "AWS_S3"
-	| "GOOGLE_CLOUD_STORAGE"
-	| "DO_SPACES"
-	| "LINODE"
-	| "WASABI"
-	| "BACKBLAZE"
-	| "RACKSPACE"
-	| "MICROSOFT_AZURE"
-	| "FTP"
-	| "SFTP";
+export type StorageType = (typeof STORAGE_TYPES)[number];
 
-export type DatabaseType = "SQLITE" | "MYSQL" | "MARIADB" | "POSTGRESQL" | "MSSQL" | "AWS_REDSHIFT" | "COCKROACHDB";
+export type DatabaseType = (typeof DATABASE_TYPES)[number];
 
-export type InstanceKeyMethod = "IP_ADDRESS" | "UNIQUE_KEY";
+export type InstanceKeyMethod = (typeof INSTANCE_KEY_METHODS)[number];
 
-export type NSFWModel = "MOBILE_NET_V2" | "MOBILE_NET_V2_MID" | "INCEPTION_V3";
+export type FFmpegPreset = (typeof FFMPEG_PRESETS)[number];
 
-export type NSFWType = "GRAPH";
+export type NSFWModel = (typeof NSFW_MODELS)[number];
 
-export type WhisperModel =
-	| "TINY"
-	| "SMALL"
-	| "MEDIUM"
-	| "LARGE"
-	| "TINY_EN"
-	| "BASE"
-	| "BASE_EN"
-	| "SMALL_EN"
-	| "MEDIUM_EN"
-	| "LARGE_V1"
-	| "LARGE_V3_TURBO";
+export type NSFWType = (typeof NSFW_TYPES)[number];
 
-export type PreviewFormat = "PNG" | "JPG" | "BMP" | "WEBP";
+export type WhisperModel = (typeof WHISPER_MODELS)[number];
 
-export interface Config {
+export type PreviewFormat = (typeof PREVIEW_FORMATS)[number];
+
+export interface AppConfig {
 	name: string;
 	version: string;
 	env: string;
@@ -54,14 +44,18 @@ export interface Config {
 	temp_dir: string;
 
 	utils: {
-		ffmpeg: {
-			path: string;
-		};
 		ffprobe: {
 			path: string;
+			general_attributes: string;
+			video_attributes: string;
+			audio_attributes: string;
+		};
+		ffmpeg: {
+			path: string;
+			preset: FFmpegPreset;
+			quality: number;
 		};
 		nsfw: {
-			is_disabled: boolean;
 			model: NSFWModel;
 			size: number;
 			type: NSFWType;
@@ -69,7 +63,7 @@ export interface Config {
 		};
 		whisper: {
 			model: WhisperModel;
-			cuda: boolean;
+			with_cuda: boolean;
 		};
 	};
 
@@ -150,6 +144,9 @@ export interface Config {
 	};
 
 	jobs: {
+		analyze_input: boolean;
+		generate_preview: boolean;
+		detect_nsfw: boolean;
 		queue_timeout: number;
 		process_interval: number;
 		process_timeout: number;
@@ -197,7 +194,28 @@ export type AWS_S3_ACL =
 	| "BUCKET_OWNER_FULL_CONTROL"
 	| "PRIVATE";
 
-export type JobInputSpecs =
+export type JobConfig = {
+	analyze_input?: boolean; // disable ffprobe analysis
+	generate_preview?: boolean; // disable input preview generation
+	detect_nsfw?: boolean; // disable NSFW detection
+
+	ffprobe_general_attributes?: string; // comma-separated list of ffprobe general properties to extract
+	ffprobe_video_attributes?: string; // comma-separated list of ffprobe video stream properties to extract
+	ffprobe_audio_attributes?: string; // comma-separated list of ffprobe audio stream properties to extract
+
+	ffmpeg_preset?: FFmpegPreset; // ffmpeg preset to use for processing
+	ffmpeg_quality?: number; // ffmpeg quality to use for processing (0-100)
+
+	nsfw_model?: NSFWModel; // NSFW model to use
+	nsfw_size?: number; // NSFW model input size
+	nsfw_type?: NSFWType; // NSFW model type
+	nsfw_threshold?: number; // NSFW detection threshold
+
+	whisper_model?: WhisperModel; // Whisper model to use
+	whisper_with_cuda?: boolean; // use CUDA for Whisper
+};
+
+export type JobInput =
 	| {
 			type: "BASE64";
 			content: string;
@@ -237,7 +255,7 @@ export type JobInputSpecs =
 			name?: string;
 	  };
 
-export type JobDestinationSpecs =
+export type JobDestinationConfig =
 	| {
 			type: "HTTP" | "HTTPS";
 			method?: "POST" | "PUT";
@@ -273,21 +291,23 @@ export type JobDestinationSpecs =
 			secure?: boolean; // for FTP (FTPS with explicit TLS)
 	  };
 
-type JobOutputSpecsCommon = {
+type JobOutputConfigCommon = {
 	name?: string; // optional custom name for the output file
 	path?: string; // required if destination is S3 or FTP
 	acl?: AWS_S3_ACL; // optional if destination is S3, default: PUBLIC
 	expires?: number; // optional if destination is S3, in seconds
 	cache_control?: string; // optional if destination is S3
-	destination?: JobDestinationSpecs; // optional - if not provided, will use global destination
+	destination?: JobDestinationConfig; // optional - if not provided, will use global destination
+	ffmpeg_preset?: FFmpegPreset; // ffmpeg preset to use for this output
+	ffmpeg_quality?: number; // ffmpeg quality to use for this output (0-100)
 };
 
-type JobOutputSpecsCut = {
+type JobOutputConfigCut = {
 	offset?: number; // in seconds
 	duration?: number; // in seconds
 };
 
-type JobOutputSpecsImage = {
+type JobOutputConfigImage = {
 	width?: number;
 	height?: number;
 	quality?: number; // 1-100
@@ -296,14 +316,14 @@ type JobOutputSpecsImage = {
 	flip?: "HORIZONTAL" | "VERTICAL" | "BOTH";
 };
 
-type JobOutputSpecsAudio = {
+type JobOutputConfigAudio = {
 	audio_codec?: string;
 	audio_bit_rate?: number | string; // e.g. '128k'
 	audio_sample_rate?: number; // in Hz
 	audio_channels?: number; // e.g. 2
 };
 
-export type JobOutputSpecs =
+export type JobOutputConfig =
 	| ({
 			type: "VIDEO";
 			format:
@@ -330,41 +350,31 @@ export type JobOutputSpecs =
 			video_profile?: string; // e.g. 'high', 'main', 'baseline'
 			video_level?: string; // e.g. '4.0', '4.1', '5.0'
 			video_deinterlace?: boolean;
-	  } & JobOutputSpecsAudio &
-			JobOutputSpecsCut &
-			JobOutputSpecsImage &
-			JobOutputSpecsCommon)
+	  } & JobOutputConfigAudio &
+			JobOutputConfigCut &
+			JobOutputConfigImage &
+			JobOutputConfigCommon)
 	| ({
 			type: "AUDIO";
 			format: "MP3" | "AAC" | "WAV" | "FLAC" | "OGG" | "OPUS" | "ALAC" | "WMA" | "AIFF" | "AMR-NB" | "AMR-WB" | string;
-	  } & JobOutputSpecsAudio &
-			JobOutputSpecsCut &
-			JobOutputSpecsCommon)
+	  } & JobOutputConfigAudio &
+			JobOutputConfigCut &
+			JobOutputConfigCommon)
 	| ({
 			type: "THUMBNAIL";
 			format: "JPG" | "PNG" | "WEBP" | "BMP" | string;
 			offset?: number; // in seconds
-	  } & JobOutputSpecsImage &
-			JobOutputSpecsCommon)
+	  } & JobOutputConfigImage &
+			JobOutputConfigCommon)
 	| ({
 			type: "SUBTITLE";
 			format: "SRT" | "VTT" | "JSON" | "CSV" | "TXT" | string;
 			language?: string;
-			model?:
-				| "BASE"
-				| "BASE_EN"
-				| "TINY"
-				| "TINY_EN"
-				| "SMALL"
-				| "SMALL_EN"
-				| "MEDIUM"
-				| "MEDIUM_EN"
-				| "LARGE_V1"
-				| "LARGE_V3_TURBO"
-				| string;
-	  } & JobOutputSpecsCommon);
+			whisper_model?: WhisperModel; // for subtitle outputs - Whisper model to use
+			whisper_with_cuda?: boolean; // for subtitle outputs - whether to use CUDA for Whisper
+	  } & JobOutputConfigCommon);
 
-export type JobNotificationSpecs =
+export type JobNotificationConfig =
 	| {
 			type: "HTTP" | "HTTPS";
 			method?: "GET" | "POST" | "PUT";
@@ -389,10 +399,11 @@ export type JobNotificationSpecs =
 
 export type JobRequest = {
 	priority?: number; // priority value (lower = higher priority, default: 1000)
-	input: JobInputSpecs;
-	outputs: JobOutputSpecs[];
-	destination?: JobDestinationSpecs; // optional global destination for outputs that don't have their own
-	notification?: JobNotificationSpecs;
+	config?: JobConfig; // optional custom config overrides for this job
+	input: JobInput;
+	outputs: JobOutputConfig[];
+	destination?: JobDestinationConfig; // optional global destination for outputs that don't have their own
+	notification?: JobNotificationConfig;
 	metadata?: Record<string, any>[]; // custom metadata to be sent back with notifications
 	try_max?: number | 1;
 	retry_in?: number | 0;
@@ -401,6 +412,7 @@ export type JobRequest = {
 export type JobRow = {
 	key: string;
 	priority?: number | 1000;
+	config?: any | null;
 	input?: any | null;
 	destination?: any | null;
 	notification?: any | null;
@@ -446,7 +458,7 @@ export type JobOutputRow = {
 	job_key?: string | null;
 	index: number | 0;
 	priority?: number | 1000;
-	specs?: any | null;
+	config?: any | null;
 	outcome?: any | null;
 	status?:
 		| "PENDING"
@@ -481,7 +493,7 @@ export type JobNotificationRow = {
 	key: string;
 	job_key?: string;
 	priority?: number | 1000;
-	specs?: any | null;
+	config?: any | null;
 	payload?: any | null;
 	outcome?: any | null;
 	status?: "PENDING" | "RETRYING" | "QUEUED" | "SUCCESSFUL" | "SKIPPED" | "FAILED";

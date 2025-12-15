@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 
 /**
  * Sanitize sensitive fields from objects
@@ -25,7 +25,9 @@ export function sanitizeData(data: any, sensitiveFields: string[] = []): any {
 	if (typeof data !== "object") return data;
 
 	// Get core sensitive fields from config
-	const coreSensitiveFields: string[] = config.api.sensitive_fields ? config.api.sensitive_fields.split(",").map((f) => f.trim()) : [];
+	const coreSensitiveFields: string[] = appConfig.api.sensitive_fields
+		? appConfig.api.sensitive_fields.split(",").map((f) => f.trim())
+		: [];
 	const allSensitiveFields = [...coreSensitiveFields, ...sensitiveFields];
 
 	// Handle arrays
@@ -49,4 +51,18 @@ export function sanitizeData(data: any, sensitiveFields: string[] = []): any {
 	}
 
 	return sanitized;
+}
+
+export function formatToUpperSnakeCase(data: any): any {
+	if (data === null || data === undefined) return data;
+	data = data.trim().toUpperCase().replace(/[ -]/g, "_");
+	return data;
+}
+
+export function parsePercent(data: any): any {
+	if (data === null || data === undefined) return data;
+	const num = parseFloat(data);
+	if (isNaN(num) || num < 0) return 0;
+	if (num > 100) return 100;
+	return num;
 }

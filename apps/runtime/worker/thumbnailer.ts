@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { storage } from "@voltage/utils";
 import { spawn } from "child_process";
 import path from "path";
@@ -16,7 +16,7 @@ export class JobThumbnailer {
 
 	constructor(job: any) {
 		this.job = job;
-		this.tempJobDir = path.join(config.temp_dir, "jobs", job.key);
+		this.tempJobDir = path.join(appConfig.temp_dir, "jobs", job.key);
 		this.tempJobInputFilePath = path.join(this.tempJobDir, "input");
 	}
 
@@ -56,7 +56,7 @@ export class JobThumbnailer {
 			await new Promise<void>((resolve, reject) => {
 				let stderrData = "";
 
-				const proc = spawn(config.utils.ffmpeg.path, ffmpegArgs, { stdio: ["ignore", "pipe", "pipe"] }); // inherit || ignore
+				const proc = spawn(appConfig.utils.ffmpeg.path, ffmpegArgs, { stdio: ["ignore", "pipe", "pipe"] }); // inherit || ignore
 
 				proc.stderr.on("data", (chunk) => {
 					stderrData += chunk.toString();
@@ -76,7 +76,7 @@ export class JobThumbnailer {
 			});
 
 			try {
-				storage.config(config.storage);
+				storage.config(appConfig.storage);
 				await storage.upload(
 					tempJobInputPreviewFilePath,
 					`/jobs/${this.job.key}/preview.${tempJobInputPreviewFileFormat.toLowerCase()}`

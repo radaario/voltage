@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { sendError } from "@/utils/response.util.js";
 
 interface RateLimitRecord {
@@ -26,8 +26,8 @@ export const authRateLimitMiddleware = () => {
 		const key = `auth:${ip}`;
 		const now = Date.now();
 
-		const windowMs = config.api.auth_rate_limit.window_ms;
-		const maxRequests = config.api.auth_rate_limit.max_requests;
+		const windowMs = appConfig.api.auth_rate_limit.window_ms;
+		const maxRequests = appConfig.api.auth_rate_limit.max_requests;
 
 		// Get or create record
 		let record = rateLimitStore.get(key);

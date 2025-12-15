@@ -4,9 +4,9 @@ export const testJobPayload = {
 		url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4",
 		nsfw_is_disabled: false,
 		nsfw_model: "MOBILE_NET_V2_MID",
-		nsfw_size: 299,
+		nsfw_size: 224,
 		nfsw_type: "GRAPH",
-		nsfw_threshold: 0.7
+		nsfw_threshold: 75
 	},
 	outputs: [
 		{

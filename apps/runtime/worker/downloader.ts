@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { storage } from "@voltage/utils";
 import path from "path";
 import fs from "fs/promises";
@@ -12,7 +12,7 @@ export class JobDownloader {
 
 	constructor(job: any) {
 		this.job = job;
-		this.tempJobDir = path.join(config.temp_dir, "jobs", job.key);
+		this.tempJobDir = path.join(appConfig.temp_dir, "jobs", job.key);
 		this.tempJobInputFilePath = path.join(this.tempJobDir, "input");
 	}
 

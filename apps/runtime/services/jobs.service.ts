@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { database, logger, getInstanceKey, getNow, subtractNow } from "@voltage/utils";
 import { createJobNotification } from "@/worker/notifier.js";
 import { WorkersProcessMap } from "@/types/index.js";
@@ -14,7 +14,7 @@ export const timeoutQueuedJobs = async (): Promise<void> => {
 		await database
 			.table("jobs")
 			.where("status", "QUEUED")
-			.where("updated_at", "<=", subtractNow(config.jobs.queue_timeout || 5 * 60 * 1000, "milliseconds")) // in milliseconds, default 5 minutes
+			.where("updated_at", "<=", subtractNow(appConfig.jobs.queue_timeout || 5 * 60 * 1000, "milliseconds")) // in milliseconds, default 5 minutes
 			.update({
 				outcome: database.knex.raw(
 					`CASE WHEN \`try_count\` >= \`try_max\` THEN '{"message":"Job queue didn\\'t processed and it failed!"}' ELSE \`outcome\` END`
@@ -46,7 +46,7 @@ export const enqueuePendingJobs = async (): Promise<void> => {
 			.where("locked_by", null)
 			.orderBy("priority", "asc")
 			.orderBy("created_at", "asc")
-			.limit(config.jobs.enqueue_limit || 10) // default 10
+			.limit(appConfig.jobs.enqueue_limit || 10) // default 10
 			.update({ updated_at: now, locked_by: selfInstanceKey });
 	} catch (error: Error | any) {
 		await logger.insert("INSTANCE", "ERROR", "Failed to select pending jobs!", { ...error });
@@ -171,14 +171,14 @@ export const processJobsQueue = async (workersProcessMap: WorkersProcessMap): Pr
 };
 
 export const timeoutProcessingJobs = async (): Promise<void> => {
-	if (config.jobs.process_timeout > 0) {
+	if (appConfig.jobs.process_timeout > 0) {
 		const now = getNow();
 
 		try {
 			await database
 				.table("jobs")
 				.whereNotIn("status", ["COMPLETED", "CANCELLED", "FAILED", "TIMEOUT"])
-				.where("updated_at", "<=", subtractNow(config.jobs.process_timeout || 30 * 60 * 1000, "milliseconds")) // in milliseconds, default 30 minutes
+				.where("updated_at", "<=", subtractNow(appConfig.jobs.process_timeout || 30 * 60 * 1000, "milliseconds")) // in milliseconds, default 30 minutes
 				.where("try_count", ">", 0)
 				.update({
 					outcome: JSON.stringify({ message: "Job processing timed out!" }),

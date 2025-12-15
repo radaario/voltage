@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { sanitizeData, logger, storage } from "@voltage/utils";
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { sendSuccess, sendError, sendPaginatedSuccess } from "@/utils/response.util.js";
 import { getPaginationParams } from "@/utils/pagination.util.js";
 import * as jobsService from "@/services/jobs.service.js";
@@ -56,7 +56,7 @@ export const createJob = async (req: Request, res: Response) => {
 		const job = await jobsService.createJob(req.body);
 
 		return res.status(202).json({
-			metadata: { version: config.version, env: config.env, status: "SUCCESSFUL" },
+			metadata: { version: appConfig.version, env: appConfig.env, status: "SUCCESSFUL" },
 			data: sanitizeData(job)
 		});
 	} catch (error: any) {
@@ -134,12 +134,12 @@ export const getJobPreview = async (req: Request, res: Response) => {
 			}
 
 			try {
-				const exists = await storage.exists(`/jobs/${job_key}/preview.${config.jobs.preview.format.toLowerCase()}`);
+				const exists = await storage.exists(`/jobs/${job_key}/preview.${appConfig.jobs.preview.format.toLowerCase()}`);
 				if (!exists) return serveFallbackImage();
 
-				const buffer = await storage.read(`/jobs/${job_key}/preview.${config.jobs.preview.format.toLowerCase()}`);
+				const buffer = await storage.read(`/jobs/${job_key}/preview.${appConfig.jobs.preview.format.toLowerCase()}`);
 
-				res.setHeader("Content-Type", `image/${config.jobs.preview.format.toLowerCase()}`);
+				res.setHeader("Content-Type", `image/${appConfig.jobs.preview.format.toLowerCase()}`);
 				// res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
 
 				return res.send(buffer);

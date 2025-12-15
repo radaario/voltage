@@ -55,6 +55,17 @@ export function getEnvNumber(key: string, fallback: number): number {
 }
 
 /**
+ * Helper to get number from environment variable with fallback
+ */
+export function getEnvNumberOrNull(key: string, fallback: number | null): number | null {
+	const value = process.env[key];
+	if (!value) return fallback;
+
+	const parsed = Number(value);
+	return isNaN(parsed) ? fallback : parsed;
+}
+
+/**
  * Helper to get boolean from environment variable
  */
 export function getEnvBoolean(key: string, fallback: boolean = false): boolean {

@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import * as tf from "@tensorflow/tfjs";
 import { createRequire } from "module";
 
@@ -7,7 +7,7 @@ const Jimp = require("jimp");
 const nsfwjs = require("nsfwjs");
 
 interface NSFWConfig {
-	nsfw_is_disabled?: boolean;
+	nsfw_enabled?: boolean;
 	nsfw_model?: string;
 	nsfw_size?: number;
 	nsfw_type?: string;
@@ -33,17 +33,17 @@ export class NSFWDetector {
 	}
 
 	async analyze(imagePath: string): Promise<NSFWResult | null> {
-		const nsfwIsDisabled = this.config.nsfw_is_disabled || config.utils.nsfw.is_disabled;
+		const nsfwIsDisabled = this.config.nsfw_enabled || appConfig.utils.nsfw.enabled;
 
 		if (nsfwIsDisabled) {
 			return null;
 		}
 
 		try {
-			const modelName = this.config.nsfw_model || config.utils.nsfw.model;
-			const size = this.config.nsfw_size || config.utils.nsfw.size || 299;
-			const type = this.config.nsfw_type || config.utils.nsfw.type || "GRAPH";
-			const threshold = this.config.nsfw_threshold || config.utils.nsfw.threshold || 0.7;
+			const modelName = this.config.nsfw_model || appConfig.utils.nsfw.model;
+			const size = this.config.nsfw_size || appConfig.utils.nsfw.size || 224;
+			const type = this.config.nsfw_type || appConfig.utils.nsfw.type || "GRAPH";
+			const threshold = this.config.nsfw_threshold || appConfig.utils.nsfw.threshold || 75;
 
 			// Select model
 			let model = NSFW_MODELS.MOBILE_NET_V2_MID;

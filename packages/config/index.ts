@@ -1,20 +1,17 @@
-import type { Config, StorageType, DatabaseType, InstanceKeyMethod, NSFWModel, WhisperModel, PreviewFormat } from "./types";
-import { loadEnvironmentFiles, getEnv, getEnvNumber, getEnvBoolean } from "./loader";
+import type {
+	AppConfig,
+	StorageType,
+	DatabaseType,
+	InstanceKeyMethod,
+	FFmpegPreset,
+	NSFWModel,
+	NSFWType,
+	WhisperModel,
+	PreviewFormat
+} from "./types";
+import { loadEnvironmentFiles, getEnv, getEnvNumber, getEnvNumberOrNull, getEnvBoolean } from "./loader";
 import { validateEnvironment, validateConfig } from "./validators";
-import {
-	getAppDir,
-	SYSTEM_DEFAULTS,
-	APP_DEFAULTS,
-	STORAGE_DEFAULTS,
-	DATABASE_DEFAULTS,
-	RUNTIME_DEFAULTS,
-	API_DEFAULTS,
-	FRONTEND_DEFAULTS,
-	STATS_DEFAULTS,
-	LOGS_DEFAULTS,
-	JOBS_DEFAULTS,
-	UTILS_DEFAULTS
-} from "./defaults";
+import { getAppDir, SYSTEM, APP_CONFIG } from "./defaults";
 
 // =====================================================
 // ENVIRONMENT SETUP
@@ -29,10 +26,10 @@ validateEnvironment();
 // =====================================================
 
 const appDir = getAppDir();
-const appProtocol = getEnv("VOLTAGE_PROTOCOL", APP_DEFAULTS.protocol);
-const appHost = getEnv("VOLTAGE_HOST", APP_DEFAULTS.host);
-const appPort = getEnvNumber("VOLTAGE_PORT", APP_DEFAULTS.port);
-const appPath = getEnv("VOLTAGE_PATH", APP_DEFAULTS.path);
+const appProtocol = getEnv("VOLTAGE_PROTOCOL", APP_CONFIG.protocol);
+const appHost = getEnv("VOLTAGE_HOST", APP_CONFIG.host);
+const appPort = getEnvNumber("VOLTAGE_PORT", APP_CONFIG.port);
+const appPath = getEnv("VOLTAGE_PATH", APP_CONFIG.path);
 const appUrl = `${appProtocol}://${appHost}${appPort !== 80 ? `:${appPort}` : ""}${appPath}`;
 
 const frontendPassword = getEnv("VOLTAGE_FRONTEND_PASSWORD") || null;
@@ -41,157 +38,168 @@ const frontendPassword = getEnv("VOLTAGE_FRONTEND_PASSWORD") || null;
 // CONFIGURATION OBJECT
 // =====================================================
 
-export const config: Config = {
+export const appConfig: AppConfig = {
 	// Application basics
-	name: getEnv("VOLTAGE_NAME", APP_DEFAULTS.name),
-	version: getEnv("VOLTAGE_VERSION", APP_DEFAULTS.version),
-	env: getEnv("VOLTAGE_ENV", APP_DEFAULTS.env),
-	ngnix_port: getEnvNumber("VOLTAGE_NGINX_PORT", APP_DEFAULTS.nginxPort),
+	name: getEnv("VOLTAGE_NAME", APP_CONFIG.name),
+	version: getEnv("VOLTAGE_VERSION", APP_CONFIG.version),
+	env: getEnv("VOLTAGE_ENV", APP_CONFIG.env),
+	ngnix_port: getEnvNumber("VOLTAGE_NGINX_PORT", APP_CONFIG.nginxPort),
 	url: appUrl,
 	protocol: appProtocol,
 	host: appHost,
 	path: appPath,
 	port: appPort,
-	timezone: getEnv("VOLTAGE_TIMEZONE", APP_DEFAULTS.timezone),
+	timezone: getEnv("VOLTAGE_TIMEZONE", APP_CONFIG.timezone),
 	dir: appDir,
 	temp_dir: getEnv("VOLTAGE_TEMP_DIR", `${appDir}/storage/tmp`),
 
 	// Utilities configuration
 	utils: {
-		ffmpeg: {
-			path: getEnv("FFMPEG_PATH", SYSTEM_DEFAULTS.ffmpegPath)
-		},
 		ffprobe: {
-			path: getEnv("FFPROBE_PATH", SYSTEM_DEFAULTS.ffprobePath)
+			path: getEnv("VOLTAGE_UTILS_FFPROBE_PATH", APP_CONFIG.utils.ffprobe.path),
+			general_attributes: getEnv("VOLTAGE_UTILS_FFPROBE_GENERAL_ATTRIBUTES", APP_CONFIG.utils.ffprobe.generalAttributes),
+			video_attributes: getEnv("VOLTAGE_UTILS_FFPROBE_VIDEO_ATTRIBUTES", APP_CONFIG.utils.ffprobe.videoAttributes),
+			audio_attributes: getEnv("VOLTAGE_UTILS_FFPROBE_AUDIO_ATTRIBUTES", APP_CONFIG.utils.ffprobe.audioAttributes)
+		},
+		ffmpeg: {
+			path: getEnv("VOLTAGE_UTILS_FFMPEG_PATH", APP_CONFIG.utils.ffmpeg.path),
+			preset: getEnv("VOLTAGE_UTILS_FFMPEG_PRESET", APP_CONFIG.utils.ffmpeg.preset) as FFmpegPreset,
+			quality: getEnvNumber("VOLTAGE_UTILS_FFMPEG_QUALITY", APP_CONFIG.utils.ffmpeg.quality)
 		},
 		nsfw: {
-			is_disabled: getEnvBoolean("NSFW_IS_DISABLED", UTILS_DEFAULTS.nsfw.isDisabled),
-			model: getEnv("NSFW_MODEL", UTILS_DEFAULTS.nsfw.model) as NSFWModel,
-			size: getEnvNumber("NSFW_SIZE", UTILS_DEFAULTS.nsfw.size),
-			type: getEnv("NSFW_TYPE", UTILS_DEFAULTS.nsfw.type) as "GRAPH",
-			threshold: getEnvNumber("NSFW_THRESHOLD", UTILS_DEFAULTS.nsfw.threshold)
+			model: getEnv("VOLTAGE_UTILS_NSFW_MODEL", APP_CONFIG.utils.nsfw.model) as NSFWModel,
+			size: getEnvNumber("VOLTAGE_UTILS_NSFW_SIZE", APP_CONFIG.utils.nsfw.size),
+			type: getEnv("VOLTAGE_UTILS_NSFW_TYPE", APP_CONFIG.utils.nsfw.type) as NSFWType,
+			threshold: getEnvNumber("VOLTAGE_UTILS_NSFW_THRESHOLD", APP_CONFIG.utils.nsfw.threshold)
 		},
 		whisper: {
-			model: getEnv("WHISPER_MODEL", UTILS_DEFAULTS.whisper.model) as WhisperModel,
-			cuda: getEnvBoolean("WHISPER_CUDA", UTILS_DEFAULTS.whisper.cuda)
+			model: getEnv("VOLTAGE_UTILS_WHISPER_MODEL", APP_CONFIG.utils.whisper.model) as WhisperModel,
+			with_cuda: getEnvBoolean("VOLTAGE_UTILS_WHISPER_WITH_CUDA", APP_CONFIG.utils.whisper.with_cuda)
 		}
 	},
 
 	// Storage configuration
 	storage: {
-		type: getEnv("VOLTAGE_STORAGE_TYPE", STORAGE_DEFAULTS.type) as StorageType,
-		endpoint: getEnv("VOLTAGE_STORAGE_ENDPOINT", STORAGE_DEFAULTS.endpoint),
-		access_key: getEnv("VOLTAGE_STORAGE_ACCESS_KEY", STORAGE_DEFAULTS.accessKey),
-		access_secret: getEnv("VOLTAGE_STORAGE_ACCESS_SECRET", STORAGE_DEFAULTS.accessSecret),
-		region: getEnv("VOLTAGE_STORAGE_REGION", STORAGE_DEFAULTS.region),
-		bucket: getEnv("VOLTAGE_STORAGE_BUCKET", STORAGE_DEFAULTS.bucket),
-		host: getEnv("VOLTAGE_STORAGE_HOST", STORAGE_DEFAULTS.host),
-		username: getEnv("VOLTAGE_STORAGE_USERNAME", STORAGE_DEFAULTS.username),
-		password: getEnv("VOLTAGE_STORAGE_PASSWORD", STORAGE_DEFAULTS.password),
-		secure: getEnvBoolean("VOLTAGE_STORAGE_SECURE", STORAGE_DEFAULTS.secure),
+		type: getEnv("VOLTAGE_STORAGE_TYPE", APP_CONFIG.storage.type) as StorageType,
+		endpoint: getEnv("VOLTAGE_STORAGE_ENDPOINT", APP_CONFIG.storage.endpoint),
+		access_key: getEnv("VOLTAGE_STORAGE_ACCESS_KEY", APP_CONFIG.storage.accessKey),
+		access_secret: getEnv("VOLTAGE_STORAGE_ACCESS_SECRET", APP_CONFIG.storage.accessSecret),
+		region: getEnv("VOLTAGE_STORAGE_REGION", APP_CONFIG.storage.region),
+		bucket: getEnv("VOLTAGE_STORAGE_BUCKET", APP_CONFIG.storage.bucket),
+		host: getEnv("VOLTAGE_STORAGE_HOST", APP_CONFIG.storage.host),
+		username: getEnv("VOLTAGE_STORAGE_USERNAME", APP_CONFIG.storage.username),
+		password: getEnv("VOLTAGE_STORAGE_PASSWORD", APP_CONFIG.storage.password),
+		secure: getEnvBoolean("VOLTAGE_STORAGE_SECURE", APP_CONFIG.storage.secure),
 		base_path: getEnv("VOLTAGE_STORAGE_BASE_PATH", `${appDir}/storage`)
 	},
 
 	// Database configuration
 	database: {
-		type: getEnv("VOLTAGE_DATABASE_TYPE", DATABASE_DEFAULTS.type) as DatabaseType,
-		host: getEnv("VOLTAGE_DATABASE_HOST", DATABASE_DEFAULTS.host),
-		port: getEnvNumber("VOLTAGE_DATABASE_PORT", DATABASE_DEFAULTS.port),
-		username: getEnv("VOLTAGE_DATABASE_USERNAME", DATABASE_DEFAULTS.username),
-		password: getEnv("VOLTAGE_DATABASE_PASSWORD", DATABASE_DEFAULTS.password),
-		name: getEnv("VOLTAGE_DATABASE_NAME", DATABASE_DEFAULTS.name),
-		table_prefix: getEnv("VOLTAGE_DATABASE_TABLE_PREFIX", DATABASE_DEFAULTS.tablePrefix),
-		file_name: getEnv("VOLTAGE_DATABASE_FILE_NAME", DATABASE_DEFAULTS.fileName),
-		cleanup_interval: getEnvNumber("VOLTAGE_DATABASE_CLEANUP_INTERVAL", DATABASE_DEFAULTS.cleanupInterval)
+		type: getEnv("VOLTAGE_DATABASE_TYPE", APP_CONFIG.database.type) as DatabaseType,
+		host: getEnv("VOLTAGE_DATABASE_HOST", APP_CONFIG.database.host),
+		port: getEnvNumber("VOLTAGE_DATABASE_PORT", APP_CONFIG.database.port),
+		username: getEnv("VOLTAGE_DATABASE_USERNAME", APP_CONFIG.database.username),
+		password: getEnv("VOLTAGE_DATABASE_PASSWORD", APP_CONFIG.database.password),
+		name: getEnv("VOLTAGE_DATABASE_NAME", APP_CONFIG.database.name),
+		table_prefix: getEnv("VOLTAGE_DATABASE_TABLE_PREFIX", APP_CONFIG.database.tablePrefix),
+		file_name: getEnv("VOLTAGE_DATABASE_FILE_NAME", APP_CONFIG.database.fileName),
+		cleanup_interval: getEnvNumber("VOLTAGE_DATABASE_CLEANUP_INTERVAL", APP_CONFIG.database.cleanupInterval)
 	},
 
 	// Runtime configuration
 	runtime: {
-		is_disabled: getEnvBoolean("VOLTAGE_RUNTIME_IS_DISABLED", RUNTIME_DEFAULTS.isDisabled),
-		key_method: getEnv("VOLTAGE_INSTANCES_KEY_METHOD", RUNTIME_DEFAULTS.keyMethod) as InstanceKeyMethod,
-		maintain_interval: getEnvNumber("VOLTAGE_INSTANCES_MAINTAIN_INTERVAL", RUNTIME_DEFAULTS.maintainInterval),
-		online_timeout: getEnvNumber("VOLTAGE_INSTANCES_ONLINE_TIMEOUT", RUNTIME_DEFAULTS.onlineTimeout),
-		purge_after: getEnvNumber("VOLTAGE_INSTANCES_PURGE_AFTER", RUNTIME_DEFAULTS.purgeAfter),
+		is_disabled: getEnvBoolean("VOLTAGE_RUNTIME_IS_DISABLED", APP_CONFIG.runtime.isDisabled),
+		key_method: getEnv("VOLTAGE_INSTANCES_KEY_METHOD", APP_CONFIG.runtime.keyMethod) as InstanceKeyMethod,
+		maintain_interval: getEnvNumber("VOLTAGE_INSTANCES_MAINTAIN_INTERVAL", APP_CONFIG.runtime.maintainInterval),
+		online_timeout: getEnvNumber("VOLTAGE_INSTANCES_ONLINE_TIMEOUT", APP_CONFIG.runtime.onlineTimeout),
+		purge_after: getEnvNumber("VOLTAGE_INSTANCES_PURGE_AFTER", APP_CONFIG.runtime.purgeAfter),
 		workers: {
-			per_cpu_core: getEnvNumber("VOLTAGE_WORKERS_PER_CPU_CORE", RUNTIME_DEFAULTS.workers.perCpuCore),
-			max: SYSTEM_DEFAULTS.cpuCoresCount * getEnvNumber("VOLTAGE_WORKERS_PER_CPU_CORE", RUNTIME_DEFAULTS.workers.perCpuCore),
-			busy_interval: getEnvNumber("VOLTAGE_WORKERS_BUSY_INTERVAL", RUNTIME_DEFAULTS.workers.busyInterval),
-			busy_timeout: getEnvNumber("VOLTAGE_WORKERS_BUSY_TIMEOUT", RUNTIME_DEFAULTS.workers.busyTimeout),
-			idle_after: getEnvNumber("VOLTAGE_WORKERS_IDLE_AFTER", RUNTIME_DEFAULTS.workers.idleAfter)
+			per_cpu_core: getEnvNumber("VOLTAGE_WORKERS_PER_CPU_CORE", APP_CONFIG.runtime.workers.perCpuCore),
+			max: SYSTEM.cpuCoresCount * getEnvNumber("VOLTAGE_WORKERS_PER_CPU_CORE", APP_CONFIG.runtime.workers.perCpuCore),
+			busy_interval: getEnvNumber("VOLTAGE_WORKERS_BUSY_INTERVAL", APP_CONFIG.runtime.workers.busyInterval),
+			busy_timeout: getEnvNumber("VOLTAGE_WORKERS_BUSY_TIMEOUT", APP_CONFIG.runtime.workers.busyTimeout),
+			idle_after: getEnvNumber("VOLTAGE_WORKERS_IDLE_AFTER", APP_CONFIG.runtime.workers.idleAfter)
 		}
 	},
 
 	// API configuration
 	api: {
-		is_disabled: getEnvBoolean("VOLTAGE_API_IS_DISABLED", API_DEFAULTS.isDisabled),
-		url: getEnv("VOLTAGE_HOST") ? `${appUrl}/api` : `http://localhost:${getEnvNumber("VOLTAGE_API_NODE_PORT", API_DEFAULTS.nodePort)}`,
-		node_port: getEnvNumber("VOLTAGE_API_NODE_PORT", API_DEFAULTS.nodePort),
-		key: getEnv("VOLTAGE_API_KEY") || API_DEFAULTS.key,
-		request_body_limit: getEnvNumber("VOLTAGE_API_REQUEST_BODY_LIMIT", API_DEFAULTS.requestBodyLimit),
+		is_disabled: getEnvBoolean("VOLTAGE_API_IS_DISABLED", APP_CONFIG.api.isDisabled),
+		url: getEnv("VOLTAGE_HOST")
+			? `${appUrl}/api`
+			: `http://localhost:${getEnvNumber("VOLTAGE_API_NODE_PORT", APP_CONFIG.api.nodePort)}`,
+		node_port: getEnvNumber("VOLTAGE_API_NODE_PORT", APP_CONFIG.api.nodePort),
+		key: getEnv("VOLTAGE_API_KEY") || APP_CONFIG.api.key,
+		request_body_limit: getEnvNumber("VOLTAGE_API_REQUEST_BODY_LIMIT", APP_CONFIG.api.requestBodyLimit),
 		auth_rate_limit: {
-			window_ms: getEnvNumber("VOLTAGE_API_AUTH_RATE_LIMIT_WINDOW_MS", API_DEFAULTS.authRateLimit.windowMs),
-			max_requests: getEnvNumber("VOLTAGE_API_AUTH_RATE_LIMIT_MAX_REQUESTS", API_DEFAULTS.authRateLimit.maxRequests)
+			window_ms: getEnvNumber("VOLTAGE_API_AUTH_RATE_LIMIT_WINDOW_MS", APP_CONFIG.api.authRateLimit.windowMs),
+			max_requests: getEnvNumber("VOLTAGE_API_AUTH_RATE_LIMIT_MAX_REQUESTS", APP_CONFIG.api.authRateLimit.maxRequests)
 		},
-		sensitive_fields: getEnv("VOLTAGE_API_SENSITIVE_FIELDS", API_DEFAULTS.sensitiveFields)
+		sensitive_fields: getEnv("VOLTAGE_API_SENSITIVE_FIELDS", APP_CONFIG.api.sensitiveFields)
 	},
 
 	// Frontend configuration
 	frontend: {
-		is_disabled: getEnvBoolean("VOLTAGE_FRONTEND_IS_DISABLED", FRONTEND_DEFAULTS.isDisabled),
-		url: getEnv("VOLTAGE_HOST") ? appUrl : `http://localhost:${getEnvNumber("VOLTAGE_FRONTEND_NODE_PORT", FRONTEND_DEFAULTS.nodePort)}`,
-		node_port: getEnvNumber("VOLTAGE_FRONTEND_NODE_PORT", FRONTEND_DEFAULTS.nodePort),
+		is_disabled: getEnvBoolean("VOLTAGE_FRONTEND_IS_DISABLED", APP_CONFIG.frontend.isDisabled),
+		url: getEnv("VOLTAGE_HOST")
+			? appUrl
+			: `http://localhost:${getEnvNumber("VOLTAGE_FRONTEND_NODE_PORT", APP_CONFIG.frontend.nodePort)}`,
+		node_port: getEnvNumber("VOLTAGE_FRONTEND_NODE_PORT", APP_CONFIG.frontend.nodePort),
 		is_authentication_required: frontendPassword !== null,
 		password: frontendPassword,
-		data_refetch_interval: getEnvNumber("VOLTAGE_FRONTEND_DATA_REFETCH_INTERVAL", FRONTEND_DEFAULTS.dataRefetchInterval),
-		datetime_format: getEnv("VOLTAGE_FRONTEND_DATETIME_FORMAT", FRONTEND_DEFAULTS.datetimeFormat),
+		data_refetch_interval: getEnvNumber("VOLTAGE_FRONTEND_DATA_REFETCH_INTERVAL", APP_CONFIG.frontend.dataRefetchInterval),
+		datetime_format: getEnv("VOLTAGE_FRONTEND_DATETIME_FORMAT", APP_CONFIG.frontend.datetimeFormat),
 		local_storage: {
-			prefix: getEnv("VOLTAGE_FRONTEND_LOCAL_STORAGE_PREFIX") || FRONTEND_DEFAULTS.localStorage.prefix
+			prefix: getEnv("VOLTAGE_FRONTEND_LOCAL_STORAGE_PREFIX") || APP_CONFIG.frontend.localStorage.prefix
 		}
 	},
 
 	// Stats configuration
 	stats: {
-		retention: getEnvNumber("VOLTAGE_STATS_RETENTION", STATS_DEFAULTS.retention)
+		retention: getEnvNumber("VOLTAGE_STATS_RETENTION", APP_CONFIG.stats.retention)
 	},
 
 	// Logs configuration
 	logs: {
-		is_disabled: getEnvBoolean("VOLTAGE_LOGS_IS_DISABLED", LOGS_DEFAULTS.isDisabled),
-		retention: getEnvNumber("VOLTAGE_LOGS_RETENTION", LOGS_DEFAULTS.retention)
+		is_disabled: getEnvBoolean("VOLTAGE_LOGS_IS_DISABLED", APP_CONFIG.logs.isDisabled),
+		retention: getEnvNumber("VOLTAGE_LOGS_RETENTION", APP_CONFIG.logs.retention)
 	},
 
 	// Jobs configuration
 	jobs: {
-		queue_timeout: getEnvNumber("VOLTAGE_JOBS_QUEUE_TIMEOUT", JOBS_DEFAULTS.queueTimeout),
-		process_interval: getEnvNumber("VOLTAGE_JOBS_PROCESS_INTERVAL", JOBS_DEFAULTS.processInterval),
-		process_timeout: getEnvNumber("VOLTAGE_JOBS_PROCESS_TIMEOUT", JOBS_DEFAULTS.processTimeout),
-		enqueue_on_receive: getEnvBoolean("VOLTAGE_JOBS_ENQUEUE_ON_RECEIVE", JOBS_DEFAULTS.enqueueOnReceive),
-		enqueue_limit: getEnvNumber("VOLTAGE_JOBS_ENQUEUE_LIMIT", JOBS_DEFAULTS.enqueueLimit),
-		retention: getEnvNumber("VOLTAGE_JOBS_RETENTION", JOBS_DEFAULTS.retention),
-		try_min: getEnvNumber("VOLTAGE_JOBS_TRY_MIN", JOBS_DEFAULTS.tryMin),
-		try_max: getEnvNumber("VOLTAGE_JOBS_TRY_MAX", JOBS_DEFAULTS.tryMax),
-		try_count: getEnvNumber("VOLTAGE_JOBS_TRY_COUNT", JOBS_DEFAULTS.tryCount),
-		retry_in_min: getEnvNumber("VOLTAGE_JOBS_RETRY_IN_MIN", JOBS_DEFAULTS.retryInMin),
-		retry_in_max: getEnvNumber("VOLTAGE_JOBS_RETRY_IN_MAX", JOBS_DEFAULTS.retryInMax),
-		retry_in: getEnvNumber("VOLTAGE_JOBS_RETRY_IN", JOBS_DEFAULTS.retryIn),
+		analyze_input: getEnvBoolean("VOLTAGE_JOBS_ANALYZE_INPUT", APP_CONFIG.jobs.analyze_input),
+		generate_preview: getEnvBoolean("VOLTAGE_JOBS_GENERATE_PREVIEW", APP_CONFIG.jobs.generate_preview),
+		detect_nsfw: getEnvBoolean("VOLTAGE_JOBS_DETECT_NSFW", APP_CONFIG.jobs.detect_nsfw),
+		queue_timeout: getEnvNumber("VOLTAGE_JOBS_QUEUE_TIMEOUT", APP_CONFIG.jobs.queueTimeout),
+		process_interval: getEnvNumber("VOLTAGE_JOBS_PROCESS_INTERVAL", APP_CONFIG.jobs.processInterval),
+		process_timeout: getEnvNumber("VOLTAGE_JOBS_PROCESS_TIMEOUT", APP_CONFIG.jobs.processTimeout),
+		enqueue_on_receive: getEnvBoolean("VOLTAGE_JOBS_ENQUEUE_ON_RECEIVE", APP_CONFIG.jobs.enqueueOnReceive),
+		enqueue_limit: getEnvNumber("VOLTAGE_JOBS_ENQUEUE_LIMIT", APP_CONFIG.jobs.enqueueLimit),
+		retention: getEnvNumber("VOLTAGE_JOBS_RETENTION", APP_CONFIG.jobs.retention),
+		try_min: getEnvNumber("VOLTAGE_JOBS_TRY_MIN", APP_CONFIG.jobs.tryMin),
+		try_max: getEnvNumber("VOLTAGE_JOBS_TRY_MAX", APP_CONFIG.jobs.tryMax),
+		try_count: getEnvNumber("VOLTAGE_JOBS_TRY_COUNT", APP_CONFIG.jobs.tryCount),
+		retry_in_min: getEnvNumber("VOLTAGE_JOBS_RETRY_IN_MIN", APP_CONFIG.jobs.retryInMin),
+		retry_in_max: getEnvNumber("VOLTAGE_JOBS_RETRY_IN_MAX", APP_CONFIG.jobs.retryInMax),
+		retry_in: getEnvNumber("VOLTAGE_JOBS_RETRY_IN", APP_CONFIG.jobs.retryIn),
 		preview: {
-			format: getEnv("VOLTAGE_JOBS_PREVIEW_FORMAT", JOBS_DEFAULTS.preview.format) as PreviewFormat,
-			quality: getEnvNumber("VOLTAGE_JOBS_PREVIEW_QUALITY", JOBS_DEFAULTS.preview.quality)
+			format: getEnv("VOLTAGE_JOBS_PREVIEW_FORMAT", APP_CONFIG.jobs.preview.format) as PreviewFormat,
+			quality: getEnvNumber("VOLTAGE_JOBS_PREVIEW_QUALITY", APP_CONFIG.jobs.preview.quality)
 		},
 		outputs: {
-			process_interval: getEnvNumber("VOLTAGE_JOBS_OUTPUTS_PROCESS_INTERVAL", JOBS_DEFAULTS.outputs.processInterval)
+			process_interval: getEnvNumber("VOLTAGE_JOBS_OUTPUTS_PROCESS_INTERVAL", APP_CONFIG.jobs.outputs.processInterval)
 		},
 		notifications: {
-			process_interval: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_PROCESS_INTERVAL", JOBS_DEFAULTS.notifications.processInterval),
-			process_limit: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_PROCESS_LIMIT", JOBS_DEFAULTS.notifications.processLimit),
-			notify_on: getEnv("VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON", JOBS_DEFAULTS.notifications.notifyOn),
-			notify_on_alloweds: getEnv("VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON_ALLOWEDS", JOBS_DEFAULTS.notifications.notifyOnAlloweds),
-			timeout: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT", JOBS_DEFAULTS.notifications.timeout),
-			timeout_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX", JOBS_DEFAULTS.notifications.timeoutMax),
-			try: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TRY", JOBS_DEFAULTS.notifications.try),
-			try_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TRY_MAX", JOBS_DEFAULTS.notifications.tryMax),
-			retry_in: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN", JOBS_DEFAULTS.notifications.retryIn),
-			retry_in_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MAX", JOBS_DEFAULTS.notifications.retryInMax)
+			process_interval: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_PROCESS_INTERVAL", APP_CONFIG.jobs.notifications.processInterval),
+			process_limit: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_PROCESS_LIMIT", APP_CONFIG.jobs.notifications.processLimit),
+			notify_on: getEnv("VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON", APP_CONFIG.jobs.notifications.notifyOn),
+			notify_on_alloweds: getEnv("VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON_ALLOWEDS", APP_CONFIG.jobs.notifications.notifyOnAlloweds),
+			timeout: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT", APP_CONFIG.jobs.notifications.timeout),
+			timeout_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX", APP_CONFIG.jobs.notifications.timeoutMax),
+			try: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TRY", APP_CONFIG.jobs.notifications.try),
+			try_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TRY_MAX", APP_CONFIG.jobs.notifications.tryMax),
+			retry_in: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN", APP_CONFIG.jobs.notifications.retryIn),
+			retry_in_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MAX", APP_CONFIG.jobs.notifications.retryInMax)
 		}
 	}
 };
@@ -200,7 +208,7 @@ export const config: Config = {
 // VALIDATE CONFIGURATION
 // =====================================================
 
-validateConfig(config);
+validateConfig(appConfig);
 
 // =====================================================
 // EXPORTS
@@ -208,3 +216,4 @@ validateConfig(config);
 
 // Re-export types for convenience
 export * from "./types";
+export * from "./defaults";

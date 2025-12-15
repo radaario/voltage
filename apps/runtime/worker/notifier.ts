@@ -1,5 +1,5 @@
-import { config } from "@voltage/config";
-import { JobNotificationSpecs } from "@voltage/config/types";
+import { appConfig } from "@voltage/config";
+import { JobNotificationConfig } from "@voltage/config/types";
 
 import { database, stats, logger } from "@voltage/utils";
 import { uukey, getNow, addNow, sanitizeData } from "@voltage/utils";
@@ -7,14 +7,14 @@ import { uukey, getNow, addNow, sanitizeData } from "@voltage/utils";
 import axios from "axios";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 
-database.config(config.database);
+database.config(appConfig.database);
 
 export async function createJobNotification(job: any, jobStatus: string): Promise<any> {
 	if (!job.notification || !job.notification.type) {
 		return { status: "SKIPPED" };
 	}
 
-	let jobNotificationNotifyOn = config.jobs.notifications.notify_on ? config.jobs.notifications.notify_on.split(",") : [];
+	let jobNotificationNotifyOn = appConfig.jobs.notifications.notify_on ? appConfig.jobs.notifications.notify_on.split(",") : [];
 	if (job.notification && job.notification.notify_on && Array.isArray(job.notification.notify_on)) {
 		jobNotificationNotifyOn = job.notification.notify_on;
 	}
@@ -40,25 +40,26 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 		worker_key: job.worker_key,
 		job_key: job.key,
 		priority: job.priority ?? 1000,
-		specs: job.notification || null,
+		config: job.notification || null,
 		payload: sanitizedJob || null,
 		outcome: notificationOutcome || null,
 		status: notificationOutcome.status || "FAILED",
 		updated_at: now,
 		created_at: now,
-		try_max: config.jobs.notifications.try || 3, // default 3
+		try_max: appConfig.jobs.notifications.try || 3, // default 3
 		try_count: 1,
-		retry_in: config.jobs.notifications.retry_in || 1 * 60 * 1000, // in milliseconds, default 1 minute
+		retry_in: appConfig.jobs.notifications.retry_in || 1 * 60 * 1000, // in milliseconds, default 1 minute
 		retry_at: null
 	};
 
 	if (job?.notification?.try && parseInt(job.notification.try) > 0) notification.try_max = parseInt(job.notification.try);
 	if (notification.try_max < 1) notification.try_max = 1;
-	if (notification.try_max > config.jobs.notifications.try_max) notification.try_max = config.jobs.notifications.try_max;
+	if (notification.try_max > appConfig.jobs.notifications.try_max) notification.try_max = appConfig.jobs.notifications.try_max;
 
 	if (job.notification?.retry_in && parseInt(job.notification.retry_in) > 0) notification.retry_in = parseInt(job.notification.retry_in);
 	if (notification.retry_in < 1 * 1000) notification.retry_in = 1 * 1000;
-	if (notification.retry_in > config.jobs.notifications.retry_in_max) notification.retry_in = config.jobs.notifications.retry_in_max;
+	if (notification.retry_in > appConfig.jobs.notifications.retry_in_max)
+		notification.retry_in = appConfig.jobs.notifications.retry_in_max;
 
 	const notificationStats = {
 		notifications_created_count: 1,
@@ -97,7 +98,7 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 		// JOB: NOTIFICATION: INSERT
 		await database.table("jobs_notifications").insert({
 			...notification,
-			specs: notification.specs ? JSON.stringify(notification.specs) : null,
+			config: notification.config ? JSON.stringify(notification.config) : null,
 			payload: notification.payload ? JSON.stringify(notification.payload) : null,
 			outcome: notification.outcome ? JSON.stringify(notification.outcome) : null
 		});
@@ -134,7 +135,7 @@ export async function retryJobNotification(notification: any): Promise<any> {
 	};
 
 	try {
-		const notificationOutcome = await notify(JSON.parse(notification.specs), JSON.parse(notification.payload));
+		const notificationOutcome = await notify(JSON.parse(notification.config), JSON.parse(notification.payload));
 
 		notification.status = notificationOutcome.status || "FAILED";
 		notification.try_count = (notification.try_count || 1) + 1;
@@ -178,7 +179,7 @@ export async function retryJobNotification(notification: any): Promise<any> {
 			.where("key", notification.key)
 			.update({
 				...notification,
-				specs: notification.specs ? JSON.stringify(notification.specs) : null,
+				config: notification.config ? JSON.stringify(notification.config) : null,
 				payload: notification.payload ? JSON.stringify(notification.payload) : null,
 				outcome: notification.outcome ? JSON.stringify(notification.outcome) : null
 			});
@@ -199,18 +200,18 @@ export async function retryJobNotification(notification: any): Promise<any> {
 	return outcome;
 }
 
-export async function notify(specs: JobNotificationSpecs, payload: any): Promise<any> {
+export async function notify(config: JobNotificationConfig, payload: any): Promise<any> {
 	let outcome: any = {
 		status: "FAILED"
 	};
 
 	try {
-		if (specs.type === "HTTP" || specs.type === "HTTPS") {
+		if (config.type === "HTTP" || config.type === "HTTPS") {
 			// HTTP/HTTPS notification
-			outcome = await notifyHttp(specs, payload);
-		} else if (specs.type === "AWS_SNS") {
+			outcome = await notifyHttp(config, payload);
+		} else if (config.type === "AWS_SNS") {
 			// AWS SNS notification
-			outcome = await notifySns(specs, payload);
+			outcome = await notifySns(config, payload);
 		} else {
 			throw new Error("Unknown notification type!");
 		}
@@ -222,13 +223,17 @@ export async function notify(specs: JobNotificationSpecs, payload: any): Promise
 	return outcome;
 }
 
-async function notifyHttp(specs: any, payload: any): Promise<any> {
-	const method = specs.method || "POST";
-	const headers = { "Content-Type": "application/json", "User-Agent": `${config.name}/${config.version}`, ...(specs.headers || {}) };
+async function notifyHttp(config: any, payload: any): Promise<any> {
+	const method = config.method || "POST";
+	const headers = {
+		"Content-Type": "application/json",
+		"User-Agent": `${appConfig.name}/${appConfig.version}`,
+		...(config.headers || {})
+	};
 
-	let timeout = specs.timeout || config.jobs.notifications.timeout;
+	let timeout = config.timeout || appConfig.jobs.notifications.timeout;
 	if (timeout < 1) timeout = 1;
-	if (timeout > config.jobs.notifications.timeout_max) timeout = config.jobs.notifications.timeout_max;
+	if (timeout > appConfig.jobs.notifications.timeout_max) timeout = appConfig.jobs.notifications.timeout_max;
 
 	const requestConfig: any = {
 		method,
@@ -244,10 +249,10 @@ async function notifyHttp(specs: any, payload: any): Promise<any> {
 				params.append(key, String(value));
 			}
 		});
-		requestConfig.url = `${specs.url}?${params.toString()}`;
+		requestConfig.url = `${config.url}?${params.toString()}`;
 	} else {
 		// For POST/PUT requests, send as JSON body
-		requestConfig.url = specs.url;
+		requestConfig.url = config.url;
 		requestConfig.data = payload;
 	}
 
@@ -265,18 +270,18 @@ async function notifyHttp(specs: any, payload: any): Promise<any> {
 	return outcome;
 }
 
-async function notifySns(specs: any, payload: any): Promise<any> {
+async function notifySns(config: any, payload: any): Promise<any> {
 	const snsClient = new SNSClient({
-		region: specs.region,
+		region: config.region,
 		credentials: {
-			accessKeyId: specs.access_key,
-			secretAccessKey: specs.access_secret
+			accessKeyId: config.access_key,
+			secretAccessKey: config.access_secret
 		}
 	});
 
 	// Always include full payload with metadata
 	const command = new PublishCommand({
-		TopicArn: specs.topic,
+		TopicArn: config.topic,
 		Message: JSON.stringify(payload),
 		Subject: `Job ${(payload as any)?.status || "update"}`
 	});

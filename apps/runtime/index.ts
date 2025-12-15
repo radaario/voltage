@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { storage, database, logger, getInstanceKey, getInstanceSpecs, getNow } from "@voltage/utils";
 import { WorkersProcessMap } from "@/types/index.js";
 import { restartInstance } from "@/services/instances.service.js";
@@ -29,7 +29,7 @@ async function processJobs(): Promise<void> {
 
 	await timeoutProcessingJobs();
 
-	setTimeout(() => processJobs(), config.jobs.process_interval || 10000); // default 10 seconds
+	setTimeout(() => processJobs(), appConfig.jobs.process_interval || 10000); // default 10 seconds
 }
 
 async function processNotificationsQueue(): Promise<void> {
@@ -38,7 +38,7 @@ async function processNotificationsQueue(): Promise<void> {
 
 	await processJobsNotifications();
 
-	setTimeout(() => processNotificationsQueue(), config.jobs.notifications.process_interval || 60000); // default 1 minute
+	setTimeout(() => processNotificationsQueue(), appConfig.jobs.notifications.process_interval || 60000); // default 1 minute
 }
 
 async function cleanup() {
@@ -46,12 +46,12 @@ async function cleanup() {
 	await cleanupStats();
 	await cleanupLogs();
 
-	setTimeout(() => cleanup(), config.database.cleanup_interval || 60 * 60 * 1000); // in milliseconds, default 1 hour
+	setTimeout(() => cleanup(), appConfig.database.cleanup_interval || 60 * 60 * 1000); // in milliseconds, default 1 hour
 }
 
 async function maintenanceLoop() {
 	await maintainInstancesAndWorkers();
-	setTimeout(() => maintenanceLoop(), config.runtime.maintain_interval || 60000);
+	setTimeout(() => maintenanceLoop(), appConfig.runtime.maintain_interval || 60000);
 }
 
 process.on("SIGINT", (signal) => gracefulShutdown(signal));
@@ -88,8 +88,8 @@ const gracefulShutdown = async (signal: string) => {
 
 async function init() {
 	logger.setMetadata("INSTANCE", { instance_key: selfInstanceKey });
-	await storage.config(config.storage);
-	database.config(config.database);
+	await storage.config(appConfig.storage);
+	database.config(appConfig.database);
 	await database.verifySchemaExists();
 
 	await logger.insert("INSTANCE", "INFO", "Starting runtime service...");

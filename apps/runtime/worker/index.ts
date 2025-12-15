@@ -1,10 +1,10 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { database, logger, stats, getNow } from "@voltage/utils";
 import { JobLifecycleService } from "@/worker/job-lifecycle.service.js";
 import { JobStepsService } from "@/worker/job-steps.service.js";
 import { JobStats, JOB_PROGRESS_PER_STEP } from "@/worker/types.js";
 
-database.config(config.database);
+database.config(appConfig.database);
 
 async function run() {
 	await logger.insert("WORKER", "INFO", "Worker starts running...");

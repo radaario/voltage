@@ -35,7 +35,7 @@ class Database {
 	 */
 	get knex(): Knex {
 		if (!this._knex) {
-			throw new Error("Database not configured. Call database.config(config.database) first.");
+			throw new Error("Database not configured. Call database.config(appConfig.database) first.");
 		}
 		return this._knex;
 	}
@@ -160,6 +160,7 @@ class Database {
 				await this.knex.schema.createTable(`${prefix}jobs`, (table) => {
 					table.string("key", 40).primary();
 					table.integer("priority").notNullable().defaultTo(1000);
+					table.text("config").notNullable();
 					table.text("input").notNullable();
 					// table.text("outputs").notNullable();
 					table.text("destination").nullable();
@@ -214,7 +215,7 @@ class Database {
 					table.string("job_key", 40).nullable();
 					table.integer("index").notNullable().defaultTo(0);
 					table.integer("priority").notNullable().defaultTo(1000);
-					table.text("specs").notNullable();
+					table.text("config").notNullable();
 					table.text("outcome").nullable();
 					table
 						.enum("status", [
@@ -269,7 +270,7 @@ class Database {
 						table.string("key", 40).primary();
 						table.string("job_key", 40).notNullable();
 						table.integer("priority").notNullable().defaultTo(1000);
-						table.text("specs").notNullable();
+						table.text("config").notNullable();
 						table.text("payload").notNullable();
 						table.text("outcome").nullable();
 						table

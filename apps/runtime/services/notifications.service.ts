@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { database, logger, getInstanceKey, getNow } from "@voltage/utils";
 import { retryJobNotification } from "@/worker/notifier.js";
 
@@ -20,7 +20,7 @@ export const processJobsNotifications = async (): Promise<void> => {
 			.where("locked_by", null)
 			.orderBy("priority", "asc")
 			.orderBy("created_at", "asc")
-			.limit(config.jobs.notifications.process_limit || 10) // default 10
+			.limit(appConfig.jobs.notifications.process_limit || 10) // default 10
 			.update({ locked_by: selfInstanceKey }); // updated_at: now,
 
 		// JOBs: NOTIFICATIONs: QUEUE: SELECT LOCKEDs

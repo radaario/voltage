@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { storage, guessContentType } from "@voltage/utils";
 import path from "path";
 import fs from "fs/promises";
@@ -17,7 +17,7 @@ export class JobUploader {
 		this.output = output;
 
 		// Use output's destination if available, otherwise fall back to global destination
-		this.destination = output.specs?.destination || this.job?.destination;
+		this.destination = output.config?.destination || this.job?.destination;
 
 		if (!this.destination) {
 			throw new Error("No destination specified for job output!");
@@ -44,8 +44,8 @@ export class JobUploader {
 			throw new Error(`Job output destination type is unsupported: ${this.destination.type}!`);
 		}
 
-		this.tempJobDir = path.join(config.temp_dir, "jobs", job.key);
-		this.tempJobOutputFilePath = path.join(this.tempJobDir, `output.${output.index}.${(output.specs?.format || "MP4").toLowerCase()}`);
+		this.tempJobDir = path.join(appConfig.temp_dir, "jobs", job.key);
+		this.tempJobOutputFilePath = path.join(this.tempJobDir, `output.${output.index}.${(output.config?.format || "MP4").toLowerCase()}`);
 	}
 
 	async upload(): Promise<Record<string, unknown>> {
@@ -91,17 +91,17 @@ export class JobUploader {
 	}
 
 	private async uploadToStorage(): Promise<Record<string, unknown>> {
-		if (!this.output.specs?.path) {
-			throw new Error("Path is required in output.specs for remote upload destinations!");
+		if (!this.output.config?.path) {
+			throw new Error("Path is required in output.config for remote upload destinations!");
 		}
 
 		// Initialize storage based on destination
-		const key = String(this.output.specs.path).replace(/^\/+/, "");
+		const key = String(this.output.config.path).replace(/^\/+/, "");
 		const contentType = guessContentType(key);
-		const acl = this.output.specs?.acl || this.output.specs?.destination?.acl || this.destination?.acl || null;
-		const expires = this.output.specs?.expires || this.output.specs?.destination?.expires || this.destination?.expires || null;
+		const acl = this.output.config?.acl || this.output.config?.destination?.acl || this.destination?.acl || null;
+		const expires = this.output.config?.expires || this.output.config?.destination?.expires || this.destination?.expires || null;
 		const cacheControl =
-			this.output.specs?.cache_control || this.output.specs?.destination?.cache_control || this.destination?.cache_control || null;
+			this.output.config?.cache_control || this.output.config?.destination?.cache_control || this.destination?.cache_control || null;
 
 		await storage.config(this.destination);
 		await storage.upload(this.tempJobOutputFilePath, key, contentType, acl, expires, cacheControl);

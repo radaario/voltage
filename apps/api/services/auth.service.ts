@@ -1,8 +1,8 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { hash } from "@voltage/utils";
 
 export const authenticateFrontend = (password: string): string | null => {
-	if (!config.frontend.is_authentication_required) {
+	if (!appConfig.frontend.is_authentication_required) {
 		return null;
 	}
 
@@ -10,7 +10,7 @@ export const authenticateFrontend = (password: string): string | null => {
 		throw new Error("PASSWORD_REQUIRED");
 	}
 
-	if (password !== config.frontend.password) {
+	if (password !== appConfig.frontend.password) {
 		throw new Error("PASSWORD_INVALID");
 	}
 

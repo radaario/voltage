@@ -1,9 +1,9 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { database } from "./database";
 import { getNow, getDate } from "./helpers/date";
 import { hash } from "./helpers/crypto";
 
-database.config(config.database);
+database.config(appConfig.database);
 
 /**
  * Stats data interface
@@ -111,7 +111,7 @@ class Stats {
 	 * @returns Promise with number of deleted rows
 	 */
 	async cleanup(): Promise<number> {
-		const retentionDays = Math.floor(config.stats.retention / (24 * 60 * 60 * 1000));
+		const retentionDays = Math.floor(appConfig.stats.retention / (24 * 60 * 60 * 1000));
 		const cutoffDate = getNow("YYYY-MM-DD");
 
 		// Calculate cutoff using moment

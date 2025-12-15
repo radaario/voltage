@@ -1,8 +1,8 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { database, logger, storage, subtractNow } from "@voltage/utils";
 
 export const cleanupCompletedJobs = async (): Promise<void> => {
-	if (config.jobs.retention > 0) {
+	if (appConfig.jobs.retention > 0) {
 		// JOBs: CLEANUP
 		logger.console("INSTANCE", "INFO", "Cleaning up completed jobs...");
 
@@ -11,7 +11,7 @@ export const cleanupCompletedJobs = async (): Promise<void> => {
 			.select("key")
 			.where("status", "COMPLETED")
 			.whereNotNull("completed_at")
-			.where("completed_at", "<=", subtractNow(config.jobs.retention || 24 * 60 * 60 * 1000, "milliseconds")); // in milliseconds, default 24 hours
+			.where("completed_at", "<=", subtractNow(appConfig.jobs.retention || 24 * 60 * 60 * 1000, "milliseconds")); // in milliseconds, default 24 hours
 
 		const jobsKeysToHardDelete = jobsToHardDelete.map((r: any) => r.key);
 
@@ -37,13 +37,13 @@ export const cleanupCompletedJobs = async (): Promise<void> => {
 
 export const cleanupStats = async (): Promise<void> => {
 	// STATs: CLEANUP
-	if ((config.stats.retention || 365 * 24 * 60 * 60 * 1000) > 0) {
+	if ((appConfig.stats.retention || 365 * 24 * 60 * 60 * 1000) > 0) {
 		// in milliseconds, default 365 days
 		logger.console("INSTANCE", "INFO", "Cleaning stats...");
 
 		await database
 			.table("stats")
-			.where("date", "<=", subtractNow(config.stats.retention || 365 * 24 * 60 * 60 * 1000, "milliseconds"))
+			.where("date", "<=", subtractNow(appConfig.stats.retention || 365 * 24 * 60 * 60 * 1000, "milliseconds"))
 			.delete(); // in milliseconds, default 365 days
 
 		logger.console("INSTANCE", "INFO", "Stats cleaning completed!");
@@ -52,13 +52,13 @@ export const cleanupStats = async (): Promise<void> => {
 
 export const cleanupLogs = async (): Promise<void> => {
 	// LOGS: CLEANUP
-	if (!config.logs.is_disabled || (config.logs.retention || 60 * 60 * 1000) > 0) {
+	if (!appConfig.logs.is_disabled || (appConfig.logs.retention || 60 * 60 * 1000) > 0) {
 		// in milliseconds, default 1 hour
 		logger.console("INSTANCE", "INFO", "Cleaning logs...");
 
 		await database
 			.table("logs")
-			.where("created_at", "<=", subtractNow(config.logs.retention || 60 * 60 * 1000, "milliseconds"))
+			.where("created_at", "<=", subtractNow(appConfig.logs.retention || 60 * 60 * 1000, "milliseconds"))
 			.where("job_key", null) // do not delete job logs
 			.delete(); // in milliseconds, default 1 hour
 

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { hash } from "@voltage/utils";
 import { sendError } from "@/utils/response.util.js";
 
@@ -8,8 +8,8 @@ export const authMiddleware = (options: {} = {}) => {
 		const client = req.query.client?.toString().toUpperCase() || null; // "FRONTEND"
 
 		// Expected tokens
-		const frontendToken = config.frontend.password ? hash(config.frontend.password) : null;
-		const apiToken = client === "FRONTEND" ? frontendToken : config.api.key;
+		const frontendToken = appConfig.frontend.password ? hash(appConfig.frontend.password) : null;
+		const apiToken = client === "FRONTEND" ? frontendToken : appConfig.api.key;
 
 		if (!apiToken) {
 			return next();
@@ -45,8 +45,8 @@ export const optionalAuthMiddleware = () => {
 		const client = req.query.client?.toString().toUpperCase() || null;
 
 		// Expected tokens
-		const frontendToken = config.frontend.password ? hash(config.frontend.password) : null;
-		const apiToken = client === "FRONTEND" ? frontendToken : config.api.key;
+		const frontendToken = appConfig.frontend.password ? hash(appConfig.frontend.password) : null;
+		const apiToken = client === "FRONTEND" ? frontendToken : appConfig.api.key;
 
 		// Get token from various possible locations
 		const token =

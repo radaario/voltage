@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { database, logger, getInstanceKey, getNow, subtractNow } from "@voltage/utils";
 import { initInstance, maintainInstance, getMasterInstance, setMasterInstance } from "@/services/instances.service.js";
 import { timeoutBusyWorkers, idleTimeoutWorkers, terminateInactiveInstanceWorkers } from "@/services/workers.service.js";
@@ -54,7 +54,7 @@ export const maintainInstancesAndWorkers = async (): Promise<void> => {
 
 		// INSTANCEs: UPDATE: OFFLINE
 		try {
-			const offlineTimeout = config.runtime.online_timeout || 1 * 15 * 1000; // in milliseconds, default 15 seconds
+			const offlineTimeout = appConfig.runtime.online_timeout || 1 * 15 * 1000; // in milliseconds, default 15 seconds
 
 			const inactiveInstances = await database
 				.table("instances")
@@ -86,7 +86,7 @@ export const maintainInstancesAndWorkers = async (): Promise<void> => {
 
 		// INSTANCEs: DELETE: PURGE
 		try {
-			const purgeAfter = config.runtime.purge_after || 1 * 60 * 1000; // in milliseconds, default 1 minute
+			const purgeAfter = appConfig.runtime.purge_after || 1 * 60 * 1000; // in milliseconds, default 1 minute
 
 			const offlineInstances = await database
 				.table("instances")

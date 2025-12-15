@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { spawn } from "child_process";
 import fs from "fs/promises";
 import path from "path";
@@ -18,80 +18,80 @@ export class JobOutputProcessor {
 			this.job = job;
 			this.output = output;
 
-			// Validate and set defaults for output specs
-			this.output.specs.type = (this.output.specs?.type || "VIDEO").toUpperCase();
-			this.output.specs.format = (this.output.specs?.format || "MP4").toUpperCase();
+			// Validate and set defaults for output config
+			this.output.config.type = (this.output.config?.type || "VIDEO").toUpperCase();
+			this.output.config.format = (this.output.config?.format || "MP4").toUpperCase();
 
 			// Validate offset
 			if (
 				this.job.input?.duration &&
-				this.output.specs?.offset &&
-				parseInt(this.output.specs.offset) >= parseInt(this.job.input.duration)
+				this.output.config?.offset &&
+				parseInt(this.output.config.offset) >= parseInt(this.job.input.duration)
 			) {
-				this.output.specs.offset = parseInt(this.job.input.duration) - 1;
+				this.output.config.offset = parseInt(this.job.input.duration) - 1;
 			}
 
-			if (this.output.specs?.offset && parseInt(this.output.specs.offset) <= 0) {
-				this.output.specs.offset = null;
+			if (this.output.config?.offset && parseInt(this.output.config.offset) <= 0) {
+				this.output.config.offset = null;
 			}
 
-			if (this.output.specs?.offset === null) {
-				delete this.output.specs.offset;
+			if (this.output.config?.offset === null) {
+				delete this.output.config.offset;
 			}
 
 			// Validate duration
 			if (
 				this.job.input?.duration &&
-				!this.output.specs?.duration &&
-				this.output.specs?.offset &&
-				parseInt(this.output.specs.offset) > 0
+				!this.output.config?.duration &&
+				this.output.config?.offset &&
+				parseInt(this.output.config.offset) > 0
 			) {
-				this.output.specs.duration = parseInt(this.job.input.duration) - parseInt(this.output.specs.offset || 0);
+				this.output.config.duration = parseInt(this.job.input.duration) - parseInt(this.output.config.offset || 0);
 			}
 
 			if (
 				this.job.input?.duration &&
-				(!this.output.specs?.duration ||
-					parseInt(this.output.specs.duration) > parseInt(this.job.input.duration) - parseInt(this.output.specs?.offset || 0))
+				(!this.output.config?.duration ||
+					parseInt(this.output.config.duration) > parseInt(this.job.input.duration) - parseInt(this.output.config?.offset || 0))
 			) {
-				this.output.specs.duration = parseInt(this.job.input.duration) - parseInt(this.output.specs.offset || 0);
+				this.output.config.duration = parseInt(this.job.input.duration) - parseInt(this.output.config.offset || 0);
 			}
 
-			if (this.output.specs?.duration && parseInt(this.output.specs.duration) <= 0) {
-				this.output.specs.duration = null;
+			if (this.output.config?.duration && parseInt(this.output.config.duration) <= 0) {
+				this.output.config.duration = null;
 			}
 
 			if (
 				this.job.input?.duration &&
-				this.output.specs?.duration &&
-				parseInt(this.output.specs.duration) == parseInt(this.job.input.duration)
+				this.output.config?.duration &&
+				parseInt(this.output.config.duration) == parseInt(this.job.input.duration)
 			) {
-				this.output.specs.duration = null;
+				this.output.config.duration = null;
 			}
 
-			if (this.output.specs?.duration === null) {
-				delete this.output.specs.duration;
+			if (this.output.config?.duration === null) {
+				delete this.output.config.duration;
 			}
 
 			// preset validation
 			// ultrafast > superfast > veryfast > faster > fast > medium(varsayılan) > slow > slower;
 			// ULTRA_FAST, SUPER_FAST, VERY_FAST, FASTER, FAST, MEDIUM, SLOW, SLOWER
 			if (
-				this.output.specs?.preset &&
+				this.output.config?.preset &&
 				!["ULTRA_FAST", "SUPER_FAST", "VERY_FAST", "FASTER", "FAST", "MEDIUM", "SLOW", "SLOWER"].includes(
-					this.output.specs.preset.toUpperCase()
+					this.output.config.preset.toUpperCase()
 				)
 			) {
-				this.output.specs.preset = null;
+				this.output.config.preset = null;
 			}
 
-			this.tempJobDir = path.join(config.temp_dir, "jobs", job.key);
+			this.tempJobDir = path.join(appConfig.temp_dir, "jobs", job.key);
 			this.tempJobInputFilePath = path.join(this.tempJobDir, "input");
 
 			// Temporary output file path
 			this.tempJobOutputFilePath = path.join(
 				this.tempJobDir,
-				`output.${this.output.index}.${this.output.specs.format.toLowerCase()}`
+				`output.${this.output.index}.${this.output.config.format.toLowerCase()}`
 			);
 		} catch (error: Error | any) {
 			throw new Error(`Failed to process job output! ${error.message || ""}!`.trim());
@@ -102,17 +102,17 @@ export class JobOutputProcessor {
 	async process(): Promise<any> {
 		try {
 			// OUTPUT: TYPE: CHECK
-			if (!["VIDEO", "AUDIO", "THUMBNAIL", "SUBTITLE"].includes(this.output.specs.type)) {
-				throw new Error(`Job output type is unsupported: ${this.output.specs.type}!`);
+			if (!["VIDEO", "AUDIO", "THUMBNAIL", "SUBTITLE"].includes(this.output.config.type)) {
+				throw new Error(`Job output type is unsupported: ${this.output.config.type}!`);
 			}
 
 			// OUTPUT: TYPE: SUBTITLE
-			if (["SUBTITLE"].includes(this.output.specs.type)) {
+			if (["SUBTITLE"].includes(this.output.config.type)) {
 				return await this.processSubtitle();
 			}
 
 			// OUTPUT: TYPE: THUMBNAIL
-			if (["THUMBNAIL"].includes(this.output.specs.type)) {
+			if (["THUMBNAIL"].includes(this.output.config.type)) {
 				return await this.processThumbnail();
 			}
 
@@ -138,20 +138,20 @@ export class JobOutputProcessor {
 			const ffmpegArgs = ["-y", "-i", this.tempJobInputFilePath, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le"];
 
 			// Offset
-			if (this.output.specs?.offset) ffmpegArgs.push("-ss", String(this.output.specs.offset));
+			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
 
 			// Duration
-			if (this.output.specs?.duration) ffmpegArgs.push("-t", String(this.output.specs.duration));
+			if (this.output.config?.duration) ffmpegArgs.push("-t", String(this.output.config.duration));
 
 			// Preset
-			if (this.output.specs?.preset) ffmpegArgs.push("-preset", this.output.specs.preset.toLocaleLowerCase().replace("_", ""));
+			if (this.output.config?.preset) ffmpegArgs.push("-preset", this.output.config.preset.toLocaleLowerCase().replace("_", ""));
 
 			ffmpegArgs.push(jobInputAudioFilePath);
 
 			await new Promise<void>((resolve, reject) => {
 				let stderrData = "";
 
-				const proc = spawn(config.utils.ffmpeg.path, ffmpegArgs, { stdio: ["ignore", "pipe", "pipe"] }); // inherit || ignore
+				const proc = spawn(appConfig.utils.ffmpeg.path, ffmpegArgs, { stdio: ["ignore", "pipe", "pipe"] }); // inherit || ignore
 
 				proc.stderr.on("data", (chunk) => {
 					stderrData += chunk.toString();
@@ -173,7 +173,7 @@ export class JobOutputProcessor {
 			// Generate subtitles using whisper-node
 			const { nodewhisper } = await import("nodejs-whisper"); /* ! */
 
-			const modelName = (this.output.specs?.whisper_model || config.utils.whisper.model || "BASE")
+			const modelName = (this.output.config?.whisper_model || appConfig.utils.whisper.model || "BASE")
 				.toLowerCase()
 				.replace("_en", ".en")
 				.replace("_", "-");
@@ -182,16 +182,16 @@ export class JobOutputProcessor {
 				modelName: modelName,
 				autoDownloadModelName: modelName,
 				// removeWavFileAfterTranscription: true,
-				withCuda: this.output.specs?.whisper_cuda || config.utils.whisper.cuda || false,
+				withCuda: this.output.config?.whisper_with_cuda || appConfig.utils.whisper.with_cuda || false,
 				// logger: null,
 				whisperOptions: {
-					outputInSrt: this.output.specs.format === "SRT",
-					outputInVtt: this.output.specs.format === "VTT",
-					outputInCsv: this.output.specs.format === "CSV",
-					outputInJson: this.output.specs.format === "JSON",
-					outputInText: this.output.specs.format === "TXT",
-					// translateToEnglish: this.output.specs.translate || false,
-					language: (this.output.specs?.language || "AUTO").toLowerCase(),
+					outputInSrt: this.output.config.format === "SRT",
+					outputInVtt: this.output.config.format === "VTT",
+					outputInCsv: this.output.config.format === "CSV",
+					outputInJson: this.output.config.format === "JSON",
+					outputInText: this.output.config.format === "TXT",
+					// translateToEnglish: this.output.config.translate || false,
+					language: (this.output.config?.language || "AUTO").toLowerCase(),
 					wordTimestamps: false,
 					timestamps_length: 20,
 					splitOnWord: true
@@ -201,12 +201,12 @@ export class JobOutputProcessor {
 			try {
 				// Move generated subtitle file to output path
 				await fs.rename(
-					path.join(this.tempJobDir, `audio.wav.${this.output.specs.format.toLowerCase()}`),
+					path.join(this.tempJobDir, `audio.wav.${this.output.config.format.toLowerCase()}`),
 					this.tempJobOutputFilePath
 				);
 			} catch (error: Error | any) {
 				throw new Error(
-					`Failed to move generated subtitle file! ${path.join(this.tempJobDir, `audio.wav.${this.output.specs.format.toLowerCase()}`)} to ${this.tempJobOutputFilePath}. ${error.message || ""}`.trim()
+					`Failed to move generated subtitle file! ${path.join(this.tempJobDir, `audio.wav.${this.output.config.format.toLowerCase()}`)} to ${this.tempJobOutputFilePath}. ${error.message || ""}`.trim()
 				);
 			}
 
@@ -226,13 +226,13 @@ export class JobOutputProcessor {
 			const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
 
 			// Offset
-			if (this.output.specs?.offset) ffmpegArgs.push("-ss", String(this.output.specs.offset));
+			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
 
 			// Preset
-			if (this.output.specs?.preset) ffmpegArgs.push("-preset", this.output.specs.preset.toLocaleLowerCase().replace("_", ""));
+			if (this.output.config?.preset) ffmpegArgs.push("-preset", this.output.config.preset.toLocaleLowerCase().replace("_", ""));
 
 			// Image format
-			ffmpegArgs.push("-quality", String(this.output.specs.quality || 75));
+			ffmpegArgs.push("-quality", String(this.output.config.quality || 75));
 
 			// Extract only one frame
 			ffmpegArgs.push("-vframes", "1");
@@ -247,14 +247,14 @@ export class JobOutputProcessor {
 
 			return {
 				temp_path: this.tempJobOutputFilePath,
-				duration: this.output.specs?.duration || this.job.input?.duration || 0.0,
+				duration: this.output.config?.duration || this.job.input?.duration || 0.0,
 				ffmpeg_command: `ffmpeg ${ffmpegArgs.join(" ")}`
 			};
 		} catch (error: Error | any) {
 			const thubnailBuffer = await this.createBlackImageBuffer(
-				this.output.specs.format || "JPG",
-				this.output.specs?.width || 1920,
-				this.output.specs?.height || 1080
+				this.output.config.format || "JPG",
+				this.output.config?.width || 1920,
+				this.output.config?.height || 1080
 			);
 
 			try {
@@ -269,7 +269,7 @@ export class JobOutputProcessor {
 		try {
 			const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
 
-			if (["AUDIO"].includes(this.output.specs.type) && this.job.input?.audio === false) {
+			if (["AUDIO"].includes(this.output.config.type) && this.job.input?.audio === false) {
 				// args.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
 				ffmpegArgs.push(
 					"-f",
@@ -282,30 +282,30 @@ export class JobOutputProcessor {
 			}
 
 			// Offset
-			if (this.output.specs?.offset) ffmpegArgs.push("-ss", String(this.output.specs.offset));
+			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
 
 			// Duration
-			if (this.output.specs?.duration) ffmpegArgs.push("-t", String(this.output.specs.duration));
+			if (this.output.config?.duration) ffmpegArgs.push("-t", String(this.output.config.duration));
 
 			// Preset
-			if (this.output.specs?.preset) ffmpegArgs.push("-preset", this.output.specs.preset.toLocaleLowerCase().replace("_", ""));
+			if (this.output.config?.preset) ffmpegArgs.push("-preset", this.output.config.preset.toLocaleLowerCase().replace("_", ""));
 
 			// Audio codec
-			if (this.output.specs?.audio_codec) ffmpegArgs.push("-c:a", this.output.specs.audio_codec);
+			if (this.output.config?.audio_codec) ffmpegArgs.push("-c:a", this.output.config.audio_codec);
 
 			// Audio bit rate
-			if (this.output.specs?.audio_bit_rate) ffmpegArgs.push("-b:a", this.parseBitRate(this.output.specs.audio_bit_rate));
+			if (this.output.config?.audio_bit_rate) ffmpegArgs.push("-b:a", this.parseBitRate(this.output.config.audio_bit_rate));
 
 			// Audio sample rate
-			if (this.output.specs?.audio_sample_rate) ffmpegArgs.push("-ar", this.parseSampleRate(this.output.specs.audio_sample_rate));
+			if (this.output.config?.audio_sample_rate) ffmpegArgs.push("-ar", this.parseSampleRate(this.output.config.audio_sample_rate));
 
 			// Audio channels
-			if (this.output.specs?.audio_channels) ffmpegArgs.push("-ac", String(this.output.specs.audio_channels));
+			if (this.output.config?.audio_channels) ffmpegArgs.push("-ac", String(this.output.config.audio_channels));
 
-			if (["VIDEO"].includes(this.output.specs.type)) {
+			if (["VIDEO"].includes(this.output.config.type)) {
 				// Video first frame image overlay
-				if (this.output.specs?.video_first_frame_image_url) {
-					ffmpegArgs.push("-i", this.output.specs.video_first_frame_image_url);
+				if (this.output.config?.video_first_frame_image_url) {
+					ffmpegArgs.push("-i", this.output.config.video_first_frame_image_url);
 					ffmpegArgs.push(
 						"-filter_complex",
 						"[0:v]format=yuv420p,drawbox=0:0:iw:ih:black:t=fill:enable='eq(n,0)'[bg];[1:v]scale=w=min(iw\,in_w):h=min(ih\,in_h):force_original_aspect_ratio=decrease[scaled];[bg][scaled]overlay=(W-w)/2:(H-h)/2:enable='eq(n,0)'[v]"
@@ -314,33 +314,33 @@ export class JobOutputProcessor {
 				}
 
 				// Video subtitle burn-in
-				if (this.output.specs?.video_subtitle) {
+				if (this.output.config?.video_subtitle) {
 					// ffmpegArgs.push("-vf", "subtitles=subtitle.srt:force_style='FontName=Arial,FontSize=24,PrimaryColour=&H00FFFF,Bold=1'");
 				}
 
 				// Video codec
-				if (this.output.specs?.video_codec) ffmpegArgs.push("-c:v", this.output.specs.video_codec);
+				if (this.output.config?.video_codec) ffmpegArgs.push("-c:v", this.output.config.video_codec);
 
 				// Video bit rate
-				if (this.output.specs?.video_bit_rate) ffmpegArgs.push("-b:v", this.parseBitRate(this.output.specs.video_bit_rate));
+				if (this.output.config?.video_bit_rate) ffmpegArgs.push("-b:v", this.parseBitRate(this.output.config.video_bit_rate));
 
 				// Video profile
-				if (this.output.specs?.video_profile) ffmpegArgs.push("-profile:v", this.output.specs.video_profile);
+				if (this.output.config?.video_profile) ffmpegArgs.push("-profile:v", this.output.config.video_profile);
 
 				// Video level
-				if (this.output.specs?.video_level) ffmpegArgs.push("-level", this.output.specs.video_level);
+				if (this.output.config?.video_level) ffmpegArgs.push("-level", this.output.config.video_level);
 
 				// Video pixel format
-				if (this.output.specs?.video_pixel_format) ffmpegArgs.push("-pix_fmt", this.output.specs.video_pixel_format);
+				if (this.output.config?.video_pixel_format) ffmpegArgs.push("-pix_fmt", this.output.config.video_pixel_format);
 
 				// Video frame rate
-				if (this.output.specs?.video_frame_rate) ffmpegArgs.push("-r", this.parseFrameRate(this.output.specs.video_frame_rate));
+				if (this.output.config?.video_frame_rate) ffmpegArgs.push("-r", this.parseFrameRate(this.output.config.video_frame_rate));
 
 				// Deinterlace
-				if (this.output.specs?.video_deinterlace) ffmpegArgs.push("-vf", "yadif");
+				if (this.output.config?.video_deinterlace) ffmpegArgs.push("-vf", "yadif");
 
 				// Video quality
-				if (this.output.specs?.quality !== undefined) ffmpegArgs.push("-q:v", String(this.output.specs.quality));
+				if (this.output.config?.quality !== undefined) ffmpegArgs.push("-q:v", String(this.output.config.quality));
 
 				// Video filters
 				const videoFilters = this.buildVideoFilters();
@@ -353,7 +353,7 @@ export class JobOutputProcessor {
 
 			return {
 				temp_path: this.tempJobOutputFilePath,
-				duration: this.output.specs?.duration || this.job.input?.duration || 0.0,
+				duration: this.output.config?.duration || this.job.input?.duration || 0.0,
 				ffmpeg_command: `ffmpeg ${ffmpegArgs.join(" ")}`
 			};
 		} catch (error: Error | any) {
@@ -364,34 +364,34 @@ export class JobOutputProcessor {
 	private buildVideoFilters(): string[] {
 		const videoFilters: string[] = [];
 
-		if (this.output.specs?.width && this.output.specs?.height) {
-			const fit = (this.output.specs?.fit || "PAD").toUpperCase();
+		if (this.output.config?.width && this.output.config?.height) {
+			const fit = (this.output.config?.fit || "PAD").toUpperCase();
 
 			switch (fit) {
 				case "STRETCH":
-					videoFilters.push(`scale=${this.output.specs.width}:${this.output.specs.height}`);
+					videoFilters.push(`scale=${this.output.config.width}:${this.output.config.height}`);
 					break;
 				case "CROP":
 					videoFilters.push(
-						`scale=${this.output.specs.width}:${this.output.specs.height}:force_original_aspect_ratio=increase,crop=${this.output.specs.width}:${this.output.specs.height}`
+						`scale=${this.output.config.width}:${this.output.config.height}:force_original_aspect_ratio=increase,crop=${this.output.config.width}:${this.output.config.height}`
 					);
 					break;
 				case "MAX":
 					videoFilters.push(
-						`scale='min(${this.output.specs.width},iw)':'min(${this.output.specs.height},ih)':force_original_aspect_ratio=decrease`
+						`scale='min(${this.output.config.width},iw)':'min(${this.output.config.height},ih)':force_original_aspect_ratio=decrease`
 					);
 					break;
 				case "PAD":
 				default:
 					videoFilters.push(
-						`scale=${this.output.specs.width}:${this.output.specs.height}:force_original_aspect_ratio=decrease,pad=${this.output.specs.width}:${this.output.specs.height}:(ow-iw)/2:(oh-ih)/2`
+						`scale=${this.output.config.width}:${this.output.config.height}:force_original_aspect_ratio=decrease,pad=${this.output.config.width}:${this.output.config.height}:(ow-iw)/2:(oh-ih)/2`
 					);
 					break;
 			}
 		}
 
-		if (this.output.specs?.rotate) {
-			switch (parseInt(this.output.specs.rotate)) {
+		if (this.output.config?.rotate) {
+			switch (parseInt(this.output.config.rotate)) {
 				case 90:
 					videoFilters.push("transpose=1");
 					break;
@@ -405,8 +405,8 @@ export class JobOutputProcessor {
 			}
 		}
 
-		if (this.output.specs?.flip) {
-			switch (this.output.specs.flip.toUpperCase()) {
+		if (this.output.config?.flip) {
+			switch (this.output.config.flip.toUpperCase()) {
 				case "HORIZONTAL":
 					videoFilters.push("hflip");
 					break;
@@ -426,7 +426,7 @@ export class JobOutputProcessor {
 		return new Promise<void>((resolve, reject) => {
 			let stderrData = "";
 
-			const proc = spawn(config.utils.ffmpeg.path, args, { stdio: ["ignore", "pipe", "pipe"] }); // inherit || ignore
+			const proc = spawn(appConfig.utils.ffmpeg.path, args, { stdio: ["ignore", "pipe", "pipe"] }); // inherit || ignore
 
 			proc.stderr.on("data", (chunk) => {
 				stderrData += chunk.toString();

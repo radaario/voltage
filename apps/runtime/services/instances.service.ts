@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { database, logger, getInstanceKey, getInstanceSpecs, getNow } from "@voltage/utils";
 import { Instance } from "@/types/index.js";
 
@@ -119,7 +119,7 @@ export const getMasterInstance = async (instances: any[]): Promise<any | null> =
 			return null;
 		}
 
-		const offlineTimeout = config.runtime.online_timeout || 1 * 15 * 1000; // in milliseconds, default 15 seconds
+		const offlineTimeout = appConfig.runtime.online_timeout || 1 * 15 * 1000; // in milliseconds, default 15 seconds
 		const { subtractNow } = await import("@voltage/utils");
 
 		const activeInstances = instances.filter(

@@ -398,10 +398,10 @@ Create a new encoding job
 		"type": "HTTP",
 		"url": "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4",
 		"nsfw_is_disabled": false,
-		"nsfw_model": "MOBILE_NET_V2_MID",
-		"nsfw_size": 299,
+		"nsfw_model": "MOBILE_NET_V2",
+		"nsfw_size": 224,
 		"nfsw_type": "GRAPH",
-		"nsfw_threshold": 0.7
+		"nsfw_threshold": 75
 	},
 	"outputs": [
 		{
@@ -604,31 +604,31 @@ Delete all data (stats, logs, instances, jobs, notifications)
 
 ### FFMPEG Configuration
 
-| Variable       | Type   | Default   | Description            |
-| -------------- | ------ | --------- | ---------------------- |
-| `FFMPEG_PATH`  | string | `ffmpeg`  | Path to FFMPEG binary  |
-| `FFPROBE_PATH` | string | `ffprobe` | Path to FFPROBE binary |
+| Variable                     | Type   | Default   | Description            |
+| ---------------------------- | ------ | --------- | ---------------------- |
+| `VOLTAGE_UTILS_FFMPEG_PATH`  | string | `ffmpeg`  | Path to FFMPEG binary  |
+| `VOLTAGE_UTILS_FFPROBE_PATH` | string | `ffprobe` | Path to FFPROBE binary |
 
 ---
 
 ### NSFW Detection
 
-| Variable           | Type    | Default             | Description                                            |
-| ------------------ | ------- | ------------------- | ------------------------------------------------------ |
-| `NSFW_IS_DISABLED` | boolean | `false`             | Disable NSFW detection                                 |
-| `NSFW_MODEL`       | string  | `MOBILE_NET_V2_MID` | Model (MOBILE_NET_V2, MOBILE_NET_V2_MID, INCEPTION_V3) |
-| `NSFW_SIZE`        | number  | `299`               | Input image size                                       |
-| `NSFW_TYPE`        | string  | `GRAPH`             | Model type                                             |
-| `NSFW_THRESHOLD`   | number  | `0.7`               | Detection threshold (0-1)                              |
+| Variable                         | Type    | Default             | Description                                            |
+| -------------------------------- | ------- | ------------------- | ------------------------------------------------------ |
+| `VOLTAGE_UTILS_NSFW_IS_DISABLED` | boolean | `false`             | Disable NSFW detection                                 |
+| `VOLTAGE_UTILS_NSFW_MODEL`       | string  | `MOBILE_NET_V2_MID` | Model (MOBILE_NET_V2, MOBILE_NET_V2_MID, INCEPTION_V3) |
+| `VOLTAGE_UTILS_NSFW_SIZE`        | number  | `224`               | Input image size                                       |
+| `VOLTAGE_UTILS_NSFW_TYPE`        | string  | `GRAPH`             | Model type                                             |
+| `VOLTAGE_UTILS_NSFW_THRESHOLD`   | number  | `75`                | Detection threshold (0-1)                              |
 
 ---
 
 ### Whisper Transcription
 
-| Variable        | Type    | Default | Description                                    |
-| --------------- | ------- | ------- | ---------------------------------------------- |
-| `WHISPER_MODEL` | string  | `BASE`  | Model (TINY, BASE, SMALL, MEDIUM, LARGE, etc.) |
-| `WHISPER_CUDA`  | boolean | `false` | Enable CUDA acceleration                       |
+| Variable                      | Type    | Default | Description                                    |
+| ----------------------------- | ------- | ------- | ---------------------------------------------- |
+| `VOLTAGE_UTILS_WHISPER_MODEL` | string  | `BASE`  | Model (TINY, BASE, SMALL, MEDIUM, LARGE, etc.) |
+| `VOLTAGE_UTILS_WHISPER_CUDA`  | boolean | `false` | Enable CUDA acceleration                       |
 
 ---
 

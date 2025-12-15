@@ -1,10 +1,10 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { Response } from "express";
 import { ApiResponse } from "@/types/index.js";
 
 export const responseMetadata = {
-	version: config.version,
-	env: config.env
+	version: appConfig.version,
+	env: appConfig.env
 };
 
 export const sendSuccess = <T = any>(res: Response, data?: T, additionalMetadata?: Record<string, any>, message?: string): Response => {
@@ -17,7 +17,7 @@ export const sendSuccess = <T = any>(res: Response, data?: T, additionalMetadata
 	};
 
 	if (data !== undefined) response.data = data;
-	if (message) response.message = message;
+	if (message) response.metadata.message = message;
 
 	return res.json(response);
 };

@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import moment from "moment-timezone";
 
 // Set default format for moment
@@ -28,9 +28,9 @@ export function getDate(date: string, format: string = DEFAULT_DATE_FORMAT): str
 export function getNow(format: string = DEFAULT_DATE_FORMAT): string {
 	let m = moment();
 
-	if (config.timezone && config.timezone !== "") {
+	if (appConfig.timezone && appConfig.timezone !== "") {
 		try {
-			m = m.tz(config.timezone);
+			m = m.tz(appConfig.timezone);
 		} catch (error) {
 			// Invalid timezone — fall back to local moment
 		}

@@ -17,6 +17,15 @@ const Info: React.FC = () => {
 				excludedKeys={["input", "instance_key", "outputs", "outcome", "destination", "notification", "metadata"]}
 			/>
 
+			{/* Config */}
+			<div>
+				<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Config</h4>
+				<JsonViewer
+					data={job.config}
+					emptyMessage="No config available"
+				/>
+			</div>
+
 			{/* Destination */}
 			<div>
 				<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Destination</h4>

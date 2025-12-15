@@ -1,4 +1,4 @@
-import type { Config, StorageType, DatabaseType } from "./types";
+import type { AppConfig, StorageType, DatabaseType } from "./types";
 
 export class ConfigValidationError extends Error {
 	constructor(message: string) {
@@ -11,7 +11,7 @@ export class ConfigValidationError extends Error {
  * Validates application configuration
  * Throws ConfigValidationError if validation fails
  */
-export function validateConfig(config: Config): void {
+export function validateConfig(config: AppConfig): void {
 	// Validate basic app config
 	validateApp(config);
 
@@ -31,7 +31,7 @@ export function validateConfig(config: Config): void {
 	validateJobs(config);
 }
 
-function validateApp(config: Config): void {
+function validateApp(config: AppConfig): void {
 	if (!config.name || config.name.trim() === "") {
 		throw new ConfigValidationError("Application name cannot be empty");
 	}
@@ -45,7 +45,7 @@ function validateApp(config: Config): void {
 	}
 }
 
-function validatePorts(config: Config): void {
+function validatePorts(config: AppConfig): void {
 	const ports = [
 		{ name: "VOLTAGE_PORT", value: config.port },
 		{ name: "VOLTAGE_NGINX_PORT", value: config.ngnix_port },
@@ -75,7 +75,7 @@ function validatePorts(config: Config): void {
 	}
 }
 
-function validateStorage(type: StorageType, storage: Config["storage"]): void {
+function validateStorage(type: StorageType, storage: AppConfig["storage"]): void {
 	// LOCAL storage doesn't need additional validation
 	if (type === "LOCAL") {
 		return;
@@ -117,7 +117,7 @@ function validateStorage(type: StorageType, storage: Config["storage"]): void {
 	}
 }
 
-function validateDatabase(type: DatabaseType, database: Config["database"]): void {
+function validateDatabase(type: DatabaseType, database: AppConfig["database"]): void {
 	// SQLite validation
 	if (type === "SQLITE") {
 		if (!database.file_name || database.file_name.trim() === "") {
@@ -142,7 +142,7 @@ function validateDatabase(type: DatabaseType, database: Config["database"]): voi
 	// Note: We don't validate password as it might be intentionally empty for some setups
 }
 
-function validateRuntime(config: Config): void {
+function validateRuntime(config: AppConfig): void {
 	if (config.runtime.is_disabled) {
 		return; // Skip validation if runtime is disabled
 	}
@@ -168,7 +168,7 @@ function validateRuntime(config: Config): void {
 	}
 }
 
-function validateJobs(config: Config): void {
+function validateJobs(config: AppConfig): void {
 	if (config.jobs.try_min < 0) {
 		throw new ConfigValidationError("VOLTAGE_JOBS_TRY_MIN must be 0 or greater");
 	}
@@ -194,13 +194,13 @@ function validateJobs(config: Config): void {
 	}
 
 	// Validate NSFW settings
-	if (!config.utils.nsfw.is_disabled) {
-		if (config.utils.nsfw.threshold < 0 || config.utils.nsfw.threshold > 1) {
-			throw new ConfigValidationError("NSFW_THRESHOLD must be between 0 and 1");
-		}
-
+	if (config.utils.nsfw.enabled) {
 		if (config.utils.nsfw.size < 1) {
 			throw new ConfigValidationError("NSFW_SIZE must be greater than 0");
+		}
+
+		if (config.utils.nsfw.threshold < 0 || config.utils.nsfw.threshold > 100) {
+			throw new ConfigValidationError("NSFW_THRESHOLD must be between 0 and 100");
 		}
 	}
 }

@@ -1,7 +1,7 @@
-import { config } from "@voltage/config";
-import { JobRequest, JobRow, JobOutputRow, JobOutputSpecs } from "@voltage/config/types";
+import { appConfig } from "@voltage/config";
+import { JobRequest, JobConfig, JobRow, JobOutputRow, JobOutputConfig } from "@voltage/config/types";
 import { database, storage, logger, stats } from "@voltage/utils";
-import { uukey, getNow, getDate } from "@voltage/utils";
+import { uukey, getNow, getDate, formatToUpperSnakeCase, parsePercent } from "@voltage/utils";
 import { createJobNotification } from "@voltage/runtime/worker/notifier";
 import { PaginationParams } from "@/types/index.js";
 
@@ -76,37 +76,64 @@ export const createJob = async (body: JobRequest) => {
 	const priority = body.priority ?? 1000;
 	const now = getNow();
 
-	// OUTPUTs: VALIDATE
-	const outputs: Array<JobOutputRow> = [];
+	// Validate Job Config
+	const jobConfig: JobConfig = {};
+
+	jobConfig.analyze_enabled = body?.config?.analyze_enabled === false ? false : true;
+	jobConfig.preview_enabled = body?.config?.preview_enabled === false ? false : true;
+	jobConfig.nsfw_enabled = (body?.config?.nsfw_enabled || appConfig.utils.nsfw.enabled) === false ? false : true;
+
+	jobConfig.ffprobe_general_attributes = body?.config?.ffprobe_general_attributes || appConfig.utils.ffprobe.general_attributes;
+	jobConfig.ffprobe_video_attributes = body?.config?.ffprobe_video_attributes || appConfig.utils.ffprobe.video_attributes;
+	jobConfig.ffprobe_audio_attributes = body?.config?.ffprobe_audio_attributes || appConfig.utils.ffprobe.audio_attributes;
+
+	jobConfig.ffmpeg_preset = formatToUpperSnakeCase(
+		body?.config?.ffmpeg_preset || appConfig.utils.ffmpeg.preset
+	) as JobConfig["ffmpeg_preset"];
+	jobConfig.ffmpeg_quality = parsePercent(body?.config?.ffmpeg_quality || appConfig.utils.ffmpeg.quality) as JobConfig["ffmpeg_quality"];
+
+	jobConfig.nsfw_model = formatToUpperSnakeCase(body?.config?.nsfw_model || appConfig.utils.nsfw.model) as JobConfig["nsfw_model"];
+	jobConfig.nsfw_size = parseInt(String(body?.config?.nsfw_size ?? appConfig.utils.nsfw.size)) as JobConfig["nsfw_size"];
+	jobConfig.nsfw_type = formatToUpperSnakeCase(body?.config?.nsfw_type || appConfig.utils.nsfw.type) as JobConfig["nsfw_type"];
+	jobConfig.nsfw_threshold = parsePercent(body?.config?.nsfw_threshold ?? appConfig.utils.nsfw.threshold) as JobConfig["nsfw_threshold"];
+
+	jobConfig.whisper_model = formatToUpperSnakeCase(
+		body?.config?.whisper_model || appConfig.utils.whisper.model
+	) as JobConfig["whisper_model"];
+	jobConfig.whisper_with_cuda = body?.config?.whisper_with_cuda ?? appConfig.utils.whisper.with_cuda;
+
+	// Validate Job Outputs
+	const jobOutputs: Array<JobOutputRow> = [];
 
 	for (let index = 0; index < body.outputs.length; index++) {
-		const specs: JobOutputSpecs = body.outputs[index];
+		// type check
+		const jobOutputConfig: JobOutputConfig = body.outputs[index];
 
-		outputs.push({
+		jobOutputs.push({
 			key: uukey(),
 			job_key,
 			index,
 			priority,
-			specs,
-			status: config.jobs.enqueue_on_receive ? "QUEUED" : "PENDING",
+			config: jobOutputConfig,
+			status: appConfig.jobs.enqueue_on_receive ? "QUEUED" : "PENDING",
 			updated_at: now,
 			created_at: now,
-			try_max: body.try_max ? body.try_max : config.jobs.try_count || 3,
-			try_count: config.jobs.enqueue_on_receive ? 1 : 0,
-			retry_in: body.retry_in ? body.retry_in : config.jobs.retry_in || 60 * 1000
+			try_max: body.try_max ? body.try_max : appConfig.jobs.try_count || 3,
+			try_count: appConfig.jobs.enqueue_on_receive ? 1 : 0,
+			retry_in: body.retry_in ? body.retry_in : appConfig.jobs.retry_in || 60 * 1000
 			// retry_at: null,
 			// locked_by: null
 		});
 	}
 
-	if (outputs.length === 0) {
+	if (jobOutputs.length === 0) {
 		throw new Error("OUTPUT_REQUIRED");
 	}
 
 	// NOTIFICATION: VALIDATE
 	if (body.notification) {
 		if (body.notification.notify_on && Array.isArray(body.notification.notify_on)) {
-			const allowedNotifyOns = config.jobs.notifications.notify_on_alloweds.split(",").map((e) => e.trim());
+			const allowedNotifyOns = appConfig.jobs.notifications.notify_on_alloweds.split(",").map((e) => e.trim());
 
 			body.notification.notify_on = body.notification.notify_on.filter((status: string) => allowedNotifyOns.includes(status));
 		}
@@ -115,40 +142,42 @@ export const createJob = async (body: JobRequest) => {
 	const job: JobRow = {
 		key: job_key,
 		priority,
+		config: jobConfig,
 		input: body.input ? body.input : null,
 		destination: body.destination ? body.destination : null,
 		notification: body.notification ? body.notification : null,
 		metadata: body.metadata ? body.metadata : null,
-		status: config.jobs.enqueue_on_receive ? "QUEUED" : "PENDING",
+		status: appConfig.jobs.enqueue_on_receive ? "QUEUED" : "PENDING",
 		updated_at: now,
 		created_at: now,
-		try_max: body.try_max ? body.try_max : config.jobs.try_count || 3,
-		try_count: config.jobs.enqueue_on_receive ? 1 : 0,
-		retry_in: body.retry_in ? body.retry_in : config.jobs.retry_in || 60 * 1000
+		try_max: body.try_max ? body.try_max : appConfig.jobs.try_count || 3,
+		try_count: appConfig.jobs.enqueue_on_receive ? 1 : 0,
+		retry_in: body.retry_in ? body.retry_in : appConfig.jobs.retry_in || 60 * 1000
 		// retry_at: null,
 		// locked_by: null
 	};
 
-	if ((job.try_max || 0) < config.jobs.try_min) {
-		job.try_max = config.jobs.try_min;
+	if ((job.try_max || 0) < appConfig.jobs.try_min) {
+		job.try_max = appConfig.jobs.try_min;
 	}
 
-	if ((job.try_max || 0) > config.jobs.try_max) {
-		job.try_max = config.jobs.try_max;
+	if ((job.try_max || 0) > appConfig.jobs.try_max) {
+		job.try_max = appConfig.jobs.try_max;
 	}
 
-	if ((job.retry_in || 0) < config.jobs.retry_in_min) {
-		job.retry_in = config.jobs.retry_in_min;
+	if ((job.retry_in || 0) < appConfig.jobs.retry_in_min) {
+		job.retry_in = appConfig.jobs.retry_in_min;
 	}
 
-	if ((job.retry_in || 0) > config.jobs.retry_in_max) {
-		job.retry_in = config.jobs.retry_in_max;
+	if ((job.retry_in || 0) > appConfig.jobs.retry_in_max) {
+		job.retry_in = appConfig.jobs.retry_in_max;
 	}
 
 	await database
 		.table("jobs")
 		.insert({
 			...job,
+			config: job.config ? JSON.stringify(job.config) : null,
 			input: JSON.stringify(job.input),
 			destination: job.destination ? JSON.stringify(job.destination) : null,
 			notification: job.notification ? JSON.stringify(job.notification) : null,
@@ -158,11 +187,11 @@ export const createJob = async (body: JobRequest) => {
 			await database
 				.table("jobs_outputs")
 				.insert(
-					outputs.map((output) => ({
-						...output,
-						specs: JSON.stringify(output.specs),
-						outcome: output.outcome ? JSON.stringify(output.outcome) : null,
-						status: config.jobs.enqueue_on_receive ? "QUEUED" : "PENDING",
+					jobOutputs.map((jobOutput) => ({
+						...jobOutput,
+						config: JSON.stringify(jobOutput.config),
+						// outcome: jobOutput.outcome ? JSON.stringify(jobOutput.outcome) : null,
+						status: appConfig.jobs.enqueue_on_receive ? "QUEUED" : "PENDING",
 						updated_at: now,
 						created_at: now
 					}))
@@ -173,7 +202,7 @@ export const createJob = async (body: JobRequest) => {
 					await stats.update({
 						jobs_recieved_count: 1,
 						inputs_recieved_count: 1,
-						outputs_requested_count: outputs.length || 0
+						outputs_requested_count: jobOutputs.length || 0
 					});
 
 					await logger.insert("API", "INFO", "Job request received!", { job_key });
@@ -213,7 +242,7 @@ export const createJob = async (body: JobRequest) => {
 			throw error;
 		});
 
-	return { ...job, outputs };
+	return { ...job, outputs: jobOutputs };
 };
 
 export const retryJob = async (job_key: string, output_key?: string) => {
@@ -373,7 +402,7 @@ export const getOutputs = async (
 		query = query.where(function () {
 			this.where("key", "like", searchPattern)
 				.orWhere("job_key", "like", searchPattern)
-				.orWhere("specs", "like", searchPattern)
+				.orWhere("config", "like", searchPattern)
 				.orWhere("outcome", "like", searchPattern)
 				.orWhere("status", "like", searchPattern)
 				.orWhere("instance_key", "like", searchPattern)
@@ -426,7 +455,7 @@ export const getNotifications = async (
 		query = query.where(function () {
 			this.where("key", "like", searchPattern)
 				.orWhere("job_key", "like", searchPattern)
-				.orWhere("specs", "like", searchPattern)
+				.orWhere("config", "like", searchPattern)
 				.orWhere("payload", "like", searchPattern)
 				.orWhere("outcome", "like", searchPattern)
 				.orWhere("status", "like", searchPattern)

@@ -1,5 +1,5 @@
 import { Express, Request, Response } from "express";
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { sanitizeData } from "@voltage/utils";
 import { sendSuccess } from "@/utils/response.util.js";
 import { authMiddleware, optionalAuthMiddleware } from "@/middleware/auth.middleware.js";
@@ -21,7 +21,7 @@ export const registerRoutes = (app: Express) => {
 	// Config endpoint - returns full config if authenticated, otherwise only frontend config
 	app.get("/config", optionalAuthMiddleware(), async (req: Request, res: Response) => {
 		const isAuthenticated = (req as any).isAuthenticated || false;
-		const responseData = isAuthenticated ? config : { version: config.version, frontend: config.frontend };
+		const responseData = isAuthenticated ? appConfig : { version: appConfig.version, frontend: appConfig.frontend };
 		return sendSuccess(res, sanitizeData(responseData));
 	});
 

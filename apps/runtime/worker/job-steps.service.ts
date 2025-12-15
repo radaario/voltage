@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { logger, getNow } from "@voltage/utils";
 import { JobDownloader } from "@/worker/downloader.js";
 import { JobAnalyzer } from "@/worker/analyzer.js";
@@ -19,7 +19,7 @@ export class JobStepsService {
 	}
 
 	private startJobOutputInterval(callback: any) {
-		this.intervalRef = setInterval(() => callback?.(), config.jobs.outputs.process_interval || 5000);
+		this.intervalRef = setInterval(() => callback?.(), appConfig.jobs.outputs.process_interval || 5000);
 	}
 
 	private stopJobOutputInterval() {
@@ -74,13 +74,13 @@ export class JobStepsService {
 	}
 
 	async generateInputPreview(job: JobContext, jobStats: JobStats): Promise<any> {
-		if (job.input?.generate_preview_is_disabled) return;
+		if (job.input?.preview_is_disabled) return;
 
 		await logger.insert("WORKER", "INFO", "Generating job input preview...");
 
 		try {
 			const thumbnailer = new JobThumbnailer(job);
-			const jobInputPreview = await thumbnailer.generate(config.jobs.preview);
+			const jobInputPreview = await thumbnailer.generate(appConfig.jobs.preview);
 
 			await fs.access(jobInputPreview.temp_path);
 
@@ -98,7 +98,7 @@ export class JobStepsService {
 
 	async detectInputNSFW(job: JobContext, jobInputPreviewPath: string, jobStats: JobStats): Promise<any> {
 		if (!jobInputPreviewPath) return null;
-		if (job.input?.nsfw_is_disabled || config.utils.nsfw.is_disabled) return null;
+		if (job.input?.nsfw_enabled || appConfig.utils.nsfw.enabled) return null;
 
 		await logger.insert("WORKER", "INFO", "Starting NSFW analysis for job input...");
 
@@ -216,7 +216,7 @@ export class JobStepsService {
 			if (outputs[index].status === "PROCESSED") {
 				const tempJobOutputFilePath = path.join(
 					this.tempJobDir,
-					`output.${outputs[index].index}.${(outputs[index].specs.format || "MP4").toLowerCase()}`
+					`output.${outputs[index].index}.${(outputs[index].config.format || "MP4").toLowerCase()}`
 				);
 
 				try {

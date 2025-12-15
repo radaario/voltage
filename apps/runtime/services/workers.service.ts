@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { database, logger, getInstanceKey, hash, getNow, subtractNow } from "@voltage/utils";
 import { Worker, WorkerOutcome, WorkersProcessMap } from "@/types/index.js";
 import path from "path";
@@ -20,7 +20,7 @@ export const maintainInstanceWorkers = async (instanceKey: string): Promise<void
 			.count("* as count")
 			.first()
 			.then((result: any) => result?.count || 0);
-		const missingWorkersCount = config.runtime.workers.max - existsWorkersCount;
+		const missingWorkersCount = appConfig.runtime.workers.max - existsWorkersCount;
 
 		// INSTANCE: WORKERs: INSERT
 		if (missingWorkersCount > 0) {
@@ -61,7 +61,7 @@ export const maintainInstanceWorkers = async (instanceKey: string): Promise<void
 			.update({
 				job_key: null,
 				outcome: null,
-				status: database.knex.raw(`CASE WHEN \`index\` < ? THEN 'IDLE' ELSE 'TERMINATED' END`, [config.runtime.workers.max]),
+				status: database.knex.raw(`CASE WHEN \`index\` < ? THEN 'IDLE' ELSE 'TERMINATED' END`, [appConfig.runtime.workers.max]),
 				updated_at: now
 			});
 
@@ -84,7 +84,7 @@ export const maintainInstanceWorkers = async (instanceKey: string): Promise<void
 
 export const timeoutBusyWorkers = async (): Promise<string[] | undefined> => {
 	try {
-		const busyTimeout = config.runtime.workers.busy_timeout || 5 * 60 * 1000; // in milliseconds, default 5 minutes
+		const busyTimeout = appConfig.runtime.workers.busy_timeout || 5 * 60 * 1000; // in milliseconds, default 5 minutes
 		const now = getNow();
 
 		const timeoutedWorkers = await database
@@ -114,7 +114,7 @@ export const timeoutBusyWorkers = async (): Promise<string[] | undefined> => {
 
 export const idleTimeoutWorkers = async (): Promise<void> => {
 	try {
-		const idleAfter = config.runtime.workers.idle_after || 1 * 10 * 1000; // in milliseconds, default 10 seconds
+		const idleAfter = appConfig.runtime.workers.idle_after || 1 * 10 * 1000; // in milliseconds, default 10 seconds
 		const now = getNow();
 
 		await database
@@ -145,7 +145,7 @@ export const spawnInstanceWorkerForJob = async (
 		// WORKER: CREATE
 		let child: ChildProcess;
 
-		if (config.env === "local") {
+		if (appConfig.env === "local") {
 			const workerScriptPath = path.join(process.cwd(), "worker", "index.ts");
 			child = spawn("npx", ["tsx", workerScriptPath, instanceKey, workerKey, jobKey], {
 				stdio: ["inherit", "inherit", "inherit"],

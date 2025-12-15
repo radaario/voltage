@@ -1,4 +1,4 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import os from "os";
 import { hash, uuid } from "./crypto";
 
@@ -9,7 +9,7 @@ const networkInterfaces = os.networkInterfaces();
  * @returns Instance key (hashed IP or unique key)
  */
 export function getInstanceKey(): string {
-	if (config.runtime.key_method === "IP_ADDRESS") {
+	if (appConfig.runtime.key_method === "IP_ADDRESS") {
 		const ipAddress = getInstanceLocalIpAddress();
 		return hash(ipAddress || uuid());
 	}
@@ -39,7 +39,7 @@ export function getInstanceSpecs(): {
 	return {
 		hostname: os.hostname(),
 		ip_address: getInstanceLocalIpAddress(),
-		port: config.port,
+		port: appConfig.port,
 		os_platform: os.platform(),
 		os_release: os.release(),
 		cpu_core_count: os.cpus().length,
@@ -48,8 +48,8 @@ export function getInstanceSpecs(): {
 		memory_total: os.totalmem(),
 		memory_free: os.freemem(),
 		memory_usage_percent: getInstanceMemoryUsagePercent(),
-		workers_per_cpu_core: config.runtime.workers.per_cpu_core,
-		workers_max: config.runtime.workers.max
+		workers_per_cpu_core: appConfig.runtime.workers.per_cpu_core,
+		workers_max: appConfig.runtime.workers.max
 	};
 }
 

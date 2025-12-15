@@ -1,10 +1,10 @@
-import { config } from "@voltage/config";
+import { appConfig } from "@voltage/config";
 import { database } from "./database";
 import { getNow } from "./helpers/date";
 import { uukey } from "./helpers/crypto";
 import { pino as _pino, Logger as PinoLogger } from "pino";
 
-database.config(config.database);
+database.config(appConfig.database);
 
 /**
  * Log level type
@@ -32,7 +32,7 @@ export interface MetadataStore {
  */
 function createPinoLogger(): PinoLogger {
 	const level = process.env.LOG_LEVEL || "info";
-	const isProd = config.env === "prod" || config.env === "production";
+	const isProd = appConfig.env === "prod" || appConfig.env === "production";
 
 	return _pino({
 		level,
@@ -112,7 +112,7 @@ class Logger {
 			created_at: getNow()
 		};
 
-		if (!config.logs.is_disabled) {
+		if (!appConfig.logs.is_disabled) {
 			try {
 				await database.table("logs").insert(log);
 			} catch (error: Error | any) {

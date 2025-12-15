@@ -67,6 +67,7 @@ export interface Job {
 	instance_key: string | null;
 	worker_key: string | null;
 	priority: number;
+	config: any | null;
 	input: ServiceConfig;
 	destination: ServiceConfig | null;
 	notification: ServiceConfig | null;

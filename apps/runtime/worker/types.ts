@@ -43,7 +43,7 @@ export interface JobOutputContext {
 	job_key: string;
 	index: number;
 	priority: number;
-	specs?: any;
+	config?: any;
 	outcome?: any;
 	status: string;
 	started_at?: string | null;
