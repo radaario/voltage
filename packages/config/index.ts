@@ -1,14 +1,4 @@
-import type {
-	AppConfig,
-	StorageType,
-	DatabaseType,
-	InstanceKeyMethod,
-	FFmpegPreset,
-	NSFWModel,
-	NSFWType,
-	WhisperModel,
-	PreviewFormat
-} from "./types";
+import type { AppConfig, STORAGE_TYPE, DATABASE_TYPE, FFMPEG_PRESET, NSFW_MODEL, NSFW_TYPE, WHISPER_MODEL, PREVIEW_FORMAT } from "./types";
 import { loadEnvironmentFiles, getEnv, getEnvNumber, getEnvNumberOrNull, getEnvBoolean } from "./loader";
 import { validateEnvironment, validateConfig } from "./validators";
 import { getAppDir, SYSTEM, APP_CONFIG } from "./defaults";
@@ -63,24 +53,24 @@ export const appConfig: AppConfig = {
 		},
 		ffmpeg: {
 			path: getEnv("VOLTAGE_UTILS_FFMPEG_PATH", APP_CONFIG.utils.ffmpeg.path),
-			preset: getEnv("VOLTAGE_UTILS_FFMPEG_PRESET", APP_CONFIG.utils.ffmpeg.preset) as FFmpegPreset,
+			preset: getEnv("VOLTAGE_UTILS_FFMPEG_PRESET", APP_CONFIG.utils.ffmpeg.preset) as FFMPEG_PRESET,
 			quality: getEnvNumber("VOLTAGE_UTILS_FFMPEG_QUALITY", APP_CONFIG.utils.ffmpeg.quality)
 		},
 		nsfw: {
-			model: getEnv("VOLTAGE_UTILS_NSFW_MODEL", APP_CONFIG.utils.nsfw.model) as NSFWModel,
+			model: getEnv("VOLTAGE_UTILS_NSFW_MODEL", APP_CONFIG.utils.nsfw.model) as NSFW_MODEL,
 			size: getEnvNumber("VOLTAGE_UTILS_NSFW_SIZE", APP_CONFIG.utils.nsfw.size),
-			type: getEnv("VOLTAGE_UTILS_NSFW_TYPE", APP_CONFIG.utils.nsfw.type) as NSFWType,
+			type: getEnv("VOLTAGE_UTILS_NSFW_TYPE", APP_CONFIG.utils.nsfw.type) as NSFW_TYPE,
 			threshold: getEnvNumber("VOLTAGE_UTILS_NSFW_THRESHOLD", APP_CONFIG.utils.nsfw.threshold)
 		},
 		whisper: {
-			model: getEnv("VOLTAGE_UTILS_WHISPER_MODEL", APP_CONFIG.utils.whisper.model) as WhisperModel,
+			model: getEnv("VOLTAGE_UTILS_WHISPER_MODEL", APP_CONFIG.utils.whisper.model) as WHISPER_MODEL,
 			with_cuda: getEnvBoolean("VOLTAGE_UTILS_WHISPER_WITH_CUDA", APP_CONFIG.utils.whisper.with_cuda)
 		}
 	},
 
 	// Storage configuration
 	storage: {
-		type: getEnv("VOLTAGE_STORAGE_TYPE", APP_CONFIG.storage.type) as StorageType,
+		type: getEnv("VOLTAGE_STORAGE_TYPE", APP_CONFIG.storage.type) as STORAGE_TYPE,
 		endpoint: getEnv("VOLTAGE_STORAGE_ENDPOINT", APP_CONFIG.storage.endpoint),
 		access_key: getEnv("VOLTAGE_STORAGE_ACCESS_KEY", APP_CONFIG.storage.accessKey),
 		access_secret: getEnv("VOLTAGE_STORAGE_ACCESS_SECRET", APP_CONFIG.storage.accessSecret),
@@ -95,7 +85,7 @@ export const appConfig: AppConfig = {
 
 	// Database configuration
 	database: {
-		type: getEnv("VOLTAGE_DATABASE_TYPE", APP_CONFIG.database.type) as DatabaseType,
+		type: getEnv("VOLTAGE_DATABASE_TYPE", APP_CONFIG.database.type) as DATABASE_TYPE,
 		host: getEnv("VOLTAGE_DATABASE_HOST", APP_CONFIG.database.host),
 		port: getEnvNumber("VOLTAGE_DATABASE_PORT", APP_CONFIG.database.port),
 		username: getEnv("VOLTAGE_DATABASE_USERNAME", APP_CONFIG.database.username),
@@ -109,7 +99,7 @@ export const appConfig: AppConfig = {
 	// Runtime configuration
 	runtime: {
 		is_disabled: getEnvBoolean("VOLTAGE_RUNTIME_IS_DISABLED", APP_CONFIG.runtime.isDisabled),
-		key_method: getEnv("VOLTAGE_INSTANCES_KEY_METHOD", APP_CONFIG.runtime.keyMethod) as InstanceKeyMethod,
+		key_method: getEnv("VOLTAGE_INSTANCES_KEY_METHOD", APP_CONFIG.runtime.keyMethod),
 		maintain_interval: getEnvNumber("VOLTAGE_INSTANCES_MAINTAIN_INTERVAL", APP_CONFIG.runtime.maintainInterval),
 		online_timeout: getEnvNumber("VOLTAGE_INSTANCES_ONLINE_TIMEOUT", APP_CONFIG.runtime.onlineTimeout),
 		purge_after: getEnvNumber("VOLTAGE_INSTANCES_PURGE_AFTER", APP_CONFIG.runtime.purgeAfter),
@@ -167,23 +157,24 @@ export const appConfig: AppConfig = {
 
 	// Jobs configuration
 	jobs: {
-		analyze_input: getEnvBoolean("VOLTAGE_JOBS_ANALYZE_INPUT", APP_CONFIG.jobs.analyze_input),
-		generate_preview: getEnvBoolean("VOLTAGE_JOBS_GENERATE_PREVIEW", APP_CONFIG.jobs.generate_preview),
-		detect_nsfw: getEnvBoolean("VOLTAGE_JOBS_DETECT_NSFW", APP_CONFIG.jobs.detect_nsfw),
 		queue_timeout: getEnvNumber("VOLTAGE_JOBS_QUEUE_TIMEOUT", APP_CONFIG.jobs.queueTimeout),
 		process_interval: getEnvNumber("VOLTAGE_JOBS_PROCESS_INTERVAL", APP_CONFIG.jobs.processInterval),
 		process_timeout: getEnvNumber("VOLTAGE_JOBS_PROCESS_TIMEOUT", APP_CONFIG.jobs.processTimeout),
 		enqueue_on_receive: getEnvBoolean("VOLTAGE_JOBS_ENQUEUE_ON_RECEIVE", APP_CONFIG.jobs.enqueueOnReceive),
 		enqueue_limit: getEnvNumber("VOLTAGE_JOBS_ENQUEUE_LIMIT", APP_CONFIG.jobs.enqueueLimit),
 		retention: getEnvNumber("VOLTAGE_JOBS_RETENTION", APP_CONFIG.jobs.retention),
+		input_analysis: getEnvBoolean("VOLTAGE_JOBS_INPUT_ANALYSIS", APP_CONFIG.jobs.inputAnalysis),
+		preview_generation: getEnvBoolean("VOLTAGE_JOBS_PREVIEW_GENERATION", APP_CONFIG.jobs.previewGeneration),
+		nsfw_detection: getEnvBoolean("VOLTAGE_JOBS_NSFW_DETECTION", APP_CONFIG.jobs.nsfwDetection),
+		priority: getEnvNumber("VOLTAGE_JOBS_PRIORITY", APP_CONFIG.jobs.priority),
+		try: getEnvNumber("VOLTAGE_JOBS_TRY", APP_CONFIG.jobs.try),
 		try_min: getEnvNumber("VOLTAGE_JOBS_TRY_MIN", APP_CONFIG.jobs.tryMin),
 		try_max: getEnvNumber("VOLTAGE_JOBS_TRY_MAX", APP_CONFIG.jobs.tryMax),
-		try_count: getEnvNumber("VOLTAGE_JOBS_TRY_COUNT", APP_CONFIG.jobs.tryCount),
+		retry_in: getEnvNumber("VOLTAGE_JOBS_RETRY_IN", APP_CONFIG.jobs.retryIn),
 		retry_in_min: getEnvNumber("VOLTAGE_JOBS_RETRY_IN_MIN", APP_CONFIG.jobs.retryInMin),
 		retry_in_max: getEnvNumber("VOLTAGE_JOBS_RETRY_IN_MAX", APP_CONFIG.jobs.retryInMax),
-		retry_in: getEnvNumber("VOLTAGE_JOBS_RETRY_IN", APP_CONFIG.jobs.retryIn),
 		preview: {
-			format: getEnv("VOLTAGE_JOBS_PREVIEW_FORMAT", APP_CONFIG.jobs.preview.format) as PreviewFormat,
+			format: getEnv("VOLTAGE_JOBS_PREVIEW_FORMAT", APP_CONFIG.jobs.preview.format) as PREVIEW_FORMAT,
 			quality: getEnvNumber("VOLTAGE_JOBS_PREVIEW_QUALITY", APP_CONFIG.jobs.preview.quality)
 		},
 		outputs: {
@@ -197,8 +188,10 @@ export const appConfig: AppConfig = {
 			timeout: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT", APP_CONFIG.jobs.notifications.timeout),
 			timeout_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX", APP_CONFIG.jobs.notifications.timeoutMax),
 			try: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TRY", APP_CONFIG.jobs.notifications.try),
+			try_min: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TRY_MIN", APP_CONFIG.jobs.notifications.tryMin),
 			try_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_TRY_MAX", APP_CONFIG.jobs.notifications.tryMax),
 			retry_in: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN", APP_CONFIG.jobs.notifications.retryIn),
+			retry_in_min: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MIN", APP_CONFIG.jobs.notifications.retryInMin),
 			retry_in_max: getEnvNumber("VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MAX", APP_CONFIG.jobs.notifications.retryInMax)
 		}
 	}

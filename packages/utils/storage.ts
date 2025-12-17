@@ -1,3 +1,5 @@
+import { STORAGE_TYPE, STORAGE_S3_LIKE_TYPE, STORAGE_FTP_TYPE } from "@voltage/config";
+
 import { guessContentType } from "./index";
 import { logger } from "./logger";
 
@@ -20,22 +22,8 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Client as FTPClient } from "basic-ftp";
 import SFTPClient from "ssh2-sftp-client";
 
-export type StorageType =
-	| "LOCAL"
-	| "OTHER_S3"
-	| "AWS_S3"
-	| "GOOGLE_CLOUD_STORAGE"
-	| "DO_SPACES"
-	| "LINODE"
-	| "WASABI"
-	| "BACKBLAZE"
-	| "RACKSPACE"
-	| "MICROSOFT_AZURE"
-	| "FTP"
-	| "SFTP";
-
 export interface StorageConfigOptions {
-	type?: StorageType;
+	type?: STORAGE_TYPE;
 	// Common
 	endpoint?: string; // custom S3-compatible endpoint
 	access_key?: string;
@@ -225,11 +213,9 @@ class LocalStorageDriver implements StorageDriver {
 	}
 }
 
-type S3LikeType = Exclude<StorageType, "LOCAL">;
-
 class S3StorageDriver implements StorageDriver {
 	private client!: S3Client;
-	private type!: S3LikeType;
+	private type!: STORAGE_S3_LIKE_TYPE;
 	private endpoint?: string;
 	private region?: string;
 	private bucket?: string;
@@ -238,7 +224,7 @@ class S3StorageDriver implements StorageDriver {
 	private publicUrlBase?: string;
 
 	async config(options?: StorageConfigOptions): Promise<void> {
-		this.type = options?.type as S3LikeType;
+		this.type = options?.type as STORAGE_S3_LIKE_TYPE;
 		this.endpoint = options?.endpoint;
 		this.region = options?.region;
 		this.bucket = options?.bucket;
@@ -520,10 +506,8 @@ class S3StorageDriver implements StorageDriver {
 	}
 }
 
-type FTPLikeType = Extract<StorageType, "FTP" | "SFTP">;
-
 class FTPStorageDriver implements StorageDriver {
-	private type!: FTPLikeType;
+	private type!: STORAGE_FTP_TYPE;
 	private host?: string;
 	private port?: number;
 	private username?: string;
@@ -536,7 +520,7 @@ class FTPStorageDriver implements StorageDriver {
 	private sftpClient?: SFTPClient;
 
 	async config(options?: StorageConfigOptions): Promise<void> {
-		this.type = options?.type as FTPLikeType;
+		this.type = options?.type as STORAGE_FTP_TYPE;
 		this.host = options?.host;
 		this.username = options?.username || "anonymous";
 		this.password = options?.password || "";
@@ -885,10 +869,10 @@ class FTPStorageDriver implements StorageDriver {
 // Facade
 class StorageFacade implements StorageDriver {
 	private driver: StorageDriver | null = null;
-	private type: StorageType | null = null;
+	private type: STORAGE_TYPE | null = null;
 
 	async config(options?: StorageConfigOptions): Promise<void> {
-		this.type = options?.type as StorageType;
+		this.type = options?.type as STORAGE_TYPE;
 
 		if (this.type === "LOCAL") {
 			this.driver = new LocalStorageDriver();

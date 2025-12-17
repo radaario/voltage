@@ -216,6 +216,7 @@ class Database {
 					table.integer("index").notNullable().defaultTo(0);
 					table.integer("priority").notNullable().defaultTo(1000);
 					table.text("config").notNullable();
+					table.text("destination").nullable();
 					table.text("outcome").nullable();
 					table
 						.enum("status", [
@@ -270,6 +271,8 @@ class Database {
 						table.string("key", 40).primary();
 						table.string("job_key", 40).notNullable();
 						table.integer("priority").notNullable().defaultTo(1000);
+						table.enum("type", ["VIDEO", "AUDIO", "THUMBNAIL", "SUBTITLE"]).notNullable().defaultTo("VIDEO");
+						table.string("name", 255).notNullable();
 						table.text("config").notNullable();
 						table.text("payload").notNullable();
 						table.text("outcome").nullable();

@@ -1,5 +1,5 @@
 import { appConfig } from "@voltage/config";
-import { JobNotificationConfig } from "@voltage/config/types";
+import { JobNotification } from "@voltage/config/types";
 
 import { database, stats, logger } from "@voltage/utils";
 import { uukey, getNow, addNow, sanitizeData } from "@voltage/utils";
@@ -200,7 +200,7 @@ export async function retryJobNotification(notification: any): Promise<any> {
 	return outcome;
 }
 
-export async function notify(config: JobNotificationConfig, payload: any): Promise<any> {
+export async function notify(config: JobNotification, payload: any): Promise<any> {
 	let outcome: any = {
 		status: "FAILED"
 	};

@@ -1,4 +1,4 @@
-import type { AppConfig, StorageType, DatabaseType } from "./types";
+import type { AppConfig, STORAGE_TYPE, DATABASE_TYPE } from "./types";
 
 export class ConfigValidationError extends Error {
 	constructor(message: string) {
@@ -75,7 +75,7 @@ function validatePorts(config: AppConfig): void {
 	}
 }
 
-function validateStorage(type: StorageType, storage: AppConfig["storage"]): void {
+function validateStorage(type: STORAGE_TYPE, storage: AppConfig["storage"]): void {
 	// LOCAL storage doesn't need additional validation
 	if (type === "LOCAL") {
 		return;
@@ -117,7 +117,7 @@ function validateStorage(type: StorageType, storage: AppConfig["storage"]): void
 	}
 }
 
-function validateDatabase(type: DatabaseType, database: AppConfig["database"]): void {
+function validateDatabase(type: DATABASE_TYPE, database: AppConfig["database"]): void {
 	// SQLite validation
 	if (type === "SQLITE") {
 		if (!database.file_name || database.file_name.trim() === "") {
@@ -169,16 +169,16 @@ function validateRuntime(config: AppConfig): void {
 }
 
 function validateJobs(config: AppConfig): void {
-	if (config.jobs.try_min < 0) {
-		throw new ConfigValidationError("VOLTAGE_JOBS_TRY_MIN must be 0 or greater");
+	if (config.jobs.try_min < 1) {
+		throw new ConfigValidationError("VOLTAGE_JOBS_TRY_MIN must be 1 or greater");
 	}
 
 	if (config.jobs.try_max < config.jobs.try_min) {
 		throw new ConfigValidationError("VOLTAGE_JOBS_TRY_MAX must be greater than or equal to VOLTAGE_JOBS_TRY_MIN");
 	}
 
-	if (config.jobs.try_count < 0) {
-		throw new ConfigValidationError("VOLTAGE_JOBS_TRY_COUNT must be 0 or greater");
+	if (config.jobs.try < 0) {
+		throw new ConfigValidationError("VOLTAGE_JOBS_TRY must be 0 or greater");
 	}
 
 	if (config.jobs.enqueue_limit < 1) {
@@ -194,14 +194,12 @@ function validateJobs(config: AppConfig): void {
 	}
 
 	// Validate NSFW settings
-	if (config.utils.nsfw.enabled) {
-		if (config.utils.nsfw.size < 1) {
-			throw new ConfigValidationError("NSFW_SIZE must be greater than 0");
-		}
+	if (config.utils.nsfw.size < 1) {
+		throw new ConfigValidationError("NSFW_SIZE must be greater than 0");
+	}
 
-		if (config.utils.nsfw.threshold < 0 || config.utils.nsfw.threshold > 100) {
-			throw new ConfigValidationError("NSFW_THRESHOLD must be between 0 and 100");
-		}
+	if (config.utils.nsfw.threshold < 0 || config.utils.nsfw.threshold > 100) {
+		throw new ConfigValidationError("NSFW_THRESHOLD must be between 0 and 100");
 	}
 }
 

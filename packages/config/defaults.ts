@@ -26,8 +26,10 @@ export const SYSTEM = {
 	cpuCoresCount
 };
 
-export const STORAGE_TYPES = [
-	"LOCAL",
+export const HTTPS_TYPES = ["HTTP", "HTTPS"] as const;
+export const BASE64_TYPES = ["BASE64"] as const;
+
+export const STORAGE_S3_LIKE_TYPES = [
 	"OTHER_S3",
 	"AWS_S3",
 	"GOOGLE_CLOUD_STORAGE",
@@ -36,10 +38,22 @@ export const STORAGE_TYPES = [
 	"WASABI",
 	"BACKBLAZE",
 	"RACKSPACE",
-	"MICROSOFT_AZURE",
-	"FTP",
-	"SFTP"
+	"MICROSOFT_AZURE"
 ] as const;
+
+export const STORAGE_S3_LIKE_ACLS = [
+	"PUBLIC_READ",
+	"PUBLIC_READ_WRITE",
+	"AUTHENTICATED_READ",
+	"AWS_EXEC_READ",
+	"BUCKET_OWNER_READ",
+	"BUCKET_OWNER_FULL_CONTROL",
+	"PRIVATE"
+] as const;
+
+export const STORAGE_FTP_TYPES = ["FTP", "SFTP"] as const;
+
+export const STORAGE_TYPES = ["LOCAL", ...STORAGE_S3_LIKE_TYPES, ...STORAGE_FTP_TYPES] as const;
 
 export const DATABASE_TYPES = ["SQLITE", "MYSQL", "MARIADB", "POSTGRESQL", "MSSQL", "AWS_REDSHIFT", "COCKROACHDB"] as const;
 
@@ -63,6 +77,118 @@ export const WHISPER_MODELS = [
 ] as const;
 
 export const PREVIEW_FORMATS = ["PNG", "JPG", "BMP", "WEBP"] as const;
+
+export const FIT_MODES = ["PAD", "STRETCH", "CROP", "MAX"] as const;
+export const ROTATE_MODES = [90, -90, 180, -180] as const;
+export const FLIP_MODES = ["HORIZONTAL", "VERTICAL", "BOTH"] as const;
+
+export const VIDEO_FORMATS = [
+	"MP4",
+	"WEBM",
+	"OGV",
+	"MOV",
+	"AVI",
+	"WMV",
+	"ASF",
+	"FLV",
+	"MKV",
+	"TS",
+	"M2TS",
+	"MPG",
+	"MPEG",
+	"GIF",
+	"RAW"
+] as const;
+
+export const VIDEO_CODECS = [
+	"LIB_X_264",
+	"LIB_X_265",
+	"LIB_VPX",
+	"LIB_VPX_VP9",
+	"LIB_AOM_AV1",
+	"MPEG_4",
+	"MPEG_2_VIDEO",
+	"H264_NVENC",
+	"HEVC_NVENC",
+	"H264_QSV",
+	"HEVC_QSV",
+	"H264_VAAPI",
+	"COPY",
+	"PRORES",
+	"DNXHD",
+	"FFV_1",
+	"UTVIDEO"
+] as const;
+export const VIDEO_PROFILES = ["MAIN", "BASELINE", "HIGH", "HIGH_10", "HIGH_422", "HIGH_444"] as const;
+export const VIDEO_PIXEL_FORMATS = [
+	"YUV_420_P",
+	"YUV_422_P",
+	"YUV_444_P",
+	"YUV_422_P101E",
+	"YUV_444_P101E",
+	"NV_12",
+	"NV_21",
+	"RGB_24",
+	"BGR_24",
+	"RGBA",
+	"BGRA",
+	"ARGB",
+	"GBRP",
+	"GRAY",
+	"GRAY_161_E",
+	"CUDA",
+	"VAAPI",
+	"QSV",
+	"DXVA2_VLD",
+	"VIDEO_TOOL_BOX"
+] as const;
+export const VIDEO_LEVELS = [1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 3.0, 3.1, 3.2, 4.0, 4.1, 4.2, 5.0, 5.1, 5.2, 6.0, 6.1, 6.2] as const;
+
+export const AUDIO_FORMATS = ["MP3", "AAC", "WAV", "FLAC", "OGG", "OPUS", "ALAC", "WMA", "AIFF", "AMR-NB", "AMR-WB"] as const;
+export const AUDIO_CODECS = [
+	"LIB_MP3_LAME",
+	"PCM_S16_LE",
+	"PCM_S24_LE",
+	"PCM_S32_LE",
+	"FLAC",
+	"ALAC",
+	"WAVPACK",
+	"AAC",
+	"LIB_OPUS",
+	"LIB_VORBIS",
+	"AC3",
+	"EAC3",
+	"MP2",
+	"WMAV2"
+] as const;
+export const AUDIO_CHANNELS = [2, 1, 4, 6, 8] as const;
+
+export const THUMBNAIL_FORMATS = ["PNG", "JPG", "WEBP", "BMP"] as const;
+
+export const SUBTITLE_FORMATS = ["SRT", "VTT", "JSON", "CSV", "TXT"] as const;
+
+export const NOTIFICATION_NOTIFY_ON_TYPES = [
+	"RECEIVED",
+	"PENDING",
+	"RETRYING",
+	"QUEUED",
+	"STARTED",
+	"DOWNLOADING",
+	"DOWNLOADED",
+	"ANALYZING",
+	"ANALYZED",
+	"PROCESSING",
+	"PROCESSED",
+	"UPLOADING",
+	"UPLOADED",
+	"COMPLETED",
+	"CANCELLED",
+	"DELETED",
+	"FAILED",
+	"TIMEOUT"
+] as const;
+
+export const NOTIFICATION_NOTIFY_ON_DEFAULT = ["RECEIVED", "COMPLETED", "FAILED", "TIMEOUT"] as const;
 
 // Application configuration defaults
 export const APP_CONFIG = {
@@ -163,21 +289,22 @@ export const APP_CONFIG = {
 		retention: 60 * 60 * 1000 // 1 hour
 	},
 	jobs: {
-		analyze_input: true,
-		generate_preview: true,
-		detect_nsfw: true,
 		queueTimeout: 5 * 60 * 1000, // 5 minutes
 		processInterval: 1 * 1000, // 1 second
 		processTimeout: 30 * 60 * 1000, // 30 minutes
 		enqueueOnReceive: true,
 		enqueueLimit: 10,
 		retention: 24 * 60 * 60 * 1000, // 24 hours
+		inputAnalysis: true,
+		previewGeneration: true,
+		nsfwDetection: false,
+		priority: 1000,
+		try: 3,
 		tryMin: 1,
 		tryMax: 3,
-		tryCount: 3,
+		retryIn: 1 * 60 * 1000, // 1 minute
 		retryInMin: 1 * 60 * 1000, // 1 minute
 		retryInMax: 60 * 60 * 1000, // 60 minutes
-		retryIn: 1 * 60 * 1000, // 1 minute
 		preview: {
 			format: PREVIEW_FORMATS[0], // e.g., "PNG", "JPG", "BMP", "WEBP"
 			quality: 75
@@ -188,14 +315,15 @@ export const APP_CONFIG = {
 		notifications: {
 			processInterval: 1 * 1000, // 1 second
 			processLimit: 10,
-			notifyOn: "RECEIVED,COMPLETED,FAILED,TIMEOUT",
-			notifyOnAlloweds:
-				"RECEIVED,PENDING,RETRYING,QUEUED,STARTED,DOWNLOADING,DOWNLOADED,ANALYZING,ANALYZED,PROCESSING,PROCESSED,UPLOADING,UPLOADED,COMPLETED,CANCELLED,DELETED,FAILED,TIMEOUT",
+			notifyOn: NOTIFICATION_NOTIFY_ON_DEFAULT.join(","),
+			notifyOnAlloweds: NOTIFICATION_NOTIFY_ON_TYPES.join(","),
 			timeout: 10 * 1000, // 10 seconds
 			timeoutMax: 30 * 1000, // 30 seconds
 			try: 3,
+			tryMin: 1,
 			tryMax: 3,
 			retryIn: 1 * 60 * 1000, // 1 minute
+			retryInMin: 1 * 60 * 1000, // 1 minute
 			retryInMax: 60 * 60 * 1000 // 60 minutes
 		}
 	}

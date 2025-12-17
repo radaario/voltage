@@ -1,3 +1,4 @@
+import { appConfig } from "@voltage/config";
 import { Request, Response, NextFunction } from "express";
 import Joi, { ObjectSchema } from "joi";
 
@@ -25,8 +26,15 @@ export const validateMiddleware =
 
 		if (error) {
 			return res.status(400).json({
-				message: "Validation error",
-				details: error.details.map((d) => d.message)
+				metadata: {
+					version: appConfig.version,
+					env: appConfig.env,
+					status: "ERROR",
+					error: {
+						code: "VALIDATION_ERROR",
+						message: `${error.details.map((d) => d.message).join(", ")}!`
+					}
+				}
 			});
 		}
 

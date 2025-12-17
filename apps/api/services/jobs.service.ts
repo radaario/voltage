@@ -1,7 +1,16 @@
-import { appConfig } from "@voltage/config";
-import { JobRequest, JobConfig, JobRow, JobOutputRow, JobOutputConfig } from "@voltage/config/types";
+import { appConfig, HTTPS_TYPES, STORAGE_FTP_TYPES, STORAGE_S3_LIKE_TYPES } from "@voltage/config";
+import type {
+	JobRequest,
+	JobConfig,
+	JobInput,
+	JobDestination,
+	JobNotification,
+	JobRow,
+	JobOutputRequest,
+	JobOutputRow
+} from "@voltage/config/types";
 import { database, storage, logger, stats } from "@voltage/utils";
-import { uukey, getNow, getDate, formatToUpperSnakeCase, parsePercent } from "@voltage/utils";
+import { uukey, getNow, getDate } from "@voltage/utils";
 import { createJobNotification } from "@voltage/runtime/worker/notifier";
 import { PaginationParams } from "@/types/index.js";
 
@@ -72,57 +81,99 @@ export const createJob = async (body: JobRequest) => {
 		throw new Error("REQUEST_INVALID");
 	}
 
-	const job_key = uukey();
-	const priority = body.priority ?? 1000;
 	const now = getNow();
 
-	// Validate Job Config
-	const jobConfig: JobConfig = {};
+	// Validate job
+	const jobKey = uukey();
+	const jobPriority = body.priority ?? 1000;
 
-	jobConfig.analyze_enabled = body?.config?.analyze_enabled === false ? false : true;
-	jobConfig.preview_enabled = body?.config?.preview_enabled === false ? false : true;
-	jobConfig.nsfw_enabled = (body?.config?.nsfw_enabled || appConfig.utils.nsfw.enabled) === false ? false : true;
+	const jobConfig: JobConfig = body.config || {};
+	const jobInput: JobInput = body.input || {};
+	const jobDestination: JobDestination | null = body.destination || null;
+	const jobNotification: JobNotification | null = body.notification || null;
+	const jobMetadata: any = body.metadata || null;
 
-	jobConfig.ffprobe_general_attributes = body?.config?.ffprobe_general_attributes || appConfig.utils.ffprobe.general_attributes;
-	jobConfig.ffprobe_video_attributes = body?.config?.ffprobe_video_attributes || appConfig.utils.ffprobe.video_attributes;
-	jobConfig.ffprobe_audio_attributes = body?.config?.ffprobe_audio_attributes || appConfig.utils.ffprobe.audio_attributes;
+	const jobStatus = appConfig.jobs.enqueue_on_receive ? "QUEUED" : "PENDING";
 
-	jobConfig.ffmpeg_preset = formatToUpperSnakeCase(
-		body?.config?.ffmpeg_preset || appConfig.utils.ffmpeg.preset
-	) as JobConfig["ffmpeg_preset"];
-	jobConfig.ffmpeg_quality = parsePercent(body?.config?.ffmpeg_quality || appConfig.utils.ffmpeg.quality) as JobConfig["ffmpeg_quality"];
-
-	jobConfig.nsfw_model = formatToUpperSnakeCase(body?.config?.nsfw_model || appConfig.utils.nsfw.model) as JobConfig["nsfw_model"];
-	jobConfig.nsfw_size = parseInt(String(body?.config?.nsfw_size ?? appConfig.utils.nsfw.size)) as JobConfig["nsfw_size"];
-	jobConfig.nsfw_type = formatToUpperSnakeCase(body?.config?.nsfw_type || appConfig.utils.nsfw.type) as JobConfig["nsfw_type"];
-	jobConfig.nsfw_threshold = parsePercent(body?.config?.nsfw_threshold ?? appConfig.utils.nsfw.threshold) as JobConfig["nsfw_threshold"];
-
-	jobConfig.whisper_model = formatToUpperSnakeCase(
-		body?.config?.whisper_model || appConfig.utils.whisper.model
-	) as JobConfig["whisper_model"];
-	jobConfig.whisper_with_cuda = body?.config?.whisper_with_cuda ?? appConfig.utils.whisper.with_cuda;
-
-	// Validate Job Outputs
+	// Validate job outputs
 	const jobOutputs: Array<JobOutputRow> = [];
 
-	for (let index = 0; index < body.outputs.length; index++) {
-		// type check
-		const jobOutputConfig: JobOutputConfig = body.outputs[index];
+	for (let jobOutputIndex = 0; jobOutputIndex < body.outputs.length; jobOutputIndex++) {
+		const jobOutput: JobOutputRequest = body.outputs[jobOutputIndex];
+
+		const jobOutputPriority = jobOutput.priority;
+		const jobOutputType = jobOutput.type;
+		const jobOutputName = jobOutput.name;
+
+		const jobOutputConfig = {
+			...jobOutput,
+			priority: undefined,
+			type: undefined,
+			name: undefined,
+			url: undefined,
+			path: undefined,
+			destination: undefined,
+			acl: undefined,
+			expires: undefined,
+			cache_control: undefined,
+			try: undefined,
+			retry_in: undefined
+		};
+
+		// Build destination based on type
+		let jobOutputDestination: any = {
+			...jobDestination,
+			...jobOutput.destination
+		};
+
+		if (jobOutput.destination?.type && jobOutput.destination.type != jobDestination?.type) {
+			jobOutputDestination = {
+				...jobOutput.destination
+			};
+		}
+
+		if (HTTPS_TYPES.includes(jobOutputDestination.type)) {
+			// HTTP/HTTPS: only include url
+			jobOutputDestination = {
+				...jobOutputDestination,
+				url: jobOutput.destination?.url || jobOutput.url || undefined
+			};
+		} else if (STORAGE_FTP_TYPES.includes(jobOutputDestination.type)) {
+			// FTP/SFTP: only include path
+			jobOutputDestination = {
+				...jobOutputDestination,
+				path: jobOutput.destination?.path || jobOutput.path || undefined
+			};
+		} else if (STORAGE_S3_LIKE_TYPES.includes(jobOutputDestination.type)) {
+			// S3_LIKE: include path, acl, expires, cache_control
+			jobOutputDestination = {
+				...jobOutputDestination,
+				path: jobOutput.destination?.path || jobOutput.path || undefined,
+				acl: jobOutput.destination?.acl || jobOutput.acl || undefined,
+				expires: jobOutput.destination?.expires || jobOutput.expires || undefined,
+				cache_control: jobOutput.destination?.cache_control || jobOutput.cache_control || undefined
+			};
+		}
 
 		jobOutputs.push({
 			key: uukey(),
-			job_key,
-			index,
-			priority,
+			job_key: jobKey,
+			index: jobOutputIndex,
+			priority: jobOutputPriority || jobPriority || appConfig.jobs.priority || 1000,
+			type: jobOutputType,
+			name: jobOutputName,
 			config: jobOutputConfig,
-			status: appConfig.jobs.enqueue_on_receive ? "QUEUED" : "PENDING",
+			destination: jobOutputDestination || jobDestination || null,
+			status: jobStatus,
 			updated_at: now,
 			created_at: now,
-			try_max: body.try_max ? body.try_max : appConfig.jobs.try_count || 3,
+			try_max: jobOutput.try || body?.try || appConfig?.jobs?.try || 3,
 			try_count: appConfig.jobs.enqueue_on_receive ? 1 : 0,
-			retry_in: body.retry_in ? body.retry_in : appConfig.jobs.retry_in || 60 * 1000
-			// retry_at: null,
-			// locked_by: null
+			retry_in: jobOutput.retry_in || body?.retry_in || appConfig?.jobs?.retry_in || 60 * 1000,
+			retry_at: null,
+			locked_by: null,
+			instance_key: null,
+			worker_key: null
 		});
 	}
 
@@ -130,48 +181,33 @@ export const createJob = async (body: JobRequest) => {
 		throw new Error("OUTPUT_REQUIRED");
 	}
 
-	// NOTIFICATION: VALIDATE
-	if (body.notification) {
-		if (body.notification.notify_on && Array.isArray(body.notification.notify_on)) {
+	// Validate job notification
+	if (jobNotification) {
+		if (jobNotification.notify_on && Array.isArray(jobNotification.notify_on)) {
 			const allowedNotifyOns = appConfig.jobs.notifications.notify_on_alloweds.split(",").map((e) => e.trim());
-
-			body.notification.notify_on = body.notification.notify_on.filter((status: string) => allowedNotifyOns.includes(status));
+			jobNotification.notify_on = jobNotification.notify_on.filter((status: string) => allowedNotifyOns.includes(status));
 		}
 	}
 
 	const job: JobRow = {
-		key: job_key,
-		priority,
+		key: jobKey,
+		priority: jobPriority,
 		config: jobConfig,
-		input: body.input ? body.input : null,
-		destination: body.destination ? body.destination : null,
-		notification: body.notification ? body.notification : null,
-		metadata: body.metadata ? body.metadata : null,
-		status: appConfig.jobs.enqueue_on_receive ? "QUEUED" : "PENDING",
+		input: jobInput,
+		destination: jobDestination,
+		notification: jobNotification,
+		metadata: jobMetadata,
+		status: jobStatus,
 		updated_at: now,
 		created_at: now,
-		try_max: body.try_max ? body.try_max : appConfig.jobs.try_count || 3,
+		try_max: body.try ? body.try : appConfig.jobs.try || 3,
 		try_count: appConfig.jobs.enqueue_on_receive ? 1 : 0,
-		retry_in: body.retry_in ? body.retry_in : appConfig.jobs.retry_in || 60 * 1000
-		// retry_at: null,
-		// locked_by: null
+		retry_in: body.retry_in ? body.retry_in : appConfig.jobs.retry_in || 60 * 1000,
+		retry_at: null,
+		locked_by: null,
+		instance_key: null,
+		worker_key: null
 	};
-
-	if ((job.try_max || 0) < appConfig.jobs.try_min) {
-		job.try_max = appConfig.jobs.try_min;
-	}
-
-	if ((job.try_max || 0) > appConfig.jobs.try_max) {
-		job.try_max = appConfig.jobs.try_max;
-	}
-
-	if ((job.retry_in || 0) < appConfig.jobs.retry_in_min) {
-		job.retry_in = appConfig.jobs.retry_in_min;
-	}
-
-	if ((job.retry_in || 0) > appConfig.jobs.retry_in_max) {
-		job.retry_in = appConfig.jobs.retry_in_max;
-	}
 
 	await database
 		.table("jobs")
@@ -189,7 +225,8 @@ export const createJob = async (body: JobRequest) => {
 				.insert(
 					jobOutputs.map((jobOutput) => ({
 						...jobOutput,
-						config: JSON.stringify(jobOutput.config),
+						config: jobOutput.config ? JSON.stringify(jobOutput.config) : null,
+						destination: jobOutput.destination ? JSON.stringify(jobOutput.destination) : null,
 						// outcome: jobOutput.outcome ? JSON.stringify(jobOutput.outcome) : null,
 						status: appConfig.jobs.enqueue_on_receive ? "QUEUED" : "PENDING",
 						updated_at: now,
@@ -205,28 +242,28 @@ export const createJob = async (body: JobRequest) => {
 						outputs_requested_count: jobOutputs.length || 0
 					});
 
-					await logger.insert("API", "INFO", "Job request received!", { job_key });
+					await logger.insert("API", "INFO", "Job request received!", { job_key: jobKey });
 
 					if (job.status === "QUEUED") {
 						await database
 							.table("jobs_queue")
 							.insert({ key: job.key, priority: job.priority, created_at: job.created_at })
 							.then(async (result) => {
-								await logger.insert("API", "INFO", "Received job successfully queued!", { job_key });
+								await logger.insert("API", "INFO", "Received job successfully queued!", { job_key: jobKey });
 							})
 							.catch(async (error) => {
 								job.status = "PENDING";
 
 								await database
 									.table("jobs")
-									.where("key", job_key)
+									.where("key", jobKey)
 									.update({
 										outcome: JSON.stringify({ message: "Enqueuing received job failed!" }),
 										status: job.status,
 										updated_at: getNow()
 									});
 
-								await logger.insert("API", "ERROR", "Enqueuing received job failed!", { job_key, ...error });
+								await logger.insert("API", "ERROR", "Enqueuing received job failed!", { job_key: jobKey, ...error });
 							});
 					}
 
