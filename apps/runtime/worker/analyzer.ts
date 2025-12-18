@@ -1,15 +1,8 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { guessContentType } from "@voltage/utils";
 import { spawn } from "child_process";
 import fs from "fs/promises";
 import path from "path";
-
-interface FileInfo {
-	file_name: string;
-	file_extension: string;
-	file_mime_type: string;
-	file_size: number;
-}
 
 const constantInfoProps = {
 	duration: {

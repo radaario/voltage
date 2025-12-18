@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import moment from "moment-timezone";
 
 // Set default format for moment

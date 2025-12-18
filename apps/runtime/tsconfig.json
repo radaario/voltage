@@ -8,7 +8,7 @@
 		"rootDir": "./",
 		"paths": {
 			"@/*": ["./*"],
-			"@voltage/config": ["../../packages/config"],
+			"@voltage/core": ["../../packages/core"],
 			"@voltage/utils": ["../../packages/utils"]
 		}
 	},

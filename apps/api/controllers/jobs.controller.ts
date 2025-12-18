@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { sanitizeData, logger, storage } from "@voltage/utils";
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { sendSuccess, sendError, sendPaginatedSuccess } from "@/utils/response.util.js";
 import { getPaginationParams } from "@/utils/pagination.util.js";
 import * as jobsService from "@/services/jobs.service.js";

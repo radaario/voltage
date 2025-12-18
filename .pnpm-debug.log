@@ -30,8 +30,8 @@
         "dev:frontend": "pnpm --filter @voltage/frontend dev",
         "dev:api": "pnpm --filter @voltage/api dev",
         "dev:runtime": "pnpm --filter @voltage/runtime dev",
-        "build": "pnpm --filter @voltage/config build && pnpm --filter @voltage/utils build && pnpm --filter @voltage/frontend --filter @voltage/api --filter @voltage/runtime build",
-        "build:packages": "pnpm --filter @voltage/config --filter @voltage/utils build",
+        "build": "pnpm --filter @voltage/core build && pnpm --filter @voltage/utils build && pnpm --filter @voltage/frontend --filter @voltage/api --filter @voltage/runtime build",
+        "build:packages": "pnpm --filter @voltage/core --filter @voltage/utils build",
         "build:runtime": "pnpm --filter @voltage/runtime build",
         "build:api": "pnpm --filter @voltage/api build",
         "build:frontend": "pnpm --filter @voltage/frontend build",
@@ -108,7 +108,7 @@
   },
   "3 debug pnpm:package-manifest": {
     "initial": {
-      "name": "@voltage/config",
+      "name": "@voltage/core",
       "version": "1.0.0",
       "type": "module",
       "private": true,
@@ -137,7 +137,7 @@
         "@types/node": "^24.10.1"
       }
     },
-    "prefix": "C:\\Users\\frkgr\\Desktop\\RADAAR\\voltage\\packages\\config"
+    "prefix": "C:\\Users\\frkgr\\Desktop\\RADAAR\\voltage\\packages\\core"
   },
   "4 debug pnpm:package-manifest": {
     "initial": {
@@ -182,7 +182,7 @@
         "clean": "rimraf ./dist"
       },
       "dependencies": {
-        "@voltage/config": "workspace:*",
+        "@voltage/core": "workspace:*",
         "@aws-sdk/client-s3": "^3.901.0",
         "@aws-sdk/s3-request-presigner": "^3.901.0",
         "basic-ftp": "^5.0.5",
@@ -232,7 +232,7 @@
         "@aws-sdk/client-s3": "^3.901.0",
         "@aws-sdk/client-sns": "^3.906.0",
         "@aws-sdk/s3-request-presigner": "^3.901.0",
-        "@voltage/config": "workspace:*",
+        "@voltage/core": "workspace:*",
         "@voltage/utils": "workspace:*",
         "axios": "^1.7.2",
         "basic-ftp": "^5.0.5",
@@ -286,7 +286,7 @@
         "typecheck": "tsc --noEmit"
       },
       "dependencies": {
-        "@voltage/config": "workspace:*",
+        "@voltage/core": "workspace:*",
         "@voltage/utils": "workspace:*",
         "@voltage/runtime": "workspace:*",
         "@aws-sdk/client-s3": "^3.901.0",

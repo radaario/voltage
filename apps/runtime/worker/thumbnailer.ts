@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { storage } from "@voltage/utils";
 import { spawn } from "child_process";
 import path from "path";

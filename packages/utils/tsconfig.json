@@ -16,8 +16,8 @@
 		"paths": {
 			"@voltage/utils": ["./"],
 			"@voltage/utils/*": ["./*"],
-			"@voltage/config": ["../config"],
-			"@voltage/config/*": ["../config/*"]
+			"@voltage/core": ["../core"],
+			"@voltage/core/*": ["../core/*"]
 		}
 	},
 	"include": ["./*.ts"],

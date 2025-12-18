@@ -3,7 +3,7 @@ import { authMiddleware } from "@/middleware/auth.middleware.js";
 import { validateMiddleware } from "@/middleware/validate.middleware.js";
 import * as jobsController from "@/controllers/jobs.controller.js";
 import { jobSchema } from "@/schemas/job.schemas.js";
-import { JobRequest } from "@voltage/config";
+import { JobRequest } from "@voltage/core";
 
 const router = Router();
 

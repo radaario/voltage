@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { Response } from "express";
 import { ApiResponse } from "@/types/index.js";
 

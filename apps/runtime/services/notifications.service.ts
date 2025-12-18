@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { database, logger, getInstanceKey, getNow } from "@voltage/utils";
 import { retryJobNotification } from "@/worker/notifier.js";
 

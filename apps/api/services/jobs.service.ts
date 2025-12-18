@@ -1,4 +1,6 @@
-import { appConfig, HTTPS_TYPES, STORAGE_FTP_TYPES, STORAGE_S3_LIKE_TYPES } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
+import { Knex } from "knex";
+import { HTTPS_TYPES, STORAGE_FTP_TYPES, STORAGE_S3_LIKE_TYPES } from "@voltage/core";
 import type {
 	JobRequest,
 	JobConfig,
@@ -8,7 +10,7 @@ import type {
 	JobRow,
 	JobOutputRequest,
 	JobOutputRow
-} from "@voltage/config/types";
+} from "@voltage/core";
 import { database, storage, logger, stats } from "@voltage/utils";
 import { uukey, getNow, getDate } from "@voltage/utils";
 import { createJobNotification } from "@voltage/runtime/worker/notifier";
@@ -43,10 +45,11 @@ export const getJobs = async (
 
 	if (filters.q) {
 		const searchPattern = `%${filters.q}%`;
-		query = query.where(function () {
-			this.where("key", "like", searchPattern)
+		query = query.where((builder: Knex.QueryBuilder) => {
+			/* ! */
+			builder
+				.where("key", "like", searchPattern)
 				.orWhere("input", "like", searchPattern)
-				.orWhere("outputs", "like", searchPattern)
 				.orWhere("destination", "like", searchPattern)
 				.orWhere("notification", "like", searchPattern)
 				.orWhere("metadata", "like", searchPattern)
@@ -149,7 +152,7 @@ export const createJob = async (body: JobRequest) => {
 			jobOutputDestination = {
 				...jobOutputDestination,
 				path: jobOutput.destination?.path || jobOutput.path || undefined,
-				acl: jobOutput.destination?.acl || jobOutput.acl || undefined,
+				acl: jobOutput.destination?.acl || jobOutput.acl || jobDestination?.acl || undefined,
 				expires: jobOutput.destination?.expires || jobOutput.expires || undefined,
 				cache_control: jobOutput.destination?.cache_control || jobOutput.cache_control || undefined
 			};
@@ -219,7 +222,7 @@ export const createJob = async (body: JobRequest) => {
 			notification: job.notification ? JSON.stringify(job.notification) : null,
 			metadata: job.metadata ? JSON.stringify(job.metadata) : null
 		})
-		.then(async (result) => {
+		.then(async () => {
 			await database
 				.table("jobs_outputs")
 				.insert(
@@ -233,7 +236,7 @@ export const createJob = async (body: JobRequest) => {
 						created_at: now
 					}))
 				)
-				.then(async (result) => {
+				.then(async () => {
 					await createJobNotification(job, "RECEIVED");
 
 					await stats.update({
@@ -248,10 +251,10 @@ export const createJob = async (body: JobRequest) => {
 						await database
 							.table("jobs_queue")
 							.insert({ key: job.key, priority: job.priority, created_at: job.created_at })
-							.then(async (result) => {
+							.then(async () => {
 								await logger.insert("API", "INFO", "Received job successfully queued!", { job_key: jobKey });
 							})
-							.catch(async (error) => {
+							.catch(async (error: Error | any) => {
 								job.status = "PENDING";
 
 								await database
@@ -269,12 +272,12 @@ export const createJob = async (body: JobRequest) => {
 
 					await createJobNotification(job, job.status as string);
 				})
-				.catch(async (error) => {
+				.catch(async (error: Error | any) => {
 					await createJobNotification(job, "FAILED");
 					throw error;
 				});
 		})
-		.catch(async (error) => {
+		.catch(async (error: Error | any) => {
 			await createJobNotification(job, "FAILED");
 			throw error;
 		});
@@ -436,8 +439,10 @@ export const getOutputs = async (
 
 	if (filters.q) {
 		const searchPattern = `%${filters.q}%`;
-		query = query.where(function () {
-			this.where("key", "like", searchPattern)
+		query = query.where((builder: Knex.QueryBuilder) => {
+			/* ! */
+			builder
+				.where("key", "like", searchPattern)
 				.orWhere("job_key", "like", searchPattern)
 				.orWhere("config", "like", searchPattern)
 				.orWhere("outcome", "like", searchPattern)
@@ -489,8 +494,10 @@ export const getNotifications = async (
 
 	if (filters.q) {
 		const searchPattern = `%${filters.q}%`;
-		query = query.where(function () {
-			this.where("key", "like", searchPattern)
+		query = query.where((builder: Knex.QueryBuilder) => {
+			/* ! */
+			builder
+				.where("key", "like", searchPattern)
 				.orWhere("job_key", "like", searchPattern)
 				.orWhere("config", "like", searchPattern)
 				.orWhere("payload", "like", searchPattern)

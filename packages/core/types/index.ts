@@ -25,7 +25,7 @@ import {
 	ROTATE_MODES,
 	FLIP_MODES,
 	NOTIFICATION_NOTIFY_ON_TYPES
-} from "./defaults";
+} from "../constants";
 
 // =====================================================
 // CONFIGURATION TYPES
@@ -67,7 +67,7 @@ export type FLIP_MODE = (typeof FLIP_MODES)[number];
 
 export type NOTIFICATIONS_NOTIFY_ON_TYPE = (typeof NOTIFICATION_NOTIFY_ON_TYPES)[number];
 
-export interface AppConfig {
+export interface APP_CONFIG {
 	name: string;
 	version: string;
 	env: string;
@@ -255,13 +255,13 @@ export type JobInput =
 	  }
 	| {
 			type: HTTP_TYPE;
-			name?: string;
-			method?: "POST" | "PUT" | "GET";
-			url: string;
-			headers?: Record<string, string>;
+			method?: "GET" | "POST" | "PUT";
 			agent?: string;
+			headers?: Record<string, string>;
+			params?: Record<string, string>;
 			username?: string;
 			password?: string;
+			url: string;
 	  }
 	| {
 			type: STORAGE_S3_LIKE_TYPE;
@@ -286,12 +286,13 @@ export type JobInput =
 export type JobDestination =
 	| {
 			type: HTTP_TYPE;
-			method?: "POST" | "PUT" | "GET";
-			url?: string;
-			headers?: Record<string, string>;
+			method?: "GET" | "POST" | "PUT";
 			agent?: string;
+			headers?: Record<string, string>;
+			params?: Record<string, string>;
 			username?: string;
 			password?: string;
+			url?: string;
 	  }
 	| {
 			type: STORAGE_S3_LIKE_TYPE;
@@ -442,12 +443,13 @@ export type JobOutputRow = {
 export type JobNotification =
 	| {
 			type: HTTP_TYPE;
-			method?: "POST" | "PUT" | "GET";
-			url: string;
-			headers?: Record<string, string>;
+			method?: "GET" | "POST" | "PUT";
 			agent?: string;
+			headers?: Record<string, string>;
+			params?: Record<string, string>;
 			username?: string;
 			password?: string;
+			url: string;
 			notify_on?: NOTIFICATIONS_NOTIFY_ON_TYPE[];
 			timeout?: number; // in milliseconds
 			try?: number;

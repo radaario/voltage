@@ -29,9 +29,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.901.0
         version: 3.940.0
-      '@voltage/config':
+      '@voltage/core':
         specifier: workspace:*
-        version: link:../../packages/config
+        version: link:../../packages/core
       '@voltage/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -253,9 +253,9 @@ importers:
       '@types/jimp':
         specifier: ^0.2.28
         version: 0.2.28
-      '@voltage/config':
+      '@voltage/core':
         specifier: workspace:*
-        version: link:../../packages/config
+        version: link:../../packages/core
       '@voltage/utils':
         specifier: workspace:*
         version: link:../../packages/utils
@@ -360,7 +360,7 @@ importers:
         specifier: ^5.5.4
         version: 5.9.3
 
-  packages/config:
+  packages/core:
     dependencies:
       dotenv:
         specifier: ^17.2.3
@@ -384,9 +384,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.901.0
         version: 3.940.0
-      '@voltage/config':
+      '@voltage/core':
         specifier: workspace:*
-        version: link:../config
+        version: link:../core
       basic-ftp:
         specifier: ^5.0.5
         version: 5.0.5

@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { Request, Response, NextFunction } from "express";
 import Joi, { ObjectSchema } from "joi";
 
@@ -22,6 +22,8 @@ export const validateMiddleware =
 		const { error, value } = schema.validate(data, {
 			abortEarly: false,
 			stripUnknown: true
+			// debug: process.env.NODE_ENV === "development"
+			// errors: process.env.NODE_ENV === "development" ? { stack: true } : undefined
 		});
 
 		if (error) {
@@ -32,7 +34,7 @@ export const validateMiddleware =
 					status: "ERROR",
 					error: {
 						code: "VALIDATION_ERROR",
-						message: `${error.details.map((d) => d.message).join(", ")}!`
+						message: `${error.details.map((d) => `${d.message}`).join(", ")}!`
 					}
 				}
 			});

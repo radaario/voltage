@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { database, logger, getInstanceKey, getNow, subtractNow } from "@voltage/utils";
 import { initInstance, maintainInstance, getMasterInstance, setMasterInstance } from "@/services/instances.service.js";
 import { timeoutBusyWorkers, idleTimeoutWorkers, terminateInactiveInstanceWorkers } from "@/services/workers.service.js";

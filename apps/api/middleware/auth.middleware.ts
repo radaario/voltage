@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { hash } from "@voltage/utils";
 import { sendError } from "@/utils/response.util.js";
 

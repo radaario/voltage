@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { database, logger, stats, getNow } from "@voltage/utils";
 import { JobLifecycleService } from "@/worker/job-lifecycle.service.js";
 import { JobStepsService } from "@/worker/job-steps.service.js";

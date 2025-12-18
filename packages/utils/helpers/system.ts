@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import os from "os";
 import { hash, uuid } from "./crypto";
 

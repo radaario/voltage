@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { logger, getNow } from "@voltage/utils";
 import { JobDownloader } from "@/worker/downloader.js";
 import { JobAnalyzer } from "@/worker/analyzer.js";
@@ -98,7 +98,7 @@ export class JobStepsService {
 
 	async detectInputNSFW(job: JobContext, jobInputPreviewPath: string, jobStats: JobStats): Promise<any> {
 		if (!jobInputPreviewPath) return null;
-		if (job.input?.nsfw_enabled || appConfig.utils.nsfw.enabled) return null;
+		if (job.input?.config?.nsfw_detection === false) return null;
 
 		await logger.insert("WORKER", "INFO", "Starting NSFW analysis for job input...");
 

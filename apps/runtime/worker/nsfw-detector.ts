@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import * as tf from "@tensorflow/tfjs";
 import { createRequire } from "module";
 
@@ -33,7 +33,7 @@ export class NSFWDetector {
 	}
 
 	async analyze(imagePath: string): Promise<NSFWResult | null> {
-		const nsfwIsDisabled = this.config.nsfw_enabled || appConfig.utils.nsfw.enabled;
+		const nsfwIsDisabled = this.config.nsfw_detection === false;
 
 		if (nsfwIsDisabled) {
 			return null;

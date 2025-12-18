@@ -4,16 +4,16 @@
 		"declaration": true,
 		"declarationMap": true,
 		"outDir": "./dist",
-		"rootDir": "./",
+		// "rootDir": "./",
 		"paths": {
 			"@/*": ["./*"],
-			"@voltage/config": ["../../packages/config"],
+			"@voltage/core": ["../../packages/core"],
 			"@voltage/utils": ["../../packages/utils"],
 			"@voltage/runtime": ["../runtime"],
 			"@voltage/runtime/*": ["../runtime/*"]
 		}
 	},
-	"include": ["./**/*.ts"],
+	"include": ["./**/*.ts", "./**/*.d.ts"],
 	"exclude": ["node_modules", "dist"],
 	"references": [{ "path": "../runtime" }]
 }

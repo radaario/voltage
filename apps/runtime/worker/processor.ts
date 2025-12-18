@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { spawn } from "child_process";
 import fs from "fs/promises";
 import path from "path";

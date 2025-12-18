@@ -1,4 +1,4 @@
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { hash } from "@voltage/utils";
 
 export const authenticateFrontend = (password: string): string | null => {

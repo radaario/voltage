@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { appConfig } from "@voltage/config";
+import { config as appConfig } from "@voltage/core";
 import { sendError } from "@/utils/response.util.js";
 
 interface RateLimitRecord {
