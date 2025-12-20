@@ -301,7 +301,7 @@ const JobsTable = ({
 				{/* Pagination Controls */}
 				<Pagination
 					currentPage={pagination.page}
-				totalPages={pagination.total_pages}
+					totalPages={pagination.total_pages}
 					totalItems={pagination.total}
 					itemsPerPage={pagination.limit}
 					hasNextPage={!!pagination.next_page}

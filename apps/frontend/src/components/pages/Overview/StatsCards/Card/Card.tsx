@@ -27,7 +27,17 @@ const Card: React.FC<CardProps> = ({ title, icon, mainValue, secondaryText, fail
 			<div className="mt-2 flex flex-wrap items-baseline gap-2 text-xs text-gray-500 dark:text-white">
 				<p>{secondaryText}</p>
 				{failedCount !== undefined && failedCount > 0 && (
-					<p className="text-red-600 dark:text-red-400">({failedCount.toLocaleString()} failed)</p>
+					<>
+						{to ? (
+							<NavLink
+								to={to + (to.includes("?") ? "&" : "?") + "status=failed"}
+								className="text-red-600 py-1 px-2 -ml-1 hover:text-white hover:bg-red-600 rounded-sm dark:text-red-400">
+								({failedCount.toLocaleString()} failed)
+							</NavLink>
+						) : (
+							<p className="text-red-600 dark:text-red-400">){failedCount.toLocaleString()} failed)</p>
+						)}
+					</>
 				)}
 			</div>
 		</>

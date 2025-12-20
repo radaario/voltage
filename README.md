@@ -10,7 +10,7 @@
 
 **Open-source, fully customizable, scalable, multi-instance, FFMPEG-based video encoding API service**
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Version](https://img.shields.io/badge/version-1.0.5-green.svg)](https://github.com/radaar/voltage)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Version](https://img.shields.io/badge/version-1.0.5-green.svg)](https://github.com/radaario/voltage)
 
 </div>
 
@@ -166,7 +166,7 @@ Configure via `VOLTAGE_STORAGE_TYPE` and related environment variables.
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/radaar/voltage.git
+git clone https://github.com/radaario/voltage.git
 cd voltage
 ```
 
