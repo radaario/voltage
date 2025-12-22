@@ -54,8 +54,9 @@ export interface JobOutput {
 	job_key: string;
 	index: number;
 	config: JobOutputConfig | null;
-	outcome: Outcome | null;
+	destination: ServiceConfig | null;
 	metadata: Record<string, unknown> | null;
+	outcome: Outcome | null;
 	status: JobOutputStatus;
 	started_at: string | null;
 	processed_at: string | null;
@@ -74,11 +75,11 @@ export interface Job {
 	instance_key: string | null;
 	worker_key: string | null;
 	priority: number;
+	config: Record<string, unknown> | null;
 	input: ServiceConfig;
 	destination: ServiceConfig | null;
 	notification: ServiceConfig | null;
 	metadata: Record<string, unknown> | null;
-	config: Record<string, unknown> | null;
 	outcome: Outcome | null;
 	status: JobStatus;
 	progress?: number;

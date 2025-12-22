@@ -105,9 +105,8 @@ const Outputs: React.FC = () => {
 				cell: (info) => {
 					const output = info.row.original;
 					const name = (output.metadata?.name as string) || output.config?.name || output.key || "";
+					const path = output.outcome?.path || output.outcome?.url || output.destination?.path || output.destination?.url;
 					const duration = (output.outcome?.duration as number | undefined) || (output.config?.duration as number | undefined);
-
-					console.log("output", output);
 
 					return (
 						<div className="max-w-60">
@@ -126,9 +125,7 @@ const Outputs: React.FC = () => {
 							<div>
 								<div className="text-gray-500 dark:text-gray-400 font-bold text-xs truncate max-w-50">{name}</div>
 								<div className="flex flex-wrap text-gray-500 dark:text-gray-400 text-xs">
-									<span className="truncate">
-										{output.config?.path && <div>{getFilenameFromPath(output.config.path)}</div>}
-									</span>
+									<span className="truncate">{path && <div>{getFilenameFromPath(path as string)}</div>}</span>
 									<span>{duration ? `, ${formatDuration(duration)}` : ""}</span>
 								</div>
 								{/*
