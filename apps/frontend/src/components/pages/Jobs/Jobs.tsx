@@ -1,27 +1,30 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, Outlet } from "react-router-dom";
+import { useNavigate, Outlet, useSearchParams } from "react-router-dom";
 import type { Job } from "@/interfaces/job";
 import { useAuth } from "@/hooks/useAuth";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import { api, ApiResponse } from "@/utils";
 import { testJobPayload } from "@/mocks/testJobPayload";
 import JobsTable from "@/components/pages/Jobs/Table/Table";
-import { ConfirmModal, Button, Tooltip, SearchInput, LoadingSpinner, Page, ErrorAlert, JsonViewer } from "@/components";
+import { ConfirmModal, Button, Tooltip, SearchInput, LoadingSpinner, Page, ErrorAlert, JsonViewer, Select } from "@/components";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import type { PaginationInfo } from "@/types";
+import { jobStatusOptions } from "@/constants/job-status-options";
 
 const Jobs: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const { pageResetCounters } = useGlobalStateContext();
+	const [searchParams, setSearchParams] = useSearchParams();
 
 	// states
-	const [searchQuery, setSearchQuery] = useState("");
-	const [searchInput, setSearchInput] = useState("");
+	const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+	const [searchInput, setSearchInput] = useState(searchParams.get("q") || "");
 	const [currentPage, setCurrentPage] = useState(1);
 	const [currentLimit, setCurrentLimit] = useState(6);
+	const [statusFilter, setStatusFilter] = useState<string>(searchParams.get("status")?.toUpperCase() || "");
 	const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
 	const [jobToRetry, setJobToRetry] = useState<Job | null>(null);
 	const previousDataRef = useRef<Job[]>([]);
@@ -38,13 +41,14 @@ const Jobs: React.FC = () => {
 		refetch,
 		dataUpdatedAt
 	} = useQuery<ApiResponse<Job[]>>({
-		queryKey: ["jobs", currentPage, currentLimit, searchQuery, authToken],
+		queryKey: ["jobs", currentPage, currentLimit, searchQuery, statusFilter, authToken],
 		queryFn: () =>
 			api.get<Job[]>("/jobs", {
 				token: authToken || "",
 				page: currentPage,
 				limit: currentLimit,
-				...(searchQuery && { q: searchQuery })
+				...(searchQuery && { q: searchQuery }),
+				...(statusFilter && { status: statusFilter })
 			}),
 		enabled: !!authToken,
 		refetchInterval: 5000,
@@ -87,7 +91,7 @@ const Jobs: React.FC = () => {
 
 	const deleteAllJobsMutation = useMutation({
 		mutationFn: async () => {
-			return await api.delete("/jobs", { token: authToken, all: "true", hard_delete: "true" });
+			return await api.delete("/jobs", { token: authToken, status: statusFilter, hard_delete: "true" });
 		},
 		onSuccess: async () => {
 			setShowDeleteAllModal(false);
@@ -152,6 +156,20 @@ const Jobs: React.FC = () => {
 
 	const handleRefresh = () => {
 		queryClient.invalidateQueries({ queryKey: ["jobs"] });
+	};
+
+	const handleStatusFilterChange = (status: string) => {
+		setStatusFilter(status);
+		setCurrentPage(1);
+
+		// Update URL
+		const newSearchParams = new URLSearchParams(searchParams);
+		if (status) {
+			newSearchParams.set("status", status);
+		} else {
+			newSearchParams.delete("status");
+		}
+		setSearchParams(newSearchParams);
 	};
 
 	const handleViewJob = (job: Job) => {
@@ -248,6 +266,15 @@ const Jobs: React.FC = () => {
 			if (searchInput !== "") {
 				setCurrentPage(1);
 			}
+
+			// Update URL
+			const newSearchParams = new URLSearchParams(searchParams);
+			if (searchInput) {
+				newSearchParams.set("q", searchInput);
+			} else {
+				newSearchParams.delete("q");
+			}
+			setSearchParams(newSearchParams);
 		}, 500);
 
 		return () => clearTimeout(timer);
@@ -265,6 +292,16 @@ const Jobs: React.FC = () => {
 				title="Jobs"
 				onRefresh={handleRefresh}
 				isRefreshing={isLoading || isFetching}>
+				{/* Status Filter */}
+				<Select
+					value={statusFilter}
+					onChange={handleStatusFilterChange}
+					options={jobStatusOptions}
+					placeholder="Filter by status"
+					emptyLabel="All Status"
+					className="w-[220px]"
+				/>
+				{/* Search Input */}
 				<SearchInput
 					value={searchInput}
 					onChange={setSearchInput}

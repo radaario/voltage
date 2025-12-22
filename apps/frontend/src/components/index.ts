@@ -15,6 +15,8 @@ export { default as Page } from "./base/Page/Page";
 export { default as Pagination } from "./base/Pagination/Pagination";
 export { default as ProgressBar } from "./base/ProgressBar/ProgressBar";
 export { default as SearchInput } from "./base/SearchInput/SearchInput";
+export { Select } from "./base/Select";
+export type { SelectOption } from "./base/Select";
 export { default as TableKeyValuePreview } from "./base/TableKeyValuePreview/TableKeyValuePreview";
 export { default as TabsNavigation } from "./base/TabsNavigation/TabsNavigation";
 export { default as TimeAgo } from "./base/TimeAgo/TimeAgo";

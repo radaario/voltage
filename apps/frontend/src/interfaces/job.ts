@@ -1,4 +1,5 @@
 import { Outcome } from "@/interfaces/instance";
+import { JOB_STATUSES, JOB_OUTPUT_STATUSES } from "@/constants/job";
 
 interface ServiceConfig {
 	service: string;
@@ -44,6 +45,9 @@ export interface JobOutputSpecs {
 	[key: string]: unknown;
 }
 
+export type JobStatus = (typeof JOB_STATUSES)[number];
+export type JobOutputStatus = (typeof JOB_OUTPUT_STATUSES)[number];
+
 export interface JobOutput {
 	[key: string]: unknown;
 	key: string;
@@ -51,18 +55,7 @@ export interface JobOutput {
 	index: number;
 	specs: JobOutputSpecs | null;
 	outcome: Outcome | null;
-	status:
-		| "PENDING"
-		| "QUEUED"
-		| "PROCESSING"
-		| "PROCESSED"
-		| "UPLOADING"
-		| "UPLOADED"
-		| "COMPLETED"
-		| "CANCELLED"
-		| "DELETED"
-		| "FAILED"
-		| "TIMEOUT";
+	status: JobOutputStatus;
 	started_at: string | null;
 	processed_at: string | null;
 	uploaded_at: string | null;
@@ -80,32 +73,13 @@ export interface Job {
 	instance_key: string | null;
 	worker_key: string | null;
 	priority: number;
-	config: any | null;
 	input: ServiceConfig;
 	destination: ServiceConfig | null;
 	notification: ServiceConfig | null;
 	metadata: Record<string, unknown> | null;
 	config: Record<string, unknown> | null;
 	outcome: Outcome | null;
-	status:
-		| "RECEIVED"
-		| "PENDING"
-		| "RETRYING"
-		| "QUEUED"
-		| "STARTED"
-		| "DOWNLOADING"
-		| "DOWNLOADED"
-		| "ANALYZING"
-		| "ANALYZED"
-		| "PROCESSING"
-		| "PROCESSED"
-		| "UPLOADING"
-		| "UPLOADED"
-		| "COMPLETED"
-		| "CANCELLED"
-		| "DELETED"
-		| "FAILED"
-		| "TIMEOUT";
+	status: JobStatus;
 	progress?: number;
 	started_at: string | null;
 	analyzed_at: string;

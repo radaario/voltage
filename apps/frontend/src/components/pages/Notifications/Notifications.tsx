@@ -1,26 +1,28 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Outlet } from "react-router-dom";
+import { Outlet, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import type { Notification } from "@/interfaces/notification";
 import NotificationsTable from "@/components/pages/Notifications/Table/Table";
-import { SearchInput, LoadingSpinner, Page, ErrorAlert, Button, Tooltip, ConfirmModal } from "@/components";
+import { SearchInput, LoadingSpinner, Page, ErrorAlert, Button, Tooltip, ConfirmModal, Select } from "@/components";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import type { PaginationInfo } from "@/types";
+import { notificationStatusOptions } from "@/constants/notificaton-status-options";
 
 const Notifications: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
 	const { pageResetCounters } = useGlobalStateContext();
+	const [searchParams, setSearchParams] = useSearchParams();
 
 	// states
-	const [searchQuery, setSearchQuery] = useState("");
-	const [searchInput, setSearchInput] = useState("");
+	const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+	const [searchInput, setSearchInput] = useState(searchParams.get("q") || "");
 	const [currentPage, setCurrentPage] = useState(1);
 	const [currentLimit, setCurrentLimit] = useState(10);
-	const [statusFilter, setStatusFilter] = useState<string>("");
+	const [statusFilter, setStatusFilter] = useState<string>(searchParams.get("status")?.toUpperCase() || "");
 	const previousDataRef = useRef<Notification[]>([]);
 	const [newNotificationKeys, setNewNotificationKeys] = useState<Set<string>>(new Set());
 	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
@@ -51,7 +53,7 @@ const Notifications: React.FC = () => {
 	// mutations
 	const deleteAllNotificationsMutation = useMutation({
 		mutationFn: async () => {
-			return await api.delete("/jobs/notifications", { token: authToken, all: "true" });
+			return await api.delete("/jobs/notifications", { token: authToken, status: statusFilter, all: "true" });
 		},
 		onSuccess: async () => {
 			setShowDeleteAllModal(false);
@@ -81,6 +83,15 @@ const Notifications: React.FC = () => {
 	const handleStatusFilterChange = (status: string) => {
 		setStatusFilter(status);
 		setCurrentPage(1);
+
+		// Update URL
+		const newSearchParams = new URLSearchParams(searchParams);
+		if (status) {
+			newSearchParams.set("status", status);
+		} else {
+			newSearchParams.delete("status");
+		}
+		setSearchParams(newSearchParams);
 	};
 
 	const handleDeleteAllNotifications = () => {
@@ -138,6 +149,15 @@ const Notifications: React.FC = () => {
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			setSearchQuery(searchInput);
+
+			// Update URL
+			const newSearchParams = new URLSearchParams(searchParams);
+			if (searchInput) {
+				newSearchParams.set("q", searchInput);
+			} else {
+				newSearchParams.delete("q");
+			}
+			setSearchParams(newSearchParams);
 		}, 500);
 
 		return () => clearTimeout(timer);
@@ -178,17 +198,15 @@ const Notifications: React.FC = () => {
 				onRefresh={handleRefresh}
 				isRefreshing={isLoading || isFetching}>
 				{/* Status Filter */}
-				<select
+				<Select
 					value={statusFilter}
-					onChange={(e) => handleStatusFilterChange(e.target.value)}
-					className="h-[38px] px-3 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm">
-					<option value="">All Status</option>
-					<option value="PENDING">PENDING</option>
-					<option value="SUCCESSFUL">SUCCESSFUL</option>
-					<option value="FAILED">FAILED</option>
-					<option value="SKIPPED">SKIPPED</option>
-				</select>
-
+					onChange={handleStatusFilterChange}
+					options={notificationStatusOptions}
+					placeholder="Filter by status"
+					emptyLabel="All Status"
+					className="w-[220px]"
+				/>
+				{/* Search Input */}
 				<SearchInput
 					value={searchInput}
 					onChange={setSearchInput}

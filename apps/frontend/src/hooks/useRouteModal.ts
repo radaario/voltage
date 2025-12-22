@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useModal } from "./useModal";
 
 interface UseRouteModalOptions {
@@ -10,6 +10,7 @@ interface UseRouteModalOptions {
 export function useRouteModal(options: UseRouteModalOptions = {}) {
 	const { navigateBackTo, id } = options;
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
 	const [isOpen, setIsOpen] = useState(true);
 
 	const handleCloseCallback = useCallback(() => {
@@ -25,8 +26,9 @@ export function useRouteModal(options: UseRouteModalOptions = {}) {
 	// Navigate when modal finishes closing animation
 	useEffect(() => {
 		if (!isOpen && !modalProps.shouldRender) {
+			const queryString = searchParams.toString();
 			if (navigateBackTo) {
-				navigate(navigateBackTo);
+				navigate(`${navigateBackTo}${queryString ? `?${queryString}` : ''}`);
 			} else {
 				navigate(-1);
 			}

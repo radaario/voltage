@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Outlet } from "react-router-dom";
+import { Outlet, useSearchParams } from "react-router-dom";
 import type { Instance } from "@/interfaces/instance";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
@@ -11,10 +11,11 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 const Instances: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
+	const [searchParams, setSearchParams] = useSearchParams();
 
 	// states
-	const [searchQuery, setSearchQuery] = useState("");
-	const [searchInput, setSearchInput] = useState("");
+	const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+	const [searchInput, setSearchInput] = useState(searchParams.get("q") || "");
 	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
 	// queries
@@ -74,6 +75,15 @@ const Instances: React.FC = () => {
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			setSearchQuery(searchInput);
+
+			// Update URL
+			const newSearchParams = new URLSearchParams(searchParams);
+			if (searchInput) {
+				newSearchParams.set("q", searchInput);
+			} else {
+				newSearchParams.delete("q");
+			}
+			setSearchParams(newSearchParams);
 		}, 500);
 
 		return () => clearTimeout(timer);

@@ -1,26 +1,28 @@
 import { useState, useEffect, useRef } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import LogsTable from "@/components/pages/Logs/Table/Table";
-import { ConfirmModal, Alert, Button, Tooltip, SearchInput, LoadingSpinner, Page, ErrorAlert } from "@/components";
+import { ConfirmModal, Alert, Button, Tooltip, SearchInput, LoadingSpinner, Page, ErrorAlert, Select } from "@/components";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useGlobalStateContext } from "@/contexts/GlobalStateContext";
 import type { PaginationInfo } from "@/types";
+import { logTypeOptions } from "@/constants/log-type-options";
 
 const Logs: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
 	const { pageResetCounters } = useGlobalStateContext();
+	const [searchParams, setSearchParams] = useSearchParams();
 
 	// states
-	const [searchQuery, setSearchQuery] = useState("");
-	const [searchInput, setSearchInput] = useState("");
+	const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+	const [searchInput, setSearchInput] = useState(searchParams.get("q") || "");
 	const [currentPage, setCurrentPage] = useState(1);
 	const [currentLimit, setCurrentLimit] = useState(10);
-	const [typeFilter, setTypeFilter] = useState<string>("");
+	const [typeFilter, setTypeFilter] = useState<string>(searchParams.get("type")?.toUpperCase() || "");
 	const previousDataRef = useRef<Log[]>([]);
 	const [newLogKeys, setNewLogKeys] = useState<Set<string>>(new Set());
 	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
@@ -51,7 +53,7 @@ const Logs: React.FC = () => {
 	// mutations
 	const deleteAllLogsMutation = useMutation({
 		mutationFn: async () => {
-			return await api.delete("/logs", { token: authToken, all: "true" });
+			return await api.delete("/logs", { token: authToken, type: typeFilter, all: "true" });
 		},
 		onSuccess: async () => {
 			setShowDeleteAllModal(false);
@@ -105,6 +107,15 @@ const Logs: React.FC = () => {
 	const handleTypeFilterChange = (type: string) => {
 		setTypeFilter(type);
 		setCurrentPage(1);
+
+		// Update URL
+		const newSearchParams = new URLSearchParams(searchParams);
+		if (type) {
+			newSearchParams.set("type", type);
+		} else {
+			newSearchParams.delete("type");
+		}
+		setSearchParams(newSearchParams);
 	};
 
 	// effects
@@ -146,6 +157,15 @@ const Logs: React.FC = () => {
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			setSearchQuery(searchInput);
+
+			// Update URL
+			const newSearchParams = new URLSearchParams(searchParams);
+			if (searchInput) {
+				newSearchParams.set("q", searchInput);
+			} else {
+				newSearchParams.delete("q");
+			}
+			setSearchParams(newSearchParams);
 		}, 500);
 
 		return () => clearTimeout(timer);
@@ -186,16 +206,15 @@ const Logs: React.FC = () => {
 				onRefresh={handleRefresh}
 				isRefreshing={isLoading || isFetching}>
 				{/* Type Filter */}
-				<select
+				<Select
 					value={typeFilter}
-					onChange={(e) => handleTypeFilterChange(e.target.value)}
-					className="h-[38px] px-3 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 sm:text-sm">
-					<option value="">All Types</option>
-					<option value="INFO">Info</option>
-					<option value="WARNING">Warning</option>
-					<option value="ERROR">Error</option>
-				</select>
-
+					onChange={handleTypeFilterChange}
+					options={logTypeOptions}
+					placeholder="Filter by type"
+					emptyLabel="All Types"
+					className="w-[220px]"
+				/>
+				{/* Search Input */}
 				<SearchInput
 					value={searchInput}
 					onChange={setSearchInput}
