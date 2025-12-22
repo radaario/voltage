@@ -1,5 +1,4 @@
 import { config as appConfig } from "@voltage/core/config";
-import { Knex } from "knex";
 import { HTTPS_TYPES, STORAGE_FTP_TYPES, STORAGE_S3_LIKE_TYPES } from "@voltage/core/constants";
 import type {
 	JobRequest,
@@ -14,6 +13,8 @@ import type {
 import { database, storage, logger, stats } from "@voltage/utils";
 import { uukey, getNow, getDate } from "@voltage/utils";
 import { createJobNotification } from "@voltage/runtime/worker/notifier";
+
+import { Knex } from "knex";
 import { PaginationParams } from "@/types/index.js";
 
 export const getJob = async (job_key: string) => {
@@ -120,11 +121,29 @@ export const createJob = async (body: JobRequest) => {
 			path: undefined,
 			destination: undefined,
 			acl: undefined,
-			expires: undefined,
+			expires_in: undefined,
 			cache_control: undefined,
 			try: undefined,
 			retry_in: undefined
 		};
+
+		if (!jobOutputConfig.ffmpeg_preset) {
+			jobOutputConfig.ffmpeg_preset = jobConfig.ffmpeg_preset || appConfig.utils.ffmpeg.preset || "DEFAULT";
+		}
+
+		if (jobOutputConfig.ffmpeg_quality === undefined) {
+			jobOutputConfig.ffmpeg_quality = jobConfig.ffmpeg_quality || appConfig.utils.ffmpeg.quality || 75;
+		}
+
+		if (["SUBTITLE"].includes(jobOutputType)) {
+			if (!jobOutputConfig.whisper_model) {
+				jobOutputConfig.whisper_model = jobConfig.whisper_model || appConfig.utils.whisper.model || "BASE";
+			}
+
+			if (jobOutputConfig.whisper_with_cuda === undefined) {
+				jobOutputConfig.whisper_with_cuda = jobConfig.whisper_with_cuda || appConfig.utils.whisper.with_cuda || false;
+			}
+		}
 
 		// Build destination based on type
 		let jobOutputDestination: any = {
@@ -142,22 +161,22 @@ export const createJob = async (body: JobRequest) => {
 			// HTTP/HTTPS: only include url
 			jobOutputDestination = {
 				...jobOutputDestination,
-				url: jobOutput.destination?.url || jobOutput.url || undefined
+				url: (jobOutput.destination as any)?.url || jobOutput.url || undefined
 			};
 		} else if (STORAGE_FTP_TYPES.includes(jobOutputDestination.type)) {
 			// FTP/SFTP: only include path
 			jobOutputDestination = {
 				...jobOutputDestination,
-				path: jobOutput.destination?.path || jobOutput.path || undefined
+				path: (jobOutput.destination as any)?.path || jobOutput.path || undefined
 			};
 		} else if (STORAGE_S3_LIKE_TYPES.includes(jobOutputDestination.type)) {
-			// S3_LIKE: include path, acl, expires, cache_control
+			// S3_LIKE: include path, acl, expires_in, cache_control
 			jobOutputDestination = {
 				...jobOutputDestination,
-				path: jobOutput.destination?.path || jobOutput.path || undefined,
-				acl: jobOutput.destination?.acl || jobOutput.acl || jobDestination?.acl || undefined,
-				expires: jobOutput.destination?.expires || jobOutput.expires || undefined,
-				cache_control: jobOutput.destination?.cache_control || jobOutput.cache_control || undefined
+				path: (jobOutput.destination as any)?.path || jobOutput.path || undefined,
+				acl: (jobOutput.destination as any)?.acl || jobOutput.acl || (jobDestination as any)?.acl || undefined,
+				expires_in: (jobOutput.destination as any)?.expires_in || jobOutput.expires_in || undefined,
+				cache_control: (jobOutput.destination as any)?.cache_control || jobOutput.cache_control || undefined
 			};
 		}
 
@@ -208,7 +227,13 @@ export const createJob = async (body: JobRequest) => {
 		destination: jobDestination,
 		notification: jobNotification,
 		metadata: jobMetadata,
+		outcome: null,
 		status: jobStatus,
+		progress: 0,
+		started_at: null,
+		downloaded_at: null,
+		analyzed_at: null,
+		completed_at: null,
 		updated_at: now,
 		created_at: now,
 		try_max: body.try ? body.try : appConfig.jobs.try || 3,

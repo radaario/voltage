@@ -43,6 +43,10 @@ export function getEnv(key: string, fallback: string = ""): string {
 	return process.env[key] ?? fallback;
 }
 
+export function getEnvOrNull(key: string, fallback: string | null): string | null {
+	return process.env[key] ?? fallback;
+}
+
 /**
  * Helper to get number from environment variable with fallback
  */

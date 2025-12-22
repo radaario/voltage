@@ -1,10 +1,11 @@
 import { config as appConfig } from "@voltage/core/config";
 import { guessContentType } from "@voltage/utils";
+
 import { spawn } from "child_process";
 import fs from "fs/promises";
 import path from "path";
 
-const constantInfoProps = {
+const constantInfoAttributes = {
 	duration: {
 		type: "INTEGER",
 		name: "duration"
@@ -77,6 +78,7 @@ const constantInfoProps = {
 
 export class JobAnalyzer {
 	private job: any;
+
 	private tempJobDir: string;
 	private tempJobInputFilePath: string;
 
@@ -119,35 +121,33 @@ export class JobAnalyzer {
 
 			ffprobeArgs.push("-print_format", "json");
 
-			let ffprobeProps = "";
+			let ffprobeAttributes = "";
 
-			if (appConfig.utils.ffprobe.general_attributes) {
-				ffprobeProps = `format=${appConfig.utils.ffprobe.general_attributes.toLocaleLowerCase()}`;
+			if (this.job.config.ffprobe_general_attributes) {
+				ffprobeAttributes = `format=${this.job.config.ffprobe_general_attributes.join(",").toLocaleLowerCase()}`;
 			}
 
-			if (appConfig.utils.ffprobe.video_attributes || appConfig.utils.ffprobe.audio_attributes) {
-				const commonProps = ["codec_type"];
+			if (this.job.config.ffprobe_video_attributes || this.job.config.ffprobe_audio_attributes) {
+				const commonAttributes = ["codec_type"];
 
-				const videoProps = String(appConfig.utils.ffprobe.video_attributes)
-					.split(",")
-					.map((p) => this.convertProp(p));
+				const videoAttributes = this.job.config.ffprobe_video_attributes.map((p: string) => this.sanitizeAttribute(p));
+				const audioAttributes = this.job.config.ffprobe_audio_attributes.map((p: string) => this.sanitizeAttribute(p));
+				const streamsAttributes = [...new Set([...commonAttributes, ...videoAttributes, ...audioAttributes])].filter(
+					(p) => p.trim() !== ""
+				);
 
-				const audioProps = String(appConfig.utils.ffprobe.audio_attributes)
-					.split(",")
-					.map((p) => this.convertProp(p));
-
-				const streamsProps = [...new Set([...commonProps, ...videoProps, ...audioProps])].filter((p) => p.trim() !== "");
-
-				ffprobeProps = ffprobeProps ? ffprobeProps + ":" + `stream=${streamsProps.join(",").toLocaleLowerCase()}` : "";
+				ffprobeAttributes = ffprobeAttributes
+					? ffprobeAttributes + ":" + `stream=${streamsAttributes.join(",").toLocaleLowerCase()}`
+					: "";
 			}
 
-			if (ffprobeProps) ffprobeArgs.push("-show_entries", ffprobeProps);
+			if (ffprobeAttributes) ffprobeArgs.push("-show_entries", ffprobeAttributes);
 
-			if (!appConfig.utils.ffprobe.general_attributes) {
+			if (!this.job.config.ffprobe_general_attributes) {
 				ffprobeArgs.push("-show_format");
 			}
 
-			if (!appConfig.utils.ffprobe.video_attributes && !appConfig.utils.ffprobe.audio_attributes) {
+			if (!this.job.config.ffprobe_video_attributes && !this.job.config.ffprobe_audio_attributes) {
 				ffprobeArgs.push("-show_streams");
 			}
 
@@ -234,8 +234,8 @@ export class JobAnalyzer {
 				continue;
 			}
 
-			if (constantInfoProps.hasOwnProperty(prop_key)) {
-				const constant = (constantInfoProps as any)[prop_key];
+			if (constantInfoAttributes.hasOwnProperty(prop_key)) {
+				const constant = (constantInfoAttributes as any)[prop_key];
 
 				if (constant.type === "INTEGER") {
 					_data[`${prefix ? prefix + "_" : ""}${constant.name}`] = parseInt(prop_value);
@@ -274,7 +274,7 @@ export class JobAnalyzer {
 		return _data;
 	}
 
-	private convertProp(key: string): string {
+	private sanitizeAttribute(key: string): string {
 		key = key.toLocaleLowerCase();
 
 		const constantProps = {

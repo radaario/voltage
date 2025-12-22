@@ -1,5 +1,7 @@
 import { config as appConfig } from "@voltage/core/config";
+import { HTTPS_TYPES, STORAGE_S3_LIKE_TYPES, STORAGE_FTP_TYPES } from "@voltage/core/constants";
 import { storage, guessContentType } from "@voltage/utils";
+
 import path from "path";
 import fs from "fs/promises";
 import axios from "axios";
@@ -17,31 +19,15 @@ export class JobUploader {
 		this.output = output;
 
 		// Use output's destination if available, otherwise fall back to global destination
-		this.destination = output.config?.destination || this.job?.destination;
+		this.destination = { ...this.job?.destination, ...this.output?.destination };
 
 		if (!this.destination) {
 			throw new Error("No destination specified for job output!");
 		}
 
 		// OUTPUT: TYPE: CHECK
-		if (
-			![
-				"HTTP",
-				"HTTPS",
-				"AWS_S3",
-				"GOOGLE_CLOUD_STORAGE",
-				"DO_SPACES",
-				"LINODE",
-				"WASABI",
-				"BACKBLAZE",
-				"RACKSPACE",
-				"MICROSOFT_AZURE",
-				"OTHER_S3",
-				"FTP",
-				"SFTP"
-			].includes(this.destination.type)
-		) {
-			throw new Error(`Job output destination type is unsupported: ${this.destination.type}!`);
+		if (!["VOLTAGE", ...HTTPS_TYPES, ...STORAGE_S3_LIKE_TYPES, ...STORAGE_FTP_TYPES].includes(this.destination.type.toUpperCase())) {
+			throw new Error(`Job output destination type is unsupported: ${this.destination.type.toUpperCase()}!`);
 		}
 
 		this.tempJobDir = path.join(appConfig.temp_dir, "jobs", job.key);
@@ -51,7 +37,7 @@ export class JobUploader {
 	async upload(): Promise<Record<string, unknown>> {
 		try {
 			// DESTINATION: TYPE: HTTP & HTTPS
-			if (["HTTP", "HTTPS"].includes(this.destination.type)) {
+			if (HTTPS_TYPES.includes(this.destination.type.toUpperCase())) {
 				return await this.uploadHttp();
 			}
 
@@ -91,24 +77,43 @@ export class JobUploader {
 	}
 
 	private async uploadToStorage(): Promise<Record<string, unknown>> {
-		if (!this.output.config?.path) {
-			throw new Error("Path is required in output.config for remote upload destinations!");
+		let jobOutputDestination = {
+			...appConfig.storage,
+			path: `${this.job.key}/${this.output.key}.${(this.output.config?.format || "MP4").toLowerCase()}`
+		};
+
+		if ([...STORAGE_S3_LIKE_TYPES, ...STORAGE_FTP_TYPES].includes(this.destination.type.toUpperCase())) {
+			if (!this.destination?.path) {
+				throw new Error("Path is required in output.config for remote upload destinations!");
+			}
+
+			jobOutputDestination = this.destination;
 		}
 
 		// Initialize storage based on destination
-		const key = String(this.output.config.path).replace(/^\/+/, "");
+		const key = String(jobOutputDestination.path).replace(/^\/+/, "");
 		const contentType = guessContentType(key);
-		const acl = this.output.config?.acl || this.output.config?.destination?.acl || this.destination?.acl || null;
-		const expires = this.output.config?.expires || this.output.config?.destination?.expires || this.destination?.expires || null;
-		const cacheControl =
-			this.output.config?.cache_control || this.output.config?.destination?.cache_control || this.destination?.cache_control || null;
+		const acl = jobOutputDestination?.acl || undefined;
+		const expires_in = jobOutputDestination?.expires_in || undefined;
+		const cacheControl = jobOutputDestination?.cache_control || undefined;
 
-		await storage.config(this.destination);
-		await storage.upload(this.tempJobOutputFilePath, key, contentType, acl, expires, cacheControl);
+		await storage.config(jobOutputDestination);
+		await storage.upload(this.tempJobOutputFilePath, key, contentType, acl, expires_in, cacheControl);
 
 		// Build a result similar to previous S3 uploader
-		const location = (this.destination as any).bucket ? `s3://${(this.destination as any).bucket}/${key}` : key;
-		const url = storage.getPublicUrl(key) || null;
+		let location = key;
+		let url = null;
+
+		if (STORAGE_S3_LIKE_TYPES.includes(jobOutputDestination.type as any)) {
+			location = `s3://${(jobOutputDestination as any).bucket}/${key}`;
+			url = storage.getPublicUrl(key) || null;
+		} else if (STORAGE_FTP_TYPES.includes(jobOutputDestination.type as any)) {
+			location = `ftp://${(jobOutputDestination as any).host}/${jobOutputDestination.path}`;
+			url = `https://${(jobOutputDestination as any).host}/${jobOutputDestination.path}`;
+		} else if (jobOutputDestination.type === "LOCAL") {
+			location = path.resolve(key);
+			url = `${appConfig.url}/storage/jobs/${key}`;
+		}
 
 		return { path: `/${key}`, location, url };
 	}

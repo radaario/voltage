@@ -1,4 +1,6 @@
 import { config as appConfig } from "@voltage/core/config";
+import { NSFW_MODELS, NSFW_TYPES } from "@voltage/core/constants";
+
 import * as tf from "@tensorflow/tfjs";
 import { createRequire } from "module";
 
@@ -6,55 +8,40 @@ const require = createRequire(import.meta.url);
 const Jimp = require("jimp");
 const nsfwjs = require("nsfwjs");
 
-interface NSFWConfig {
-	nsfw_enabled?: boolean;
-	nsfw_model?: string;
-	nsfw_size?: number;
-	nsfw_type?: string;
-	nsfw_threshold?: number;
-}
-
 interface NSFWResult {
 	nsfw: boolean;
 	classification: Record<string, number>;
 }
 
-const NSFW_MODELS = {
-	MOBILE_NET_V2_MID: "MobileNetV2Mid",
-	MOBILE_NET_V2: "MobileNetV2",
-	INCEPTION_V3: "InceptionV3"
-};
-
 export class NSFWDetector {
-	private config: NSFWConfig;
+	private job: any;
 
-	constructor(config: NSFWConfig) {
-		this.config = config;
+	constructor(job: any) {
+		this.job = job;
 	}
 
 	async analyze(imagePath: string): Promise<NSFWResult | null> {
-		const nsfwIsDisabled = this.config.nsfw_detection === false;
-
-		if (nsfwIsDisabled) {
-			return null;
-		}
+		if (!imagePath) return null;
 
 		try {
-			const modelName = this.config.nsfw_model || appConfig.utils.nsfw.model;
-			const size = this.config.nsfw_size || appConfig.utils.nsfw.size || 224;
-			const type = this.config.nsfw_type || appConfig.utils.nsfw.type || "GRAPH";
-			const threshold = this.config.nsfw_threshold || appConfig.utils.nsfw.threshold || 75;
-
-			// Select model
-			let model = NSFW_MODELS.MOBILE_NET_V2_MID;
-			if (modelName && Object.keys(NSFW_MODELS).includes(modelName.toUpperCase())) {
-				model = NSFW_MODELS[modelName.toUpperCase() as keyof typeof NSFW_MODELS];
+			let model = appConfig.utils.nsfw.model || "MOBILE_NET_V2";
+			if (this.job.config?.nsfw_model && NSFW_MODELS.includes(this.job.config.nsfw_model.toUpperCase() as any)) {
+				model = this.job.config.nsfw_model.toUpperCase();
 			}
 
+			const size = this.job.config.nsfw_size || appConfig.utils.nsfw.size || 224;
+
+			let type = appConfig.utils.nsfw.type || "GRAPH";
+			if (this.job.config?.nsfw_type && NSFW_TYPES.includes(this.job.config.nsfw_type.toUpperCase() as any)) {
+				type = this.job.config.nsfw_type.toUpperCase();
+			}
+
+			const threshold = this.job.config.nsfw_threshold || appConfig.utils.nsfw.threshold || 70;
+
 			// Load NSFW model
-			const nsfwModel = await nsfwjs.load(model, {
+			const nsfwModel = await nsfwjs.load(this.sanitizeModel(model), {
 				size,
-				type: type.toLowerCase()
+				type: this.sanitizeType(type)
 			});
 
 			// Process image
@@ -101,6 +88,26 @@ export class NSFWDetector {
 			throw new Error(`${error.message || "Unknown error!"}`.trim());
 			// throw new Error(`NSFW analysis for job input failed! ${error.message || ""}`.trim());
 			// return null;
+		}
+	}
+
+	private sanitizeModel(model: string): string {
+		switch (model.toUpperCase()) {
+			case "MOBILE_NET_V2_MID":
+				return "MobileNetV2Mid";
+			case "INCEPTION_V3":
+				return "InceptionV3";
+			default:
+				return "MobileNetV2";
+		}
+	}
+
+	private sanitizeType(type: string): string {
+		switch (type.toUpperCase()) {
+			case "LITE":
+				return "lite";
+			default:
+				return "graph";
 		}
 	}
 }

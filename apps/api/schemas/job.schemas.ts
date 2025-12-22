@@ -1,3 +1,4 @@
+import { config as appConfig } from "@voltage/core/config";
 import {
 	HTTPS_TYPES,
 	STORAGE_S3_LIKE_TYPES,
@@ -24,7 +25,7 @@ import {
 	NOTIFICATION_NOTIFY_ON_TYPES,
 	NOTIFICATION_NOTIFY_ON_DEFAULT
 } from "@voltage/core/constants";
-import { config as appConfig } from "@voltage/core/config";
+
 import { Joi } from "@/utils/joi.util";
 
 const ffprobeGeneralAttributesDefault = appConfig.utils?.ffprobe?.general_attributes
@@ -100,7 +101,9 @@ const jobConfigSchema = Joi.object({
 
 	// Whisper Configs
 	whisper_model: Joi.string().constantcase().validOrDefault(WHISPER_MODELS, appConfig.utils.whisper.model) /* ! */,
-	whisper_with_cuda: Joi.boolean().failover(appConfig.utils.whisper.with_cuda || false) /* ! */
+	whisper_with_cuda: Joi.boolean()
+		.default(appConfig.utils.whisper.with_cuda || false)
+		.failover(appConfig.utils.whisper.with_cuda || false) /* ! */
 });
 
 // Job input schemas for each type
@@ -159,6 +162,10 @@ const jobInputBase64Schema = Joi.object({
 const jobInputSchema = Joi.alternatives().try(jobInputHttpSchema, jobInputS3LikeSchema, jobInputFtpSchema, jobInputBase64Schema);
 
 // Job destination schemas
+const jobDestinationVoltageSchema = Joi.object({
+	type: Joi.string().uppercase().constantcase().valid("VOLTAGE").required() /* ! */
+});
+
 const jobDestinationHttpSchema = Joi.object({
 	type: Joi.string()
 		.uppercase()
@@ -186,7 +193,7 @@ const jobDestinationS3LikeSchema = Joi.object({
 	region: Joi.string().required() /* ! */,
 	bucket: Joi.string().required() /* ! */,
 	acl: Joi.string().constantcase().validOrDefault(STORAGE_S3_LIKE_ACLS),
-	expires: Joi.number().failover(null).allow(null),
+	expires_in: Joi.number().failover(null).allow(null),
 	cache_control: Joi.string().failover(null).allow(null)
 });
 
@@ -203,7 +210,12 @@ const jobDestinationFtpSchema = Joi.object({
 	secure: Joi.boolean().default(false).failover(false) /* ! */
 });
 
-const jobDestinationSchema = Joi.alternatives().try(jobDestinationHttpSchema, jobDestinationS3LikeSchema, jobDestinationFtpSchema);
+const jobDestinationSchema = Joi.alternatives().try(
+	jobDestinationVoltageSchema,
+	jobDestinationHttpSchema,
+	jobDestinationS3LikeSchema,
+	jobDestinationFtpSchema
+);
 
 // Job notification schemas
 const jobNotificationCommonSchema = {
@@ -279,7 +291,7 @@ const jobOutputConfigCommonFileSchema = {
 		.constantcase()
 		.validOrFallback(STORAGE_S3_LIKE_ACLS, STORAGE_S3_LIKE_ACLS[0])
 		.failover(STORAGE_S3_LIKE_ACLS[0]) /* ! */,
-	expires: Joi.number().failover(null).allow(null) /* ! */,
+	expires_in: Joi.number().failover(null).allow(null) /* ! */,
 	cache_control: Joi.string().failover(null).allow(null) /* ! */
 };
 
@@ -292,6 +304,8 @@ const jobOutputConfigCommonFfmpegSchema = {
 };
 
 const jobOutputConfigCommonVideoSchema = {
+	video_first_frame_image_url: Joi.string().uri().failover(null).allow(null) /* ! */,
+	video_quality: Joi.number().range(0, 100).failover(null).allow(null) /* ! */,
 	video_codec: Joi.string().failover(null).allow(null) /* ! */,
 	video_bit_rate: Joi.any().bitrate().failover(null).allow(null) /* ! */,
 	video_pixel_format: Joi.string().failover(null).allow(null) /* ! */,
@@ -302,6 +316,7 @@ const jobOutputConfigCommonVideoSchema = {
 };
 
 const jobOutputConfigCommonAudioSchema = {
+	audio_quality: Joi.number().range(0, 100).failover(null).allow(null) /* ! */,
 	audio_codec: Joi.string().failover(null).allow(null) /* ! */,
 	audio_bit_rate: Joi.any().bitrate().failover(null).allow(null) /* ! */,
 	audio_sample_rate: Joi.any().samplerate().failover(null).allow(null) /* ! */,

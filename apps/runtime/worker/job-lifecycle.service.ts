@@ -2,7 +2,9 @@ import { config as appConfig } from "@voltage/core/config";
 import { JobRow, JobOutputRow, StatRow } from "@voltage/core/types";
 import { database, logger } from "@voltage/utils";
 import { getNow, addNow } from "@voltage/utils";
+
 import { createJobNotification } from "@/worker/notifier.js";
+
 import fs from "fs/promises";
 import path from "path";
 
@@ -48,6 +50,7 @@ export class JobLifecycleService {
 			status: "STARTED",
 			progress: 0.0,
 			started_at: getNow(),
+			downloaded_at: null,
 			analyzed_at: null,
 			completed_at: null,
 			try_count: parseInt(job.try_count as string),
@@ -71,6 +74,8 @@ export class JobLifecycleService {
 		return outputs.map((output: any) => ({
 			...output,
 			config: output.config ? JSON.parse(output.config as string) : null,
+			destination: output.destination ? JSON.parse(output.destination as string) : null,
+			metadata: output.metadata ? JSON.parse(output.metadata as string) : null,
 			outcome: output.outcome ? JSON.parse(output.outcome as string) : null
 		}));
 	}
@@ -145,6 +150,8 @@ export class JobLifecycleService {
 				.update({
 					...output,
 					config: output.config ? JSON.stringify(output.config) : null,
+					destination: output.destination ? JSON.stringify(output.destination) : null,
+					metadata: output.metadata ? JSON.stringify(output.metadata) : null,
 					outcome: output.outcome ? JSON.stringify(output.outcome) : null,
 					updated_at: getNow()
 				});

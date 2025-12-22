@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from "express";
 import { config as appConfig } from "@voltage/core/config";
 import { hash } from "@voltage/utils";
+
+import { Request, Response, NextFunction } from "express";
 import { sendError } from "@/utils/response.util.js";
 
 export const authMiddleware = (options: {} = {}) => {

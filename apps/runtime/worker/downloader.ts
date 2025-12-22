@@ -1,5 +1,7 @@
 import { config as appConfig } from "@voltage/core/config";
+import { HTTPS_TYPES, BASE64_TYPES, STORAGE_S3_LIKE_TYPES, STORAGE_FTP_TYPES } from "@voltage/core/constants";
 import { storage } from "@voltage/utils";
+
 import path from "path";
 import fs from "fs/promises";
 import axios from "axios";
@@ -22,15 +24,15 @@ export class JobDownloader {
 				throw new Error("No input specified for job!");
 			}
 
-			if (["BASE64"].includes(this.job.input?.type)) {
+			if (BASE64_TYPES.includes(this.job.input?.type)) {
 				return await this.downloadBase64();
 			}
 
-			if (["HTTP", "HTTPS"].includes(this.job.input?.type)) {
+			if (HTTPS_TYPES.includes(this.job.input?.type)) {
 				return await this.downloadHttp();
 			}
 
-			if (!["BASE64", "HTTP", "HTTPS"].includes(this.job.input?.type)) {
+			if (STORAGE_S3_LIKE_TYPES.includes(this.job.input?.type) || STORAGE_FTP_TYPES.includes(this.job.input?.type)) {
 				return await this.downloadFromStorage();
 			}
 
@@ -50,10 +52,10 @@ export class JobDownloader {
 
 	private async downloadHttp(): Promise<{ temp_path: string }> {
 		const auth =
-			this.job.input?.username && this.job.input?.password
+			this.job.input?.username || this.job.input?.password
 				? {
-						username: this.job.input.username,
-						password: this.job.input.password
+						username: this.job.input?.username,
+						password: this.job.input?.password
 					}
 				: undefined;
 

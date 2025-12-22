@@ -35,7 +35,7 @@ export const FFPROBE_GENERAL_ATTRIBUTES = ["DURATION", "SIZE"] as const;
 export const FFPROBE_VIDEO_ATTRIBUTES = ["WIDTH", "HEIGHT", "CODEC", "FRAME_RATE", "BIT_RATE"] as const;
 export const FFPROBE_AUDIO_ATTRIBUTES = ["CODEC", "CHANNELS", "SAMPLE_RATE", "CHANNEL_LAYOUT", "BIT_RATE"] as const;
 
-export const FFMPEG_PRESETS = ["MEDIUM", "ULTRA_FAST", "SUPER_FAST", "VERY_FAST", "FASTER", "FAST", "SLOW", "SLOWER"] as const;
+export const FFMPEG_PRESETS = ["DEFAULT", "MEDIUM", "ULTRA_FAST", "SUPER_FAST", "VERY_FAST", "FASTER", "FAST", "SLOW", "SLOWER"] as const;
 export const NSFW_MODELS = ["MOBILE_NET_V2", "MOBILE_NET_V2_MID", "INCEPTION_V3"] as const;
 export const NSFW_TYPES = ["GRAPH", "LITE"] as const;
 export const WHISPER_MODELS = [
@@ -82,9 +82,11 @@ export const VIDEO_LEVELS = [1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 3.0, 3.1, 3.2, 4
 export const AUDIO_FORMATS = ["MP3", "AAC", "WAV", "FLAC", "OGG", "OPUS", "ALAC", "WMA", "AIFF", "AMR-NB", "AMR-WB"] as const;
 export const AUDIO_CHANNELS = [2, 1, 4, 6, 8] as const;
 
-export const THUMBNAIL_FORMATS = ["PNG", "JPG", "WEBP", "BMP"] as const;
+export const THUMBNAIL_FORMATS = ["PNG", "JPG", "JPEG", "WEBP", "TIFF", "BMP"] as const; // "PNG", "JPG", "JPEG", "WEBP", "TIFF", "BMP"
 
 export const SUBTITLE_FORMATS = ["SRT", "VTT", "JSON", "CSV", "TXT"] as const;
+
+export const OUTPUT_TYPES = ["VIDEO", "AUDIO", "THUMBNAIL", "SUBTITLE"] as const;
 
 export const NOTIFICATION_NOTIFY_ON_TYPES = [
 	"RECEIVED",

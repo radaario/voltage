@@ -1,4 +1,5 @@
-import type { APP_CONFIG, STORAGE_TYPE, DATABASE_TYPE } from "../../types";
+import type { STORAGE_TYPE, DATABASE_TYPE } from "../../types";
+import type { APP_CONFIG } from "./types";
 
 export class ConfigValidationError extends Error {
 	constructor(message: string) {

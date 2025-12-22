@@ -1,9 +1,11 @@
+import { config as appConfig } from "@voltage/core/config";
+import { storage, database, logger, getInstanceKey } from "@voltage/utils";
+
 import "dotenv/config";
 import "express-async-errors";
 import express from "express";
 import cors from "cors";
-import { config as appConfig } from "@voltage/core/config";
-import { storage, database, logger, getInstanceKey } from "@voltage/utils";
+
 import { registerRoutes } from "@/routes/index.js";
 import { errorHandler } from "@/middleware/error.middleware.js";
 

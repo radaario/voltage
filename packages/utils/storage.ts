@@ -54,8 +54,15 @@ export interface StorageDriver {
 	list(prefix?: string): Promise<string[]>; // returns object keys relative to root/base
 	exists(key: string): Promise<boolean>;
 	read(key: string): Promise<Buffer>;
-	write(key: string, data: Buffer | string, contentType?: string, acl?: string, expires?: string, cacheControl?: string): Promise<void>;
-	upload(localFilePath: string, key: string, contentType?: string, acl?: string, expires?: string, cacheControl?: string): Promise<void>;
+	write(key: string, data: Buffer | string, contentType?: string, acl?: string, expiresIn?: number, cacheControl?: string): Promise<void>;
+	upload(
+		localFilePath: string,
+		key: string,
+		contentType?: string,
+		acl?: string,
+		expiresIn?: number,
+		cacheControl?: string
+	): Promise<void>;
 	download(key: string, localFilePath: string): Promise<void>;
 	copy(srcKey: string, destKey: string): Promise<void>;
 	move(srcKey: string, destKey: string): Promise<void>;
@@ -137,7 +144,7 @@ class LocalStorageDriver implements StorageDriver {
 		data: Buffer | string,
 		contentType?: string,
 		acl?: string,
-		expires?: string,
+		expiresIn?: number,
 		cacheControl?: string
 	): Promise<void> {
 		// contentType ignored for local
@@ -151,7 +158,7 @@ class LocalStorageDriver implements StorageDriver {
 		key: string,
 		contentType?: string,
 		acl?: string,
-		expires?: string,
+		expiresIn?: number,
 		cacheControl?: string
 	): Promise<void> {
 		const dest = this.withBasePath(key);
@@ -344,7 +351,7 @@ class S3StorageDriver implements StorageDriver {
 		data: Buffer | string,
 		contentType?: string,
 		accessControlList?: string,
-		expires?: string,
+		expiresIn?: number,
 		cacheControl?: string
 	): Promise<void> {
 		await this.client.send(
@@ -354,7 +361,7 @@ class S3StorageDriver implements StorageDriver {
 				Body: typeof data === "string" ? Buffer.from(data) : data,
 				ContentType: contentType || guessContentType(key),
 				ACL: this.validateACL(accessControlList),
-				Expires: this.validateDate(expires),
+				Expires: this.sanitizeExpiresIn(expiresIn),
 				CacheControl: cacheControl
 			})
 		);
@@ -365,7 +372,7 @@ class S3StorageDriver implements StorageDriver {
 		key: string,
 		contentType?: string,
 		accessControlList?: string,
-		expires?: string,
+		expiresIn?: number,
 		cacheControl?: string
 	): Promise<void> {
 		const stream = fssync.createReadStream(localFilePath);
@@ -376,7 +383,7 @@ class S3StorageDriver implements StorageDriver {
 				Body: stream,
 				ContentType: contentType || guessContentType(key),
 				ACL: this.validateACL(accessControlList),
-				Expires: this.validateDate(expires),
+				Expires: this.sanitizeExpiresIn(expiresIn),
 				CacheControl: cacheControl
 			})
 		);
@@ -498,11 +505,11 @@ class S3StorageDriver implements StorageDriver {
 		return aclMap[normalizedACL] || ObjectCannedACL.public_read;
 	}
 
-	private validateDate(date?: string): Date | undefined {
-		if (!date) return undefined;
-		const parsed = new Date(date);
-		if (isNaN(parsed.getTime())) return undefined;
-		return parsed;
+	private sanitizeExpiresIn(expiresIn?: number): Date | undefined {
+		if (expiresIn === undefined) return undefined;
+		const now = new Date();
+		const expiresDate = new Date(now.getTime() + expiresIn);
+		return expiresDate;
 	}
 }
 
@@ -687,7 +694,7 @@ class FTPStorageDriver implements StorageDriver {
 		data: Buffer | string,
 		contentType?: string,
 		acl?: string,
-		expires?: string,
+		expires_in?: number,
 		cacheControl?: string
 	): Promise<void> {
 		await this.connect();
@@ -723,7 +730,7 @@ class FTPStorageDriver implements StorageDriver {
 		key: string,
 		contentType?: string,
 		acl?: string,
-		expires?: string,
+		expires_in?: number,
 		cacheControl?: string
 	): Promise<void> {
 		await this.connect();
@@ -916,13 +923,27 @@ class StorageFacade implements StorageDriver {
 		this.assertReady();
 		return this.driver!.read(key);
 	}
-	write(key: string, data: Buffer | string, contentType?: string, acl?: string, expires?: string, cacheControl?: string): Promise<void> {
+	write(
+		key: string,
+		data: Buffer | string,
+		contentType?: string,
+		acl?: string,
+		expires_in?: number,
+		cacheControl?: string
+	): Promise<void> {
 		this.assertReady();
-		return this.driver!.write(key, data, contentType, acl, expires, cacheControl);
+		return this.driver!.write(key, data, contentType, acl, expires_in, cacheControl);
 	}
-	upload(localFilePath: string, key: string, contentType?: string, acl?: string, expires?: string, cacheControl?: string): Promise<void> {
+	upload(
+		localFilePath: string,
+		key: string,
+		contentType?: string,
+		acl?: string,
+		expires_in?: number,
+		cacheControl?: string
+	): Promise<void> {
 		this.assertReady();
-		return this.driver!.upload(localFilePath, key, contentType, acl, expires, cacheControl);
+		return this.driver!.upload(localFilePath, key, contentType, acl, expires_in, cacheControl);
 	}
 	download(key: string, localFilePath: string): Promise<void> {
 		this.assertReady();

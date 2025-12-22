@@ -61,165 +61,6 @@ export type FLIP_MODE = (typeof FLIP_MODES)[number];
 
 export type NOTIFICATIONS_NOTIFY_ON_TYPE = (typeof NOTIFICATION_NOTIFY_ON_TYPES)[number];
 
-export interface APP_CONFIG {
-	name: string;
-	version: string;
-	env: string;
-	ngnix_port: number;
-	url: string;
-	protocol: string;
-	host: string;
-	path: string;
-	port: number;
-	timezone: string;
-	dir: string;
-	temp_dir: string;
-
-	utils: {
-		ffprobe: {
-			path: string;
-			general_attributes: string;
-			video_attributes: string;
-			audio_attributes: string;
-		};
-		ffmpeg: {
-			path: string;
-			preset: FFMPEG_PRESET;
-			quality: number;
-		};
-		nsfw: {
-			model: NSFW_MODEL;
-			size: number;
-			type: NSFW_TYPE;
-			threshold: number;
-		};
-		whisper: {
-			model: WHISPER_MODEL;
-			with_cuda: boolean;
-		};
-	};
-
-	storage: {
-		type: STORAGE_TYPE;
-		endpoint: string;
-		access_key: string;
-		access_secret: string;
-		region: string;
-		bucket: string;
-		host: string;
-		username: string;
-		password: string;
-		secure: boolean;
-		base_path: string;
-	};
-
-	database: {
-		type: DATABASE_TYPE;
-		host: string;
-		port: number;
-		username: string;
-		password: string;
-		name: string;
-		table_prefix: string;
-		file_name: string;
-		cleanup_interval: number;
-	};
-
-	runtime: {
-		is_disabled: boolean;
-		key_method: string;
-		maintain_interval: number;
-		online_timeout: number;
-		purge_after: number;
-		workers: {
-			per_cpu_core: number;
-			max: number;
-			busy_interval: number;
-			busy_timeout: number;
-			idle_after: number;
-		};
-	};
-
-	api: {
-		is_disabled: boolean;
-		url: string;
-		node_port: number;
-		key: string | null;
-		request_body_limit: number | string;
-		auth_rate_limit: {
-			window_ms: number;
-			max_requests: number;
-		};
-		sensitive_fields: string;
-	};
-
-	frontend: {
-		is_disabled: boolean;
-		url: string;
-		node_port: number;
-		is_authentication_required: boolean;
-		password: string | null;
-		data_refetch_interval: number;
-		datetime_format: string;
-		local_storage: {
-			prefix: string | null;
-		};
-	};
-
-	stats: {
-		retention: number;
-	};
-
-	logs: {
-		is_disabled: boolean;
-		retention: number;
-	};
-
-	jobs: {
-		queue_timeout: number;
-		process_interval: number;
-		process_timeout: number;
-		enqueue_on_receive: boolean | string;
-		enqueue_limit: number;
-		retention: number;
-		input_analysis: boolean;
-		preview_generation: boolean;
-		nsfw_detection: boolean;
-		priority: number;
-		try: number;
-		try_min: number;
-		try_max: number;
-		retry_in: number;
-		retry_in_min: number;
-		retry_in_max: number;
-		preview: {
-			format: PREVIEW_FORMAT;
-			quality: number | string;
-		};
-		outputs: {
-			process_interval: number;
-		};
-		notifications: {
-			process_interval: number;
-			process_limit: number;
-			notify_on: string;
-			notify_on_alloweds: string;
-			timeout: number;
-			timeout_max: number;
-			try: number;
-			try_min: number;
-			try_max: number;
-			retry_in: number;
-			retry_in_min: number;
-			retry_in_max: number;
-		};
-	};
-}
-
-// =====================================================
-// JOB TYPES
-// =====================================================
-
 export type JobConfig = {
 	input_analysis?: boolean; // disable ffprobe analysis
 	preview_generation?: boolean; // disable input preview generation
@@ -279,6 +120,9 @@ export type JobInput =
 
 export type JobDestination =
 	| {
+			type: "VOLTAGE";
+	  }
+	| {
 			type: HTTP_TYPE;
 			method?: "GET" | "POST" | "PUT";
 			agent?: string;
@@ -297,7 +141,7 @@ export type JobDestination =
 			bucket: string;
 			path?: string;
 			acl?: STORAGE_S3_LIKE_ACL;
-			expires?: number;
+			expires_in?: number;
 			cache_control?: string;
 	  }
 	| {
@@ -315,7 +159,7 @@ type JobOutputConfigCommon = {
 	// name?: string; // optional custom name for the output file
 	// path?: string; // required if destination is S3 or FTP
 	// acl?: STORAGE_S3_LIKE_ACL; // optional if destination is S3, default: PUBLIC
-	// expires?: number; // optional if destination is S3, in seconds
+	// expires_in?: number; // optional if destination is S3, in seconds
 	// cache_control?: string; // optional if destination is S3
 	// destination?: JobDestination | null; // optional - if not provided, will use global destination
 	ffmpeg_preset?: FFMPEG_PRESET; // ffmpeg preset to use for this output
@@ -390,10 +234,12 @@ export type JobOutputRequest = JobOutputConfig & {
 	destination?: JobDestination | null; // optional - if not provided, will use global destination
 	metadata?: Record<string, any>[]; // custom metadata to be sent back with notifications
 	acl?: STORAGE_S3_LIKE_ACL; // optional if destination is S3, default: PUBLIC
-	expires?: number; // optional if destination is S3, in seconds
+	expires_in?: number; // optional if destination is S3, in seconds
 	cache_control?: string; // optional if destination is S3
 	try?: number; // maximum number of tries for this output
 	retry_in?: number; // retry interval for this output in milliseconds
+	whisper_model?: WHISPER_MODEL;
+	whisper_with_cuda?: boolean;
 };
 
 export type JobOutputRow = {
@@ -538,15 +384,21 @@ export type JobNotificationRow = {
 
 export type StatRow = {
 	[key: string]: any;
-	jobs_completed_count: number;
-	jobs_retried_count: number;
-	jobs_failed_count: number;
-	inputs_completed_count: number;
-	inputs_completed_duration: number;
-	inputs_failed_count: number;
-	inputs_failed_duration: number;
-	outputs_completed_count: number;
-	outputs_completed_duration: number;
-	outputs_failed_count: number;
-	outputs_failed_duration: number;
+	jobs_completed_count: number | 0;
+	jobs_retried_count: number | 0;
+	jobs_failed_count: number | 0;
+	inputs_downloaded_count: number | 0;
+	inputs_analyzed_count: number | 0;
+	inputs_preview_generated_count: number | 0;
+	inputs_nsfw_detected_count: number | 0;
+	inputs_completed_count: number | 0;
+	inputs_completed_duration: number | 0;
+	inputs_failed_count: number | 0;
+	inputs_failed_duration: number | 0;
+	outputs_processed_count: number | 0;
+	outputs_uploaded_count: number | 0;
+	outputs_completed_count: number | 0;
+	outputs_completed_duration: number | 0;
+	outputs_failed_count: number | 0;
+	outputs_failed_duration: number | 0;
 };

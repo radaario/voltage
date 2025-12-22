@@ -32,7 +32,7 @@ export const DEFAULT = {
 		},
 		ffmpeg: {
 			path: isWindows ? "C:\\ffmpeg\\bin\\ffmpeg" : "ffmpeg",
-			preset: FFMPEG_PRESETS[0], // e.g., "MEDIUM", "ULTRA_FAST", "SUPER_FAST", "VERY_FAST", "FASTER", "FAST", "SLOW", "SLOWER"
+			preset: FFMPEG_PRESETS[0], // e.g., "DEFAULT", "MEDIUM", "ULTRA_FAST", "SUPER_FAST", "VERY_FAST", "FASTER", "FAST", "SLOW", "SLOWER"
 			quality: 75 // 0-100 where higher is better quality
 		},
 		nsfw: {
@@ -56,7 +56,10 @@ export const DEFAULT = {
 		host: "",
 		username: "",
 		password: "",
-		secure: false
+		secure: false,
+		acl: "PUBLIC_READ",
+		expires_in: null,
+		cache_control: null
 	},
 	database: {
 		type: DATABASE_TYPES[0], // e.g., "SQLITE", "MYSQL", "MARIADB", "POSTGRESQL", "MSSQL", "AWS_REDSHIFT", "COCKROACHDB"

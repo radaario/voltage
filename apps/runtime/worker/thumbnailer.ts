@@ -1,5 +1,7 @@
 import { config as appConfig } from "@voltage/core/config";
+import { THUMBNAIL_FORMATS } from "@voltage/core/constants";
 import { storage } from "@voltage/utils";
+
 import { spawn } from "child_process";
 import path from "path";
 
@@ -11,6 +13,7 @@ interface ThumbnailerOptions {
 
 export class JobThumbnailer {
 	private job: any;
+
 	private tempJobDir: string;
 	private tempJobInputFilePath: string;
 
@@ -21,14 +24,14 @@ export class JobThumbnailer {
 	}
 
 	async generate(options: ThumbnailerOptions = {}): Promise<any> {
-		try {
-			if (this.job.input?.video === false) {
-				return { message: "There is no video in the input file!" };
-			}
+		if (this.job.input?.video === false) {
+			return { message: "There is no video in the input file!" };
+		}
 
-			let tempJobInputPreviewFileFormat = "PNG";
-			if (["PNG", "JPG", "JPEG", "WEBP", "TIFF", "BMP"].includes((options.format || "PNG").toUpperCase())) {
-				tempJobInputPreviewFileFormat = (options.format || "PNG").toUpperCase();
+		try {
+			let tempJobInputPreviewFileFormat = (appConfig.jobs.preview.format as string) || "PNG"; // default PNG
+			if (options?.format && THUMBNAIL_FORMATS.includes(options.format.toUpperCase() as any)) {
+				tempJobInputPreviewFileFormat = options.format.toUpperCase();
 			}
 
 			const tempJobInputPreviewFilePath = path.join(this.tempJobDir, `preview.${tempJobInputPreviewFileFormat.toLowerCase()}`);
@@ -49,7 +52,7 @@ export class JobThumbnailer {
 				"1",
 				// '-vf', 'scale=640:-1', // width 640, height auto to maintain aspect ratio
 				"-quality",
-				(options.quality || 75).toString(), // quality
+				(options.quality || appConfig.jobs.preview.quality || 75).toString(), // quality
 				tempJobInputPreviewFilePath
 			];
 

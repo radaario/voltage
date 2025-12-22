@@ -1,14 +1,15 @@
 import type {
-	APP_CONFIG,
 	STORAGE_TYPE,
 	DATABASE_TYPE,
 	FFMPEG_PRESET,
 	NSFW_MODEL,
 	NSFW_TYPE,
 	WHISPER_MODEL,
-	PREVIEW_FORMAT
+	PREVIEW_FORMAT,
+	STORAGE_S3_LIKE_ACL
 } from "../types";
-import { loadEnvironmentFiles, getEnv, getEnvNumber, getEnvBoolean } from "./helpers/loader";
+import { loadEnvironmentFiles, getEnv, getEnvOrNull, getEnvNumber, getEnvNumberOrNull, getEnvBoolean } from "./helpers/loader";
+import type { APP_CONFIG } from "./helpers/types";
 import { validateEnvironment, validateConfig } from "./helpers/validators";
 import { getAppDir, cpuCoresCount } from "./helpers/system";
 import { DEFAULT } from "./default";
@@ -90,7 +91,10 @@ export const config: APP_CONFIG = {
 		username: getEnv("VOLTAGE_STORAGE_USERNAME", DEFAULT.storage.username),
 		password: getEnv("VOLTAGE_STORAGE_PASSWORD", DEFAULT.storage.password),
 		secure: getEnvBoolean("VOLTAGE_STORAGE_SECURE", DEFAULT.storage.secure),
-		base_path: getEnv("VOLTAGE_STORAGE_BASE_PATH", `${appDir}/storage`)
+		base_path: getEnv("VOLTAGE_STORAGE_BASE_PATH", `${appDir}/storage`),
+		acl: getEnv("VOLTAGE_STORAGE_ACL", DEFAULT.storage.acl) as STORAGE_S3_LIKE_ACL,
+		expires_in: getEnvNumberOrNull("VOLTAGE_STORAGE_EXPIRES_IN", DEFAULT.storage.expires_in),
+		cache_control: getEnvOrNull("VOLTAGE_STORAGE_CACHE_CONTROL", DEFAULT.storage.cache_control)
 	},
 
 	// Database configuration

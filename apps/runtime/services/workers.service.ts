@@ -1,6 +1,7 @@
 import { config as appConfig } from "@voltage/core/config";
 import { database, logger, getInstanceKey, hash, getNow, subtractNow } from "@voltage/utils";
 import { WorkerOutcome, WorkersProcessMap } from "@/types/index.js";
+
 import path from "path";
 import { spawn, ChildProcess } from "child_process";
 
@@ -154,7 +155,6 @@ export const spawnInstanceWorkerForJob = async (
 			});
 		} else {
 			const workerScriptPath = path.join(process.cwd(), "dist", "worker", "index.js");
-			console.log("Spawning worker with tsx:", workerScriptPath);
 			child = spawn("node", [workerScriptPath, instanceKey, workerKey, jobKey], {
 				stdio: ["inherit", "inherit", "inherit"],
 				cwd: process.cwd()
