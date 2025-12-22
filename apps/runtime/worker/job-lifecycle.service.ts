@@ -1,8 +1,8 @@
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
+import { JobRow, JobOutputRow, StatRow } from "@voltage/core/types";
 import { database, logger } from "@voltage/utils";
 import { getNow, addNow } from "@voltage/utils";
 import { createJobNotification } from "@/worker/notifier.js";
-import { JobStats, JobContext, JobOutputContext } from "@/worker/types.js";
 import fs from "fs/promises";
 import path from "path";
 
@@ -24,7 +24,7 @@ export class JobLifecycleService {
 		await fs.mkdir(this.tempJobDir, { recursive: true }).catch(() => {});
 	}
 
-	async loadJob(): Promise<JobContext> {
+	async loadJob(): Promise<JobRow> {
 		const job = await database.table("jobs").where("key", this.jobKey).first();
 
 		if (!job) {
@@ -36,8 +36,8 @@ export class JobLifecycleService {
 		return job;
 	}
 
-	parseJob(job: any): JobContext {
-		const parsedJob: JobContext = {
+	parseJob(job: any): JobRow {
+		const parsedJob: JobRow = {
 			...job,
 			config: job.config ? JSON.parse(job.config as string) : null,
 			input: job.input ? JSON.parse(job.input as string) : null,
@@ -59,7 +59,7 @@ export class JobLifecycleService {
 		return parsedJob;
 	}
 
-	async getOutputs(): Promise<JobOutputContext[]> {
+	async getOutputs(): Promise<JobOutputRow[]> {
 		const outputs = await database.table("jobs_outputs").where("job_key", this.jobKey).orderBy("index", "asc");
 
 		if (!outputs) {
@@ -91,7 +91,7 @@ export class JobLifecycleService {
 		}
 	}
 
-	async updateJob(job: JobContext, params: any = {}, progressIncrement: number | null = null): Promise<void> {
+	async updateJob(job: JobRow, params: any = {}, progressIncrement: number | null = null): Promise<void> {
 		if (!job.key) return;
 
 		if (params) {
@@ -110,6 +110,7 @@ export class JobLifecycleService {
 				.where("key", job.key)
 				.update({
 					...job,
+					config: job.config ? JSON.stringify(job.config) : null,
 					input: job.input ? JSON.stringify(job.input) : null,
 					destination: job.destination ? JSON.stringify(job.destination) : null,
 					notification: job.notification ? JSON.stringify(job.notification) : null,
@@ -128,7 +129,7 @@ export class JobLifecycleService {
 		}
 	}
 
-	async updateJobOutput(output: JobOutputContext, params: any = {}): Promise<void> {
+	async updateJobOutput(output: JobOutputRow, params: any = {}): Promise<void> {
 		if (!output.key) return;
 
 		if (params) {
@@ -166,7 +167,7 @@ export class JobLifecycleService {
 		}
 	}
 
-	async finalizeJob(job: JobContext, outputs: JobOutputContext[], jobStats: JobStats): Promise<void> {
+	async finalizeJob(job: JobRow, outputs: JobOutputRow[], jobStats: StatRow): Promise<void> {
 		this.stopWorkerStatusInterval();
 
 		// Cleanup temp directory
@@ -207,7 +208,7 @@ export class JobLifecycleService {
 		}
 	}
 
-	exitWorker(job: JobContext): Promise<void> {
+	exitWorker(job: JobRow): Promise<void> {
 		if (job.status === "COMPLETED") {
 			process.exit(0);
 		} else {

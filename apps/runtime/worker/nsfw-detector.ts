@@ -1,4 +1,4 @@
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
 import * as tf from "@tensorflow/tfjs";
 import { createRequire } from "module";
 

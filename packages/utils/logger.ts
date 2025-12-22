@@ -1,4 +1,4 @@
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
 import { database } from "./database";
 import { getNow } from "./helpers/date";
 import { uukey } from "./helpers/crypto";

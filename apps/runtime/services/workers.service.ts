@@ -1,4 +1,4 @@
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
 import { database, logger, getInstanceKey, hash, getNow, subtractNow } from "@voltage/utils";
 import { WorkerOutcome, WorkersProcessMap } from "@/types/index.js";
 import path from "path";

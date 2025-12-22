@@ -1,5 +1,5 @@
-import { config as appConfig } from "@voltage/core";
-import type { JobNotification } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
+import type { JobNotification } from "@voltage/core/types";
 
 import { database, stats, logger } from "@voltage/utils";
 import { uukey, getNow, addNow, sanitizeData } from "@voltage/utils";

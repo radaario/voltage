@@ -1,4 +1,4 @@
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
 import { storage, guessContentType } from "@voltage/utils";
 import path from "path";
 import fs from "fs/promises";

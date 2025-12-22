@@ -1,8 +1,8 @@
 import { Express, Request, Response } from "express";
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
 import { sanitizeData } from "@voltage/utils";
 import { sendSuccess } from "@/utils/response.util.js";
-import { authMiddleware, optionalAuthMiddleware } from "@/middleware/auth.middleware.js";
+import { optionalAuthMiddleware } from "@/middleware/auth.middleware.js";
 
 // Import routes
 import authRoutes from "@/routes/auth.routes.js";

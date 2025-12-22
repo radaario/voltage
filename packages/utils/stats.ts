@@ -1,4 +1,4 @@
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
 import { database } from "./database";
 import { getNow, getDate } from "./helpers/date";
 import { hash } from "./helpers/crypto";

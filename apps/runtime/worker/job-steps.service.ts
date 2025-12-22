@@ -1,4 +1,6 @@
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
+import { JOB_PROGRESS_PER_STEP } from "@voltage/core/constants";
+import { JobRow, JobOutputRow, StatRow } from "@voltage/core/types";
 import { logger, getNow } from "@voltage/utils";
 import { JobDownloader } from "@/worker/downloader.js";
 import { JobAnalyzer } from "@/worker/analyzer.js";
@@ -6,7 +8,6 @@ import { JobThumbnailer } from "@/worker/thumbnailer.js";
 import { JobOutputProcessor } from "@/worker/processor.js";
 import { JobUploader } from "@/worker/uploader.js";
 import { NSFWDetector } from "@/worker/nsfw-detector.js";
-import { JobStats, JobContext, JobOutputContext, JOB_PROGRESS_PER_STEP } from "@/worker/types.js";
 import fs from "fs/promises";
 import path from "path";
 
@@ -26,7 +27,7 @@ export class JobStepsService {
 		clearInterval(this.intervalRef);
 	}
 
-	async downloadInput(job: JobContext, jobStats: JobStats): Promise<void> {
+	async downloadInput(job: JobRow, jobStats: StatRow): Promise<void> {
 		await logger.insert("WORKER", "INFO", "Downloading job input...");
 
 		try {
@@ -43,7 +44,7 @@ export class JobStepsService {
 		}
 	}
 
-	async analyzeInput(job: JobContext, jobStats: JobStats): Promise<void> {
+	async analyzeInput(job: JobRow, jobStats: StatRow): Promise<void> {
 		if (job.input?.analyze_is_disabled) return;
 
 		await logger.insert("WORKER", "INFO", "Analyzing job input...");
@@ -73,7 +74,7 @@ export class JobStepsService {
 		}
 	}
 
-	async generateInputPreview(job: JobContext, jobStats: JobStats): Promise<any> {
+	async generateInputPreview(job: JobRow, jobStats: StatRow): Promise<any> {
 		if (job.input?.preview_is_disabled) return;
 
 		await logger.insert("WORKER", "INFO", "Generating job input preview...");
@@ -96,7 +97,7 @@ export class JobStepsService {
 		return null;
 	}
 
-	async detectInputNSFW(job: JobContext, jobInputPreviewPath: string, jobStats: JobStats): Promise<any> {
+	async detectInputNSFW(job: JobRow, jobInputPreviewPath: string, jobStats: StatRow): Promise<any> {
 		if (!jobInputPreviewPath) return null;
 		if (job.input?.config?.nsfw_detection === false) return null;
 
@@ -133,9 +134,9 @@ export class JobStepsService {
 	}
 
 	async processOutputs(
-		job: JobContext,
-		outputs: JobOutputContext[],
-		jobStats: JobStats,
+		job: JobRow,
+		outputs: JobOutputRow[],
+		jobStats: StatRow,
 		onProgressUpdate: ({ job, output }: any) => void
 	): Promise<number> {
 		await logger.insert("WORKER", "INFO", "Processing job outputs...");
@@ -202,9 +203,9 @@ export class JobStepsService {
 	}
 
 	async uploadOutputs(
-		job: JobContext,
-		outputs: JobOutputContext[],
-		jobStats: JobStats,
+		job: JobRow,
+		outputs: JobOutputRow[],
+		jobStats: StatRow,
 		onProgressUpdate: ({ job, output }: any) => void
 	): Promise<number> {
 		await logger.insert("WORKER", "INFO", "Uploading job outputs...");
@@ -284,8 +285,8 @@ export class JobStepsService {
 		return outputsUploadedCount;
 	}
 
-	validateOutputs(outputs: JobOutputContext[]): void {
-		const jobOutputsFailed = outputs?.filter((output: JobOutputContext) => output.status !== "COMPLETED");
+	validateOutputs(outputs: JobOutputRow[]): void {
+		const jobOutputsFailed = outputs?.filter((output: JobOutputRow) => output.status !== "COMPLETED");
 
 		if (jobOutputsFailed && jobOutputsFailed.length > 0) {
 			throw new Error("Some job outputs failed!");

@@ -1,4 +1,4 @@
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
 import { Request, Response, NextFunction } from "express";
 import Joi, { ObjectSchema } from "joi";
 

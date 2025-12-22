@@ -1,6 +1,6 @@
 import "dotenv/config";
-import { config as appConfig } from "@voltage/core";
 import { storage, database, logger, getInstanceKey, getInstanceSpecs, getNow } from "@voltage/utils";
+import { config as appConfig } from "@voltage/core/config";
 import { WorkersProcessMap } from "@/types/index.js";
 import { restartInstance } from "@/services/instances.service.js";
 import { maintainInstancesAndWorkers } from "@/services/maintenance.service.js";

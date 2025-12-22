@@ -76,67 +76,10 @@ export const VIDEO_FORMATS = [
 	"RAW"
 ] as const;
 
-export const VIDEO_CODECS = [
-	"LIB_X_264",
-	"LIB_X_265",
-	"LIB_VPX",
-	"LIB_VPX_VP9",
-	"LIB_AOM_AV1",
-	"MPEG_4",
-	"MPEG_2_VIDEO",
-	"H264_NVENC",
-	"HEVC_NVENC",
-	"H264_QSV",
-	"HEVC_QSV",
-	"H264_VAAPI",
-	"COPY",
-	"PRORES",
-	"DNXHD",
-	"FFV_1",
-	"UTVIDEO"
-] as const;
 export const VIDEO_PROFILES = ["MAIN", "BASELINE", "HIGH", "HIGH_10", "HIGH_422", "HIGH_444"] as const;
-export const VIDEO_PIXEL_FORMATS = [
-	"YUV_420_P",
-	"YUV_422_P",
-	"YUV_444_P",
-	"YUV_422_P101E",
-	"YUV_444_P101E",
-	"NV_12",
-	"NV_21",
-	"RGB_24",
-	"BGR_24",
-	"RGBA",
-	"BGRA",
-	"ARGB",
-	"GBRP",
-	"GRAY",
-	"GRAY_161_E",
-	"CUDA",
-	"VAAPI",
-	"QSV",
-	"DXVA2_VLD",
-	"VIDEO_TOOL_BOX"
-] as const;
 export const VIDEO_LEVELS = [1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 3.0, 3.1, 3.2, 4.0, 4.1, 4.2, 5.0, 5.1, 5.2, 6.0, 6.1, 6.2] as const;
 
 export const AUDIO_FORMATS = ["MP3", "AAC", "WAV", "FLAC", "OGG", "OPUS", "ALAC", "WMA", "AIFF", "AMR-NB", "AMR-WB"] as const;
-export const AUDIO_CODECS = [
-	"LIB_MP3_LAME",
-	"PCM_S16_LE",
-	"PCM_S24_LE",
-	"PCM_S32_LE",
-	"FLAC",
-	"ALAC",
-	"WAVPACK",
-	"AAC",
-	"LIB_OPUS",
-	"LIB_VORBIS",
-	"AC3",
-	"EAC3",
-	"MP2",
-	"WMAV2"
-] as const;
 export const AUDIO_CHANNELS = [2, 1, 4, 6, 8] as const;
 
 export const THUMBNAIL_FORMATS = ["PNG", "JPG", "WEBP", "BMP"] as const;
@@ -165,3 +108,5 @@ export const NOTIFICATION_NOTIFY_ON_TYPES = [
 ] as const;
 
 export const NOTIFICATION_NOTIFY_ON_DEFAULT = ["RECEIVED", "COMPLETED", "FAILED", "TIMEOUT"] as const;
+
+export const JOB_PROGRESS_PER_STEP = 20.0; // Each step contributes 20% to the total progress

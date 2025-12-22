@@ -1,4 +1,4 @@
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
 import { database, logger, storage, subtractNow } from "@voltage/utils";
 
 export const cleanupCompletedJobs = async (): Promise<void> => {

@@ -1,4 +1,4 @@
-import { STORAGE_TYPE, STORAGE_S3_LIKE_TYPE, STORAGE_FTP_TYPE } from "@voltage/core";
+import { STORAGE_TYPE, STORAGE_S3_LIKE_TYPE, STORAGE_FTP_TYPE } from "@voltage/core/types";
 
 import { guessContentType } from "./index";
 import { logger } from "./logger";

@@ -9,12 +9,9 @@ import {
 	NSFW_TYPES,
 	WHISPER_MODELS,
 	VIDEO_FORMATS,
-	VIDEO_CODECS,
 	VIDEO_PROFILES,
-	VIDEO_PIXEL_FORMATS,
 	VIDEO_LEVELS,
 	AUDIO_FORMATS,
-	AUDIO_CODECS,
 	AUDIO_CHANNELS,
 	THUMBNAIL_FORMATS,
 	SUBTITLE_FORMATS,
@@ -26,8 +23,8 @@ import {
 	FFPROBE_AUDIO_ATTRIBUTES,
 	NOTIFICATION_NOTIFY_ON_TYPES,
 	NOTIFICATION_NOTIFY_ON_DEFAULT
-} from "@voltage/core";
-import { config as appConfig } from "@voltage/core";
+} from "@voltage/core/constants";
+import { config as appConfig } from "@voltage/core/config";
 import { Joi } from "@/utils/joi.util";
 
 const ffprobeGeneralAttributesDefault = appConfig.utils?.ffprobe?.general_attributes
@@ -295,9 +292,9 @@ const jobOutputConfigCommonFfmpegSchema = {
 };
 
 const jobOutputConfigCommonVideoSchema = {
-	video_codec: Joi.string().constantcase().validOrFallback(VIDEO_CODECS, null).failover(null).allow(null) /* ! */,
+	video_codec: Joi.string().failover(null).allow(null) /* ! */,
 	video_bit_rate: Joi.any().bitrate().failover(null).allow(null) /* ! */,
-	video_pixel_format: Joi.string().constantcase().validOrFallback(VIDEO_PIXEL_FORMATS, null).failover(null).allow(null) /* ! */,
+	video_pixel_format: Joi.string().failover(null).allow(null) /* ! */,
 	video_frame_rate: Joi.any().framerate().failover(null).allow(null),
 	video_profile: Joi.string().constantcase().validOrFallback(VIDEO_PROFILES, null).failover(null).allow(null) /* ! */,
 	video_level: Joi.string().constantcase().validOrFallback(VIDEO_LEVELS, null).failover(null).allow(null) /* ! */,
@@ -305,7 +302,7 @@ const jobOutputConfigCommonVideoSchema = {
 };
 
 const jobOutputConfigCommonAudioSchema = {
-	audio_codec: Joi.string().constantcase().validOrFallback(AUDIO_CODECS, null).failover(null).allow(null) /* ! */,
+	audio_codec: Joi.string().failover(null).allow(null) /* ! */,
 	audio_bit_rate: Joi.any().bitrate().failover(null).allow(null) /* ! */,
 	audio_sample_rate: Joi.any().samplerate().failover(null).allow(null) /* ! */,
 	audio_channels: Joi.any().constantcase().validOrFallback(AUDIO_CHANNELS, null).failover(null).allow(null) /* ! */

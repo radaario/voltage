@@ -12,12 +12,9 @@ import {
 	WHISPER_MODELS,
 	PREVIEW_FORMATS,
 	VIDEO_FORMATS,
-	VIDEO_CODECS,
 	VIDEO_PROFILES,
-	VIDEO_PIXEL_FORMATS,
 	VIDEO_LEVELS,
 	AUDIO_FORMATS,
-	AUDIO_CODECS,
 	AUDIO_CHANNELS,
 	THUMBNAIL_FORMATS,
 	SUBTITLE_FORMATS,
@@ -49,13 +46,10 @@ export type WHISPER_MODEL = (typeof WHISPER_MODELS)[number];
 export type PREVIEW_FORMAT = (typeof PREVIEW_FORMATS)[number];
 
 export type VIDEO_FORMAT = (typeof VIDEO_FORMATS)[number];
-export type VIDEO_CODEC = (typeof VIDEO_CODECS)[number];
 export type VIDEO_PROFILE = (typeof VIDEO_PROFILES)[number];
-export type VIDEO_PIXEL_FORMAT = (typeof VIDEO_PIXEL_FORMATS)[number];
 export type VIDEO_LEVEL = (typeof VIDEO_LEVELS)[number];
 
 export type AUDIO_FORMAT = (typeof AUDIO_FORMATS)[number];
-export type AUDIO_CODEC = (typeof AUDIO_CODECS)[number];
 export type AUDIO_CHANNEL = (typeof AUDIO_CHANNELS)[number];
 
 export type THUMBNAIL_FORMAT = (typeof THUMBNAIL_FORMATS)[number];
@@ -345,7 +339,7 @@ type JobOutputConfigImage = {
 };
 
 type JobOutputConfigAudio = {
-	audio_codec?: AUDIO_CODEC;
+	audio_codec?: string;
 	audio_bit_rate?: number | string; // e.g. '128k'
 	audio_sample_rate?: number; // in Hz
 	audio_channels?: AUDIO_CHANNEL; // e.g. 2
@@ -355,9 +349,9 @@ export type JobOutputConfig =
 	| ({
 			type: "VIDEO";
 			format: VIDEO_FORMAT;
-			video_codec?: VIDEO_CODEC;
+			video_codec?: string;
 			video_bit_rate?: number | string; // e.g. '2500k'
-			video_pixel_format?: VIDEO_PIXEL_FORMAT; // e.g. 'YUV_420_P'
+			video_pixel_format?: string; // e.g. 'yuv420p'
 			video_frame_rate?: number | string;
 			video_profile?: VIDEO_PROFILE; // e.g. 'MAIN', 'HIGH', 'BASELINE'
 			video_level?: VIDEO_LEVEL; // e.g. 4.0, 4.1, 5.0
@@ -394,6 +388,7 @@ export type JobOutputRequest = JobOutputConfig & {
 	path?: string; // required if destination is S3 or FTP
 	url?: string; // required if destination is HTTP
 	destination?: JobDestination | null; // optional - if not provided, will use global destination
+	metadata?: Record<string, any>[]; // custom metadata to be sent back with notifications
 	acl?: STORAGE_S3_LIKE_ACL; // optional if destination is S3, default: PUBLIC
 	expires?: number; // optional if destination is S3, in seconds
 	cache_control?: string; // optional if destination is S3
@@ -403,15 +398,15 @@ export type JobOutputRequest = JobOutputConfig & {
 
 export type JobOutputRow = {
 	key: string;
-	job_key?: string | null;
+	job_key: string | null;
 	index: number | 0;
-	priority?: number | 1000;
+	priority: number | 1000;
 	type: "VIDEO" | "AUDIO" | "THUMBNAIL" | "SUBTITLE";
-	name?: string | null;
-	config?: any | null;
-	destination?: any | null;
-	outcome?: any | null;
-	status?:
+	config: any | null;
+	destination: any | null;
+	metadata: any | null;
+	outcome: any | null;
+	status:
 		| "PENDING"
 		| "RETRYING"
 		| "QUEUED"
@@ -425,19 +420,19 @@ export type JobOutputRow = {
 		| "DELETED"
 		| "FAILED"
 		| "TIMEOUT";
-	started_at?: string | null;
-	processed_at?: string | null;
-	uploaded_at?: string | null;
-	completed_at?: string | null;
-	updated_at?: string;
-	created_at?: string;
-	try_max?: number | 1;
-	try_count?: number | 0;
-	retry_in?: number | 0;
-	retry_at?: string | null;
-	locked_by?: string | null;
-	instance_key?: string | null;
-	worker_key?: string | null;
+	started_at: string | null;
+	processed_at: string | null;
+	uploaded_at: string | null;
+	completed_at: string | null;
+	updated_at: string;
+	created_at: string;
+	try_max: number | 3;
+	try_count: number | 0;
+	retry_in: number | 0;
+	retry_at: string | null;
+	locked_by: string | null;
+	instance_key: string | null;
+	worker_key: string | null;
 };
 
 export type JobNotification =
@@ -481,14 +476,14 @@ export type JobRequest = {
 
 export type JobRow = {
 	key: string;
-	priority?: number | 1000;
-	config?: any | null;
-	input?: any | null;
-	destination?: any | null;
-	notification?: any | null;
-	metadata?: any | null;
-	outcome?: any | null;
-	status?:
+	priority: number | 1000;
+	config: any | null;
+	input: any | null;
+	destination: any | null;
+	notification: any | null;
+	metadata: any | null;
+	outcome: any | null;
+	status:
 		| "RECEIVED"
 		| "PENDING"
 		| "RETRYING"
@@ -507,20 +502,20 @@ export type JobRow = {
 		| "DELETED"
 		| "FAILED"
 		| "TIMEOUT";
-	progress?: number | 0.0; // STARTED = 0; DOWNLOADING = 20; ANALYZING = 40; PROCESSING = 60; UPLOADING = 80; COMPLETED = 100;
-	started_at?: string | null;
-	downloaded_at?: string | null;
-	analyzed_at?: string | null;
-	completed_at?: string | null;
-	updated_at?: string;
-	created_at?: string;
-	try_max?: number | 1;
-	try_count?: number | 0;
-	retry_in?: number | 0;
-	retry_at?: string | null;
-	locked_by?: string | null;
-	instance_key?: string | null;
-	worker_key?: string | null;
+	progress: number | 0.0; // STARTED = 0; DOWNLOADING = 20; ANALYZING = 40; PROCESSING = 60; UPLOADING = 80; COMPLETED = 100;
+	started_at: string | null;
+	downloaded_at: string | null;
+	analyzed_at: string | null;
+	completed_at: string | null;
+	updated_at: string;
+	created_at: string;
+	try_max: number | 3;
+	try_count: number | 0;
+	retry_in: number | 0;
+	retry_at: string | null;
+	locked_by: string | null;
+	instance_key: string | null;
+	worker_key: string | null;
 };
 
 export type JobNotificationRow = {
@@ -539,4 +534,19 @@ export type JobNotificationRow = {
 	retry_at?: string | null;
 	instance_key?: string | null;
 	worker_key?: string | null;
+};
+
+export type StatRow = {
+	[key: string]: any;
+	jobs_completed_count: number;
+	jobs_retried_count: number;
+	jobs_failed_count: number;
+	inputs_completed_count: number;
+	inputs_completed_duration: number;
+	inputs_failed_count: number;
+	inputs_failed_duration: number;
+	outputs_completed_count: number;
+	outputs_completed_duration: number;
+	outputs_failed_count: number;
+	outputs_failed_duration: number;
 };

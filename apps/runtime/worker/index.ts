@@ -1,8 +1,9 @@
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
+import { JOB_PROGRESS_PER_STEP } from "@voltage/core/constants";
+import { StatRow } from "@voltage/core/types";
 import { database, logger, stats, getNow } from "@voltage/utils";
 import { JobLifecycleService } from "@/worker/job-lifecycle.service.js";
 import { JobStepsService } from "@/worker/job-steps.service.js";
-import { JobStats, JOB_PROGRESS_PER_STEP } from "@/worker/types.js";
 
 database.config(appConfig.database);
 
@@ -12,7 +13,7 @@ async function run() {
 	const lifecycle = new JobLifecycleService(instanceKey, workerKey, jobKey);
 	const steps = new JobStepsService(lifecycle.getTempJobDir());
 
-	const jobStats: JobStats = {
+	const jobStats: StatRow = {
 		jobs_completed_count: 0,
 		jobs_retried_count: 0,
 		jobs_failed_count: 0,

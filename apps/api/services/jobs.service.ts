@@ -1,6 +1,6 @@
-import { config as appConfig } from "@voltage/core";
+import { config as appConfig } from "@voltage/core/config";
 import { Knex } from "knex";
-import { HTTPS_TYPES, STORAGE_FTP_TYPES, STORAGE_S3_LIKE_TYPES } from "@voltage/core";
+import { HTTPS_TYPES, STORAGE_FTP_TYPES, STORAGE_S3_LIKE_TYPES } from "@voltage/core/constants";
 import type {
 	JobRequest,
 	JobConfig,
@@ -10,7 +10,7 @@ import type {
 	JobRow,
 	JobOutputRequest,
 	JobOutputRow
-} from "@voltage/core";
+} from "@voltage/core/types";
 import { database, storage, logger, stats } from "@voltage/utils";
 import { uukey, getNow, getDate } from "@voltage/utils";
 import { createJobNotification } from "@voltage/runtime/worker/notifier";
@@ -106,7 +106,10 @@ export const createJob = async (body: JobRequest) => {
 
 		const jobOutputPriority = jobOutput.priority;
 		const jobOutputType = jobOutput.type;
-		const jobOutputName = jobOutput.name;
+		const jobOutputMetadata = {
+			name: jobOutput.name || undefined,
+			metadata: jobOutput.metadata || undefined
+		};
 
 		const jobOutputConfig = {
 			...jobOutput,
@@ -164,10 +167,15 @@ export const createJob = async (body: JobRequest) => {
 			index: jobOutputIndex,
 			priority: jobOutputPriority || jobPriority || appConfig.jobs.priority || 1000,
 			type: jobOutputType,
-			name: jobOutputName,
 			config: jobOutputConfig,
 			destination: jobOutputDestination || jobDestination || null,
+			metadata: jobOutputMetadata || null,
+			outcome: null,
 			status: jobStatus,
+			started_at: null,
+			processed_at: null,
+			uploaded_at: null,
+			completed_at: null,
 			updated_at: now,
 			created_at: now,
 			try_max: jobOutput.try || body?.try || appConfig?.jobs?.try || 3,
