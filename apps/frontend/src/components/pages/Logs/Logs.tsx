@@ -205,6 +205,14 @@ const Logs: React.FC = () => {
 				title="Logs"
 				onRefresh={handleRefresh}
 				isRefreshing={isLoading || isFetching}>
+				{/* Search Input */}
+				<SearchInput
+					value={searchInput}
+					onChange={setSearchInput}
+					onClear={handleClearSearch}
+					placeholder="Search logs..."
+					className="h-[38px]"
+				/>
 				{/* Type Filter */}
 				<Select
 					value={typeFilter}
@@ -213,14 +221,6 @@ const Logs: React.FC = () => {
 					placeholder="Filter by type"
 					emptyLabel="All Types"
 					className="w-[220px]"
-				/>
-				{/* Search Input */}
-				<SearchInput
-					value={searchInput}
-					onChange={setSearchInput}
-					onClear={handleClearSearch}
-					placeholder="Search logs..."
-					className="h-[38px]"
 				/>
 
 				<Tooltip content="Delete All">

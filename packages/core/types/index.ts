@@ -120,7 +120,7 @@ export type JobInput =
 
 export type JobDestination =
 	| {
-			type: "VOLTAGE";
+			type: "LOCAL";
 	  }
 	| {
 			type: HTTP_TYPE;
@@ -352,6 +352,8 @@ export type JobRow = {
 	started_at: string | null;
 	downloaded_at: string | null;
 	analyzed_at: string | null;
+	processed_at: string | null;
+	uploaded_at: string | null;
 	completed_at: string | null;
 	updated_at: string;
 	created_at: string;

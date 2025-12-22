@@ -44,7 +44,7 @@ const JobsTable = ({
 				header: "Job",
 				cell: (info) => {
 					const job = info.row.original;
-					const filename = getJobName(job);
+					const name = getJobName(job);
 
 					const specs: string[] = [];
 
@@ -72,7 +72,7 @@ const JobsTable = ({
 							<div
 								className="flex flex-col items-start min-w-0"
 								style={{ wordBreak: "break-all" }}>
-								{filename && <div className="font-medium text-gray-900 dark:text-white sm:truncate">{filename}</div>}
+								{name && <div className="font-medium text-gray-900 dark:text-white sm:truncate">{name}</div>}
 								<div className="text-xs text-gray-500 dark:text-gray-400 font-mono sm:truncate hidden sm:block">
 									{job.key}
 								</div>
@@ -125,33 +125,59 @@ const JobsTable = ({
 				header: "Progress",
 				cell: (info) => {
 					const job = info.row.original;
-
-					const progressDurationText = formatDatesToDuration(job.started_at, job.completed_at, serverTimezone);
-					const progressDuration = progressDurationText ? <span>{progressDurationText}</span> : null;
-
-					const fullDurationText = formatDatesToDuration(job.created_at, job.completed_at, serverTimezone);
-					const fullDuration = fullDurationText ? <span>{fullDurationText}</span> : null;
+					const progressedIn = formatDatesToDuration(job.started_at || job.created_at, job.completed_at, serverTimezone);
 
 					return (
 						<div className="text-right sm:text-left">
 							<div>%{job.progress || 0}</div>
-							{progressDuration && (
-								<Tooltip
-									content={
-										<table className="py-1.5">
+							<Tooltip
+								content={
+									<table className="py-1.5">
+										<tr>
+											<td className="font-light pr-1 py-0.25">Overall</td>
+											<td>: {formatDatesToDuration(job.created_at, job.completed_at, serverTimezone)}</td>
+										</tr>
+
+										{!!job.started_at && (
 											<tr>
-												<td className="font-light pr-1 py-0.25">Progress Duration</td>
-												<td>: {progressDuration}</td>
+												<td className="font-light pr-1 py-0.25">Started In</td>
+												<td>: {formatDatesToDuration(job.created_at, job.started_at, serverTimezone)}</td>
 											</tr>
+										)}
+										{!!job.downloaded_at && (
 											<tr>
-												<td className="font-light pr-1 py-0.25">Completed Duration</td>
-												<td>: {fullDuration}</td>
+												<td className="font-light pr-1 py-0.25">Downloaded In</td>
+												<td>: {formatDatesToDuration(job.started_at, job.downloaded_at, serverTimezone)}</td>
 											</tr>
-										</table>
-									}>
-									<div className="inline-flex text-xs text-gray-500 dark:text-gray-400 font-mono">{progressDuration}</div>
-								</Tooltip>
-							)}
+										)}
+										{!!job.analyzed_at && (
+											<tr>
+												<td className="font-light pr-1 py-0.25">Analyzed In</td>
+												<td>: {formatDatesToDuration(job.downloaded_at, job.analyzed_at, serverTimezone)}</td>
+											</tr>
+										)}
+										{!!job.processed_at && (
+											<tr>
+												<td className="font-light pr-1 py-0.25">Processed In</td>
+												<td>: {formatDatesToDuration(job.analyzed_at, job.processed_at, serverTimezone)}</td>
+											</tr>
+										)}
+										{!!job.uploaded_at && (
+											<tr>
+												<td className="font-light pr-1 py-0.25">Uploaded In</td>
+												<td>: {formatDatesToDuration(job.processed_at, job.uploaded_at, serverTimezone)}</td>
+											</tr>
+										)}
+										{!!job.completed_at && (
+											<tr>
+												<td className="font-light pr-1 py-0.25">Completed In</td>
+												<td>: {formatDatesToDuration(job.started_at, job.completed_at, serverTimezone)}</td>
+											</tr>
+										)}
+									</table>
+								}>
+								<div className="inline-flex text-xs text-gray-500 dark:text-gray-400 font-mono">{progressedIn}</div>
+							</Tooltip>
 						</div>
 					);
 				}

@@ -292,6 +292,13 @@ const Jobs: React.FC = () => {
 				title="Jobs"
 				onRefresh={handleRefresh}
 				isRefreshing={isLoading || isFetching}>
+				{/* Search Input */}
+				<SearchInput
+					value={searchInput}
+					onChange={setSearchInput}
+					onClear={handleClearSearch}
+					placeholder="Search jobs..."
+				/>
 				{/* Status Filter */}
 				<Select
 					value={statusFilter}
@@ -300,13 +307,6 @@ const Jobs: React.FC = () => {
 					placeholder="Filter by status"
 					emptyLabel="All Status"
 					className="w-[220px]"
-				/>
-				{/* Search Input */}
-				<SearchInput
-					value={searchInput}
-					onChange={setSearchInput}
-					onClear={handleClearSearch}
-					placeholder="Search jobs..."
 				/>
 				<Button
 					variant="secondary"

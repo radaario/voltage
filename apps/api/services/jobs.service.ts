@@ -233,6 +233,8 @@ export const createJob = async (body: JobRequest) => {
 		started_at: null,
 		downloaded_at: null,
 		analyzed_at: null,
+		processed_at: null,
+		uploaded_at: null,
 		completed_at: null,
 		updated_at: now,
 		created_at: now,

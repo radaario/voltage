@@ -36,13 +36,13 @@ interface ServiceConfig {
 	audio_bit_rate?: number;
 }
 
-export interface JobOutputSpecs {
+export interface JobOutputConfig {
+	[key: string]: unknown;
 	name?: string;
 	path?: string;
 	type?: string;
 	format?: string;
 	duration?: number;
-	[key: string]: unknown;
 }
 
 export type JobStatus = (typeof JOB_STATUSES)[number];
@@ -53,8 +53,9 @@ export interface JobOutput {
 	key: string;
 	job_key: string;
 	index: number;
-	specs: JobOutputSpecs | null;
+	config: JobOutputConfig | null;
 	outcome: Outcome | null;
+	metadata: Record<string, unknown> | null;
 	status: JobOutputStatus;
 	started_at: string | null;
 	processed_at: string | null;
@@ -84,6 +85,9 @@ export interface Job {
 	started_at: string | null;
 	analyzed_at: string;
 	completed_at: string | null;
+	downloaded_at: string | null;
+	uploaded_at: string | null;
+	processed_at: string | null;
 	updated_at: string;
 	created_at: string;
 	try_max: number;

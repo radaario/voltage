@@ -9,7 +9,9 @@ import {
 	BellIcon,
 	ClipboardDocumentCheckIcon,
 	ArrowPathIcon,
-	XMarkIcon
+	XMarkIcon,
+	CircleStackIcon,
+	Cog8ToothIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouteModal } from "@/hooks/useRouteModal";
@@ -74,8 +76,10 @@ const JobDetailModal: React.FC = () => {
 
 	const tabs = [
 		{ path: "info", label: "Info", icon: InformationCircleIcon },
+		{ path: "config", label: "Config", icon: Cog8ToothIcon }, // InformationCircleIcon
 		{ path: "input", label: "Input", icon: ArrowDownTrayIcon },
 		{ path: "outputs", label: "Outputs", icon: ArrowUpTrayIcon },
+		{ path: "metadata", label: "Metadata", icon: CircleStackIcon },
 		{ path: "outcome", label: "Outcome", icon: ClipboardDocumentCheckIcon },
 		{ path: "notifications", label: "Notifications", icon: BellIcon },
 		{ path: "logs", label: "Logs", icon: DocumentTextIcon }
@@ -112,7 +116,7 @@ const JobDetailModal: React.FC = () => {
 							{/* Preview Image */}
 							{job && (
 								<JobPreviewImage
-									className="w-20 h-12 sm:w-24 sm:h-16 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden"
+									className="w-20 h-12 sm:w-24 sm:h-16 relative shrink-0 border-1 border-gray-100 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden"
 									jobKey={job.key}
 									duration={job?.input?.duration}
 									version={job.analyzed_at}

@@ -8,8 +8,8 @@ export const getStats = async (since_at?: string, until_at?: string) => {
 	if (!untilDate) untilDate = getNow("YYYY-MM-DD");
 	if (!sinceDate) sinceDate = subtractFrom(untilDate, 1, "month", "YYYY-MM-DD");
 
-	sinceDate = getDate(sinceDate, "YYYY-MM-DD");
-	untilDate = getDate(untilDate, "YYYY-MM-DD");
+	sinceDate = `${getDate(sinceDate, "YYYY-MM-DD")} 00:00:00`;
+	untilDate = `${getDate(untilDate, "YYYY-MM-DD")} 23:59:59`;
 
 	const stats = await database.table("stats").where("date", ">=", sinceDate).where("date", "<=", untilDate).orderBy("date", "asc");
 
@@ -38,12 +38,12 @@ export const deleteStats = async (params: { all?: boolean; stat_key?: string; da
 	let query = database.table("stats");
 
 	if (params.since_at) {
-		const sinceDate = getDate(params.since_at, "YYYY-MM-DD");
+		const sinceDate = `${getDate(params.since_at, "YYYY-MM-DD")} 00:00:00`;
 		query = query.where("date", ">=", sinceDate);
 	}
 
 	if (params.until_at) {
-		const untilDate = getDate(params.until_at, "YYYY-MM-DD");
+		const untilDate = `${getDate(params.until_at, "YYYY-MM-DD")} 23:59:59`;
 		query = query.where("date", "<=", untilDate);
 	}
 

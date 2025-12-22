@@ -4,11 +4,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	ArrowUpTrayIcon,
 	InformationCircleIcon,
-	DocumentChartBarIcon,
 	ClipboardDocumentCheckIcon,
 	ArrowPathIcon,
 	XMarkIcon,
-	DocumentTextIcon
+	DocumentTextIcon,
+	Cog8ToothIcon,
+	CircleStackIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouteModal } from "@/hooks/useRouteModal";
@@ -35,6 +36,14 @@ const OutputDetailModal: React.FC = () => {
 	});
 
 	const output = outputResponse?.data;
+	const name = (() => {
+		if (!output) {
+			return "";
+		}
+
+		const name = (output.metadata?.name as string) || output.config?.name;
+		return `${name || "Output"} ${output.config?.format ?? ""} #${output.index + 1}`;
+	})();
 
 	// Retry output mutation
 	const retryOutputMutation = useMutation({
@@ -71,7 +80,8 @@ const OutputDetailModal: React.FC = () => {
 
 	const tabs = [
 		{ path: "info", label: "Info", icon: InformationCircleIcon },
-		{ path: "specs", label: "Specs", icon: DocumentChartBarIcon },
+		{ path: "config", label: "Config", icon: Cog8ToothIcon },
+		{ path: "metadata", label: "Metadata", icon: CircleStackIcon },
 		{ path: "outcome", label: "Outcome", icon: ClipboardDocumentCheckIcon },
 		{ path: "logs", label: "Logs", icon: DocumentTextIcon }
 	];
@@ -92,11 +102,7 @@ const OutputDetailModal: React.FC = () => {
 							<div className="min-w-0">
 								{output && (
 									<div className="flex flex-col min-w-0">
-										<h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
-											{output.specs?.name
-												? output.specs?.name + " - " + output.specs.format
-												: `Output #${output.index + 1}`}
-										</h3>
+										<h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">{name}</h3>
 										<p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{output.key}</p>
 									</div>
 								)}

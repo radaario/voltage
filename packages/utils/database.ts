@@ -194,6 +194,8 @@ class Database {
 					table.datetime("started_at", { precision: 3 }).nullable();
 					table.datetime("downloaded_at", { precision: 3 }).nullable();
 					table.datetime("analyzed_at", { precision: 3 }).nullable();
+					table.datetime("processed_at", { precision: 3 }).nullable();
+					table.datetime("uploaded_at", { precision: 3 }).nullable();
 					table.datetime("completed_at", { precision: 3 }).nullable();
 					table.datetime("updated_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());

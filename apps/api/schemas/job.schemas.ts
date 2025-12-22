@@ -162,8 +162,8 @@ const jobInputBase64Schema = Joi.object({
 const jobInputSchema = Joi.alternatives().try(jobInputHttpSchema, jobInputS3LikeSchema, jobInputFtpSchema, jobInputBase64Schema);
 
 // Job destination schemas
-const jobDestinationVoltageSchema = Joi.object({
-	type: Joi.string().uppercase().constantcase().valid("VOLTAGE").required() /* ! */
+const jobDestinationLocalSchema = Joi.object({
+	type: Joi.string().uppercase().constantcase().valid("LOCAL").required() /* ! */
 });
 
 const jobDestinationHttpSchema = Joi.object({
@@ -211,7 +211,7 @@ const jobDestinationFtpSchema = Joi.object({
 });
 
 const jobDestinationSchema = Joi.alternatives().try(
-	jobDestinationVoltageSchema,
+	jobDestinationLocalSchema,
 	jobDestinationHttpSchema,
 	jobDestinationS3LikeSchema,
 	jobDestinationFtpSchema

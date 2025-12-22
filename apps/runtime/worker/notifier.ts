@@ -85,6 +85,7 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 		}
 	}
 
+	/*
 	if (["SUCCESSFUL", "FAILED"].includes(notification.status)) {
 		try {
 			// JOB: NOTIFICATION: QUEUE: DELETE
@@ -92,6 +93,7 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 			// await database.table('jobs_notifications').where('job_key', notification.job_key).whereIn('status', ['PENDING', 'RETRYING']).update({status: 'SKIPPED'});
 		} catch (error: Error | any) {}
 	}
+	*/
 
 	try {
 		// JOB: NOTIFICATION: INSERT

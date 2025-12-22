@@ -78,8 +78,10 @@ async function run() {
 			output && (await lifecycle.updateJobOutput(output));
 		});
 
+		await lifecycle.updateJob(job, { status: "PROCESSED", processed_at: getNow() });
+
+		// Step 6: Upload outputs
 		if (jobOutputsProcessedCount > 0) {
-			// Step 6: Upload outputs
 			await lifecycle.updateJob(job, { status: "UPLOADING" });
 
 			const jobOutputsUploadedCount = await steps.uploadOutputs(job, jobOutputs, jobStats, async ({ job, output }) => {
@@ -87,9 +89,7 @@ async function run() {
 				output && (await lifecycle.updateJobOutput(output));
 			});
 
-			if (jobOutputsUploadedCount > 0) {
-				// await lifecycle.updateJob(job, { status: "UPLOADED" });
-			}
+			await lifecycle.updateJob(job, { status: "UPLOADED", uploaded_at: getNow() });
 		}
 
 		// Validate all outputs completed successfully

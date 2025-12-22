@@ -26,7 +26,7 @@ export class JobUploader {
 		}
 
 		// OUTPUT: TYPE: CHECK
-		if (!["VOLTAGE", ...HTTPS_TYPES, ...STORAGE_S3_LIKE_TYPES, ...STORAGE_FTP_TYPES].includes(this.destination.type.toUpperCase())) {
+		if (!["LOCAL", ...HTTPS_TYPES, ...STORAGE_S3_LIKE_TYPES, ...STORAGE_FTP_TYPES].includes(this.destination.type.toUpperCase())) {
 			throw new Error(`Job output destination type is unsupported: ${this.destination.type.toUpperCase()}!`);
 		}
 

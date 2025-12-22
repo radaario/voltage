@@ -502,7 +502,7 @@ class S3StorageDriver implements StorageDriver {
 			"bucket-owner-full-control": ObjectCannedACL.bucket_owner_full_control
 		};
 
-		return aclMap[normalizedACL] || ObjectCannedACL.public_read;
+		return aclMap[normalizedACL] || ObjectCannedACL.private; // public_read
 	}
 
 	private sanitizeExpiresIn(expiresIn?: number): Date | undefined {

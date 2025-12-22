@@ -104,35 +104,36 @@ const Outputs: React.FC = () => {
 				header: "Output",
 				cell: (info) => {
 					const output = info.row.original;
-					const duration = (output.outcome?.duration as number | undefined) || (output.specs?.duration as number | undefined);
+					const name = (output.metadata?.name as string) || output.config?.name || output.key || "";
+					const duration = (output.outcome?.duration as number | undefined) || (output.config?.duration as number | undefined);
+
+					console.log("output", output);
 
 					return (
 						<div className="max-w-60">
 							{/*<Tooltip
 								content={
 									<div className="max-w-[500px] py-5 px-5">
-										{output.specs?.name && <div>{output.specs.name}</div>}
+										{output.config?.name && <div>{output.config.name}</div>}
 										<hr className="my-2 opacity-40" />
 										<div>{output.key}</div>
 										<hr className="my-2 opacity-40" />
-										{output.specs?.path && <div>{output.specs.path}</div>}
+										{output.config?.path && <div>{output.config.path}</div>}
 										<hr className="my-2 opacity-40" />
 										{output.outcome?.url && <div>{output.outcome.url}</div>}
 									</div>
 								}>*/}
 							<div>
-								<div className="text-gray-500 dark:text-gray-400 font-bold text-xs truncate max-w-50">
-									{output.specs?.name || output.key}
-								</div>
+								<div className="text-gray-500 dark:text-gray-400 font-bold text-xs truncate max-w-50">{name}</div>
 								<div className="flex flex-wrap text-gray-500 dark:text-gray-400 text-xs">
 									<span className="truncate">
-										{output.specs?.path && <div>{getFilenameFromPath(output.specs.path)}</div>}
+										{output.config?.path && <div>{getFilenameFromPath(output.config.path)}</div>}
 									</span>
 									<span>{duration ? `, ${formatDuration(duration)}` : ""}</span>
 								</div>
 								{/*
-									{output.specs?.format && (
-										<div className="text-gray-500 dark:text-gray-400 text-xs mt-0.25">{output.specs.format}</div>
+									{output.config?.format && (
+										<div className="text-gray-500 dark:text-gray-400 text-xs mt-0.25">{output.config.format}</div>
 									)}
 									*/}
 							</div>
@@ -141,7 +142,7 @@ const Outputs: React.FC = () => {
 					);
 				}
 			}),
-			columnHelper.accessor("specs.type", {
+			columnHelper.accessor("type", {
 				header: "Type",
 				cell: (info) => {
 					const type = info.getValue();
@@ -159,7 +160,7 @@ const Outputs: React.FC = () => {
 			// 	header: "Duration",
 			// 	cell: (info) => {
 			// 		const output = info.row.original;
-			// 		const duration = output.outcome?.duration || output.specs?.duration;
+			// 		const duration = output.outcome?.duration || output.config?.duration;
 			// 		return duration ? formatDuration(duration) : "-";
 			// 	}
 			// }),
@@ -169,32 +170,46 @@ const Outputs: React.FC = () => {
 				cell: (info) => {
 					const output = info.row.original;
 
-					const progressDurationText = formatDatesToDuration(output.started_at, output.processed_at, serverTimezone);
-					const progressDuration = progressDurationText ? <span>{progressDurationText}</span> : null;
-
-					const fullDurationText = formatDatesToDuration(output.created_at, output.processed_at, serverTimezone);
-					const fullDuration = fullDurationText ? <span>{fullDurationText}</span> : null;
+					const progressedIn = formatDatesToDuration(output.started_at || output.created_at, output.completed_at, serverTimezone);
 
 					return (
 						<div className="text-right sm:text-left">
 							<div>%{job.progress || 0}</div>
-							{progressDuration && (
-								<Tooltip
-									content={
-										<table className="py-1.5">
+							<Tooltip
+								content={
+									<table className="py-1.5">
+										<tr>
+											<td className="font-light pr-1 py-0.25">Overall</td>
+											<td>: {formatDatesToDuration(output.created_at, output.completed_at, serverTimezone)}</td>
+										</tr>
+										{!!output.started_at && (
 											<tr>
-												<td className="font-light pr-1 py-0.25">Progress Duration</td>
-												<td>: {progressDuration}</td>
+												<td className="font-light pr-1 py-0.25">Started In</td>
+												<td>: {formatDatesToDuration(output.created_at, output.started_at, serverTimezone)}</td>
 											</tr>
+										)}
+										{!!output.processed_at && (
 											<tr>
-												<td className="font-light pr-1 py-0.25">Completed Duration</td>
-												<td>: {fullDuration}</td>
+												<td className="font-light pr-1 py-0.25">Processed In</td>
+												<td>: {formatDatesToDuration(output.started_at, output.processed_at, serverTimezone)}</td>
 											</tr>
-										</table>
-									}>
-									<div className="inline-flex text-xs text-gray-500 dark:text-gray-400 font-mono">{progressDuration}</div>
-								</Tooltip>
-							)}
+										)}
+										{!!output.uploaded_at && (
+											<tr>
+												<td className="font-light pr-1 py-0.25">Uploaded In</td>
+												<td>: {formatDatesToDuration(output.processed_at, output.uploaded_at, serverTimezone)}</td>
+											</tr>
+										)}
+										{!!output.completed_at && (
+											<tr>
+												<td className="font-light pr-1 py-0.25">Completed In</td>
+												<td>: {formatDatesToDuration(output.started_at, output.completed_at, serverTimezone)}</td>
+											</tr>
+										)}
+									</table>
+								}>
+								<div className="inline-flex text-xs text-gray-500 dark:text-gray-400 font-mono">{progressedIn}</div>
+							</Tooltip>
 						</div>
 					);
 				}

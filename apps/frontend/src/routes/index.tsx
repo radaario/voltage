@@ -28,6 +28,8 @@ import WorkerOutcomeTab from "@/components/modals/WorkerDetailModal/Tabs/Outcome
 import WorkerLogsTab from "@/components/modals/WorkerDetailModal/Tabs/Logs";
 import NotificationDetailModal from "@/components/modals/NotificationDetailModal/NotificationDetailModal";
 import JobInfoTab from "@/components/modals/JobDetailModal/Tabs/Info";
+import JobConfigTab from "@/components/modals/JobDetailModal/Tabs/Config";
+import JobMetadataTab from "@/components/modals/JobDetailModal/Tabs/Metadata";
 import JobInputTab from "@/components/modals/JobDetailModal/Tabs/Input";
 import JobOutputsTab from "@/components/modals/JobDetailModal/Tabs/Outputs";
 import JobOutcomeTab from "@/components/modals/JobDetailModal/Tabs/Outcome";
@@ -35,7 +37,8 @@ import JobLogsTab from "@/components/modals/JobDetailModal/Tabs/Logs";
 import NotificationsTab from "@/components/modals/JobDetailModal/Tabs/Notifications";
 import OutputDetailModal from "@/components/modals/OutputDetailModal/OutputDetailModal";
 import OutputInfoTab from "@/components/modals/OutputDetailModal/Tabs/Info";
-import OutputSpecsTab from "@/components/modals/OutputDetailModal/Tabs/Specs";
+import OutputConfigTab from "@/components/modals/OutputDetailModal/Tabs/Config";
+import OutputMetadataTab from "@/components/modals/OutputDetailModal/Tabs/Metadata";
 import OutputOutcomeTab from "@/components/modals/OutputDetailModal/Tabs/Outcome";
 import OutputLogsTab from "@/components/modals/OutputDetailModal/Tabs/Logs";
 import NotificationInfoTab from "@/components/modals/NotificationDetailModal/Tabs/Info";
@@ -136,6 +139,7 @@ export const router = createBrowserRouter(
 											)
 										},
 										{ path: "info", element: <JobInfoTab /> },
+										{ path: "config", element: <JobConfigTab /> },
 										{ path: "input", element: <JobInputTab /> },
 										{
 											path: "outputs",
@@ -155,7 +159,8 @@ export const router = createBrowserRouter(
 															)
 														},
 														{ path: "info", element: <OutputInfoTab /> },
-														{ path: "specs", element: <OutputSpecsTab /> },
+														{ path: "config", element: <OutputConfigTab /> },
+														{ path: "metadata", element: <OutputMetadataTab /> },
 														{ path: "outcome", element: <OutputOutcomeTab /> },
 														{
 															path: "logs",
@@ -184,6 +189,7 @@ export const router = createBrowserRouter(
 												}
 											]
 										},
+										{ path: "metadata", element: <JobMetadataTab /> },
 										{ path: "outcome", element: <JobOutcomeTab /> },
 										{
 											path: "logs",

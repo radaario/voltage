@@ -36,9 +36,10 @@ type StatRow = {
 	};
 };
 
-type DateRange = "7d" | "30d" | "90d" | "180d" | "1y";
+type DateRange = "1d" | "7d" | "30d" | "90d" | "180d" | "1y";
 
 const DATE_RANGE_OPTIONS: { label: string; value: DateRange; days: number }[] = [
+	{ label: "Today", value: "1d", days: 1 },
 	{ label: "Last 7 days", value: "7d", days: 7 },
 	{ label: "Last 1 month", value: "30d", days: 30 },
 	{ label: "Last 3 months", value: "90d", days: 90 },
@@ -57,6 +58,8 @@ const Overview: React.FC = () => {
 	const since = new Date();
 	since.setDate(until.getDate() - (option.days - 1));
 	const format = (d: Date) => d.toISOString().slice(0, 10);
+
+	console.log("fav:", { dateRange, since, until });
 
 	const {
 		data: statsResponse,

@@ -180,21 +180,6 @@ const Logs: React.FC = () => {
 		<div className="space-y-4">
 			{/* Filters */}
 			<div className="flex items-center gap-3">
-				{/* Type Filter */}
-				<select
-					value={typeFilter}
-					onChange={(e) => {
-						setTypeFilter(e.target.value);
-						setCurrentPage(1);
-					}}
-					className="px-3 py-2 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-neutral-500">
-					<option value="">All Types</option>
-					<option value="INFO">Info</option>
-					<option value="WARNING">Warning</option>
-					<option value="ERROR">Error</option>
-					{/* <option value="DEBUG">Debug</option> */}
-				</select>
-
 				{/* Search Bar */}
 				<div className="relative flex-1">
 					<MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -214,6 +199,21 @@ const Logs: React.FC = () => {
 						</button>
 					)}
 				</div>
+
+				{/* Type Filter */}
+				<select
+					value={typeFilter}
+					onChange={(e) => {
+						setTypeFilter(e.target.value);
+						setCurrentPage(1);
+					}}
+					className="px-3 py-2 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-neutral-500">
+					<option value="">All Types</option>
+					<option value="INFO">Info</option>
+					<option value="WARNING">Warning</option>
+					<option value="ERROR">Error</option>
+					{/* <option value="DEBUG">Debug</option> */}
+				</select>
 			</div>
 
 			{/* Table */}

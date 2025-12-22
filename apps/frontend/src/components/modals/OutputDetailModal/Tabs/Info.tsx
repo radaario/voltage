@@ -8,7 +8,7 @@ const Info: React.FC = () => {
 	return (
 		<TableKeyValuePreview
 			data={output}
-			excludedKeys={["outcome", "specs", "error"]}
+			excludedKeys={["outcome", "config", "metadata", "destination", "error"]}
 		/>
 	);
 };
