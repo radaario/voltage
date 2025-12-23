@@ -161,7 +161,7 @@ class Database {
 				await this.knex.schema.createTable(`${prefix}jobs`, (table) => {
 					table.string("key", 40).primary();
 					table.integer("priority").notNullable().defaultTo(1000);
-					table.text("config").notNullable();
+					table.text("config").nullable();
 					table.text("input").notNullable();
 					// table.text("outputs").notNullable();
 					table.text("destination").nullable();
@@ -200,7 +200,7 @@ class Database {
 					table.datetime("completed_at", { precision: 3 }).nullable();
 					table.datetime("updated_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
-					table.integer("try_max").notNullable().defaultTo(0);
+					table.integer("try_max").notNullable().defaultTo(3);
 					table.integer("try_count").notNullable().defaultTo(0);
 					table.integer("retry_in").nullable();
 					table.datetime("retry_at", { precision: 3 }).nullable();
@@ -247,7 +247,7 @@ class Database {
 					table.datetime("completed_at", { precision: 3 }).nullable();
 					table.datetime("updated_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 					table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
-					table.integer("try_max").notNullable().defaultTo(0);
+					table.integer("try_max").notNullable().defaultTo(3);
 					table.integer("try_count").notNullable().defaultTo(0);
 					table.integer("retry_in").nullable();
 					table.datetime("retry_at", { precision: 3 }).nullable();
@@ -285,7 +285,7 @@ class Database {
 							.defaultTo("PENDING");
 						table.datetime("updated_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
 						table.datetime("created_at", { precision: 3 }).notNullable().defaultTo(this.knex.fn.now());
-						table.integer("try_max").notNullable().defaultTo(1);
+						table.integer("try_max").notNullable().defaultTo(3);
 						table.integer("try_count").notNullable().defaultTo(1);
 						table.integer("retry_in").nullable();
 						table.datetime("retry_at", { precision: 3 }).nullable();
