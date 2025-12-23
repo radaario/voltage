@@ -9,6 +9,7 @@ import sharp from "sharp";
 
 export class JobOutputProcessor {
 	private job: any;
+	private jobInputDuration: number | null;
 	private output: any;
 
 	private tempJobDir: string;
@@ -19,6 +20,8 @@ export class JobOutputProcessor {
 		try {
 			this.job = job;
 			this.output = output;
+
+			this.jobInputDuration = this.job.input?.duration || this.job.metadata?.duration || null;
 
 			this.validateOutputOffset();
 			this.validateOutputDuration();
@@ -200,7 +203,7 @@ export class JobOutputProcessor {
 
 			return {
 				temp_path: this.tempJobOutputFilePath,
-				duration: this.output.config?.duration || this.job.input?.duration || 0.0,
+				duration: this.output.config?.duration || this.jobInputDuration || 0.0,
 				ffmpeg_command: `ffmpeg ${ffmpegArgs.join(" ")}`
 			};
 		} catch (error: Error | any) {
@@ -322,7 +325,7 @@ export class JobOutputProcessor {
 
 			return {
 				temp_path: this.tempJobOutputFilePath,
-				duration: this.output.config?.duration || this.job.input?.duration || 0.0,
+				duration: this.output.config?.duration || this.jobInputDuration || 0.0,
 				ffmpeg_command: `ffmpeg ${ffmpegArgs.join(" ")}`
 			};
 		} catch (error: Error | any) {
@@ -523,12 +526,8 @@ export class JobOutputProcessor {
 	}
 
 	private validateOutputOffset(): void {
-		if (
-			this.job.input?.duration &&
-			this.output.config?.offset &&
-			parseInt(this.output.config.offset) >= parseInt(this.job.input.duration)
-		) {
-			this.output.config.offset = parseInt(this.job.input.duration) - 1;
+		if (this.jobInputDuration && this.output.config?.offset && parseInt(this.output.config.offset) >= this.jobInputDuration) {
+			this.output.config.offset = this.jobInputDuration - 1;
 		}
 
 		if (this.output.config?.offset && parseInt(this.output.config.offset) <= 0) {
@@ -542,31 +541,27 @@ export class JobOutputProcessor {
 
 	private validateOutputDuration(): void {
 		if (
-			this.job.input?.duration &&
+			this.jobInputDuration &&
 			!this.output.config?.duration &&
 			this.output.config?.offset &&
 			parseInt(this.output.config.offset) > 0
 		) {
-			this.output.config.duration = parseInt(this.job.input.duration) - parseInt(this.output.config.offset || 0);
+			this.output.config.duration = this.jobInputDuration - parseInt(this.output.config.offset || 0);
 		}
 
 		if (
-			this.job.input?.duration &&
+			this.jobInputDuration &&
 			(!this.output.config?.duration ||
-				parseInt(this.output.config.duration) > parseInt(this.job.input.duration) - parseInt(this.output.config?.offset || 0))
+				parseInt(this.output.config.duration) > this.jobInputDuration - parseInt(this.output.config?.offset || 0))
 		) {
-			this.output.config.duration = parseInt(this.job.input.duration) - parseInt(this.output.config.offset || 0);
+			this.output.config.duration = this.jobInputDuration - parseInt(this.output.config.offset || 0);
 		}
 
 		if (this.output.config?.duration && parseInt(this.output.config.duration) <= 0) {
 			this.output.config.duration = null;
 		}
 
-		if (
-			this.job.input?.duration &&
-			this.output.config?.duration &&
-			parseInt(this.output.config.duration) == parseInt(this.job.input.duration)
-		) {
+		if (this.jobInputDuration && this.output.config?.duration && parseInt(this.output.config.duration) == this.jobInputDuration) {
 			this.output.config.duration = null;
 		}
 

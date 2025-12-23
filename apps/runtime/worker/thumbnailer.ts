@@ -14,11 +14,16 @@ interface ThumbnailerOptions {
 export class JobThumbnailer {
 	private job: any;
 
+	private jobInputDuration: number | null;
+
 	private tempJobDir: string;
 	private tempJobInputFilePath: string;
 
 	constructor(job: any) {
 		this.job = job;
+
+		this.jobInputDuration = this.job.input?.duration || this.job.metadata?.duration || null;
+
 		this.tempJobDir = path.join(appConfig.temp_dir, "jobs", job.key);
 		this.tempJobInputFilePath = path.join(this.tempJobDir, "input");
 	}
@@ -37,9 +42,9 @@ export class JobThumbnailer {
 			const tempJobInputPreviewFilePath = path.join(this.tempJobDir, `preview.${tempJobInputPreviewFileFormat.toLowerCase()}`);
 
 			// Calculate the middle timestamp of the video
-			let offset = this.job.input?.duration ? this.job.input.duration / 2 : 0;
+			let offset = this.jobInputDuration ? this.jobInputDuration / 2 : 0;
 			if (options.offset !== undefined) offset = options.offset;
-			if (this.job.input?.duration && offset > this.job.input.duration) offset = this.job.input.duration;
+			if (this.jobInputDuration && offset > this.jobInputDuration) offset = this.jobInputDuration;
 
 			// Use ffmpeg to extract a frame at the middle timestamp and convert it to the desired format
 			const ffmpegArgs = [
