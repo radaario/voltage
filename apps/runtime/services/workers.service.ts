@@ -1,6 +1,6 @@
 import { config as appConfig } from "@voltage/core/config";
 import { database, logger, getInstanceKey, hash, getNow, subtractNow } from "@voltage/utils";
-import { WorkerOutcome, WorkersProcessMap } from "@/types/index.js";
+import { WorkersProcessMap } from "@/types/index.js";
 
 import path from "path";
 import { spawn, ChildProcess } from "child_process";
@@ -198,7 +198,7 @@ export const spawnInstanceWorkerForJob = async (
 	}
 };
 
-export const idleInstanceWorker = async (instanceKey: string, workerKey: string, outcome: WorkerOutcome | null = null): Promise<void> => {
+export const idleInstanceWorker = async (instanceKey: string, workerKey: string, outcome: any): Promise<void> => {
 	try {
 		// WORKER: UPDATE
 		await database
