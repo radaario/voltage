@@ -8,7 +8,7 @@ import path from "path";
 interface ThumbnailerOptions {
 	format?: string;
 	offset?: number;
-	quality?: number | string;
+	quality?: number | null;
 }
 
 export class JobThumbnailer {
