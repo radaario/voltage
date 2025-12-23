@@ -394,14 +394,16 @@ Create a new encoding job
 
 ```json
 {
+	"config": {
+		"input_analysis": true,
+		"preview_generation": true,
+		"nsfw_detection": false,
+		"ffmpeg_preset": "FASTER",
+		"whisper_model": "TINY"
+	},
 	"input": {
 		"type": "HTTP",
-		"url": "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4",
-		"nsfw_is_disabled": false,
-		"nsfw_model": "MOBILE_NET_V2",
-		"nsfw_size": 224,
-		"nfsw_type": "GRAPH",
-		"nsfw_threshold": 75
+		"url": "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_20MB.mp4"
 	},
 	"outputs": [
 		{
@@ -409,22 +411,26 @@ Create a new encoding job
 			"name": "Video (720p)",
 			"path": "Big_Buck_Bunny_1080_10s_20MB.mp4",
 			"format": "MP4",
+			"preset": "SLOW",
+			"quality": 3,
 			"offset": 1,
 			"duration": 3,
 			"width": 1280,
 			"height": 720,
 			"fit": "PAD",
-			"quality": 3,
 			"rotate": 180,
 			"flip": "HORIZONTAL",
-			"video_codec": "",
+			"video_codec": "libx264",
+			"video_quality": 75,
 			"video_bit_rate": 5000000,
 			"video_pixel_format": "yuv420p",
 			"video_frame_rate": 25,
-			"video_profile": "baseline",
+			"video_profile": "BASELINE",
 			"video_level": 4.0,
 			"video_deinterlace": true,
+			"video_first_frame_image_url": null,
 			"audio_codec": "libmp3lame",
+			"audio_quality": 50,
 			"audio_bit_rate": 128000,
 			"audio_sample_rate": 48000,
 			"audio_channels": 2,
@@ -443,6 +449,7 @@ Create a new encoding job
 			"path": "Big_Buck_Bunny_1080_10s_20MB.mp3",
 			"format": "MP3",
 			"audio_codec": "libmp3lame",
+			"audio_quality": 75,
 			"audio_bit_rate": 128000,
 			"audio_sample_rate": 48000,
 			"audio_channels": 2
@@ -452,6 +459,7 @@ Create a new encoding job
 			"name": "Thumbnail (Custom)",
 			"path": "Big_Buck_Bunny_1080_10s_20MB.png",
 			"format": "PNG",
+			"image_quality": 75,
 			"width": 1280,
 			"height": 720,
 			"offset": 1
@@ -481,7 +489,7 @@ Create a new encoding job
 	"metadata": {
 		"string": "String",
 		"number": 123,
-		"timestamp": "2025-12-09T10:30:00.000Z"
+		"timestamp": "2025-12-23T10:30:00.000Z"
 	}
 }
 ```
@@ -509,12 +517,17 @@ Delete jobs
 
 #### `GET /jobs/preview`
 
-Get job preview thumbnail
+Get job preview thumbnail with optional image transformations
 
 - **Auth**: Not required
 - **Query Params**:
     - `job_key` (string, required) - Job key
-- **Response**: Image file (PNG/JPG/WEBP)
+    - `format` (string, optional) - Output format: `WEBP` (default), `PNG`, `JPG`
+    - `quality` (number, optional) - Image quality: 0-100 (default: 75)
+    - `width` (number, optional) - Resize width in pixels
+    - `height` (number, optional) - Resize height in pixels
+    - `method` (string, optional) - Resize method: `RESIZE` (default), `FIT`, `CONTAIN`
+- **Response**: Transformed image file (PNG/JPG/WEBP)
 
 #### `GET /jobs/outputs`
 
@@ -604,31 +617,35 @@ Delete all data (stats, logs, instances, jobs, notifications)
 
 ### FFMPEG Configuration
 
-| Variable                     | Type   | Default   | Description            |
-| ---------------------------- | ------ | --------- | ---------------------- |
-| `VOLTAGE_UTILS_FFMPEG_PATH`  | string | `ffmpeg`  | Path to FFMPEG binary  |
-| `VOLTAGE_UTILS_FFPROBE_PATH` | string | `ffprobe` | Path to FFPROBE binary |
+| Variable                                   | Type   | Default   | Description                                 |
+| ------------------------------------------ | ------ | --------- | ------------------------------------------- |
+| `VOLTAGE_UTILS_FFMPEG_PATH`                | string | `ffmpeg`  | Path to FFMPEG binary                       |
+| `VOLTAGE_UTILS_FFMPEG_PRESET`              | string | `DEFAULT` | Preset (DEFAULT, MEDIUM, ULTRA_FAST, etc.)  |
+| `VOLTAGE_UTILS_FFMPEG_QUALITY`             | number | -         | CRF quality value (0-100, optional)         |
+| `VOLTAGE_UTILS_FFPROBE_PATH`               | string | `ffprobe` | Path to FFPROBE binary                      |
+| `VOLTAGE_UTILS_FFPROBE_GENERAL_ATTRIBUTES` | string | -         | General attributes (e.g., DURATION)         |
+| `VOLTAGE_UTILS_FFPROBE_VIDEO_ATTRIBUTES`   | string | -         | Video attributes (e.g., WIDTH,HEIGHT,CODEC) |
+| `VOLTAGE_UTILS_FFPROBE_AUDIO_ATTRIBUTES`   | string | -         | Audio attributes (e.g., CODEC,CHANNELS)     |
 
 ---
 
 ### NSFW Detection
 
-| Variable                         | Type    | Default             | Description                                            |
-| -------------------------------- | ------- | ------------------- | ------------------------------------------------------ |
-| `VOLTAGE_UTILS_NSFW_IS_DISABLED` | boolean | `false`             | Disable NSFW detection                                 |
-| `VOLTAGE_UTILS_NSFW_MODEL`       | string  | `MOBILE_NET_V2_MID` | Model (MOBILE_NET_V2, MOBILE_NET_V2_MID, INCEPTION_V3) |
-| `VOLTAGE_UTILS_NSFW_SIZE`        | number  | `224`               | Input image size                                       |
-| `VOLTAGE_UTILS_NSFW_TYPE`        | string  | `GRAPH`             | Model type                                             |
-| `VOLTAGE_UTILS_NSFW_THRESHOLD`   | number  | `75`                | Detection threshold (0-1)                              |
+| Variable                       | Type   | Default         | Description                                            |
+| ------------------------------ | ------ | --------------- | ------------------------------------------------------ |
+| `VOLTAGE_UTILS_NSFW_MODEL`     | string | `MOBILE_NET_V2` | Model (MOBILE_NET_V2, MOBILE_NET_V2_MID, INCEPTION_V3) |
+| `VOLTAGE_UTILS_NSFW_SIZE`      | number | `224`           | Input image size                                       |
+| `VOLTAGE_UTILS_NSFW_TYPE`      | string | `GRAPH`         | Model type (GRAPH, LITE)                               |
+| `VOLTAGE_UTILS_NSFW_THRESHOLD` | number | `70`            | Detection threshold (0-100)                            |
 
 ---
 
 ### Whisper Transcription
 
-| Variable                      | Type    | Default | Description                                    |
-| ----------------------------- | ------- | ------- | ---------------------------------------------- |
-| `VOLTAGE_UTILS_WHISPER_MODEL` | string  | `BASE`  | Model (TINY, BASE, SMALL, MEDIUM, LARGE, etc.) |
-| `VOLTAGE_UTILS_WHISPER_CUDA`  | boolean | `false` | Enable CUDA acceleration                       |
+| Variable                          | Type    | Default | Description                                    |
+| --------------------------------- | ------- | ------- | ---------------------------------------------- |
+| `VOLTAGE_UTILS_WHISPER_MODEL`     | string  | `BASE`  | Model (TINY, BASE, SMALL, MEDIUM, LARGE, etc.) |
+| `VOLTAGE_UTILS_WHISPER_WITH_CUDA` | boolean | `false` | Enable CUDA acceleration                       |
 
 ---
 
@@ -647,6 +664,9 @@ Delete all data (stats, logs, instances, jobs, notifications)
 | `VOLTAGE_STORAGE_PASSWORD` | string | - | FTP/SFTP password |
 | `VOLTAGE_STORAGE_SECURE` | boolean | `false` | Use FTPS (explicit TLS) |
 | `VOLTAGE_STORAGE_BASE_PATH` | string | `./storage` | Base storage path |
+| `VOLTAGE_STORAGE_ACL` | string | `PUBLIC_READ` | S3-like ACL (PRIVATE, PUBLIC_READ, PUBLIC_READ_WRITE) |
+| `VOLTAGE_STORAGE_EXPIRES_IN` | number | - | Expiration time in milliseconds (optional) |
+| `VOLTAGE_STORAGE_CACHE_CONTROL` | string | - | Cache control header (e.g., max-age=3600) |
 
 ---
 
@@ -673,7 +693,7 @@ Delete all data (stats, logs, instances, jobs, notifications)
 | `VOLTAGE_RUNTIME_IS_DISABLED`         | boolean | `false`      | Disable runtime service                      |
 | `VOLTAGE_INSTANCES_KEY_METHOD`        | string  | `IP_ADDRESS` | Instance key method (IP_ADDRESS, UNIQUE_KEY) |
 | `VOLTAGE_INSTANCES_MAINTAIN_INTERVAL` | number  | `10000`      | Maintenance interval (ms)                    |
-| `VOLTAGE_INSTANCES_ONLINE_TIMEOUT`    | number  | `60000`      | Online timeout (ms)                          |
+| `VOLTAGE_INSTANCES_ONLINE_TIMEOUT`    | number  | `15000`      | Online timeout (ms)                          |
 | `VOLTAGE_INSTANCES_PURGE_AFTER`       | number  | `60000`      | Purge after (ms)                             |
 | `VOLTAGE_WORKERS_PER_CPU_CORE`        | number  | `1`          | Workers per CPU core                         |
 | `VOLTAGE_WORKERS_BUSY_INTERVAL`       | number  | `1000`       | Worker busy check interval (ms)              |
@@ -684,13 +704,15 @@ Delete all data (stats, logs, instances, jobs, notifications)
 
 ### API Configuration
 
-| Variable                         | Type    | Default                  | Description                            |
-| -------------------------------- | ------- | ------------------------ | -------------------------------------- |
-| `VOLTAGE_API_IS_DISABLED`        | boolean | `false`                  | Disable API service                    |
-| `VOLTAGE_API_NODE_PORT`          | number  | `4000`                   | API server port                        |
-| `VOLTAGE_API_KEY`                | string  | -                        | API authentication key                 |
-| `VOLTAGE_API_REQUEST_BODY_LIMIT` | number  | `0`                      | Request body limit (MB, 0 = unlimited) |
-| `VOLTAGE_API_SENSITIVE_FIELDS`   | string  | `password,access_secret` | Sensitive fields to sanitize           |
+| Variable                                   | Type    | Default                  | Description                               |
+| ------------------------------------------ | ------- | ------------------------ | ----------------------------------------- |
+| `VOLTAGE_API_IS_DISABLED`                  | boolean | `false`                  | Disable API service                       |
+| `VOLTAGE_API_NODE_PORT`                    | number  | `4000`                   | API server port                           |
+| `VOLTAGE_API_KEY`                          | string  | -                        | API authentication key                    |
+| `VOLTAGE_API_REQUEST_BODY_LIMIT`           | number  | `0`                      | Request body limit (bytes, 0 = unlimited) |
+| `VOLTAGE_API_SENSITIVE_FIELDS`             | string  | `password,access_secret` | Sensitive fields to sanitize              |
+| `VOLTAGE_API_AUTH_RATE_LIMIT_WINDOW_MS`    | number  | `900000`                 | Auth rate limit window (ms, 15 minutes)   |
+| `VOLTAGE_API_AUTH_RATE_LIMIT_MAX_REQUESTS` | number  | `5`                      | Max auth requests per window              |
 
 ---
 
@@ -721,38 +743,44 @@ Delete all data (stats, logs, instances, jobs, notifications)
 
 | Variable                                | Type    | Default    | Description                          |
 | --------------------------------------- | ------- | ---------- | ------------------------------------ |
-| `VOLTAGE_JOBS_QUEUE_TIMEOUT`            | number  | `600000`   | Queue timeout (ms)                   |
+| `VOLTAGE_JOBS_QUEUE_TIMEOUT`            | number  | `300000`   | Queue timeout (ms, 5 minutes)        |
 | `VOLTAGE_JOBS_PROCESS_INTERVAL`         | number  | `1000`     | Processing interval (ms)             |
-| `VOLTAGE_JOBS_PROCESS_TIMEOUT`          | number  | `1800000`  | Processing timeout (ms)              |
+| `VOLTAGE_JOBS_PROCESS_TIMEOUT`          | number  | `1800000`  | Processing timeout (ms, 30 minutes)  |
 | `VOLTAGE_JOBS_ENQUEUE_ON_RECEIVE`       | boolean | `true`     | Auto-enqueue on receive              |
 | `VOLTAGE_JOBS_ENQUEUE_LIMIT`            | number  | `10`       | Jobs per enqueue                     |
 | `VOLTAGE_JOBS_RETENTION`                | number  | `86400000` | Job retention period (ms, 24 hours)  |
+| `VOLTAGE_JOBS_INPUT_ANALYSIS`           | boolean | `true`     | Analyze job input                    |
+| `VOLTAGE_JOBS_PREVIEW_GENERATION`       | boolean | `true`     | Generate preview for job input       |
+| `VOLTAGE_JOBS_NSFW_DETECTION`           | boolean | `false`    | NSFW detection for job input         |
+| `VOLTAGE_JOBS_PRIORITY`                 | number  | `1000`     | Default job priority                 |
+| `VOLTAGE_JOBS_TRY`                      | number  | `3`        | Default retry attempts               |
 | `VOLTAGE_JOBS_TRY_MIN`                  | number  | `1`        | Minimum retry attempts               |
 | `VOLTAGE_JOBS_TRY_MAX`                  | number  | `3`        | Maximum retry attempts               |
-| `VOLTAGE_JOBS_TRY_COUNT`                | number  | `3`        | Default retry count                  |
+| `VOLTAGE_JOBS_RETRY_IN`                 | number  | `60000`    | Default retry delay (ms, 1 minute)   |
 | `VOLTAGE_JOBS_RETRY_IN_MIN`             | number  | `60000`    | Minimum retry delay (ms)             |
-| `VOLTAGE_JOBS_RETRY_IN_MAX`             | number  | `3600000`  | Maximum retry delay (ms)             |
-| `VOLTAGE_JOBS_RETRY_IN`                 | number  | `60000`    | Default retry delay (ms)             |
+| `VOLTAGE_JOBS_RETRY_IN_MAX`             | number  | `3600000`  | Maximum retry delay (ms, 60 minutes) |
 | `VOLTAGE_JOBS_PREVIEW_FORMAT`           | string  | `PNG`      | Preview format (PNG, JPG, BMP, WEBP) |
 | `VOLTAGE_JOBS_PREVIEW_QUALITY`          | number  | `75`       | Preview quality (0-100)              |
-| `VOLTAGE_JOBS_OUTPUTS_PROCESS_INTERVAL` | number  | `1000`     | Job outputs processing interval (ms) |
+| `VOLTAGE_JOBS_OUTPUTS_PROCESS_INTERVAL` | number  | `10000`    | Job outputs processing interval (ms) |
 
 ---
 
 ### Notifications Configuration
 
-| Variable                                       | Type   | Default                             | Description                 |
-| ---------------------------------------------- | ------ | ----------------------------------- | --------------------------- |
-| `VOLTAGE_JOB_NOTIFICATIONS_PROCESS_INTERVAL`   | number | `1000`                              | Processing interval (ms)    |
-| `VOLTAGE_JOB_NOTIFICATIONS_PROCESS_LIMIT`      | number | `10`                                | Notifications per poll      |
-| `VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON`          | string | `RECEIVED,COMPLETED,FAILED,TIMEOUT` | Default notification events |
-| `VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON_ALLOWEDS` | string | `RECEIVED,PENDING,RETRYING,...`     | Allowed notification events |
-| `VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT`            | number | `10000`                             | Notification timeout (ms)   |
-| `VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX`        | number | `30000`                             | Maximum timeout (ms)        |
-| `VOLTAGE_JOB_NOTIFICATIONS_TRY`                | number | `3`                                 | Default retry attempts      |
-| `VOLTAGE_JOB_NOTIFICATIONS_TRY_MAX`            | number | `3`                                 | Maximum retry attempts      |
-| `VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN`           | number | `60000`                             | Retry delay (ms)            |
-| `VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MAX`       | number | `3600000`                           | Maximum retry delay (ms)    |
+| Variable                                       | Type   | Default                             | Description                      |
+| ---------------------------------------------- | ------ | ----------------------------------- | -------------------------------- |
+| `VOLTAGE_JOB_NOTIFICATIONS_PROCESS_INTERVAL`   | number | `1000`                              | Processing interval (ms)         |
+| `VOLTAGE_JOB_NOTIFICATIONS_PROCESS_LIMIT`      | number | `10`                                | Notifications per poll           |
+| `VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON`          | string | `RECEIVED,COMPLETED,FAILED,TIMEOUT` | Default notification events      |
+| `VOLTAGE_JOB_NOTIFICATIONS_NOTIFY_ON_ALLOWEDS` | string | `RECEIVED,PENDING,RETRYING,...`     | Allowed notification events      |
+| `VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT`            | number | `10000`                             | Notification timeout (ms)        |
+| `VOLTAGE_JOB_NOTIFICATIONS_TIMEOUT_MAX`        | number | `30000`                             | Maximum timeout (ms)             |
+| `VOLTAGE_JOB_NOTIFICATIONS_TRY`                | number | `3`                                 | Default retry attempts           |
+| `VOLTAGE_JOB_NOTIFICATIONS_TRY_MIN`            | number | `1`                                 | Minimum retry attempts           |
+| `VOLTAGE_JOB_NOTIFICATIONS_TRY_MAX`            | number | `3`                                 | Maximum retry attempts           |
+| `VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN`           | number | `60000`                             | Retry delay (ms, 1 minute)       |
+| `VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MIN`       | number | `60000`                             | Minimum retry delay (ms)         |
+| `VOLTAGE_JOB_NOTIFICATIONS_RETRY_IN_MAX`       | number | `3600000`                           | Maximum retry delay (ms, 1 hour) |
 
 ---
 

@@ -127,12 +127,12 @@ export const createJob = async (body: JobRequest) => {
 			retry_in: undefined
 		};
 
-		if (!jobOutputConfig.ffmpeg_preset) {
-			jobOutputConfig.ffmpeg_preset = jobConfig.ffmpeg_preset || appConfig.utils.ffmpeg.preset || "DEFAULT";
+		if (!jobOutputConfig.preset) {
+			jobOutputConfig.preset = jobConfig.ffmpeg_preset || appConfig.utils.ffmpeg.preset || "DEFAULT";
 		}
 
-		if (jobOutputConfig.ffmpeg_quality === undefined) {
-			jobOutputConfig.ffmpeg_quality = jobConfig.ffmpeg_quality || appConfig.utils.ffmpeg.quality || 75;
+		if (jobOutputConfig.quality === undefined && jobConfig.ffmpeg_quality) {
+			jobOutputConfig.quality = jobConfig.ffmpeg_quality || null;
 		}
 
 		if (["SUBTITLE"].includes(jobOutputType)) {
@@ -416,6 +416,8 @@ export const deleteJobs = async (params: {
 	}
 
 	if (jobsKeysToHardDelete.length > 0) {
+		await storage.config(appConfig.storage);
+
 		// Delete job folders/objects via unified storage facade
 		for (const job_key of jobsKeysToHardDelete) {
 			try {

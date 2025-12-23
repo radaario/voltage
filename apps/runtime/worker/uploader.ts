@@ -79,7 +79,7 @@ export class JobUploader {
 	private async uploadToStorage(): Promise<Record<string, unknown>> {
 		let jobOutputDestination = {
 			...appConfig.storage,
-			path: `${this.job.key}/${this.output.key}.${(this.output.config?.format || "MP4").toLowerCase()}`
+			path: `jobs/${this.job.key}/${this.output.key}.${(this.output.config?.format || "MP4").toLowerCase()}`
 		};
 
 		if ([...STORAGE_S3_LIKE_TYPES, ...STORAGE_FTP_TYPES].includes(this.destination.type.toUpperCase())) {
@@ -105,7 +105,7 @@ export class JobUploader {
 		let url = null;
 
 		if (STORAGE_S3_LIKE_TYPES.includes(jobOutputDestination.type as any)) {
-			location = `s3://${(jobOutputDestination as any).bucket}/${key}`;
+			location = `s3://${(jobOutputDestination as any).bucket}${(jobOutputDestination as any).base_path ? (jobOutputDestination as any).base_path : "/"}${key}`;
 			url = storage.getPublicUrl(key) || null;
 		} else if (STORAGE_FTP_TYPES.includes(jobOutputDestination.type as any)) {
 			location = `ftp://${(jobOutputDestination as any).host}/${jobOutputDestination.path}`;

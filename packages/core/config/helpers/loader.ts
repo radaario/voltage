@@ -44,7 +44,7 @@ export function getEnv(key: string, fallback: string = ""): string {
 }
 
 export function getEnvOrNull(key: string, fallback: string | null): string | null {
-	return process.env[key] ?? fallback;
+	return process.env[key] === undefined ? fallback : process.env[key] || null;
 }
 
 /**

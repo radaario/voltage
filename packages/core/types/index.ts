@@ -71,7 +71,7 @@ export type JobConfig = {
 	ffprobe_audio_attributes?: string; // comma-separated list of ffprobe audio stream properties to extract
 
 	ffmpeg_preset?: FFMPEG_PRESET; // ffmpeg preset to use for processing
-	ffmpeg_quality?: number; // ffmpeg quality to use for processing (0-100)
+	ffmpeg_quality?: number | null; // ffmpeg quality to use for processing (0-100)
 
 	nsfw_model?: NSFW_MODEL; // NSFW model to use
 	nsfw_size?: number; // NSFW model input size
@@ -162,8 +162,8 @@ type JobOutputConfigCommon = {
 	// expires_in?: number; // optional if destination is S3, in seconds
 	// cache_control?: string; // optional if destination is S3
 	// destination?: JobDestination | null; // optional - if not provided, will use global destination
-	ffmpeg_preset?: FFMPEG_PRESET; // ffmpeg preset to use for this output
-	ffmpeg_quality?: number; // ffmpeg quality to use for this output (0-100)
+	preset?: FFMPEG_PRESET; // ffmpeg preset to use for this output
+	quality?: number | null; // ffmpeg quality to use for this output (0-100)
 	// try?: number; // maximum number of tries for this output
 	// retry_in?: number; // retry interval for this output in milliseconds
 };
@@ -184,6 +184,7 @@ type JobOutputConfigImage = {
 
 type JobOutputConfigAudio = {
 	audio_codec?: string;
+	audio_quality?: number; // 0-100
 	audio_bit_rate?: number | string; // e.g. '128k'
 	audio_sample_rate?: number; // in Hz
 	audio_channels?: AUDIO_CHANNEL; // e.g. 2
@@ -194,6 +195,7 @@ export type JobOutputConfig =
 			type: "VIDEO";
 			format: VIDEO_FORMAT;
 			video_codec?: string;
+			video_quality?: number; // 0-100
 			video_bit_rate?: number | string; // e.g. '2500k'
 			video_pixel_format?: string; // e.g. 'yuv420p'
 			video_frame_rate?: number | string;
@@ -213,6 +215,7 @@ export type JobOutputConfig =
 	| ({
 			type: "THUMBNAIL";
 			format: THUMBNAIL_FORMAT;
+			image_quality?: number; // 0-100
 			offset?: number; // in seconds
 	  } & JobOutputConfigImage &
 			JobOutputConfigCommon)

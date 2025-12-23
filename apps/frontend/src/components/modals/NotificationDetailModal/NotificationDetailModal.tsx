@@ -6,7 +6,7 @@ import {
 	InformationCircleIcon,
 	DocumentTextIcon,
 	ClipboardDocumentCheckIcon,
-	DocumentChartBarIcon,
+	Cog8ToothIcon,
 	ArrowPathIcon,
 	XMarkIcon
 } from "@heroicons/react/24/outline";
@@ -61,7 +61,7 @@ const NotificationDetailModal: React.FC = () => {
 
 	const tabs = [
 		{ path: "info", label: "Info", icon: InformationCircleIcon },
-		{ path: "specs", label: "Specs", icon: DocumentChartBarIcon },
+		{ path: "config", label: "Config", icon: Cog8ToothIcon },
 		{ path: "payload", label: "Payload", icon: DocumentTextIcon },
 		{ path: "outcome", label: "Outcome", icon: ClipboardDocumentCheckIcon }
 	];

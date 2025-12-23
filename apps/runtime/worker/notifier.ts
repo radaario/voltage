@@ -1,5 +1,7 @@
 import { config as appConfig } from "@voltage/core/config";
+import { HTTPS_TYPES } from "@voltage/core/constants";
 import type { JobNotification } from "@voltage/core/types";
+
 import { database, stats, logger } from "@voltage/utils";
 import { uukey, getNow, addNow, sanitizeData } from "@voltage/utils";
 
@@ -24,14 +26,10 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 
 	logger.setMetadata("NOTIFIER", { instance_key: job.instance_key, worker_key: job.worker_key, job_key: job.key });
 
-	let outcome: any = {
-		status: "FAILED"
-	};
-
 	const sanitizedJob = sanitizeData({ ...job, status: jobStatus });
 	const now = getNow();
 
-	const notificationOutcome = await notify(job.notification, sanitizedJob);
+	let notifyOutcome = await notify(job.notification, sanitizedJob);
 
 	let notification: any = {
 		key: uukey(),
@@ -41,8 +39,8 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 		priority: job.priority ?? 1000,
 		config: job.notification || null,
 		payload: sanitizedJob || null,
-		outcome: notificationOutcome || null,
-		status: notificationOutcome.status || "FAILED",
+		outcome: notifyOutcome || null,
+		status: notifyOutcome.status || "FAILED",
 		updated_at: now,
 		created_at: now,
 		try_max: appConfig.jobs.notifications.try || 3, // default 3
@@ -103,17 +101,15 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 			payload: notification.payload ? JSON.stringify(notification.payload) : null,
 			outcome: notification.outcome ? JSON.stringify(notification.outcome) : null
 		});
-
-		return notificationOutcome;
 	} catch (error: Error | any) {
 		logger.console("NOTIFIER", "ERROR", "Failed to create job notification record!", { notification_key: notification.key, ...error });
-		outcome = { status: "FAILED", error: { message: error.message || "Unknown error occurred!" } }; // , outcome: notificationOutcome
+		notifyOutcome = { status: "FAILED", error: { message: error.message || "Unknown error occurred!" } }; // , outcome: notifyOutcome
 		notificationStats.notifications_failed_count = 1;
 	}
 
 	await stats.update(notificationStats);
 
-	return outcome;
+	return notifyOutcome;
 }
 
 export async function retryJobNotification(notification: any): Promise<any> {
@@ -125,23 +121,19 @@ export async function retryJobNotification(notification: any): Promise<any> {
 
 	logger.console("NOTIFIER", "INFO", "Retrying job notification...", { notification_key: notification.key });
 
-	let outcome: any = {
-		status: "FAILED"
-	};
-
 	const notificationStats = {
 		notifications_retried_count: 0,
 		notifications_sent_count: 0,
 		notifications_failed_count: 0
 	};
 
-	try {
-		const notificationOutcome = await notify(JSON.parse(notification.config), JSON.parse(notification.payload));
+	let notifyOutcome = await notify(JSON.parse(notification.config), JSON.parse(notification.payload));
 
-		notification.status = notificationOutcome.status || "FAILED";
+	try {
+		notification.status = notifyOutcome.status || "FAILED";
 		notification.try_count = (notification.try_count || 1) + 1;
 		notification.updated_at = getNow();
-		notification.outcome = notificationOutcome;
+		notification.outcome = notifyOutcome;
 		notification.retry_at = null;
 
 		if (notification.status === "SUCCESSFUL") {
@@ -155,9 +147,7 @@ export async function retryJobNotification(notification: any): Promise<any> {
 				// JOB: NOTIFICATION: QUEUE: UPDATE OR INSERT
 				try {
 					await database.table("jobs_notifications_queue").insert(notification).onConflict("key").merge();
-				} catch (error: Error | any) {
-					// console.log("ERROR", error);
-				}
+				} catch (error: Error | any) {}
 
 				notificationStats.notifications_retried_count = 1;
 			} else {
@@ -185,20 +175,20 @@ export async function retryJobNotification(notification: any): Promise<any> {
 				outcome: notification.outcome ? JSON.stringify(notification.outcome) : null
 			});
 
-		if (notificationOutcome.status === "SUCCESSFUL") {
-			outcome = { status: "SUCCESSFUL" };
+		if (notifyOutcome.status === "SUCCESSFUL") {
+			notifyOutcome = { status: "SUCCESSFUL" };
 		} else {
-			outcome.error = { message: notificationOutcome.error?.message || "Unknown error occurred!" };
+			notifyOutcome.error = { message: notifyOutcome.error?.message || "Unknown error occurred!" };
 		}
 	} catch (error: Error | any) {
 		logger.console("NOTIFIER", "ERROR", "Failed to retry job notification!", { notification_key: notification.key, ...error });
-		outcome.error = { message: error.message || "Unknown error occurred!" };
+		notifyOutcome.error = { message: error.message || "Unknown error occurred!" };
 		notificationStats.notifications_failed_count = 1;
 	}
 
 	await stats.update(notificationStats);
 
-	return outcome;
+	return notifyOutcome;
 }
 
 export async function notify(config: JobNotification, payload: any): Promise<any> {
@@ -207,7 +197,7 @@ export async function notify(config: JobNotification, payload: any): Promise<any
 	};
 
 	try {
-		if (config.type === "HTTP" || config.type === "HTTPS") {
+		if (HTTPS_TYPES.includes(config.type as any)) {
 			// HTTP/HTTPS notification
 			outcome = await notifyHttp(config, payload);
 		} else if (config.type === "AWS_SNS") {

@@ -1,5 +1,5 @@
 import { config as appConfig } from "@voltage/core/config";
-import { storage, database, logger, getInstanceKey } from "@voltage/utils";
+import { database, logger, getInstanceKey } from "@voltage/utils";
 
 import "dotenv/config";
 import "express-async-errors";
@@ -31,9 +31,6 @@ app.use(errorHandler);
 async function startApiServer() {
 	// configure services
 	logger.setMetadata("API", { instance_key: instanceKey });
-
-	// configure storage and database
-	await storage.config(appConfig.storage);
 
 	// configure database
 	database.config(appConfig.database);

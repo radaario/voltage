@@ -42,7 +42,7 @@ import OutputMetadataTab from "@/components/modals/OutputDetailModal/Tabs/Metada
 import OutputOutcomeTab from "@/components/modals/OutputDetailModal/Tabs/Outcome";
 import OutputLogsTab from "@/components/modals/OutputDetailModal/Tabs/Logs";
 import NotificationInfoTab from "@/components/modals/NotificationDetailModal/Tabs/Info";
-import NotificationSpecsTab from "@/components/modals/NotificationDetailModal/Tabs/Specs";
+import NotificationConfigTab from "@/components/modals/NotificationDetailModal/Tabs/Config";
 import NotificationPayloadTab from "@/components/modals/NotificationDetailModal/Tabs/Payload";
 import NotificationOutcomeTab from "@/components/modals/NotificationDetailModal/Tabs/Outcome";
 
@@ -232,7 +232,7 @@ export const router = createBrowserRouter(
 															)
 														},
 														{ path: "info", element: <NotificationInfoTab /> },
-														{ path: "specs", element: <NotificationSpecsTab /> },
+														{ path: "config", element: <NotificationConfigTab /> },
 														{ path: "payload", element: <NotificationPayloadTab /> },
 														{ path: "outcome", element: <NotificationOutcomeTab /> }
 													]
@@ -418,7 +418,7 @@ export const router = createBrowserRouter(
 											)
 										},
 										{ path: "info", element: <NotificationInfoTab /> },
-										{ path: "specs", element: <NotificationSpecsTab /> },
+										{ path: "config", element: <NotificationConfigTab /> },
 										{ path: "payload", element: <NotificationPayloadTab /> },
 										{ path: "outcome", element: <NotificationOutcomeTab /> }
 									]

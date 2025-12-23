@@ -75,15 +75,15 @@ export class JobOutputProcessor {
 			// Convert input to WAV
 			const ffmpegArgs = ["-y", "-i", this.tempJobInputFilePath, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le"];
 
+			// Ffmpeg Preset
+			const ffmpegPreset = this.outputPreset();
+			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
+
 			// Offset
 			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
 
 			// Duration
 			if (this.output.config?.duration) ffmpegArgs.push("-t", String(this.output.config.duration));
-
-			// Ffmpeg Preset
-			const ffmpegPreset = this.outputPreset();
-			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
 
 			ffmpegArgs.push(jobInputAudioFilePath);
 
@@ -173,15 +173,19 @@ export class JobOutputProcessor {
 		try {
 			const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
 
-			// Offset
-			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
-
 			// Ffmpeg Preset
 			const ffmpegPreset = this.outputPreset();
 			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
 
-			// Ffmpeg Quality
-			if (this.output.config?.ffmpeg_quality) ffmpegArgs.push("-quality", String(this.output.config.ffmpeg_quality));
+			// Offset
+			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
+
+			if (this.output.config?.image_quality || this.output.config?.quality) {
+				ffmpegArgs.push(
+					"-quality",
+					String(this.calculateQuality(this.output.config.image_quality || this.output.config?.quality, 1, 31))
+				);
+			}
 
 			// Extract only one frame
 			ffmpegArgs.push("-vframes", "1");
@@ -218,6 +222,10 @@ export class JobOutputProcessor {
 		try {
 			const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
 
+			// Ffmpeg Preset
+			const ffmpegPreset = this.outputPreset();
+			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
+
 			if (["AUDIO"].includes(this.output.type) && this.job.input?.audio === false) {
 				// args.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
 				ffmpegArgs.push(
@@ -236,13 +244,6 @@ export class JobOutputProcessor {
 			// Duration
 			if (this.output.config?.duration) ffmpegArgs.push("-t", String(this.output.config.duration));
 
-			// Ffmpeg Preset
-			const ffmpegPreset = this.outputPreset();
-			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
-
-			// Ffmpeg Quality
-			if (this.output.config?.ffmpeg_quality) ffmpegArgs.push("-quality", String(this.output.config.ffmpeg_quality));
-
 			// Audio codec
 			if (this.output.config?.audio_codec) ffmpegArgs.push("-c:a", this.output.config.audio_codec);
 
@@ -256,7 +257,12 @@ export class JobOutputProcessor {
 			if (this.output.config?.audio_channels) ffmpegArgs.push("-ac", String(this.output.config.audio_channels));
 
 			// Audio quality
-			if (this.output.config?.audio_quality) ffmpegArgs.push("-q:a", String(this.output.config.audio_quality));
+			if (this.output.config?.audio_quality || this.output.config?.quality) {
+				ffmpegArgs.push(
+					"-q:a",
+					String(this.calculateQuality(this.output.config.audio_quality || this.output.config?.quality, 0, 9))
+				);
+			}
 
 			if (["VIDEO"].includes(this.output.type)) {
 				// Video first frame image overlay
@@ -298,7 +304,12 @@ export class JobOutputProcessor {
 				if (this.output.config?.video_deinterlace) ffmpegArgs.push("-vf", "yadif");
 
 				// Video quality
-				if (this.output.config?.video_quality) ffmpegArgs.push("-q:v", String(this.output.config.video_quality));
+				if (this.output.config?.video_quality || this.output.config?.quality) {
+					ffmpegArgs.push(
+						"-q:v",
+						String(this.calculateQuality(this.output.config.video_quality || this.output.config?.quality, 0, 51))
+					);
+				}
 
 				// Video filters
 				const videoFilters = this.buildVideoFilters();
@@ -496,10 +507,16 @@ export class JobOutputProcessor {
 		}
 	}
 
+	private calculateQuality(value: number, bottom: number = 0, top: number = 100): number {
+		// Map value from [0, 100] range to [bottom, top] range
+		// Formula: result = bottom + (value / 100) * (top - bottom)
+		return bottom + (value / 100) * (top - bottom);
+	}
+
 	private outputPreset(): string | null {
 		let preset = "DEFAULT";
 
-		const outputPreset = this.output.config?.ffmpeg_preset || this.job.config?.ffmpeg_preset;
+		const outputPreset = this.output.config?.preset || this.job.config?.ffmpeg_preset;
 		if (outputPreset && FFMPEG_PRESETS.includes(outputPreset.toUpperCase())) preset = outputPreset.toUpperCase();
 
 		return preset == "DEFAULT" ? null : preset.toLocaleLowerCase().replace("_", "");

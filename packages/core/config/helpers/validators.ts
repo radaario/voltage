@@ -1,5 +1,4 @@
 import type { STORAGE_TYPE, DATABASE_TYPE } from "../../types";
-import type { APP_CONFIG } from "./types";
 
 export class ConfigValidationError extends Error {
 	constructor(message: string) {
@@ -12,7 +11,7 @@ export class ConfigValidationError extends Error {
  * Validates application configuration
  * Throws ConfigValidationError if validation fails
  */
-export function validateConfig(config: APP_CONFIG): void {
+export function validateConfig(config: any): void {
 	// Validate basic app config
 	validateApp(config);
 
@@ -32,7 +31,7 @@ export function validateConfig(config: APP_CONFIG): void {
 	validateJobs(config);
 }
 
-function validateApp(config: APP_CONFIG): void {
+function validateApp(config: any): void {
 	if (!config.name || config.name.trim() === "") {
 		throw new ConfigValidationError("Application name cannot be empty");
 	}
@@ -46,7 +45,7 @@ function validateApp(config: APP_CONFIG): void {
 	}
 }
 
-function validatePorts(config: APP_CONFIG): void {
+function validatePorts(config: any): void {
 	const ports = [
 		{ name: "VOLTAGE_PORT", value: config.port },
 		{ name: "VOLTAGE_NGINX_PORT", value: config.ngnix_port },
@@ -76,7 +75,7 @@ function validatePorts(config: APP_CONFIG): void {
 	}
 }
 
-function validateStorage(type: STORAGE_TYPE, storage: APP_CONFIG["storage"]): void {
+function validateStorage(type: STORAGE_TYPE, storage: any): void {
 	// LOCAL storage doesn't need additional validation
 	if (type === "LOCAL") {
 		return;
@@ -118,7 +117,7 @@ function validateStorage(type: STORAGE_TYPE, storage: APP_CONFIG["storage"]): vo
 	}
 }
 
-function validateDatabase(type: DATABASE_TYPE, database: APP_CONFIG["database"]): void {
+function validateDatabase(type: DATABASE_TYPE, database: any): void {
 	// SQLite validation
 	if (type === "SQLITE") {
 		if (!database.file_name || database.file_name.trim() === "") {
@@ -143,7 +142,7 @@ function validateDatabase(type: DATABASE_TYPE, database: APP_CONFIG["database"])
 	// Note: We don't validate password as it might be intentionally empty for some setups
 }
 
-function validateRuntime(config: APP_CONFIG): void {
+function validateRuntime(config: any): void {
 	if (config.runtime.is_disabled) {
 		return; // Skip validation if runtime is disabled
 	}
@@ -169,7 +168,7 @@ function validateRuntime(config: APP_CONFIG): void {
 	}
 }
 
-function validateJobs(config: APP_CONFIG): void {
+function validateJobs(config: any): void {
 	if (config.jobs.try_min < 1) {
 		throw new ConfigValidationError("VOLTAGE_JOBS_TRY_MIN must be 1 or greater");
 	}

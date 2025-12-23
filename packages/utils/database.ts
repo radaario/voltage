@@ -1,4 +1,5 @@
 // import { logger } from "./logger";
+import { OUTPUT_TYPES } from "@voltage/core/constants";
 import knex, { Knex } from "knex";
 
 /**
@@ -8,10 +9,10 @@ export interface DatabaseConfig {
 	type: string;
 	host?: string;
 	port?: number;
-	username?: string;
-	password?: string;
+	username?: string | null;
+	password?: string | null;
 	name?: string;
-	table_prefix?: string;
+	table_prefix?: string | null;
 	file_name?: string;
 	timezone?: string;
 }
@@ -217,8 +218,10 @@ class Database {
 					table.string("job_key", 40).nullable();
 					table.integer("index").notNullable().defaultTo(0);
 					table.integer("priority").notNullable().defaultTo(1000);
-					table.text("config").notNullable();
+					table.enum("type", OUTPUT_TYPES).notNullable().defaultTo(OUTPUT_TYPES[0]);
+					table.text("config").nullable();
 					table.text("destination").nullable();
+					table.text("metadata").nullable();
 					table.text("outcome").nullable();
 					table
 						.enum("status", [
@@ -273,9 +276,7 @@ class Database {
 						table.string("key", 40).primary();
 						table.string("job_key", 40).notNullable();
 						table.integer("priority").notNullable().defaultTo(1000);
-						table.enum("type", ["VIDEO", "AUDIO", "THUMBNAIL", "SUBTITLE"]).notNullable().defaultTo("VIDEO");
-						table.string("name", 255).notNullable();
-						table.text("config").notNullable();
+						table.text("config").nullable();
 						table.text("payload").notNullable();
 						table.text("outcome").nullable();
 						table
@@ -331,23 +332,22 @@ class Database {
 				knexConfig.connection = {
 					host: this._config.host,
 					port: this._config.port,
-					user: this._config.username,
-					password: this._config.password,
-					database: this._config.name,
+					user: this._config.username ?? undefined,
+					password: this._config.password ?? undefined,
+					database: this._config.name ?? undefined,
 					timezone: this._config.timezone ? this._config.timezone.replace("UTC", "+00:00") : "+00:00",
 					dateStrings: true
 				};
 				break;
-
 			case "POSTGRESQL":
 			case "AWS_REDSHIFT":
 			case "COCKROACHDB":
 				knexConfig.connection = {
 					host: this._config.host,
 					port: this._config.port,
-					user: this._config.username,
-					password: this._config.password,
-					database: this._config.name
+					user: this._config.username ?? undefined,
+					password: this._config.password ?? undefined,
+					database: this._config.name ?? undefined
 				};
 				if (this._config.timezone) {
 					const timezone = this._config.timezone; // Capture for closure
@@ -367,8 +367,8 @@ class Database {
 				knexConfig.connection = {
 					server: this._config.host,
 					port: this._config.port,
-					user: this._config.username,
-					password: this._config.password,
+					user: this._config.username || undefined,
+					password: this._config.password || undefined,
 					database: this._config.name,
 					options: {
 						encrypt: true,

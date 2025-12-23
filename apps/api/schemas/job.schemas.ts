@@ -96,8 +96,8 @@ const jobConfigSchema = Joi.object({
 	nsfw_type: Joi.string().constantcase().validOrDefault(NSFW_TYPES, appConfig.utils.nsfw.type) /* ! */,
 	nsfw_threshold: Joi.number()
 		.range(0, 100)
-		.default(appConfig.utils.nsfw.threshold || 75)
-		.failover(appConfig.utils.nsfw.threshold || 75) /* ! */,
+		.default(appConfig.utils.nsfw.threshold || 70)
+		.failover(appConfig.utils.nsfw.threshold || 70) /* ! */,
 
 	// Whisper Configs
 	whisper_model: Joi.string().constantcase().validOrDefault(WHISPER_MODELS, appConfig.utils.whisper.model) /* ! */,
@@ -296,28 +296,28 @@ const jobOutputConfigCommonFileSchema = {
 };
 
 const jobOutputConfigCommonFfmpegSchema = {
-	ffmpeg_preset: Joi.any().constantcase().validOrFallback(FFMPEG_PRESETS, FFMPEG_PRESETS[0]).failover(FFMPEG_PRESETS[0]) /* ! */,
-	ffmpeg_quality: Joi.number()
+	preset: Joi.any().constantcase().validOrFallback(FFMPEG_PRESETS, FFMPEG_PRESETS[0]).failover(FFMPEG_PRESETS[0]) /* ! */,
+	quality: Joi.number()
 		.range(0, 100)
-		.failover(appConfig.utils.ffmpeg.quality ?? null)
+		// .failover(appConfig.utils.ffmpeg.quality ?? null)
 		.allow(null) /* ! */
 };
 
 const jobOutputConfigCommonVideoSchema = {
-	video_first_frame_image_url: Joi.string().uri().failover(null).allow(null) /* ! */,
-	video_quality: Joi.number().range(0, 100).failover(null).allow(null) /* ! */,
 	video_codec: Joi.string().failover(null).allow(null) /* ! */,
+	video_quality: Joi.number().range(0, 100).failover(null).allow(null) /* ! */,
 	video_bit_rate: Joi.any().bitrate().failover(null).allow(null) /* ! */,
 	video_pixel_format: Joi.string().failover(null).allow(null) /* ! */,
 	video_frame_rate: Joi.any().framerate().failover(null).allow(null),
 	video_profile: Joi.string().constantcase().validOrFallback(VIDEO_PROFILES, null).failover(null).allow(null) /* ! */,
 	video_level: Joi.string().constantcase().validOrFallback(VIDEO_LEVELS, null).failover(null).allow(null) /* ! */,
-	video_deinterlace: Joi.boolean().failover(true).allow(null) /* ! */
+	video_deinterlace: Joi.boolean().failover(true).allow(null) /* ! */,
+	video_first_frame_image_url: Joi.string().uri().failover(null).allow(null) /* ! */
 };
 
 const jobOutputConfigCommonAudioSchema = {
-	audio_quality: Joi.number().range(0, 100).failover(null).allow(null) /* ! */,
 	audio_codec: Joi.string().failover(null).allow(null) /* ! */,
+	audio_quality: Joi.number().range(0, 100).failover(null).allow(null) /* ! */,
 	audio_bit_rate: Joi.any().bitrate().failover(null).allow(null) /* ! */,
 	audio_sample_rate: Joi.any().samplerate().failover(null).allow(null) /* ! */,
 	audio_channels: Joi.any().constantcase().validOrFallback(AUDIO_CHANNELS, null).failover(null).allow(null) /* ! */
@@ -372,6 +372,7 @@ const jobOutputConfigThumbnailSchema = Joi.object({
 		.required() /* ! */,
 	...jobOutputConfigCommonSchema,
 	offset: Joi.number().range(0, undefined).failover(0) /* ! */,
+	image_quality: Joi.number().range(0, 100).failover(null).allow(null) /* ! */,
 	...jobOutputConfigCommonVisualSchema,
 	destination: jobDestinationSchema.optional(),
 	...jobOutputConfigCommonFileSchema,
@@ -415,8 +416,8 @@ export const jobSchema = Joi.object({
 		.range(1, undefined)
 		.default(appConfig.jobs.priority || 1000)
 		.failover(appConfig.jobs.priority || 1000) /* ! */,
-	config: jobConfigSchema,
-	input: jobInputSchema,
+	config: jobConfigSchema.optional().default() /* ! */,
+	input: jobInputSchema.required() /* ! */,
 	outputs: Joi.array().items(outputConfigSchema).min(1).required() /* ! */,
 	destination: jobDestinationSchema.optional() /* ! */,
 	notification: jobNotificationSchema.optional() /* ! */,

@@ -6,6 +6,7 @@ import { sendSuccess, sendError, sendPaginatedSuccess } from "@/utils/response.u
 import { getPaginationParams } from "@/utils/pagination.util.js";
 import * as jobsService from "@/services/jobs.service.js";
 import path from "path";
+import sharp from "sharp";
 
 export const getJob = async (req: Request, res: Response) => {
 	try {
@@ -120,10 +121,53 @@ export const deleteJobs = async (req: Request, res: Response) => {
 export const getJobPreview = async (req: Request, res: Response) => {
 	const job_key = (req.query.job_key || req.body.job_key || "").trim();
 
-	const serveFallbackImage = () => {
-		res.setHeader("Content-Type", "image/webp");
-		res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-		res.sendFile(path.resolve(path.join(".", "assets", "no-preview.webp")));
+	// Query parameters for image transformation
+	const format = ((req.query.format as string) || "WEBP").toUpperCase();
+	const quality = parseInt((req.query.quality as string) || "75", 10);
+	const width = req.query.width ? parseInt(req.query.width as string, 10) : undefined;
+	const height = req.query.height ? parseInt(req.query.height as string, 10) : undefined;
+	const method = ((req.query.method as string) || "RESIZE").toUpperCase();
+
+	const serveFallbackImage = async () => {
+		try {
+			const fallbackPath = path.resolve(path.join(".", "assets", "no-preview.webp"));
+			let image = sharp(fallbackPath);
+
+			// Apply transformations if requested
+			if (width || height) {
+				if (method === "FIT") {
+					image = image.resize(width, height, { fit: "inside", withoutEnlargement: true });
+				} else if (method === "CONTAIN") {
+					image = image.resize(width, height, { fit: "contain" });
+				} else {
+					// RESIZE (default)
+					image = image.resize(width, height);
+				}
+			}
+
+			// Convert format
+			let mimeType = "image/webp";
+			if (format === "PNG") {
+				image = image.png({ quality });
+				mimeType = "image/png";
+			} else if (format === "JPG" || format === "JPEG") {
+				image = image.jpeg({ quality });
+				mimeType = "image/jpeg";
+			} else {
+				image = image.webp({ quality });
+				mimeType = "image/webp";
+			}
+
+			const buffer = await image.toBuffer();
+
+			res.setHeader("Content-Type", mimeType);
+			res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+			return res.send(buffer);
+		} catch (error) {
+			res.setHeader("Content-Type", "image/webp");
+			res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+			res.sendFile(path.resolve(path.join(".", "assets", "no-preview.webp")));
+		}
 	};
 
 	try {
@@ -134,19 +178,95 @@ export const getJobPreview = async (req: Request, res: Response) => {
 				return sendError(res, 404, "NOT_FOUND", "Job not found!");
 			}
 
+			await storage.config(appConfig.storage);
+
 			try {
 				const exists = await storage.exists(`/jobs/${job_key}/preview.${appConfig.jobs.preview.format.toLowerCase()}`);
 				if (!exists) return serveFallbackImage();
 
+				// Check if transformed preview exists (only if transformations are requested)
+				if (width || height) {
+					const transformedFileName = `preview-${width || "auto"}x${height || "auto"}-${method.toLowerCase()}-${quality}.${format.toLowerCase()}`;
+					const transformedPath = `/jobs/${job_key}/${transformedFileName}`;
+
+					const transformedExists = await storage.exists(transformedPath);
+					if (transformedExists) {
+						const cachedBuffer = await storage.read(transformedPath);
+
+						let mimeType = "image/webp";
+						if (format === "PNG") {
+							mimeType = "image/png";
+						} else if (format === "JPG" || format === "JPEG") {
+							mimeType = "image/jpeg";
+						}
+
+						res.setHeader("Content-Type", mimeType);
+						res.setHeader("Cache-Control", "public, max-age=3600");
+						return res.send(cachedBuffer);
+					}
+				}
+
 				const buffer = await storage.read(`/jobs/${job_key}/preview.${appConfig.jobs.preview.format.toLowerCase()}`);
 
-				res.setHeader("Content-Type", `image/${appConfig.jobs.preview.format.toLowerCase()}`);
-				// res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+				// Load image with Sharp
+				let image = sharp(buffer);
 
-				return res.send(buffer);
-			} catch (error: Error | any) {}
+				// Apply transformations
+				if (width || height) {
+					if (method === "INSIDE") {
+						image = image.resize(width, height, { fit: "inside", withoutEnlargement: true });
+					} else if (method === "CONTAIN") {
+						image = image.resize(width, height, { fit: "contain" });
+					} else if (method === "COVER") {
+						image = image.resize(width, height, { fit: "cover" });
+					} else {
+						// RESIZE (default)
+						image = image.resize(width, height);
+					}
+				}
+
+				// Convert format and set quality
+				let mimeType = "image/webp";
+				if (format === "PNG") {
+					image = image.png({ quality });
+					mimeType = "image/png";
+				} else if (format === "JPG" || format === "JPEG") {
+					image = image.jpeg({ quality });
+					mimeType = "image/jpeg";
+				} else {
+					// WEBP (default)
+					image = image.webp({ quality });
+					mimeType = "image/webp";
+				}
+
+				const outputBuffer = await image.toBuffer();
+
+				// Save transformed preview (only if transformations are applied)
+				if (width || height) {
+					try {
+						const transformedFileName = `preview-${width || "auto"}x${height || "auto"}-${method.toLowerCase()}-${quality}.${format.toLowerCase()}`;
+						const transformedPath = `/jobs/${job_key}/${transformedFileName}`;
+						await storage.write(transformedPath, outputBuffer);
+					} catch (saveError) {
+						// If save fails, log but continue serving the image
+						await logger.insert("API", "WARN", "Failed to cache transformed preview!", {
+							error: (saveError as Error).message,
+							job_key
+						});
+					}
+				}
+
+				res.setHeader("Content-Type", mimeType);
+				res.setHeader("Cache-Control", "public, max-age=3600");
+
+				return res.send(outputBuffer);
+			} catch (error: Error | any) {
+				await logger.insert("API", "ERROR", "Failed to process job preview!", { job_key, error: error.message });
+			}
 		}
-	} catch (error: Error | any) {}
+	} catch (error: Error | any) {
+		await logger.insert("API", "ERROR", "Failed to fetch job preview!", { job_key, error: error.message });
+	}
 
 	return serveFallbackImage();
 };

@@ -92,6 +92,9 @@ importers:
       pino-pretty:
         specifier: ^11.2.2
         version: 11.3.0
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
       ssh2-sftp-client:
         specifier: ^12.0.1
         version: 12.0.1

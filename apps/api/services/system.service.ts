@@ -1,3 +1,4 @@
+import { config as appConfig } from "@voltage/core/config";
 import { database, storage, logger } from "@voltage/utils";
 
 export const deleteAllData = async () => {
@@ -8,6 +9,7 @@ export const deleteAllData = async () => {
 	await database.table("instances_workers").delete();
 
 	try {
+		await storage.config(appConfig.storage);
 		await storage.delete(`/jobs`);
 	} catch (error: Error | any) {}
 

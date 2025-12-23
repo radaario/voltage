@@ -36,7 +36,7 @@ export class NSFWDetector {
 				type = this.job.config.nsfw_type.toUpperCase();
 			}
 
-			const threshold = this.job.config.nsfw_threshold || appConfig.utils.nsfw.threshold || 70;
+			const threshold = (this.job.config.nsfw_threshold || appConfig.utils.nsfw.threshold || 70) / 100;
 
 			// Load NSFW model
 			const nsfwModel = await nsfwjs.load(this.sanitizeModel(model), {

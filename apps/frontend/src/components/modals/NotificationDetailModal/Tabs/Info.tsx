@@ -8,7 +8,7 @@ const Info: React.FC = () => {
 	return (
 		<TableKeyValuePreview
 			data={notification}
-			excludedKeys={["instance_key", "payload", "outcome", "specs"]}
+			excludedKeys={["instance_key", "config", "payload", "outcome"]}
 		/>
 	);
 };
