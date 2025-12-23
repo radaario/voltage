@@ -108,8 +108,12 @@ export class JobUploader {
 			location = `s3://${(jobOutputDestination as any).bucket}${(jobOutputDestination as any).base_path ? (jobOutputDestination as any).base_path : "/"}${key}`;
 			url = storage.getPublicUrl(key) || null;
 		} else if (STORAGE_FTP_TYPES.includes(jobOutputDestination.type as any)) {
-			location = `ftp://${(jobOutputDestination as any).host}/${jobOutputDestination.path}`;
-			url = `https://${(jobOutputDestination as any).host}/${jobOutputDestination.path}`;
+			const storageUrl = jobOutputDestination.public_url_base
+				? jobOutputDestination.public_url_base
+				: `https://${jobOutputDestination.host}`;
+
+			location = `ftp://${jobOutputDestination.host}:${(jobOutputDestination as any).port}${(jobOutputDestination as any).base_path ? (jobOutputDestination as any).base_path : "/"}${jobOutputDestination.path}`;
+			url = `${storageUrl}${jobOutputDestination.base_path ? jobOutputDestination.base_path : "/"}${jobOutputDestination.path}`;
 		} else if (jobOutputDestination.type === "LOCAL") {
 			location = path.resolve(key);
 			url = `${appConfig.url}/storage/jobs/${key}`;

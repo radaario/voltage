@@ -25,20 +25,20 @@ import SFTPClient from "ssh2-sftp-client";
 export interface StorageConfigOptions {
 	type?: STORAGE_TYPE;
 	// Common
-	endpoint?: string; // custom S3-compatible endpoint
-	access_key?: string;
-	access_secret?: string;
-	region?: string; // required for most S3 providers
-	bucket?: string; // required for non-LOCAL
-	base_path?: string; // LOCAL base folder or FTP/SFTP remote path prefix
-	force_path_style?: boolean; // path-style URLs for some providers
-	public_url_base?: string; // base for public URL construction (optional override)
+	endpoint?: string | null; // custom S3-compatible endpoint
+	access_key?: string | null;
+	access_secret?: string | null;
+	region?: string | null; // required for most S3 providers
+	bucket?: string | null; // required for non-LOCAL
+	base_path?: string | null; // LOCAL base folder or FTP/SFTP remote path prefix
+	force_path_style?: boolean | null; // path-style URLs for some providers
+	public_url_base?: string | null; // base for public URL construction (optional override)
 	// FTP/SFTP specific
-	host?: string; // FTP/SFTP server hostname
-	port?: number; // FTP/SFTP server port (21 for FTP, 22 for SFTP by default)
-	username?: string; // FTP/SFTP username
-	password?: string; // FTP/SFTP password
-	secure?: boolean; // Use FTPS (explicit TLS) for FTP
+	host?: string | null; // FTP/SFTP server hostname
+	port?: number | null; // FTP/SFTP server port (21 for FTP, 22 for SFTP by default)
+	username?: string | null; // FTP/SFTP username
+	password?: string | null; // FTP/SFTP password
+	secure?: boolean | null; // Use FTPS (explicit TLS) for FTP
 }
 
 export interface ObjectMetadata {
@@ -232,12 +232,12 @@ class S3StorageDriver implements StorageDriver {
 
 	async config(options?: StorageConfigOptions): Promise<void> {
 		this.type = options?.type as STORAGE_S3_LIKE_TYPE;
-		this.endpoint = options?.endpoint;
-		this.region = options?.region;
-		this.bucket = options?.bucket;
+		this.endpoint = options?.endpoint || undefined;
+		this.region = options?.region || undefined;
+		this.bucket = options?.bucket || undefined;
 		this.basePath = (options?.base_path || "").replace(/^\/+|\/+$/g, "");
-		this.forcePathStyle = options?.force_path_style;
-		this.publicUrlBase = options?.public_url_base;
+		this.forcePathStyle = options?.force_path_style || undefined;
+		this.publicUrlBase = options?.public_url_base || undefined;
 
 		const accessKeyId = options?.access_key;
 		const secretAccessKey = options?.access_secret;
@@ -528,12 +528,12 @@ class FTPStorageDriver implements StorageDriver {
 
 	async config(options?: StorageConfigOptions): Promise<void> {
 		this.type = options?.type as STORAGE_FTP_TYPE;
-		this.host = options?.host;
+		this.host = options?.host || undefined;
 		this.username = options?.username || "anonymous";
 		this.password = options?.password || "";
 		this.secure = options?.secure ?? false;
 		this.basePath = (options?.base_path || "").replace(/^\/+|\/+$/g, "");
-		this.publicUrlBase = options?.public_url_base;
+		this.publicUrlBase = options?.public_url_base || undefined;
 
 		if (this.type === "FTP") {
 			this.port = options?.port || 21;

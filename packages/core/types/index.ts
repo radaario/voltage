@@ -139,10 +139,12 @@ export type JobDestination =
 			access_secret: string; // Access Key Secret
 			region: string;
 			bucket: string;
-			path?: string;
+			force_path_style?: boolean; // whether to force path style URLs (for S3 compatible services)
 			acl?: STORAGE_S3_LIKE_ACL;
 			expires_in?: number;
 			cache_control?: string;
+			public_url_base?: string;
+			path?: string;
 	  }
 	| {
 			type: STORAGE_FTP_TYPE;
@@ -151,6 +153,7 @@ export type JobDestination =
 			username: string;
 			password: string;
 			secure?: boolean; // for FTP (FTPS with explicit TLS)
+			public_url_base?: string;
 			path?: string;
 	  };
 

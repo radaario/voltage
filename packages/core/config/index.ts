@@ -102,14 +102,16 @@ export const config = {
 		access_secret: getEnvOrNull("VOLTAGE_STORAGE_ACCESS_SECRET", null), // e.g., AWS Secret Access Key
 		region: getEnvOrNull("VOLTAGE_STORAGE_REGION", null), // e.g., "us-east-1"
 		bucket: getEnvOrNull("VOLTAGE_STORAGE_BUCKET", null), // e.g., "my-bucket"
+		force_path_style: getEnvBoolean("VOLTAGE_STORAGE_FORCE_PATH_STYLE", false), // e.g., for S3 compatible services
+		acl: getEnv("VOLTAGE_STORAGE_ACL", "PUBLIC_READ") as STORAGE_S3_LIKE_ACL, // e.g., "PRIVATE", "PUBLIC_READ", "PUBLIC_READ_WRITE", etc.
+		expires_in: getEnvNumberOrNull("VOLTAGE_STORAGE_EXPIRES_IN", null), // e.g., in miliseconds
+		cache_control: getEnvOrNull("VOLTAGE_STORAGE_CACHE_CONTROL", null), // e.g., "max-age=3600"
 		host: getEnvOrNull("VOLTAGE_STORAGE_HOST", null), // e.g., for FTP/SFTP
 		username: getEnvOrNull("VOLTAGE_STORAGE_USERNAME", null), // e.g., for FTP/SFTP
 		password: getEnvOrNull("VOLTAGE_STORAGE_PASSWORD", null), // e.g., for FTP/SFTP
 		secure: getEnvBoolean("VOLTAGE_STORAGE_SECURE", false), // e.g., for FTP/SFTP
 		base_path: getEnv("VOLTAGE_STORAGE_BASE_PATH", `${appDir}/storage`), // e.g., base path for storage
-		acl: getEnv("VOLTAGE_STORAGE_ACL", "PUBLIC_READ") as STORAGE_S3_LIKE_ACL, // e.g., "PRIVATE", "PUBLIC_READ", "PUBLIC_READ_WRITE", etc.
-		expires_in: getEnvNumberOrNull("VOLTAGE_STORAGE_EXPIRES_IN", null), // e.g., in miliseconds
-		cache_control: getEnvOrNull("VOLTAGE_STORAGE_CACHE_CONTROL", null) // e.g., "max-age=3600"
+		public_url_base: getEnvOrNull("VOLTAGE_STORAGE_PUBLIC_URL_BASE", null) // e.g., custom public URL base
 	},
 
 	// Database configuration

@@ -659,14 +659,16 @@ Delete all data (stats, logs, instances, jobs, notifications)
 | `VOLTAGE_STORAGE_ACCESS_SECRET` | string | - | Access key secret |
 | `VOLTAGE_STORAGE_REGION` | string | - | Storage region |
 | `VOLTAGE_STORAGE_BUCKET` | string | - | Bucket/container name |
+| `VOLTAGE_STORAGE_FORCE_PATH_STYLE` | boolean | `false` | Force path style for S3 compatible services |
+| `VOLTAGE_STORAGE_ACL` | string | `PUBLIC_READ` | S3-like ACL (PRIVATE, PUBLIC_READ, PUBLIC_READ_WRITE) |
+| `VOLTAGE_STORAGE_EXPIRES_IN` | number | - | Expiration time in milliseconds (optional) |
+| `VOLTAGE_STORAGE_CACHE_CONTROL` | string | - | Cache control header (e.g., max-age=3600) |
 | `VOLTAGE_STORAGE_HOST` | string | - | FTP/SFTP host |
 | `VOLTAGE_STORAGE_USERNAME` | string | - | FTP/SFTP username |
 | `VOLTAGE_STORAGE_PASSWORD` | string | - | FTP/SFTP password |
 | `VOLTAGE_STORAGE_SECURE` | boolean | `false` | Use FTPS (explicit TLS) |
 | `VOLTAGE_STORAGE_BASE_PATH` | string | `./storage` | Base storage path |
-| `VOLTAGE_STORAGE_ACL` | string | `PUBLIC_READ` | S3-like ACL (PRIVATE, PUBLIC_READ, PUBLIC_READ_WRITE) |
-| `VOLTAGE_STORAGE_EXPIRES_IN` | number | - | Expiration time in milliseconds (optional) |
-| `VOLTAGE_STORAGE_CACHE_CONTROL` | string | - | Cache control header (e.g., max-age=3600) |
+| `VOLTAGE_STORAGE_PUBLIC_URL_BASE` | string | - | Custom public URL base |
 
 ---
 
