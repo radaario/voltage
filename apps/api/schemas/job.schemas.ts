@@ -26,7 +26,7 @@ import {
 	NOTIFICATION_NOTIFY_ON_DEFAULT
 } from "@voltage/core/constants";
 
-import { Joi } from "@/utils/joi.util";
+import { Joi } from "@/utils/joi.util.js";
 
 const ffprobeGeneralAttributesDefault = appConfig.utils?.ffprobe?.general_attributes
 	? appConfig.utils?.ffprobe?.general_attributes.split(",")
