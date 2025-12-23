@@ -125,7 +125,7 @@ const Outputs: React.FC = () => {
 							<div>
 								<div className="text-gray-500 dark:text-gray-400 font-bold text-xs truncate max-w-50">{name}</div>
 								<div className="flex flex-wrap text-gray-500 dark:text-gray-400 text-xs">
-									<span className="truncate">{path && <div>{getFilenameFromPath(path as string)}</div>}</span>
+									<span className="max-w-[150px]">{path && <div>{getFilenameFromPath(path as string)}</div>}</span>
 									<span>{duration ? `, ${formatDuration(duration)}` : ""}</span>
 								</div>
 								{/*
