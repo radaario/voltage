@@ -277,7 +277,8 @@ const jobOutputConfigCommonSchema = {
 		.range(1, undefined)
 		.default(appConfig.jobs.priority || 1000)
 		.failover(appConfig.jobs.priority || 1000),
-	path: Joi.string()
+	path: Joi.string(),
+	metadata: Joi.object().pattern(Joi.string().failover("_undefined"), Joi.any().default(null).failover(null).allow(null)).optional()
 };
 
 const jobOutputConfigCommonVisualSchema = {
@@ -413,8 +414,6 @@ export const jobSchema = Joi.object({
 	outputs: Joi.array().items(outputConfigSchema).min(1).required(),
 	destination: jobDestinationSchema.optional(),
 	notification: jobNotificationSchema.optional(),
-	metadata: Joi.array()
-		.items(Joi.object().pattern(Joi.string().failover("_undefined"), Joi.any().failover(null).allow(null)))
-		.optional(),
+	metadata: Joi.object().pattern(Joi.string().failover("_undefined"), Joi.any().default(null).failover(null).allow(null)).optional(),
 	...jobCommonTrySchema
 });

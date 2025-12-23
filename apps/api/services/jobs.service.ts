@@ -109,7 +109,7 @@ export const createJob = async (body: JobRequest) => {
 		const jobOutputType = jobOutput.type;
 		const jobOutputMetadata = {
 			name: jobOutput.name || undefined,
-			metadata: jobOutput.metadata || undefined
+			...(jobOutput.metadata || undefined)
 		};
 
 		const jobOutputConfig = {
