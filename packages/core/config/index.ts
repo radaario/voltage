@@ -103,7 +103,7 @@ export const config = {
 		region: getEnvOrNull("VOLTAGE_STORAGE_REGION", null), // e.g., "us-east-1"
 		bucket: getEnvOrNull("VOLTAGE_STORAGE_BUCKET", null), // e.g., "my-bucket"
 		force_path_style: getEnvBoolean("VOLTAGE_STORAGE_FORCE_PATH_STYLE", false), // e.g., for S3 compatible services
-		acl: getEnv("VOLTAGE_STORAGE_ACL", "PUBLIC_READ") as STORAGE_S3_LIKE_ACL, // e.g., "PRIVATE", "PUBLIC_READ", "PUBLIC_READ_WRITE", etc.
+		acl: getEnv("VOLTAGE_STORAGE_ACL", "PUBLIC_READ") as STORAGE_S3_LIKE_ACL, // e.g., "PUBLIC_READ", "PUBLIC_READ_WRITE", "PRIVATE", etc.
 		expires_in: getEnvNumberOrNull("VOLTAGE_STORAGE_EXPIRES_IN", null), // e.g., in miliseconds
 		cache_control: getEnvOrNull("VOLTAGE_STORAGE_CACHE_CONTROL", null), // e.g., "max-age=3600"
 		host: getEnvOrNull("VOLTAGE_STORAGE_HOST", null), // e.g., for FTP/SFTP
