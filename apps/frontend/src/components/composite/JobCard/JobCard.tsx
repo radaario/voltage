@@ -51,6 +51,8 @@ const JobCard = ({ jobKey, title, onClick, className }: JobCardProps) => {
 				<JobPreviewImage
 					jobKey={jobKey}
 					version={job?.analyzed_at}
+					width={150}
+					height={150}
 					className="w-4 h-4 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden"
 				/>
 				{/* Content */}

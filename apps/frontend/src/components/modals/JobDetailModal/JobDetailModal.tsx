@@ -118,6 +118,8 @@ const JobDetailModal: React.FC = () => {
 								<JobPreviewImage
 									className="w-20 h-12 sm:w-24 sm:h-16 relative shrink-0 border-1 border-gray-100 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden"
 									jobKey={job.key}
+									width={150}
+									height={150}
 									duration={job?.input?.duration}
 									version={job.analyzed_at}
 								/>

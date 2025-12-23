@@ -68,6 +68,8 @@ const JobsTable = ({
 								jobKey={job.key}
 								duration={job?.input?.duration}
 								version={job.analyzed_at}
+								width={150}
+								height={150}
 							/>
 							<div
 								className="flex flex-col items-start min-w-0"

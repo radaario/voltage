@@ -5,10 +5,19 @@ interface JobPreviewImageProps {
 	version: string | null | undefined;
 	className?: string;
 	duration?: number;
+	width?: number;
+	height?: number;
+	method?: "cover" | "contain" | "resize" | "fit";
 }
 
-const JobPreviewImage = ({ jobKey, duration, version, className }: JobPreviewImageProps) => {
-	const imageUrl = api.getResourceUrl("/jobs/preview", { job_key: jobKey, ...(version && { v: version }) });
+const JobPreviewImage = ({ jobKey, duration, version, width, height, method = "cover", className }: JobPreviewImageProps) => {
+	const imageUrl = api.getResourceUrl("/jobs/preview", {
+		job_key: jobKey,
+		method,
+		width,
+		height,
+		...(version && { v: version })
+	});
 
 	return (
 		<div
