@@ -513,7 +513,8 @@ export class JobOutputProcessor {
 	private calculateQuality(value: number, bottom: number = 0, top: number = 100): number {
 		// Map value from [0, 100] range to [bottom, top] range
 		// Formula: result = bottom + (value / 100) * (top - bottom)
-		return bottom + (value / 100) * (top - bottom);
+		// return bottom + (value / 100) * (top - bottom);
+		return parseInt(String(bottom + (value / 100) * (top - bottom)));
 	}
 
 	private outputPreset(): string | null {
