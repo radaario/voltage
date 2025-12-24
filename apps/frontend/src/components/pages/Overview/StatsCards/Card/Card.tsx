@@ -35,7 +35,7 @@ const Card: React.FC<CardProps> = ({ title, icon, mainValue, secondaryText, fail
 								({failedCount.toLocaleString()} failed)
 							</NavLink>
 						) : (
-							<p className="text-red-600 dark:text-red-400">){failedCount.toLocaleString()} failed)</p>
+							<p className="text-red-600 dark:text-red-400">({failedCount.toLocaleString()} failed)</p>
 						)}
 					</>
 				)}
