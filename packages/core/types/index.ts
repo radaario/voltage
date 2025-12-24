@@ -62,6 +62,8 @@ export type FLIP_MODE = (typeof FLIP_MODES)[number];
 export type NOTIFICATIONS_NOTIFY_ON_TYPE = (typeof NOTIFICATION_NOTIFY_ON_TYPES)[number];
 
 export type JobConfig = {
+	voltage_version?: string; // voltage version
+
 	input_analysis?: boolean; // disable ffprobe analysis
 	preview_generation?: boolean; // disable input preview generation
 	nsfw_detection?: boolean; // disable NSFW detection
