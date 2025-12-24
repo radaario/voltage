@@ -91,11 +91,11 @@ export const createJob = async (body: JobRequest) => {
 	const jobKey = uukey();
 	const jobPriority = body.priority ?? 1000;
 
-	const jobConfigVoltate = {
+	const jobConfigApp = {
 		voltage_version: appConfig.version
 	};
 
-	const jobConfig: JobConfig = body.config ? { ...jobConfigVoltate, ...body.config } : jobConfigVoltate;
+	const jobConfig: JobConfig = body.config ? { ...jobConfigApp, ...body.config } : jobConfigApp;
 	const jobInput: JobInput = body.input || {};
 	const jobDestination: JobDestination | null = body.destination || null;
 	const jobNotification: JobNotification | null = body.notification || null;
