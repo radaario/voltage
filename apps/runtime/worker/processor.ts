@@ -226,7 +226,8 @@ export class JobOutputProcessor {
 			const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
 
 			if (["AUDIO"].includes(this.output.type) && this.job.input?.audio === false) {
-				// args.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
+				// ffmpegArgs.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
+				/*
 				ffmpegArgs.push(
 					"-f",
 					"lavfi",
@@ -235,6 +236,9 @@ export class JobOutputProcessor {
 					"-filter_complex",
 					"[0:a][1:a]amix=inputs=2:duration=longest"
 				);
+				*/
+
+				ffmpegArgs.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "1:a", "-shortest");
 			}
 
 			if (this.job.input?.audio !== false) {
