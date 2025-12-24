@@ -72,8 +72,11 @@ export type JobConfig = {
 	ffprobe_video_attributes?: string; // comma-separated list of ffprobe video stream properties to extract
 	ffprobe_audio_attributes?: string; // comma-separated list of ffprobe audio stream properties to extract
 
+	ffmpeg_threads?: number | null; // number of threads to use for processing
 	ffmpeg_preset?: FFMPEG_PRESET; // ffmpeg preset to use for processing
 	ffmpeg_quality?: number | null; // ffmpeg quality to use for processing (0-100)
+	ffmpeg_bit_rate_min?: number | null; // ffmpeg minimum bit rate to use for processing (in bps)
+	ffmpeg_bit_rate_max?: number | null; // ffmpeg maximum bit rate to use for processing (in bps)
 
 	nsfw_model?: NSFW_MODEL; // NSFW model to use
 	nsfw_size?: number; // NSFW model input size
@@ -167,8 +170,11 @@ type JobOutputConfigCommon = {
 	// expires_in?: number; // optional if destination is S3, in seconds
 	// cache_control?: string; // optional if destination is S3
 	// destination?: JobDestination | null; // optional - if not provided, will use global destination
+	threads?: number | null; // number of threads to use for this output
 	preset?: FFMPEG_PRESET; // ffmpeg preset to use for this output
 	quality?: number | null; // ffmpeg quality to use for this output (0-100)
+	bit_rate_min?: number | null; // minimum bit rate to use for this output (in bps)
+	bit_rate_max?: number | null; // maximum bit rate to use for this output (in bps)
 	// try?: number; // maximum number of tries for this output
 	// retry_in?: number; // retry interval for this output in milliseconds
 };

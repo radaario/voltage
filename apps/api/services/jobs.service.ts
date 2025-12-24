@@ -131,12 +131,24 @@ export const createJob = async (body: JobRequest) => {
 			retry_in: undefined
 		};
 
+		if (!jobOutputConfig.threads) {
+			jobOutputConfig.threads = jobConfig.ffmpeg_threads || appConfig.utils.ffmpeg.threads || null;
+		}
+
 		if (!jobOutputConfig.preset) {
 			jobOutputConfig.preset = jobConfig.ffmpeg_preset || appConfig.utils.ffmpeg.preset || "DEFAULT";
 		}
 
 		if (jobOutputConfig.quality === undefined && jobConfig.ffmpeg_quality) {
 			jobOutputConfig.quality = jobConfig.ffmpeg_quality || null;
+		}
+
+		if (jobOutputConfig.bit_rate_min === undefined && jobConfig.ffmpeg_bit_rate_min) {
+			jobOutputConfig.bit_rate_min = jobConfig.ffmpeg_bit_rate_min || null;
+		}
+
+		if (jobOutputConfig.bit_rate_max === undefined && jobConfig.ffmpeg_bit_rate_max) {
+			jobOutputConfig.bit_rate_max = jobConfig.ffmpeg_bit_rate_max || null;
 		}
 
 		if (["SUBTITLE"].includes(jobOutputType)) {
@@ -151,13 +163,13 @@ export const createJob = async (body: JobRequest) => {
 
 		// Build destination based on type
 		let jobOutputDestination: any = {
-			...jobDestination,
-			...jobOutput.destination
+			...(jobDestination || undefined),
+			...(jobOutput.destination || undefined)
 		};
 
 		if (jobOutput.destination?.type && jobOutput.destination.type != jobDestination?.type) {
 			jobOutputDestination = {
-				...jobOutput.destination
+				...(jobOutput.destination || undefined)
 			};
 		}
 
@@ -165,22 +177,27 @@ export const createJob = async (body: JobRequest) => {
 			// HTTP/HTTPS: only include url
 			jobOutputDestination = {
 				...jobOutputDestination,
-				url: (jobOutput.destination as any)?.url || jobOutput.url || undefined
+				url: (jobOutput.destination as any)?.url || jobOutput?.url || (jobDestination as any)?.url || undefined
 			};
 		} else if (STORAGE_FTP_TYPES.includes(jobOutputDestination.type)) {
 			// FTP/SFTP: only include path
 			jobOutputDestination = {
 				...jobOutputDestination,
-				path: (jobOutput.destination as any)?.path || jobOutput.path || undefined
+				path: (jobOutput.destination as any)?.path || jobOutput?.path || undefined
 			};
 		} else if (STORAGE_S3_LIKE_TYPES.includes(jobOutputDestination.type)) {
 			// S3_LIKE: include path, acl, expires_in, cache_control
 			jobOutputDestination = {
 				...jobOutputDestination,
-				path: (jobOutput.destination as any)?.path || jobOutput.path || undefined,
-				acl: (jobOutput.destination as any)?.acl || jobOutput.acl || (jobDestination as any)?.acl || undefined,
-				expires_in: (jobOutput.destination as any)?.expires_in || jobOutput.expires_in || undefined,
-				cache_control: (jobOutput.destination as any)?.cache_control || jobOutput.cache_control || undefined
+				path: (jobOutput.destination as any)?.path || jobOutput?.path || undefined,
+				acl: (jobOutput.destination as any)?.acl || jobOutput?.acl || (jobDestination as any)?.acl || undefined,
+				expires_in:
+					(jobOutput.destination as any)?.expires_in || jobOutput?.expires_in || (jobDestination as any)?.expires_in || undefined,
+				cache_control:
+					(jobOutput.destination as any)?.cache_control ||
+					jobOutput?.cache_control ||
+					(jobDestination as any)?.cache_control ||
+					undefined
 			};
 		}
 
@@ -358,6 +375,10 @@ export const retryJob = async (job_key: string, output_key?: string) => {
 	await database.table("jobs_outputs").whereIn("key", updatedJobOutputsKeys).update({
 		outcome: null,
 		status: "PENDING",
+		started_at: null,
+		processed_at: null,
+		uploaded_at: null,
+		completed_at: null,
 		updated_at: now,
 		try_count: 0
 	});
@@ -365,6 +386,13 @@ export const retryJob = async (job_key: string, output_key?: string) => {
 	await database.table("jobs").where("key", job_key).update({
 		outcome: null,
 		status: "PENDING",
+		progress: 0,
+		started_at: null,
+		downloaded_at: null,
+		analyzed_at: null,
+		processed_at: null,
+		uploaded_at: null,
+		completed_at: null,
 		updated_at: now,
 		try_count: 0
 	});
