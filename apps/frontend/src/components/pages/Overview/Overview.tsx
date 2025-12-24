@@ -50,17 +50,19 @@ const DATE_RANGE_OPTIONS: { label: string; value: DateRange; days: number }[] = 
 const Overview: React.FC = () => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
+
+	// states
 	const [dateRange, setDateRange] = useState<DateRange>("30d");
 	const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
+	// data
 	const option = DATE_RANGE_OPTIONS.find((o) => o.value === dateRange)!;
 	const until = new Date();
 	const since = new Date();
 	since.setDate(until.getDate() - (option.days - 1));
 	const format = (d: Date) => d.toISOString().slice(0, 10);
 
-	console.log("fav:", { dateRange, since, until });
-
+	// querys
 	const {
 		data: statsResponse,
 		isFetching,
@@ -80,6 +82,7 @@ const Overview: React.FC = () => {
 		refetchInterval: 15_000 // 15 saniyede bir otomatik refresh
 	});
 
+	// mutations
 	const deleteAllStatsMutation = useMutation({
 		mutationFn: async () => {
 			return await api.delete("/stats", { token: authToken, all: "true" });
@@ -91,6 +94,7 @@ const Overview: React.FC = () => {
 		}
 	});
 
+	// data
 	const stats = statsResponse?.data || [];
 
 	const aggregates = useMemo(() => {
@@ -146,6 +150,7 @@ const Overview: React.FC = () => {
 		);
 	}, [stats.length, stats]);
 
+	// actions
 	const handleRefresh = () => {
 		queryClient.invalidateQueries({ queryKey: ["stats"] });
 	};
@@ -235,8 +240,8 @@ const Overview: React.FC = () => {
 					message={
 						<>
 							<p className="mb-4">
-								Are you sure you want to delete <strong>all stats</strong> for <strong>{option.label.toLowerCase()}</strong>
-								?
+								Are you sure you want to delete <strong>all stats</strong> for{" "}
+								<strong>{option.label.toLowerCase()}</strong>?
 							</p>
 							<p className="font-semibold text-red-600 dark:text-red-400">This action cannot be undone!</p>
 						</>

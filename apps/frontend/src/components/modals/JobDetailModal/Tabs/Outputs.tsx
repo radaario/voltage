@@ -106,7 +106,8 @@ const Outputs: React.FC = () => {
 					const output = info.row.original;
 					const name = (output.metadata?.name as string) || output.config?.name || output.key || "";
 					const path = output.outcome?.path || output.outcome?.url || output.destination?.path || output.destination?.url;
-					const duration = (output.outcome?.duration as number | undefined) || (output.config?.duration as number | undefined);
+					const duration =
+						(output.outcome?.duration as number | undefined) || (output.config?.duration as number | undefined);
 
 					return (
 						<div className="max-w-60">
@@ -125,7 +126,13 @@ const Outputs: React.FC = () => {
 							<div>
 								<div className="text-gray-500 dark:text-gray-400 font-bold text-xs truncate max-w-50">{name}</div>
 								<div className="flex flex-wrap text-gray-500 dark:text-gray-400 text-xs">
-									<span className="max-w-[150px]">{path && <div>{getFilenameFromPath(path as string)}</div>}</span>
+									<span className="max-w-[150px]">
+										{path ? (
+											<div>{getFilenameFromPath(path as string) || output.config?.format}</div>
+										) : (
+											output.config?.format
+										)}
+									</span>
 									<span>{duration ? `, ${formatDuration(duration)}` : ""}</span>
 								</div>
 								{/*
@@ -167,11 +174,15 @@ const Outputs: React.FC = () => {
 				cell: (info) => {
 					const output = info.row.original;
 
-					const progressedIn = formatDatesToDuration(output.started_at || output.created_at, output.completed_at, serverTimezone);
+					const progressedIn = formatDatesToDuration(
+						output.started_at || output.created_at,
+						output.completed_at,
+						serverTimezone
+					);
 
 					return (
 						<div className="text-right sm:text-left">
-							<div>%{job.progress || 0}</div>
+							{/* <div>%{job.progress || 0s}</div> */}
 							<Tooltip
 								content={
 									<table className="py-1.5">
@@ -182,30 +193,38 @@ const Outputs: React.FC = () => {
 										{!!output.started_at && (
 											<tr>
 												<td className="font-light pr-1 py-0.25">Started In</td>
-												<td>: {formatDatesToDuration(output.created_at, output.started_at, serverTimezone)}</td>
+												<td>
+													: {formatDatesToDuration(output.created_at, output.started_at, serverTimezone)}
+												</td>
 											</tr>
 										)}
 										{!!output.processed_at && (
 											<tr>
 												<td className="font-light pr-1 py-0.25">Processed In</td>
-												<td>: {formatDatesToDuration(output.started_at, output.processed_at, serverTimezone)}</td>
+												<td>
+													: {formatDatesToDuration(output.started_at, output.processed_at, serverTimezone)}
+												</td>
 											</tr>
 										)}
 										{!!output.uploaded_at && (
 											<tr>
 												<td className="font-light pr-1 py-0.25">Uploaded In</td>
-												<td>: {formatDatesToDuration(output.processed_at, output.uploaded_at, serverTimezone)}</td>
+												<td>
+													: {formatDatesToDuration(output.processed_at, output.uploaded_at, serverTimezone)}
+												</td>
 											</tr>
 										)}
 										{!!output.completed_at && (
 											<tr>
 												<td className="font-light pr-1 py-0.25">Completed In</td>
-												<td>: {formatDatesToDuration(output.started_at, output.completed_at, serverTimezone)}</td>
+												<td>
+													: {formatDatesToDuration(output.started_at, output.completed_at, serverTimezone)}
+												</td>
 											</tr>
 										)}
 									</table>
 								}>
-								<div className="inline-flex text-xs text-gray-500 dark:text-gray-400 font-mono">{progressedIn}</div>
+								<div className="inline-flex text-gray-500 dark:text-gray-400 font-mono">{progressedIn}</div>
 							</Tooltip>
 						</div>
 					);
@@ -287,7 +306,7 @@ const Outputs: React.FC = () => {
 
 	return (
 		<div className="space-y-4">
-			<div className="bg-gray-50 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+			<div className="bg-gray-50 dark:bg-neutral-800 shadow-sm rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 				<div className="w-full relative">
 					{/* Loading Overlay */}
 					<LoadingOverlay show={isLoading} />

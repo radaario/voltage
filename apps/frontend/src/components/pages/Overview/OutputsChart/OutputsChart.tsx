@@ -192,7 +192,7 @@ const OutputsChart: React.FC<OutputsChartProps> = ({ stats, aggregates }) => {
 										<TooltipPrimitive.Content
 											side="top"
 											sideOffset={5}
-											className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-md animate-in fade-in-0 zoom-in-95">
+											className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-sm animate-in fade-in-0 zoom-in-95">
 											<div className="space-y-1">
 												<div className="font-semibold text-white">Requested Outputs</div>
 												<div className="text-gray-300">
@@ -221,7 +221,7 @@ const OutputsChart: React.FC<OutputsChartProps> = ({ stats, aggregates }) => {
 										<TooltipPrimitive.Content
 											side="top"
 											sideOffset={5}
-											className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-md animate-in fade-in-0 zoom-in-95">
+											className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-sm animate-in fade-in-0 zoom-in-95">
 											<div className="space-y-1">
 												<div className="font-semibold text-white">Completed Outputs</div>
 												<div className="text-gray-300">
@@ -252,7 +252,7 @@ const OutputsChart: React.FC<OutputsChartProps> = ({ stats, aggregates }) => {
 										<TooltipPrimitive.Content
 											side="top"
 											sideOffset={5}
-											className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-md animate-in fade-in-0 zoom-in-95">
+											className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-sm animate-in fade-in-0 zoom-in-95">
 											<div className="space-y-1">
 												<div className="font-semibold text-white">Failed Outputs</div>
 												<div className="text-gray-300">
@@ -304,7 +304,7 @@ const OutputsChart: React.FC<OutputsChartProps> = ({ stats, aggregates }) => {
 											<TooltipPrimitive.Content
 												side="top"
 												sideOffset={5}
-												className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-md animate-in fade-in-0 zoom-in-95">
+												className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-sm animate-in fade-in-0 zoom-in-95">
 												<div className="space-y-0.5">
 													<div className="font-semibold text-white">{point.date}</div>
 													<div className="text-gray-300">
@@ -331,7 +331,7 @@ const OutputsChart: React.FC<OutputsChartProps> = ({ stats, aggregates }) => {
 											<TooltipPrimitive.Content
 												side="top"
 												sideOffset={5}
-												className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-md animate-in fade-in-0 zoom-in-95">
+												className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-sm animate-in fade-in-0 zoom-in-95">
 												<div className="space-y-0.5">
 													<div className="font-semibold text-white">{point.date}</div>
 													<div className="text-gray-300">
@@ -360,7 +360,7 @@ const OutputsChart: React.FC<OutputsChartProps> = ({ stats, aggregates }) => {
 												<TooltipPrimitive.Content
 													side="top"
 													sideOffset={5}
-													className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-md animate-in fade-in-0 zoom-in-95">
+													className="z-50 overflow-hidden rounded-md bg-gray-900 dark:bg-neutral-700 px-3 py-2 text-xs shadow-sm animate-in fade-in-0 zoom-in-95">
 													<div className="space-y-0.5">
 														<div className="font-semibold text-white">{point.date}</div>
 														<div className="text-gray-300">

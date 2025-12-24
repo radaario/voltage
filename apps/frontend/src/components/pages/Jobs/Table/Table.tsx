@@ -278,7 +278,7 @@ const JobsTable = ({
 	});
 
 	return (
-		<div className="bg-gray-50 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+		<div className="bg-gray-50 dark:bg-neutral-800 shadow-sm rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 			<div className="w-full relative">
 				{/* Loading Overlay */}
 				<LoadingOverlay show={loading} />

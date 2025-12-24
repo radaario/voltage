@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useOutletContext, useNavigate, Outlet } from "react-router-dom";
-import { Label, Tooltip, Button, Pagination, JobCard, TimeAgo, LoadingSpinner } from "@/components";
+import { Label, Tooltip, Button, Pagination, JobCard, TimeAgo, LoadingSpinner, SearchInput, Select } from "@/components";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
-import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import type { WorkerOutletContext } from "@/types/modal";
 import type { PaginationInfo } from "@/types";
+import { logTypeOptions } from "@/constants/log-type-options";
 
 const Logs: React.FC = () => {
 	const { worker } = useOutletContext<WorkerOutletContext>();
@@ -50,8 +50,13 @@ const Logs: React.FC = () => {
 	const pagination: PaginationInfo | undefined = logsResponse?.pagination;
 
 	// actions
-	const clearSearch = () => {
+	const handleClearSearch = () => {
 		setSearchInput("");
+	};
+
+	const handleTypeFilterChange = (type: string) => {
+		setTypeFilter(type);
+		setCurrentPage(1);
 	};
 
 	// effects
@@ -107,39 +112,24 @@ const Logs: React.FC = () => {
 		<div className="space-y-4">
 			{/* Filters */}
 			<div className="flex items-center gap-3">
-				{/* Search Bar */}
-				<div className="relative flex-1">
-					<MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-					<input
-						type="text"
-						placeholder="Search logs..."
-						value={searchInput}
-						onChange={(e) => setSearchInput(e.target.value)}
-						className="w-full pl-9 pr-9 py-2 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-neutral-500"
-					/>
-					{searchInput && (
-						<button
-							type="button"
-							onClick={clearSearch}
-							className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-							<XMarkIcon className="w-4 h-4" />
-						</button>
-					)}
-				</div>
+				{/* Search Input */}
+				<SearchInput
+					value={searchInput}
+					onChange={setSearchInput}
+					onClear={handleClearSearch}
+					placeholder="Search logs..."
+					className="h-[38px]"
+				/>
 
 				{/* Type Filter */}
-				<select
+				<Select
 					value={typeFilter}
-					onChange={(e) => {
-						setTypeFilter(e.target.value);
-						setCurrentPage(1);
-					}}
-					className="px-3 py-2 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-neutral-500">
-					<option value="">All Types</option>
-					<option value="INFO">Info</option>
-					<option value="WARNING">Warning</option>
-					<option value="ERROR">Error</option>
-				</select>
+					onChange={handleTypeFilterChange}
+					options={logTypeOptions}
+					placeholder="Filter by type"
+					emptyLabel="All Types"
+					className="w-[180px]"
+				/>
 			</div>
 
 			{/* Table */}

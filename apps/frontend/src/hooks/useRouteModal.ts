@@ -28,7 +28,7 @@ export function useRouteModal(options: UseRouteModalOptions = {}) {
 		if (!isOpen && !modalProps.shouldRender) {
 			const queryString = searchParams.toString();
 			if (navigateBackTo) {
-				navigate(`${navigateBackTo}${queryString ? `?${queryString}` : ''}`);
+				navigate(`${navigateBackTo}${queryString ? `?${queryString}` : ""}`);
 			} else {
 				navigate(-1);
 			}
@@ -39,6 +39,7 @@ export function useRouteModal(options: UseRouteModalOptions = {}) {
 
 	return {
 		...modalProps,
+		navigateBackTo,
 		onClose: handleCloseCallback,
 		handleClose: modalProps.handleClose
 	};

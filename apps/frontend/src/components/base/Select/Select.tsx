@@ -155,7 +155,7 @@ export const Select = <T extends string = string>({
 						<ComboboxOptions
 							className={clsx(
 								"absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md",
-								"bg-white dark:bg-neutral-800",
+								"bg-white dark:bg-neutral-800 text-gray-700",
 								"py-1 shadow-lg ring-1 ring-black ring-opacity-5",
 								"focus:outline-none sm:text-sm"
 							)}>
@@ -220,7 +220,8 @@ export const Select = <T extends string = string>({
 													</span>
 												)}
 												<div className="flex flex-col">
-													<span className={clsx("block truncate", selected ? "font-semibold" : "font-normal")}>
+													<span
+														className={clsx("block truncate", selected ? "font-semibold" : "font-normal")}>
 														{option.label}
 													</span>
 													{option.description && (
@@ -233,7 +234,9 @@ export const Select = <T extends string = string>({
 													<span
 														className={clsx(
 															"absolute inset-y-0 right-0 flex items-center pr-4",
-															focus ? "text-gray-900 dark:text-gray-100" : "text-gray-600 dark:text-gray-400"
+															focus
+																? "text-gray-900 dark:text-gray-100"
+																: "text-gray-600 dark:text-gray-400"
 														)}>
 														<CheckIcon
 															className="h-5 w-5"

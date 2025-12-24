@@ -1,5 +1,6 @@
 import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components";
+import { clsx } from "@/utils";
 
 interface PaginationProps {
 	currentPage: number;
@@ -8,6 +9,7 @@ interface PaginationProps {
 	itemsPerPage: number;
 	hasNextPage: boolean;
 	hasPrevPage: boolean;
+	className?: string;
 	onPageChange: (page: number) => void;
 	onLimitChange?: (limit: number) => void;
 }
@@ -20,7 +22,8 @@ function Pagination({
 	hasNextPage,
 	hasPrevPage,
 	onPageChange,
-	onLimitChange
+	onLimitChange,
+	className
 }: PaginationProps) {
 	const getPageNumbers = () => {
 		const pages: (number | string)[] = [];
@@ -79,7 +82,11 @@ function Pagination({
 	const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
 	return (
-		<div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700">
+		<div
+			className={clsx(
+				"pr-6 pl-0 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700",
+				className
+			)}>
 			{/* Pagination Controls */}
 			<div className="flex items-center gap-1 order-2 sm:order-1">
 				{/* First Page Button */}

@@ -115,7 +115,14 @@ const Workers: React.FC = () => {
 								</div>
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-								{worker.job_key ? <JobCard jobKey={worker.job_key} /> : <span className="text-gray-400">No Job</span>}
+								{worker.job_key ? (
+									<JobCard
+										jobKey={worker.job_key}
+										showDisplayJobKey={false}
+									/>
+								) : (
+									<span className="text-gray-400">No Job</span>
+								)}
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
 								<Label

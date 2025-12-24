@@ -1,4 +1,4 @@
-import { Outlet, useParams } from "react-router-dom";
+import { Navigate, Outlet, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
 	InformationCircleIcon,
@@ -39,6 +39,16 @@ const InstanceDetailModal: React.FC = () => {
 		{ path: "logs", label: "Logs", icon: DocumentTextIcon }
 	];
 
+	// renders
+	if (!isLoading && !instance) {
+		return (
+			<Navigate
+				to={modalProps.navigateBackTo || "/"}
+				replace
+			/>
+		);
+	}
+
 	return (
 		<Modal
 			{...modalProps}
@@ -55,10 +65,14 @@ const InstanceDetailModal: React.FC = () => {
 							{instance && instancesResponse?.data ? (
 								<>
 									<div className="flex items-center gap-3 flex-wrap">
-										<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+										<h3 className="flex items-center text-xl sm:text-2xl pr-15 font-bold text-gray-900 dark:text-white">
 											{getInstanceName(instancesResponse.data, instance)}
+											<Label
+												status={instance.type}
+												className="ml-2 -mb-0.5">
+												{instance.type}
+											</Label>
 										</h3>
-										<Label status={instance.type}>{instance.type}</Label>
 									</div>
 									<p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono truncate">{instance.key}</p>
 								</>
@@ -87,27 +101,7 @@ const InstanceDetailModal: React.FC = () => {
 			<TabsNavigation tabs={tabs} />
 
 			{/* Content */}
-			<Modal.Content
-				noPadding
-				className="h-[60vh]">
-				<div className="p-6 h-full overflow-y-auto">
-					{isLoading ? (
-						<LoadingSpinner />
-					) : !instance ? (
-						<div className="flex flex-col justify-center items-center py-12 gap-3">
-							<p className="text-sm text-gray-600 dark:text-gray-400">Instance not found.</p>
-							<Button
-								variant="secondary"
-								size="sm"
-								onClick={modalProps.handleClose}>
-								Close
-							</Button>
-						</div>
-					) : (
-						<Outlet context={{ instance: instance }} />
-					)}
-				</div>
-			</Modal.Content>
+			<Modal.Content>{isLoading ? <LoadingSpinner /> : <Outlet context={{ instance: instance }} />}</Modal.Content>
 		</Modal>
 	);
 };

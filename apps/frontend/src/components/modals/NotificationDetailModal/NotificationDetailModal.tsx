@@ -13,7 +13,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { api, ApiResponse } from "@/utils";
 import { useRouteModal } from "@/hooks/useRouteModal";
-import { Modal, ConfirmModal, Label, Button, Tooltip, TabsNavigation, LoadingSpinner } from "@/components";
+import { Modal, ConfirmModal, Label, Button, Tooltip, TabsNavigation, LoadingSpinner, Alert } from "@/components";
 import type { Notification } from "@/interfaces/notification";
 
 const NotificationDetailModal: React.FC = () => {
@@ -99,7 +99,9 @@ const NotificationDetailModal: React.FC = () => {
 								{notification && (
 									<>
 										<div className="flex items-center gap-3">
-											<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Notification</h3>
+											<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+												Notification
+											</h3>
 											<Label
 												status={notification.payload?.status as string | undefined}
 												statusColor={false}>
@@ -162,15 +164,11 @@ const NotificationDetailModal: React.FC = () => {
 						{isLoading ? (
 							<LoadingSpinner />
 						) : !notification ? (
-							<div className="flex flex-col justify-center items-center py-12 gap-3">
-								<p className="text-sm text-gray-600 dark:text-gray-400">Notification not found.</p>
-								<Button
-									variant="secondary"
-									size="sm"
-									onClick={modalProps.handleClose}>
-									Close
-								</Button>
-							</div>
+							<Alert
+								variant="error"
+								onClose={modalProps.handleClose}>
+								Notification not found.
+							</Alert>
 						) : (
 							<Outlet context={{ notification: notification }} />
 						)}

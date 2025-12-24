@@ -6,7 +6,7 @@ const Config: React.FC = () => {
 	const { job } = useOutletContext<JobOutletContext>();
 
 	return (
-		<div className="space-y-6">
+		<>
 			{/* Config */}
 			<div>
 				<h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Config</h4>
@@ -33,7 +33,7 @@ const Config: React.FC = () => {
 					emptyMessage="No notification available"
 				/>
 			</div>
-		</div>
+		</>
 	);
 };
 

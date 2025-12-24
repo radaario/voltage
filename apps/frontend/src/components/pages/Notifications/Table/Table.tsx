@@ -31,7 +31,14 @@ interface NotificationsTableProps {
 
 const columnHelper = createColumnHelper<Notification>();
 
-const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitChange, newNotificationKeys }: NotificationsTableProps) => {
+const NotificationsTable = ({
+	data,
+	loading,
+	pagination,
+	onPageChange,
+	onLimitChange,
+	newNotificationKeys
+}: NotificationsTableProps) => {
 	const { authToken } = useAuth();
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
@@ -200,7 +207,9 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 									variant="soft"
 									size="md"
 									iconOnly
-									disabled={!["FAILED"].includes(notification?.status as string) || retryNotificationMutation.isPending}
+									disabled={
+										!["FAILED"].includes(notification?.status as string) || retryNotificationMutation.isPending
+									}
 									onClick={(e) => {
 										e.stopPropagation();
 										handleRetryNotification(notification);
@@ -253,7 +262,7 @@ const NotificationsTable = ({ data, loading, pagination, onPageChange, onLimitCh
 	});
 
 	return (
-		<div className="bg-gray-50 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+		<div className="bg-gray-50 dark:bg-neutral-800 shadow-sm rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 			<div className="w-full relative">
 				{/* Loading Overlay */}
 				<LoadingOverlay show={loading} />

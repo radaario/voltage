@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet, useParams } from "react-router-dom";
+import { Navigate, Outlet, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	InformationCircleIcon,
@@ -60,14 +60,14 @@ const JobDetailModal: React.FC = () => {
 	const specs: string[] = [];
 	const showRetryButton = job && ["QUEUED", "COMPLETED", "CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(job.status);
 
-	// Resolution
+	// resolution
 	const width = job?.input?.video_width;
 	const height = job?.input?.video_height;
 	if (width && height) {
 		specs.push(`${width}x${height}px`);
 	}
 
-	// Size
+	// size
 	const size = job?.input?.file_size;
 	if (size) {
 		const sizeInMB = (size / (1024 * 1024)).toFixed(1);
@@ -100,6 +100,16 @@ const JobDetailModal: React.FC = () => {
 			setShowRetryModal(false);
 		}
 	};
+
+	// renders
+	if (!isLoading && !job) {
+		return (
+			<Navigate
+				to={modalProps.navigateBackTo || "/"}
+				replace
+			/>
+		);
+	}
 
 	return (
 		<>
@@ -134,7 +144,9 @@ const JobDetailModal: React.FC = () => {
 										)}
 										<p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{job?.key}</p>
 										{specs.length > 0 && (
-											<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{specs.join(", ")}</span>
+											<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+												{specs.join(", ")}
+											</span>
 										)}
 									</div>
 								) : (
@@ -180,10 +192,11 @@ const JobDetailModal: React.FC = () => {
 				<TabsNavigation tabs={tabs} />
 
 				{/* Content */}
-				<Modal.Content
-					noPadding
-					className="h-[65vh]">
-					<div className="p-6 h-full overflow-y-auto">{isLoading ? <LoadingSpinner /> : <Outlet context={{ job: job }} />}</div>
+				<Modal.Content>
+					{isLoading ? 
+						<LoadingSpinner /> : 
+						<Outlet context={{ job: job }} />
+					}
 				</Modal.Content>
 			</Modal>
 

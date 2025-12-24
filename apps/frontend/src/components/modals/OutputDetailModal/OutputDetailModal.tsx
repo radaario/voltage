@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useRouteModal } from "@/hooks/useRouteModal";
 import { api, ApiResponse } from "@/utils";
-import { Modal, ConfirmModal, Label, Button, Tooltip, TabsNavigation, LoadingSpinner } from "@/components";
+import { Modal, ConfirmModal, Label, Button, Tooltip, TabsNavigation, LoadingSpinner, Alert } from "@/components";
 import type { JobOutput } from "@/interfaces/job";
 
 const OutputDetailModal: React.FC = () => {
@@ -25,7 +25,11 @@ const OutputDetailModal: React.FC = () => {
 	const [showRetryModal, setShowRetryModal] = useState(false);
 
 	// Fetch output details
-	const { data: outputResponse, isLoading } = useQuery<ApiResponse<JobOutput>>({
+	const {
+		data: outputResponse,
+		isError,
+		isLoading
+	} = useQuery<ApiResponse<JobOutput>>({
 		queryKey: ["output", outputKey],
 		queryFn: () =>
 			api.get<JobOutput>("/jobs/outputs", {
@@ -74,10 +78,6 @@ const OutputDetailModal: React.FC = () => {
 		}
 	};
 
-	if (!output && !isLoading) {
-		return null;
-	}
-
 	const tabs = [
 		{ path: "info", label: "Info", icon: InformationCircleIcon },
 		{ path: "config", label: "Config", icon: Cog8ToothIcon },
@@ -106,11 +106,17 @@ const OutputDetailModal: React.FC = () => {
 										<p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{output.key}</p>
 									</div>
 								)}
-								{!output && <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Loading...</h3>}
+								{!output && (
+									<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+										{isError ? "Output not found" : "Loading..."}
+									</h3>
+								)}
 							</div>
 						</div>
 						<div className="flex items-center gap-3 shrink-0 ml-4">
-							{["QUEUED", "COMPLETED", "CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(output?.status as string) && (
+							{["QUEUED", "COMPLETED", "CANCELLED", "DELETED", "FAILED", "TIMEOUT"].includes(
+								output?.status as string
+							) && (
 								<Button
 									variant="secondary"
 									size="xs"
@@ -137,10 +143,18 @@ const OutputDetailModal: React.FC = () => {
 				<TabsNavigation tabs={tabs} />
 
 				{/* Tab Content */}
-				<Modal.Content
-					noPadding
-					className="h-[50vh]">
-					<div className="p-6 h-full overflow-y-auto">{isLoading ? <LoadingSpinner /> : <Outlet context={{ output }} />}</div>
+				<Modal.Content>
+					{isLoading ? (
+						<LoadingSpinner />
+					) : !output ? (
+						<Alert
+							variant="error"
+							onClose={modalProps.handleClose}>
+							Output not found.
+						</Alert>
+					) : (
+						<Outlet context={{ output }} />
+					)}
 				</Modal.Content>
 			</Modal>
 
