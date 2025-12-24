@@ -21,7 +21,7 @@ export class JobOutputProcessor {
 			this.job = job;
 			this.output = output;
 
-			this.jobInputDuration = this.job.input?.duration || this.job.metadata?.duration || null;
+			this.jobInputDuration = this.job.config?.duration || this.job.input?.duration || null;
 
 			this.validateOutputOffset();
 			this.validateOutputDuration();
@@ -78,15 +78,15 @@ export class JobOutputProcessor {
 			// Convert input to WAV
 			const ffmpegArgs = ["-y", "-i", this.tempJobInputFilePath, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le"];
 
-			// Ffmpeg Preset
-			const ffmpegPreset = this.outputPreset();
-			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
-
 			// Offset
 			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
 
 			// Duration
 			if (this.output.config?.duration) ffmpegArgs.push("-t", String(this.output.config.duration));
+
+			// Ffmpeg Preset
+			const ffmpegPreset = this.outputPreset();
+			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
 
 			ffmpegArgs.push(jobInputAudioFilePath);
 
@@ -176,10 +176,6 @@ export class JobOutputProcessor {
 		try {
 			const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
 
-			// Ffmpeg Preset
-			const ffmpegPreset = this.outputPreset();
-			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
-
 			// Offset
 			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
 
@@ -196,6 +192,10 @@ export class JobOutputProcessor {
 			// Video filters for thumbnail
 			const videoFilters = this.buildVideoFilters();
 			if (videoFilters.length > 0) ffmpegArgs.push("-vf", videoFilters.join(","));
+
+			// Ffmpeg Preset
+			const ffmpegPreset = this.outputPreset();
+			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
 
 			ffmpegArgs.push(this.tempJobOutputFilePath);
 
@@ -225,12 +225,9 @@ export class JobOutputProcessor {
 		try {
 			const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
 
-			// Ffmpeg Preset
-			const ffmpegPreset = this.outputPreset();
-			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
-
 			if (["AUDIO"].includes(this.output.type) && this.job.input?.audio === false) {
-				// args.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
+				// ffmpegArgs.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
+				/*
 				ffmpegArgs.push(
 					"-f",
 					"lavfi",
@@ -239,8 +236,21 @@ export class JobOutputProcessor {
 					"-filter_complex",
 					"[0:a][1:a]amix=inputs=2:duration=longest"
 				);
+				*/
+
+				ffmpegArgs.splice(0, ffmpegArgs.length);
+				ffmpegArgs.push(
+					"-f",
+					"lavfi",
+					"-i",
+					"anullsrc=channel_layout=stereo:sample_rate=44100",
+					"-t",
+					String(this.output.config?.duration || this.jobInputDuration || 10.0),
+					"-shortest"
+				);
 			}
 
+			// if (this.job.input?.audio !== false) {
 			// Offset
 			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
 
@@ -264,6 +274,22 @@ export class JobOutputProcessor {
 				ffmpegArgs.push(
 					"-q:a",
 					String(this.calculateQuality(this.output.config.audio_quality || this.output.config?.quality, 0, 9))
+				);
+			}
+			// }
+
+			if (["VIDEO"].includes(this.output.type) && this.job.input?.video === false) {
+				const jobInputWidth = this.job.config?.width || this.job.input?.width || 1920;
+				const jobInputHeight = this.job.config?.height || this.job.input?.height || 1080;
+
+				ffmpegArgs.push(
+					"-f",
+					"lavfi",
+					"-i",
+					`color=c=black:s=${jobInputWidth}x${jobInputHeight}`,
+					"-t",
+					String(this.output.config?.duration || this.jobInputDuration || 10.0),
+					"-shortest"
 				);
 			}
 
@@ -319,7 +345,26 @@ export class JobOutputProcessor {
 				if (videoFilters.length > 0) ffmpegArgs.push("-vf", videoFilters.join(","));
 			}
 
+			// Ffmpeg Preset
+			const ffmpegPreset = this.outputPreset();
+			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
+
+			// Ffmpeg Minimum & Maximum Bit Rate
+			if (this.output.config?.bit_rate_min || this.job.config?.ffmpeg_bit_rate_min) {
+				if (this.output.config?.bit_rate_min) ffmpegArgs.push("-minrate", this.parseBitRate(this.output.config.bit_rate_min));
+				if (this.output.config?.bit_rate_max) ffmpegArgs.push("-maxrate", this.parseBitRate(this.output.config.bit_rate_max));
+				ffmpegArgs.push(
+					"-bufsize",
+					this.parseBitRate((this.output.config.bit_rate_max || this.job.config?.ffmpeg_bit_rate_max || 0) * 2)
+				);
+			}
+
 			ffmpegArgs.push(this.tempJobOutputFilePath);
+
+			// Ffmpeg Threads
+			if (this.output.config?.threads) {
+				ffmpegArgs.unshift("-threads", String(this.output.config?.threads ?? 0));
+			}
 
 			await this.runFfmpeg(ffmpegArgs);
 

@@ -79,8 +79,11 @@ export const config = {
 		},
 		ffmpeg: {
 			path: getEnv("VOLTAGE_UTILS_FFMPEG_PATH", isWindows ? "C:\\ffmpeg\\bin\\ffmpeg" : "ffmpeg"),
+			threads: getEnvNumberOrNull("VOLTAGE_UTILS_FFMPEG_THREADS", null), // e.g., number of threads to use
 			preset: getEnv("VOLTAGE_UTILS_FFMPEG_PRESET", FFMPEG_PRESETS[0]) as FFMPEG_PRESET, // e.g., "DEFAULT", "MEDIUM", "ULTRA_FAST", "SUPER_FAST", "VERY_FAST", "FASTER", "FAST", "SLOW", "SLOWER"
-			quality: getEnvNumberOrNull("VOLTAGE_UTILS_FFMPEG_QUALITY", null) // e.g., CRF value like 0 - 100
+			quality: getEnvNumberOrNull("VOLTAGE_UTILS_FFMPEG_QUALITY", null), // e.g., CRF value like 0 - 100
+			bit_rate_min: getEnvOrNull("VOLTAGE_UTILS_FFMPEG_BIT_RATE_MIN", null), // e.g., in bps
+			bit_rate_max: getEnvOrNull("VOLTAGE_UTILS_FFMPEG_BIT_RATE_MAX", null) // e.g., in bps
 		},
 		nsfw: {
 			model: getEnv("VOLTAGE_UTILS_NSFW_MODEL", NSFW_MODELS[0]) as NSFW_MODEL, // e.g., "MOBILE_NET_V2", "MOBILE_NET_V2_MID", "INCEPTION_V3"

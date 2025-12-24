@@ -80,11 +80,24 @@ const jobConfigSchema = Joi.object({
 		.compact(),
 
 	// FFMPEG Configs
+	ffmpeg_threads: Joi.number()
+		.range(0, undefined)
+		.default(appConfig.utils.ffmpeg.threads ?? null)
+		.failover(appConfig.utils.ffmpeg.threads ?? null)
+		.allow(null),
 	ffmpeg_preset: Joi.any().constantcase().validOrDefault(FFMPEG_PRESETS, appConfig.utils.ffmpeg.preset),
 	ffmpeg_quality: Joi.number()
 		.range(0, 100)
 		.default(appConfig.utils.ffmpeg.quality ?? null)
 		.failover(appConfig.utils.ffmpeg.quality ?? null)
+		.allow(null),
+	ffmpeg_bit_rate_min: Joi.number()
+		.default(appConfig.utils.ffmpeg.bit_rate_max ?? null)
+		.failover(appConfig.utils.ffmpeg.bit_rate_max ?? null)
+		.allow(null),
+	ffmpeg_bit_rate_max: Joi.number()
+		.default(appConfig.utils.ffmpeg.bit_rate_max ?? null)
+		.failover(appConfig.utils.ffmpeg.bit_rate_max ?? null)
 		.allow(null),
 
 	// NSFW Detection Configs
@@ -103,7 +116,11 @@ const jobConfigSchema = Joi.object({
 	whisper_model: Joi.string().constantcase().validOrDefault(WHISPER_MODELS, appConfig.utils.whisper.model),
 	whisper_with_cuda: Joi.boolean()
 		.default(appConfig.utils.whisper.with_cuda || false)
-		.failover(appConfig.utils.whisper.with_cuda || false)
+		.failover(appConfig.utils.whisper.with_cuda || false),
+
+	duration: Joi.number().range(1, undefined).failover(null).allow(null),
+	width: Joi.number().range(1, 7680).failover(null).allow(null),
+	height: Joi.number().range(1, 7680).failover(null).allow(null)
 });
 
 // Job input schemas for each type
@@ -178,7 +195,7 @@ const jobDestinationHttpSchema = Joi.object({
 	params: Joi.object().pattern(Joi.string().failover("_undefined"), Joi.any().failover(null).allow(null)),
 	username: Joi.string().failover(null).allow(null),
 	password: Joi.string().failover(null).allow(null),
-	url: Joi.string().uri().required()
+	url: Joi.string().uri().optional()
 });
 
 const jobDestinationS3LikeSchema = Joi.object({

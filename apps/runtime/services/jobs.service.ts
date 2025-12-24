@@ -1,5 +1,5 @@
 import { config as appConfig } from "@voltage/core/config";
-import { database, logger, getInstanceKey, getNow, subtractNow } from "@voltage/utils";
+import { database, logger, stats, getInstanceKey, getNow, subtractNow } from "@voltage/utils";
 import { createJobNotification } from "@/worker/notifier.js";
 
 import { WorkersProcessMap } from "@/types/index.js";
@@ -176,11 +176,17 @@ export const timeoutProcessingJobs = async (): Promise<void> => {
 		const now = getNow();
 
 		try {
+			const timeoutedJobs = await database
+				.table("jobs")
+				.whereNotIn("status", ["COMPLETED", "CANCELLED", "DELETED", "FAILED", "TIMEOUT"])
+				.where("updated_at", "<=", subtractNow(appConfig.jobs.process_timeout || 30 * 60 * 1000, "milliseconds")) // in milliseconds, default 30 minutes
+				.where("try_count", ">", 0);
+
+			const timeoutedJobsKeys = timeoutedJobs.map((r: any) => r.key).filter(Boolean);
+
 			await database
 				.table("jobs")
-				.whereNotIn("status", ["COMPLETED", "CANCELLED", "FAILED", "TIMEOUT"])
-				.where("updated_at", "<=", subtractNow(appConfig.jobs.process_timeout || 30 * 60 * 1000, "milliseconds")) // in milliseconds, default 30 minutes
-				.where("try_count", ">", 0)
+				.whereIn("key", timeoutedJobsKeys)
 				.update({
 					outcome: JSON.stringify({ message: "Job processing timed out!" }),
 					status: "TIMEOUT",
@@ -188,6 +194,30 @@ export const timeoutProcessingJobs = async (): Promise<void> => {
 					completed_at: now,
 					updated_at: now
 				});
+
+			const timeoutedJobsOutputs = await database
+				.table("jobs_outputs")
+				.whereIn("job_key", timeoutedJobsKeys)
+				.whereNotIn("status", ["COMPLETED", "CANCELLED", "DELETED", "FAILED", "TIMEOUT"]);
+
+			const timeoutedJobsOutputsKeys = timeoutedJobsOutputs.map((r: any) => r.key).filter(Boolean);
+
+			await database
+				.table("jobs_outputs")
+				.whereIn("key", timeoutedJobsOutputsKeys)
+				.update({
+					outcome: JSON.stringify({ message: "Job processing timed out!" }),
+					status: "TIMEOUT",
+					completed_at: now,
+					updated_at: now
+				});
+
+			await stats.update({
+				inputs_failed_count: timeoutedJobsOutputs.length,
+				// inputs_failed_duration: 0.0,
+				outputs_failed_count: timeoutedJobsOutputs.length
+				// outputs_failed_duration: 0.0,
+			});
 		} catch (error: Error | any) {
 			await logger.insert("INSTANCE", "ERROR", "Jobs could not be timed out!", { ...error });
 		}

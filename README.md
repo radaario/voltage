@@ -620,8 +620,11 @@ Delete all data (stats, logs, instances, jobs, notifications)
 | Variable                                   | Type   | Default   | Description                                 |
 | ------------------------------------------ | ------ | --------- | ------------------------------------------- |
 | `VOLTAGE_UTILS_FFMPEG_PATH`                | string | `ffmpeg`  | Path to FFMPEG binary                       |
+| `VOLTAGE_UTILS_FFMPEG_THREADS`             | number | -         | Number of threads to use (optional)         |
 | `VOLTAGE_UTILS_FFMPEG_PRESET`              | string | `DEFAULT` | Preset (DEFAULT, MEDIUM, ULTRA_FAST, etc.)  |
 | `VOLTAGE_UTILS_FFMPEG_QUALITY`             | number | -         | CRF quality value (0-100, optional)         |
+| `VOLTAGE_UTILS_FFMPEG_BIT_RATE_MIN`        | string | -         | Minimum bit rate in bps (optional)          |
+| `VOLTAGE_UTILS_FFMPEG_BIT_RATE_MAX`        | string | -         | Maximum bit rate in bps (optional)          |
 | `VOLTAGE_UTILS_FFPROBE_PATH`               | string | `ffprobe` | Path to FFPROBE binary                      |
 | `VOLTAGE_UTILS_FFPROBE_GENERAL_ATTRIBUTES` | string | -         | General attributes (e.g., DURATION)         |
 | `VOLTAGE_UTILS_FFPROBE_VIDEO_ATTRIBUTES`   | string | -         | Video attributes (e.g., WIDTH,HEIGHT,CODEC) |
