@@ -37,7 +37,10 @@
 		"build": "rimraf dist && tsup index.ts logger.ts storage.ts database.ts --format cjs,esm --dts",
 		"dev": "rimraf dist && tsup index.ts logger.ts storage.ts database.ts --format cjs,esm --dts --watch",
 		"typecheck": "tsc --noEmit",
-		"clean": "rimraf ./dist"
+		"clean": "rimraf ./dist",
+		"test": "vitest",
+		"test:watch": "vitest --watch",
+		"test:coverage": "vitest --coverage"
 	},
 	"dependencies": {
 		"@voltage/core": "workspace:*",
