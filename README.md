@@ -701,6 +701,7 @@ Delete all data (stats, logs, instances, jobs, notifications)
 | `VOLTAGE_INSTANCES_ONLINE_TIMEOUT`    | number  | `15000`      | Online timeout (ms)                          |
 | `VOLTAGE_INSTANCES_PURGE_AFTER`       | number  | `60000`      | Purge after (ms)                             |
 | `VOLTAGE_WORKERS_MAX`                 | number  | `1`          | Maximum workers per instance                 |
+| `VOLTAGE_WORKERS_PER_CPU_CORE`        | number  | `1`          | Workers per CPU core                         |
 | `VOLTAGE_WORKERS_BUSY_INTERVAL`       | number  | `1000`       | Worker busy check interval (ms)              |
 | `VOLTAGE_WORKERS_BUSY_TIMEOUT`        | number  | `300000`     | Worker busy timeout (ms)                     |
 | `VOLTAGE_WORKERS_IDLE_AFTER`          | number  | `10000`      | Worker idle after (ms)                       |
