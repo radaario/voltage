@@ -147,8 +147,8 @@ function validateRuntime(config: any): void {
 		return; // Skip validation if runtime is disabled
 	}
 
-	if (config.runtime.workers.per_cpu_core < 1) {
-		throw new ConfigValidationError("VOLTAGE_WORKERS_PER_CPU_CORE must be at least 1");
+	if (config.runtime.workers.max < 1) {
+		throw new ConfigValidationError("VOLTAGE_WORKERS_MAX must be at least 1");
 	}
 
 	if (config.runtime.maintain_interval < 1000) {
