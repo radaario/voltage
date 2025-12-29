@@ -47,8 +47,14 @@ export class JobThumbnailer {
 			if (this.jobInputDuration && offset > this.jobInputDuration) offset = this.jobInputDuration;
 
 			// Use ffmpeg to extract a frame at the middle timestamp and convert it to the desired format
-			const ffmpegArgs = [
-				"-y", // overwrite output file if exists
+			const ffmpegArgs: string[] = ["-y"];
+
+			// Ffmpeg Threads
+			if (this.job.config?.ffmpeg_threads) {
+				ffmpegArgs.push("-threads", String(this.job.config?.ffmpeg_threads ?? 0));
+			}
+
+			ffmpegArgs.push(
 				"-ss",
 				offset.toString(),
 				"-i",
@@ -59,7 +65,7 @@ export class JobThumbnailer {
 				"-quality",
 				(options.quality || appConfig.jobs.preview.quality || 75).toString(), // quality
 				tempJobInputPreviewFilePath
-			];
+			);
 
 			await new Promise<void>((resolve, reject) => {
 				let stderrData = "";

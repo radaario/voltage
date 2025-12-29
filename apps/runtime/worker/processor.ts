@@ -76,7 +76,14 @@ export class JobOutputProcessor {
 			const jobInputAudioFilePath = path.join(this.tempJobDir, "audio.wav");
 
 			// Convert input to WAV
-			const ffmpegArgs = ["-y", "-i", this.tempJobInputFilePath, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le"];
+			const ffmpegArgs: string[] = ["-y"];
+
+			// Ffmpeg Threads
+			if (this.output.config?.threads) {
+				ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
+			}
+
+			ffmpegArgs.push("-i", this.tempJobInputFilePath, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le");
 
 			// Offset
 			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
@@ -174,7 +181,14 @@ export class JobOutputProcessor {
 		}
 
 		try {
-			const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
+			const ffmpegArgs: string[] = ["-y"];
+
+			// Ffmpeg Threads
+			if (this.output.config?.threads) {
+				ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
+			}
+
+			ffmpegArgs.push("-i", this.tempJobInputFilePath);
 
 			// Offset
 			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
@@ -223,7 +237,14 @@ export class JobOutputProcessor {
 
 	private async processVideoOrAudio(): Promise<any> {
 		try {
-			const ffmpegArgs: string[] = ["-y", "-i", this.tempJobInputFilePath];
+			const ffmpegArgs: string[] = ["-y"];
+
+			// Ffmpeg Threads
+			if (this.output.config?.threads) {
+				ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
+			}
+
+			ffmpegArgs.push("-i", this.tempJobInputFilePath);
 
 			if (["AUDIO"].includes(this.output.type) && this.job.input?.audio === false) {
 				// ffmpegArgs.push("-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-map", "0:a?", "-map", "1:a");
@@ -360,11 +381,6 @@ export class JobOutputProcessor {
 			}
 
 			ffmpegArgs.push(this.tempJobOutputFilePath);
-
-			// Ffmpeg Threads
-			if (this.output.config?.threads) {
-				ffmpegArgs.unshift("-threads", String(this.output.config?.threads ?? 0));
-			}
 
 			await this.runFfmpeg(ffmpegArgs);
 
