@@ -1,0 +1,1238 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0" />
+		<title>Voltage API - Interactive Demo</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			:root {
+				--bg-primary: #ffffff;
+				--bg-secondary: #f8f9fa;
+				--bg-tertiary: #e9ecef;
+				--text-primary: #212529;
+				--text-secondary: #6c757d;
+				--border-color: #dee2e6;
+				--accent-color: #007bff;
+				--accent-hover: #0056b3;
+				--success-color: #28a745;
+				--error-color: #dc3545;
+				--warning-color: #ffc107;
+				--code-bg: #f4f4f4;
+			}
+
+			.dark-mode {
+				--bg-primary: #212121;
+				--bg-secondary: #181818;
+				--bg-tertiary: #2a2a2a;
+				--text-primary: #e9ecef;
+				--text-secondary: #adb5bd;
+				--border-color: #474747;
+				--accent-color: #4dabf7;
+				--accent-hover: #339af0;
+				--code-bg: #1a1a1a;
+			}
+
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+				background-color: var(--bg-primary);
+				color: var(--text-primary);
+				line-height: 1.6;
+				transition:
+					background-color 0.3s,
+					color 0.3s;
+			}
+
+			.container {
+				max-width: 1200px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+
+			/* Header */
+			header {
+				background-color: var(--bg-secondary);
+				padding: 30px 20px;
+				margin-bottom: 40px;
+				border-bottom: 2px solid var(--border-color);
+				text-align: center;
+			}
+
+			.logo-container {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 15px;
+				margin-bottom: 15px;
+			}
+
+			.logo-container h1 {
+				background-color: black;
+				color: white;
+				padding: 2px 20px;
+				margin-left: 15px;
+				font-size: 32px;
+				border-radius: 10px;
+			}
+
+			.dark-mode .logo-container h1 {
+				background-color: white;
+				color: black;
+			}
+
+			.logo {
+				height: 60px;
+			}
+
+			h1 {
+				font-size: 2.5rem;
+				font-weight: 700;
+				margin-bottom: 10px;
+			}
+
+			.subtitle {
+				color: var(--text-secondary);
+				font-size: 1.1rem;
+			}
+
+			.theme-toggle {
+				position: absolute;
+				top: 20px;
+				right: 20px;
+				padding: 10px 20px;
+				background-color: var(--bg-tertiary);
+				border: 1px solid var(--border-color);
+				border-radius: 8px;
+				cursor: pointer;
+				font-size: 1rem;
+				color: var(--text-primary);
+				transition: all 0.3s;
+			}
+
+			.theme-toggle:hover {
+				background-color: var(--accent-color);
+				color: white;
+				border-color: var(--accent-color);
+			}
+
+			/* Main Content */
+			.section {
+                scroll-margin-top: 30px;
+				background-color: var(--bg-secondary);
+				border-radius: 12px;
+				padding: 30px;
+				margin-bottom: 30px;
+				border: 1px solid var(--border-color);
+			}
+
+			.section-title {
+				font-size: 1.8rem;
+				margin-bottom: 20px;
+				font-weight: 600;
+				display: flex;
+				align-items: center;
+				gap: 10px;
+			}
+
+			.section-description {
+				color: var(--text-secondary);
+				margin-bottom: 20px;
+				line-height: 1.7;
+			}
+
+			/* Form Elements */
+			.form-group {
+				margin-bottom: 20px;
+			}
+
+			label {
+				display: block;
+				margin-bottom: 8px;
+				font-weight: 600;
+				color: var(--text-primary);
+			}
+
+			input[type="text"],
+			input[type="url"],
+			input[type="password"],
+			select,
+			textarea {
+				width: 100%;
+				padding: 12px;
+				border: 1px solid var(--border-color);
+				border-radius: 8px;
+				font-size: 1rem;
+				background-color: var(--bg-primary);
+				color: var(--text-primary);
+				transition: border-color 0.3s;
+			}
+
+			input:focus,
+			select:focus,
+			textarea:focus {
+				outline: none;
+				border-color: var(--accent-color);
+			}
+
+			textarea {
+				min-height: 150px;
+				font-family: "Courier New", monospace;
+				resize: vertical;
+			}
+
+			/* Buttons */
+			.btn {
+				padding: 12px 24px;
+				border: none;
+				border-radius: 8px;
+				font-size: 1rem;
+				font-weight: 600;
+				cursor: pointer;
+				transition: all 0.3s;
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+			}
+
+			.btn-primary {
+				background-color: var(--accent-color);
+				color: white;
+			}
+
+			.btn-primary:hover:not(:disabled) {
+				background-color: var(--accent-hover);
+				transform: translateY(-2px);
+				box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+			}
+
+			.btn-secondary {
+				background-color: var(--bg-tertiary);
+				color: var(--text-primary);
+				border: 1px solid var(--border-color);
+			}
+
+			.btn-secondary:hover:not(:disabled) {
+				background-color: var(--border-color);
+			}
+
+			.btn:disabled {
+				opacity: 0.5;
+				cursor: not-allowed;
+			}
+
+			.btn-group {
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+			}
+
+			/* Response Display */
+			.response-container {
+				margin-top: 20px;
+			}
+
+			.response-box {
+				background-color: var(--code-bg);
+				border: 1px solid var(--border-color);
+				border-radius: 8px;
+				padding: 20px;
+				overflow-x: auto;
+			}
+
+			pre {
+				margin: 0;
+				font-family: "Courier New", monospace;
+				font-size: 0.9rem;
+				white-space: pre-wrap;
+				word-wrap: break-word;
+			}
+
+			.status-badge {
+				display: inline-block;
+				padding: 4px 12px;
+				border-radius: 20px;
+				font-size: 0.85rem;
+				font-weight: 600;
+				margin-bottom: 10px;
+			}
+
+			.status-success {
+				background-color: var(--success-color);
+				color: white;
+			}
+
+			.status-error {
+				background-color: var(--error-color);
+				color: white;
+			}
+
+			.status-pending {
+				background-color: var(--warning-color);
+				color: #000;
+			}
+
+			/* Loading Spinner */
+			.spinner {
+				display: inline-block;
+				width: 16px;
+				height: 16px;
+				border: 2px solid rgba(255, 255, 255, 0.3);
+				border-top-color: white;
+				border-radius: 50%;
+				animation: spin 0.6s linear infinite;
+			}
+
+			@keyframes spin {
+				to {
+					transform: rotate(360deg);
+				}
+			}
+
+			/* Header */
+			.header {
+				display: flex;
+				width: 100%;
+				flex-direction: column;
+				align-items: center;
+				justify-self: center;
+			}
+
+			/* Code Highlight */
+			.highlight {
+				background-color: var(--warning-color);
+				padding: 2px 6px;
+				border-radius: 4px;
+				color: #000;
+				font-weight: 600;
+			}
+
+			/* Footer */
+			footer {
+				text-align: center;
+				padding: 30px 20px;
+				color: var(--text-secondary);
+				border-top: 1px solid var(--border-color);
+				margin-top: 50px;
+			}
+
+			footer .developed-by-logo {
+				height: 28px;
+				margin-top: 10px;
+				margin-bottom: 10px;
+				vertical-align: middle;
+			}
+
+			footer a {
+				color: var(--accent-color);
+				text-decoration: none;
+			}
+
+			footer a:hover {
+				text-decoration: underline;
+			}
+
+			/* Tabs */
+			.tabs {
+                position: relative;
+				display: flex;
+				gap: 10px;
+                overflow: auto;
+				margin-bottom: 20px;
+			}
+            
+            .tabs:before{
+                content: "";
+                z-index: 0;
+                position: absolute;
+                left: 0;
+                bottom: 0;
+                width: 100%;
+                border-bottom: 2px solid var(--border-color);
+            }
+
+			.tab {
+                position: relative;
+				padding: 12px 24px;
+				background: none;
+				border: none;
+				border-bottom: 3px solid transparent;
+				cursor: pointer;
+				font-size: 1rem;
+				font-weight: 600;
+				color: var(--text-secondary);
+				transition: all 0.3s;
+			}
+            
+			.tab.active {
+				color: var(--accent-color);
+				border-bottom-color: var(--accent-color);
+			}
+
+			.tab:hover {
+				color: var(--text-primary);
+			}
+
+			.tab-content {
+				display: none;
+			}
+
+			.tab-content.active {
+				display: block;
+			}
+
+			/* Info Box */
+			.info-box {
+				background-color: rgba(0, 123, 255, 0.1);
+				border-left: 4px solid var(--accent-color);
+				padding: 15px;
+				border-radius: 4px;
+				margin-bottom: 20px;
+			}
+
+			.info-box strong {
+				display: block;
+				margin-bottom: 5px;
+			}
+
+			/* Grid Layout */
+			.grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+				gap: 20px;
+				margin-top: 20px;
+			}
+
+			.card {
+				background-color: var(--bg-tertiary);
+				border: 1px solid var(--border-color);
+				border-radius: 8px;
+				padding: 20px;
+			}
+
+			.card h3 {
+				margin-bottom: 15px;
+				font-size: 1.3rem;
+			}
+
+			.card p {
+				color: var(--text-secondary);
+				margin-bottom: 15px;
+			}
+
+			/* Responsive */
+			@media (max-width: 768px) {
+				.theme-toggle {
+					position: relative;
+					top: 0;
+					right: 0;
+					margin: 20px auto;
+					display: block;
+				}
+
+				h1 {
+					font-size: 2rem;
+				}
+
+				.section {
+					padding: 20px;
+				}
+
+				.btn-group {
+					flex-direction: column;
+				}
+
+				.btn {
+					width: 100%;
+					justify-content: center;
+				}
+
+                .logo-container{
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                }
+
+                .logo-container h1 {
+                    font-size: 5vw;
+                }
+                
+                .logo{
+                    height: 9vw;
+                }
+
+                .grid {
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 15px;
+                    margin-top: 15px;
+                }          
+                
+			}
+		</style>
+	</head>
+	<body>
+		<button
+			class="theme-toggle"
+			onclick="toggleTheme()">
+			🌙 Toggle Dark Mode
+		</button>
+
+		<header class="header">
+			<div class="logo-container">
+				<a href="https://github.com/radaario/voltage" target="_blank">
+                    <img
+                        id="voltage-logo"
+                        src="../assets/voltage-logo-dark.png"
+                        class="logo"
+                        alt="Voltage" />
+                </a>
+				<h1>API Demo</h1>
+			</div>
+			<p class="subtitle">Interactive API Integration Example - Test and Explore Video Encoding Endpoints</p>
+		</header>
+
+		<div class="container">
+			<!-- Quick Start Section -->
+			<div class="section">
+				<h2 class="section-title">🚀 Quick Start</h2>
+				<p class="section-description">
+					This interactive demo allows you to test Voltage API endpoints directly from your browser. Configure your API endpoint
+					below and explore various operations like health checks, authentication, job submission, and monitoring.
+				</p>
+
+				<div class="info-box">
+					<strong>📌 Before you start:</strong>
+					Make sure your Voltage instance is running and accessible. Default local endpoint is <code>http://localhost:4000</code>
+				</div>
+
+				<div class="form-group">
+					<label for="apiEndpoint">API Endpoint URL</label>
+					<input
+						type="url"
+						id="apiEndpoint"
+						placeholder="http://localhost:4000"
+						value="http://localhost:4000" />
+				</div>
+			</div>
+
+			<!-- Authentication Section -->
+			<div class="section">
+				<h2 class="section-title">🔐 Authentication</h2>
+				<p class="section-description">
+					Authenticate with the API to receive an access token for protected endpoints. Your token will be saved and used automatically for all subsequent requests.
+				</p>
+
+				<div class="form-group">
+					<label for="apiPassword">API Password</label>
+					<input
+						type="password"
+						id="apiPassword"
+						placeholder="Enter your password" />
+				</div>
+
+				<button
+					class="btn btn-primary"
+					onclick="authenticate()">
+					<span id="auth-spinner"></span>
+					Authenticate
+				</button>
+				<div
+					id="auth-response"
+					class="response-container"></div>
+			</div>
+
+            <div class="section">
+			    <!-- API Operations Tabs -->
+				<h2 class="section-title">🔧 API Operations</h2>
+
+				<div class="tabs">
+					<button
+						class="tab active"
+						onclick="switchTab('health')">
+						Health Check
+					</button>
+					<button
+						class="tab"
+						onclick="switchTab('config')">
+						Config
+					</button>
+					<button
+						class="tab"
+						onclick="switchTab('submit')">
+						Submit Job
+					</button>
+					<button
+						class="tab"
+						onclick="switchTab('jobs')">
+						List Jobs
+					</button>
+					<button
+						class="tab"
+						onclick="switchTab('instances')">
+						Instances
+					</button>
+					<button
+						class="tab"
+						onclick="switchTab('notifications')">
+						Notifications
+					</button>
+					<button
+						class="tab"
+						onclick="switchTab('logs')">
+						Logs
+					</button>
+					<button
+						class="tab"
+						onclick="switchTab('stats')">
+						Statistics
+					</button>
+				</div>
+
+				<!-- Health Check Tab -->
+				<div
+					id="health"
+					class="tab-content active">
+					<h3>Health Check</h3>
+					<p class="section-description">Check if your Voltage instance is running and healthy.</p>
+					<button
+						class="btn btn-primary"
+						onclick="checkHealth()">
+						<span id="health-spinner"></span>
+						Check Health Status
+					</button>
+					<div
+						id="health-response"
+						class="response-container"></div>
+				</div>
+
+				<!-- Config Tab -->
+				<div
+					id="config"
+					class="tab-content">
+					<h3>Configuration</h3>
+					<p class="section-description">View the current Voltage configuration settings.</p>
+					<button
+						class="btn btn-primary"
+						onclick="getConfig()">
+						<span id="config-spinner"></span>
+						Get Configuration
+					</button>
+					<div
+						id="config-response"
+						class="response-container"></div>
+				</div>
+
+				<!-- Submit Job Tab -->
+				<div
+					id="submit"
+					class="tab-content">
+					<h3>Submit Encoding Job</h3>
+					<p class="section-description">
+						Submit a new video encoding job to Voltage. Modify the JSON payload below or use the default example.
+					</p>
+
+					<div class="form-group">
+						<label for="jobPayload">Job Payload (JSON)</label>
+						<textarea id="jobPayload">
+{
+  "input": {
+    "type": "HTTP",
+    "url": "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4",
+    "nsfw_is_disabled": true
+  },
+  "outputs": [
+    {
+      "type": "VIDEO",
+      "name": "Video 720p",
+      "path": "output_720p.mp4",
+      "format": "MP4",
+      "width": 1280,
+      "height": 720,
+      "quality": 3,
+      "video_codec": "libx264",
+      "audio_codec": "aac"
+    },
+    {
+      "type": "THUMBNAIL",
+      "name": "Thumbnail",
+      "path": "thumbnail.jpg",
+      "format": "JPEG",
+      "width": 640,
+      "height": 360,
+      "offset": 2
+    }
+  ],
+  "metadata": {
+    "demo": "voltage-api-integration",
+    "timestamp": "2025-12-18T00:00:00Z"
+  }
+}</textarea>
+					</div>
+
+					<button
+						class="btn btn-primary"
+						onclick="submitJob()">
+						<span id="submit-spinner"></span>
+						Submit Job
+					</button>
+					<div
+						id="submit-response"
+						class="response-container"></div>
+				</div>
+                
+
+				<!-- List Jobs Tab -->
+				<div
+					id="jobs"
+					class="tab-content">
+					<h3>List Encoding Jobs</h3>
+					<p class="section-description">Retrieve the list of encoding jobs from your Voltage instance.</p>
+
+					<div class="form-group">
+						<label for="jobStatus">Filter by Status (optional)</label>
+						<select id="jobStatus">
+							<option value="">All</option>
+							<option value="PENDING">PENDING</option>
+							<option value="PROCESSING">PROCESSING</option>
+							<option value="COMPLETED">COMPLETED</option>
+							<option value="FAILED">FAILED</option>
+						</select>
+					</div>
+
+					<div class="form-group">
+						<label for="jobLimit">Results per page</label>
+						<input
+							type="text"
+							id="jobLimit"
+							value="10"
+							placeholder="10" />
+					</div>
+
+					<button
+						class="btn btn-primary"
+						onclick="listJobs()">
+						<span id="jobs-spinner"></span>
+						Fetch Jobs
+					</button>
+					<div
+						id="jobs-response"
+						class="response-container"></div>
+				</div>
+
+				<!-- Instances Tab -->
+				<div
+					id="instances"
+					class="tab-content">
+					<h3>List Instances</h3>
+					<p class="section-description">View all processing instances and their workers.</p>
+
+					<button
+						class="btn btn-primary"
+						onclick="listInstances()">
+						<span id="instances-spinner"></span>
+						Fetch Instances
+					</button>
+					<div
+						id="instances-response"
+						class="response-container"></div>
+				</div>
+
+				<!-- Notifications Tab -->
+				<div
+					id="notifications"
+					class="tab-content">
+					<h3>Job Notifications</h3>
+					<p class="section-description">View webhook notifications sent for job status updates.</p>
+
+					<div class="form-group">
+						<label for="notificationLimit">Results per page</label>
+						<input
+							type="text"
+							id="notificationLimit"
+							value="10"
+							placeholder="10" />
+					</div>
+
+					<button
+						class="btn btn-primary"
+						onclick="listNotifications()">
+						<span id="notifications-spinner"></span>
+						Fetch Notifications
+					</button>
+					<div
+						id="notifications-response"
+						class="response-container"></div>
+				</div>
+
+				<!-- Logs Tab -->
+				<div
+					id="logs"
+					class="tab-content">
+					<h3>System Logs</h3>
+					<p class="section-description">View system logs and activity.</p>
+
+					<div class="form-group">
+						<label for="logLimit">Results per page</label>
+						<input
+							type="text"
+							id="logLimit"
+							value="25"
+							placeholder="25" />
+					</div>
+
+					<button
+						class="btn btn-primary"
+						onclick="listLogs()">
+						<span id="logs-spinner"></span>
+						Fetch Logs
+					</button>
+					<div
+						id="logs-response"
+						class="response-container"></div>
+				</div>
+
+				<!-- Statistics Tab -->
+				<div
+					id="stats"
+					class="tab-content">
+					<h3>Statistics</h3>
+					<p class="section-description">View statistics about your Voltage instance performance and usage.</p>
+
+					<button
+						class="btn btn-primary"
+						onclick="getStats()">
+						<span id="stats-spinner"></span>
+						Get Statistics
+					</button>
+					<div
+						id="stats-response"
+						class="response-container"></div>
+				</div>
+                </div>
+
+                <!-- API Reference Cards -->
+                <div class="section">
+                    <h2 class="section-title">📚 API Reference</h2>
+                    <p class="section-description">
+                        Quick reference for available Voltage API endpoints. Click on any operation above to test them interactively.
+                    </p>
+    
+                    <div class="grid">
+                        <div class="card">
+                            <h3>🔍 Health & Config</h3>
+                            <p><code>GET /status</code> - Service health check</p>
+                            <p><code>GET /config</code> - Configuration info</p>
+                        </div>
+    
+                        <div class="card">
+                            <h3>🔐 Authentication</h3>
+                            <p><code>POST /auth</code> - Get access token</p>
+                        </div>
+    
+                        <div class="card">
+                            <h3>🎬 Jobs</h3>
+                            <p><code>GET /jobs</code> - List jobs</p>
+                            <p><code>POST /jobs</code> - Create job</p>
+                            <p><code>POST /jobs/retry</code> - Retry job</p>
+                            <p><code>DELETE /jobs</code> - Delete jobs</p>
+                        </div>
+    
+                        <div class="card">
+                            <h3>📊 Statistics</h3>
+                            <p><code>GET /stats</code> - Get statistics</p>
+                            <p><code>DELETE /stats</code> - Delete stats</p>
+                        </div>
+    
+                        <div class="card">
+                            <h3>📝 Logs</h3>
+                            <p><code>GET /logs</code> - Fetch logs</p>
+                            <p><code>DELETE /logs</code> - Delete logs</p>
+                        </div>
+    
+                        <div class="card">
+                            <h3>⚙️ Instances</h3>
+                            <p><code>GET /instances</code> - List instances</p>
+                            <p><code>GET /instances/workers</code> - List workers</p>
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- Features Section -->
+                <div class="section">
+                    <h2 class="section-title">✨ Voltage Features</h2>
+                    <div class="grid">
+                        <div class="card">
+                            <h3>🎥 Video Encoding</h3>
+                            <p>FFMPEG-based encoding with full customization support. Multiple output formats, codecs, and quality settings.</p>
+                        </div>
+    
+                        <div class="card">
+                            <h3>📦 Multi-Storage</h3>
+                            <p>Support for local, S3, FTP, SFTP storage backends. Easy integration with your existing infrastructure.</p>
+                        </div>
+    
+                        <div class="card">
+                            <h3>🤖 AI-Powered</h3>
+                            <p>Built-in Whisper transcription and NSFW detection for intelligent content processing.</p>
+                        </div>
+    
+                        <div class="card">
+                            <h3>📊 Real-time Monitoring</h3>
+                            <p>Track job progress, view statistics, and monitor system health through the web interface.</p>
+                        </div>
+    
+                        <div class="card">
+                            <h3>🔄 Job Queue</h3>
+                            <p>Priority-based job queue with retry mechanisms and webhook notifications.</p>
+                        </div>
+    
+                        <div class="card">
+                            <h3>⚡ Scalable</h3>
+                            <p>Multi-instance architecture for horizontal scaling and parallel processing.</p>
+                        </div>
+                    </div>
+                </div>
+			</div>
+		</div>
+
+		<footer>
+			<p>
+				<strong>Voltage</strong> - Open-source video encoding API service<br />
+				<a
+					href="https://www.radaar.io/"
+					target="_blank"
+					><img
+						id="radaar-logo"
+						src="../assets/radaar-developed-by-dark.svg"
+						class="developed-by-logo"
+						alt="Developed by RADAAR" /></a
+				><br />
+				<a
+					href="https://github.com/radaario/voltage"
+					target="_blank"
+					>GitHub</a
+				>
+				|
+				<a
+					href="https://github.com/radaario/voltage/blob/main/README.md"
+					target="_blank"
+					>Documentation</a
+				>
+				|
+				<a
+					href="https://github.com/radaario/voltage/blob/main/LICENSE"
+					target="_blank"
+					>MIT License</a
+				>
+			</p>
+		</footer>
+
+		<script>
+			let authToken = null;
+
+			// Theme Management
+			function toggleTheme() {
+				document.body.classList.toggle("dark-mode");
+				const isDark = document.body.classList.contains("dark-mode");
+				localStorage.setItem("theme", isDark ? "dark" : "light");
+				document.querySelector(".theme-toggle").textContent = isDark ? "☀️ Toggle Light Mode" : "🌙 Toggle Dark Mode";
+
+				// Update logos based on theme
+				const voltageLogo = document.getElementById("voltage-logo");
+				const radaarLogo = document.getElementById("radaar-logo");
+
+				if (isDark) {
+					voltageLogo.src = "../assets/voltage-logo-light.png";
+					radaarLogo.src = "../assets/radaar-developed-by-light.svg";
+				} else {
+					voltageLogo.src = "../assets/voltage-logo-dark.png";
+					radaarLogo.src = "../assets/radaar-developed-by-dark.svg";
+				}
+			}
+
+			// Load theme from localStorage
+			if (localStorage.getItem("theme") === "dark") {
+				document.body.classList.add("dark-mode");
+				document.querySelector(".theme-toggle").textContent = "☀️ Toggle Light Mode";
+
+				// Set logos for dark mode
+				document.getElementById("voltage-logo").src = "../assets/voltage-logo-light.png";
+				document.getElementById("radaar-logo").src = "../assets/radaar-developed-by-light.svg";
+			}
+
+			// Load saved authentication token from localStorage
+			const savedToken = localStorage.getItem("voltage_auth_token");
+
+			if (savedToken) {
+				authToken = savedToken;
+			}
+
+			// Tab Management
+			function switchTab(tabName) {
+				// Hide all tabs
+				document.querySelectorAll(".tab-content").forEach((content) => {
+					content.classList.remove("active");
+				});
+				document.querySelectorAll(".tab").forEach((tab) => {
+					tab.classList.remove("active");
+				});
+
+				// Show selected tab
+				document.getElementById(tabName).classList.add("active");
+				event.target.classList.add("active");
+			}
+
+			// Helper Functions
+			function getApiEndpoint() {
+				return document.getElementById("apiEndpoint").value.replace(/\/$/, "");
+			}
+
+			function getAuthHeaders() {
+				const headers = {
+					"Content-Type": "application/json"
+				};
+				if (authToken) {
+					headers["Authorization"] = `Bearer ${authToken}`;
+					console.log("🔑 Using auth token:", authToken.substring(0, 20) + "...");
+					console.log("📤 Authorization header:", headers["Authorization"]);
+				} else {
+					console.log("⚠️ No auth token available");
+				}
+				return headers;
+			}
+
+			function showLoading(spinnerId) {
+				const spinner = document.getElementById(spinnerId);
+				spinner.innerHTML = '<span class="spinner"></span>';
+			}
+
+			function hideLoading(spinnerId) {
+				const spinner = document.getElementById(spinnerId);
+				spinner.innerHTML = "";
+			}
+
+			function displayResponse(containerId, status, data, statusCode, scroll = true) {
+				const container = document.getElementById(containerId);
+				const containerSection = container.closest(".section");
+				const statusClass = status === "success" ? "status-success" : status === "error" ? "status-error" : "status-pending";
+
+				container.innerHTML = `
+                    <div class="response-box">
+                        <span class="status-badge ${statusClass}">
+                            ${status.toUpperCase()} ${statusCode ? `(${statusCode})` : ""}
+                        </span>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+
+                if(scroll && containerSection){
+                    containerSection.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+			}
+
+			// API Operations
+			async function checkHealth({ scroll = true } = {}) {
+				showLoading("health-spinner");
+				try {
+					const response = await fetch(`${getApiEndpoint()}/status`);
+					const data = await response.json();
+					displayResponse("health-response", response.ok ? "success" : "error", data, response.status, scroll);
+				} catch (error) {
+					displayResponse("health-response", "error", { error: error.message }, scroll);
+				} finally {
+					hideLoading("health-spinner");
+				}
+			}
+
+			async function authenticate() {
+				showLoading("auth-spinner");
+				const password = document.getElementById("apiPassword").value;
+
+				if (!password) {
+					displayResponse("auth-response", "error", { error: "Please enter a password" });
+					hideLoading("auth-spinner");
+					return;
+				}
+
+				try {
+					const response = await fetch(`${getApiEndpoint()}/auth`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ password })
+					});
+
+					const data = await response.json();
+					console.log("🔐 Auth response:", data);
+
+					if (response.ok && data.data && data.data.token) {
+						authToken = data.data.token;
+						// Save token to localStorage
+						localStorage.setItem("voltage_auth_token", authToken);
+						console.log("✅ Token saved:", authToken.substring(0, 20) + "...");
+						displayResponse("auth-response", "success", data, response.status);
+					} else {
+						console.error("❌ Auth failed:", data);
+						displayResponse("auth-response", "error", data, response.status);
+					}
+				} catch (error) {
+					displayResponse("auth-response", "error", { error: error.message });
+				} finally {
+					hideLoading("auth-spinner");
+				}
+			}
+
+			async function submitJob() {
+				showLoading("submit-spinner");
+
+				let payload;
+				try {
+					payload = JSON.parse(document.getElementById("jobPayload").value);
+				} catch (error) {
+					displayResponse("submit-response", "error", { error: "Invalid JSON payload: " + error.message });
+					hideLoading("submit-spinner");
+					return;
+				}
+
+				try {
+					const headers = getAuthHeaders();
+					console.log("📤 Submitting job with headers:", headers);
+					
+					const response = await fetch(`${getApiEndpoint()}/jobs?client=FRONTEND`, {
+						method: "POST",
+						headers: headers,
+						body: JSON.stringify(payload)
+					});
+
+					const data = await response.json();
+					console.log("📥 Job response:", response.status, data);
+					displayResponse("submit-response", response.ok ? "success" : "error", data, response.status);
+				} catch (error) {
+					displayResponse("submit-response", "error", { error: error.message });
+				} finally {
+					hideLoading("submit-spinner");
+				}
+			}
+
+			async function listJobs() {
+				showLoading("jobs-spinner");
+
+				const status = document.getElementById("jobStatus").value;
+				const limit = document.getElementById("jobLimit").value || 10;
+
+				let url = `${getApiEndpoint()}/jobs?client=FRONTEND&limit=${limit}`;
+				if (status) url += `&status=${status}`;
+
+				try {
+					const response = await fetch(url, {
+						headers: getAuthHeaders()
+					});
+
+					const data = await response.json();
+					displayResponse("jobs-response", response.ok ? "success" : "error", data, response.status);
+				} catch (error) {
+					displayResponse("jobs-response", "error", { error: error.message });
+				} finally {
+					hideLoading("jobs-spinner");
+				}
+			}
+
+			async function getStats() {
+				showLoading("stats-spinner");
+
+				try {
+					const response = await fetch(`${getApiEndpoint()}/stats?client=FRONTEND`, {
+						headers: getAuthHeaders()
+					});
+
+					const data = await response.json();
+					displayResponse("stats-response", response.ok ? "success" : "error", data, response.status);
+				} catch (error) {
+					displayResponse("stats-response", "error", { error: error.message });
+				} finally {
+					hideLoading("stats-spinner");
+				}
+			}
+
+			async function getConfig() {
+				showLoading("config-spinner");
+
+				try {
+					const response = await fetch(`${getApiEndpoint()}/config`);
+					const data = await response.json();
+					displayResponse("config-response", response.ok ? "success" : "error", data, response.status);
+				} catch (error) {
+					displayResponse("config-response", "error", { error: error.message });
+				} finally {
+					hideLoading("config-spinner");
+				}
+			}
+
+			async function listInstances() {
+				showLoading("instances-spinner");
+
+				try {
+					const response = await fetch(`${getApiEndpoint()}/instances?client=FRONTEND`, {
+						headers: getAuthHeaders()
+					});
+
+					const data = await response.json();
+					displayResponse("instances-response", response.ok ? "success" : "error", data, response.status);
+				} catch (error) {
+					displayResponse("instances-response", "error", { error: error.message });
+				} finally {
+					hideLoading("instances-spinner");
+				}
+			}
+
+			async function listNotifications() {
+				showLoading("notifications-spinner");
+
+				const limit = document.getElementById("notificationLimit").value || 10;
+				const url = `${getApiEndpoint()}/jobs/notifications?client=FRONTEND&limit=${limit}`;
+
+				try {
+					const response = await fetch(url, {
+						headers: getAuthHeaders()
+					});
+
+					const data = await response.json();
+					displayResponse("notifications-response", response.ok ? "success" : "error", data, response.status);
+				} catch (error) {
+					displayResponse("notifications-response", "error", { error: error.message });
+				} finally {
+					hideLoading("notifications-spinner");
+				}
+			}
+
+			async function listLogs() {
+				showLoading("logs-spinner");
+
+				const limit = document.getElementById("logLimit").value || 25;
+				const url = `${getApiEndpoint()}/logs?client=FRONTEND&limit=${limit}`;
+
+				try {
+					const response = await fetch(url, {
+						headers: getAuthHeaders()
+					});
+
+					const data = await response.json();
+					displayResponse("logs-response", response.ok ? "success" : "error", data, response.status);
+				} catch (error) {
+					displayResponse("logs-response", "error", { error: error.message });
+				} finally {
+					hideLoading("logs-spinner");
+				}
+			}
+
+			// Auto-check health on page load
+			window.addEventListener("load", () => {
+				setTimeout(() => checkHealth({ scroll: false }), 500);
+			});
+		</script>
+	</body>
+</html>
