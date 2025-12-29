@@ -50,9 +50,11 @@ export class JobThumbnailer {
 			const ffmpegArgs: string[] = ["-y"];
 
 			// Ffmpeg Threads
+			/*
 			if (this.job.config?.ffmpeg_threads) {
 				ffmpegArgs.push("-threads", String(this.job.config?.ffmpeg_threads ?? 0));
 			}
+			*/
 
 			ffmpegArgs.push(
 				"-ss",

@@ -79,9 +79,8 @@ export class JobOutputProcessor {
 			const ffmpegArgs: string[] = ["-y"];
 
 			// Ffmpeg Threads
-			if (this.output.config?.threads) {
-				ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
-			}
+			const ffmpegThreads = this.outputThreads();
+			if (!ffmpegThreads) ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
 
 			ffmpegArgs.push("-i", this.tempJobInputFilePath, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le");
 
@@ -184,9 +183,8 @@ export class JobOutputProcessor {
 			const ffmpegArgs: string[] = ["-y"];
 
 			// Ffmpeg Threads
-			if (this.output.config?.threads) {
-				ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
-			}
+			const ffmpegThreads = this.outputThreads();
+			if (!ffmpegThreads) ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
 
 			ffmpegArgs.push("-i", this.tempJobInputFilePath);
 
@@ -240,9 +238,8 @@ export class JobOutputProcessor {
 			const ffmpegArgs: string[] = ["-y"];
 
 			// Ffmpeg Threads
-			if (this.output.config?.threads) {
-				ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
-			}
+			const ffmpegThreads = this.outputThreads();
+			if (!ffmpegThreads) ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
 
 			ffmpegArgs.push("-i", this.tempJobInputFilePath);
 
@@ -589,6 +586,20 @@ export class JobOutputProcessor {
 		// return bottom + (value / 100) * (top - bottom);
 		// return parseInt(String(bottom + (value / 100) * (top - bottom)));
 		return Math.round(bottom + (value / 100) * (top - bottom));
+	}
+
+	private outputThreads(): number | null {
+		let threads = null;
+
+		if (this.job.config?.ffmpeg_threads !== undefined) {
+			threads = this.job.config.ffmpeg_threads;
+		}
+
+		if (this.output.config?.threads !== undefined) {
+			threads = this.output.config.threads;
+		}
+
+		return threads;
 	}
 
 	private outputPreset(): string | null {
