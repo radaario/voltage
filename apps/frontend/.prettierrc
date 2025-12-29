@@ -4,7 +4,7 @@
 	"arrowParens": "always",
 	"singleQuote": false,
 	"jsxSingleQuote": false,
-	"printWidth": 140,
+	"printWidth": 135,
 	"bracketSameLine": true,
 	"trailingComma": "none",
 	"bracketSpacing": true,

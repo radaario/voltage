@@ -15,7 +15,9 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, config }) =>
 		<Modal
 			{...modalProps}
 			onClose={onClose}
+			className="h-[75vh]"
 			size="3xl">
+			{/* Modal Header */}
 			<Modal.Header
 				onClose={modalProps.handleClose}
 				showCloseButton={false}>
@@ -46,12 +48,11 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, config }) =>
 
 			{/* Tab Content */}
 			<Modal.Content>
-				<div className="h-[60vh] overflow-y-auto rounded-md break-words">
-					<JsonViewer
-						data={config}
-						emptyMessage="No configuration available"
-					/>
-				</div>
+				<JsonViewer
+					data={config}
+					className="break-words"
+					emptyMessage="No configuration available"
+				/>
 			</Modal.Content>
 		</Modal>
 	);

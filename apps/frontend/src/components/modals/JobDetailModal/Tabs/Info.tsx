@@ -6,13 +6,11 @@ const Info: React.FC = () => {
 	const { job } = useOutletContext<JobOutletContext>();
 
 	return (
-		<div className="space-y-6">
-			{/* Info Table */}
-			<TableKeyValuePreview
-				data={job}
-				excludedKeys={["input", "instance_key", "outputs", "outcome", "config", "destination", "notification", "metadata"]}
-			/>
-		</div>
+		// Info Table
+		<TableKeyValuePreview
+			data={job}
+			excludedKeys={["input", "instance_key", "outputs", "outcome", "config", "destination", "notification", "metadata"]}
+		/>
 	);
 };
 

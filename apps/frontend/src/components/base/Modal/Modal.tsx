@@ -1,8 +1,10 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useEffect, useMemo, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useModal } from "@/hooks/useModal";
 import { useModalContext } from "@/contexts/ModalContext";
+import { clsx } from "@/utils";
 
 interface ModalProps {
 	isOpen?: boolean;
@@ -13,6 +15,7 @@ interface ModalProps {
 	closeOnBackdrop?: boolean;
 	closeOnEscape?: boolean;
 	id?: string;
+	className?: string;
 	// Internal props from useModal/useRouteModal
 	zIndex?: number;
 	isAnimating?: boolean;
@@ -87,12 +90,15 @@ function Modal({
 	closeOnBackdrop = true,
 	closeOnEscape = true,
 	id,
+	className,
 	// External modal props (from useRouteModal or direct useModal)
 	zIndex: externalZIndex,
 	isAnimating: externalIsAnimating,
 	shouldRender: externalShouldRender,
 	handleBackdropClick: externalHandleBackdropClick
 }: ModalProps) {
+	const modalContainerRef = useRef<HTMLDivElement>(null);
+
 	// Only use internal useModal if external props are not provided
 	const internalModalProps = useModal({
 		isOpen,
@@ -124,34 +130,55 @@ function Modal({
 		return heightMap[index];
 	}, [height, stackPosition]);
 
-	if (!shouldRender) return null;
-
 	const handleBackdropClickInternal = () => {
 		if (closeOnBackdrop) {
 			handleBackdropClick?.();
 		}
 	};
 
+	// effects
+	useEffect(() => {
+		if (isOpen && isAnimating) {
+			// Wait for animation to complete, then focus
+			const timer = setTimeout(() => {
+				modalContainerRef.current?.focus();
+			}, 100);
+			return () => clearTimeout(timer);
+		}
+	}, [isOpen, isAnimating]);
+
+	// renders
+	if (!shouldRender) {
+		return null;
+	}
+
 	const ModalContent = (
 		<div
 			data-modal-id={id}
-			className="fixed inset-0 overflow-y-auto"
+			className="modal-wrapper fixed inset-0 overflow-y-auto"
 			style={{ zIndex }}>
 			{/* Backdrop */}
 			<div
-				className={`fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
+				className={`modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
 					isAnimating ? "opacity-100" : "opacity-0"
 				}`}
+				aria-hidden="true"
 				onClick={handleBackdropClickInternal}
 			/>
 
 			{/* Modal Container */}
-			<div className="flex min-h-full items-center justify-center p-4">
+			<div
+				ref={modalContainerRef}
+				className="modal-container flex min-h-full items-center justify-center p-4"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="modal-title"
+				tabIndex={-1}>
 				{/* Modal Panel */}
 				<div
 					className={`relative w-full overflow-hidden ${sizeClasses[adjustedSize]} ${adjustedHeight ? heightClasses[adjustedHeight] : ""} flex flex-col bg-white dark:bg-neutral-800 rounded-2xl shadow-xl transition-all duration-300 ${
 						isAnimating ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-					}`}
+					} ${className || ""}`}
 					onClick={(e) => e.stopPropagation()}
 					style={{ zIndex: zIndex + 1 }}>
 					{children}
@@ -180,7 +207,24 @@ function ModalHeader({ children, onClose, showCloseButton = true }: ModalHeaderP
 }
 
 function ModalContent({ children, className = "", noPadding = false }: ModalContentProps) {
-	return <div className={`flex-1 overflow-y-auto ${noPadding ? "" : "p-6"} ${className}`}>{children}</div>;
+	const location = useLocation();
+	const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+	// effects
+	// reset scroll position when tab changes
+	useEffect(() => {
+		if (scrollContainerRef.current && scrollContainerRef.current.scrollTop !== 0) {
+			scrollContainerRef.current.scrollTop = 0;
+		}
+	}, [location.pathname]);
+
+	return (
+		<div
+			ref={scrollContainerRef}
+			className={clsx("flex-1 overflow-y-auto", { "p-6": !noPadding }, className)}>
+			{children}
+		</div>
+	);
 }
 
 function ModalFooter({ children, className = "" }: ModalFooterProps) {

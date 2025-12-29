@@ -258,7 +258,7 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 	});
 
 	return (
-		<div className="bg-gray-50 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+		<div className="bg-gray-50 dark:bg-neutral-800 shadow-sm rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 			<div className="w-full relative">
 				{/* Loading Overlay */}
 				<LoadingOverlay show={loading} />
@@ -272,7 +272,9 @@ const InstancesTable = ({ data, loading }: InstancesTableProps) => {
 										<th
 											key={header.id}
 											className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+											{header.isPlaceholder
+												? null
+												: flexRender(header.column.columnDef.header, header.getContext())}
 										</th>
 									))}
 								</tr>

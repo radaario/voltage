@@ -176,7 +176,9 @@ const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, exclu
 	};
 
 	// Filter out excluded keys and null/undefined values
-	const entries = Object.entries(data).filter(([key, value]) => !excludedKeys.includes(key) && value !== undefined && value !== null);
+	const entries = Object.entries(data).filter(
+		([key, value]) => !excludedKeys.includes(key) && value !== undefined && value !== null
+	);
 
 	if (entries.length === 0) {
 		return (
@@ -194,7 +196,7 @@ const TableKeyValuePreview: React.FC<TableKeyValuePreviewProps> = ({ data, exclu
 						<tr
 							key={key}
 							className="hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors">
-							<td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 dark:text-white uppercase">
+							<td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-gray-900 dark:text-white uppercase">
 								{formatKey(key)}
 							</td>
 							<td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{renderValue(key, value, data)}</td>

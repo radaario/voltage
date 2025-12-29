@@ -6,7 +6,18 @@ import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "
 import { Log } from "@/interfaces/log";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/utils";
-import { Label, Button, Tooltip, TimeAgo, Pagination, LoadingOverlay, EmptyState, JobCard, WorkerCard, ConfirmModal } from "@/components";
+import {
+	Label,
+	Button,
+	Tooltip,
+	TimeAgo,
+	Pagination,
+	LoadingOverlay,
+	EmptyState,
+	JobCard,
+	WorkerCard,
+	ConfirmModal
+} from "@/components";
 import type { PaginationInfo } from "@/types";
 
 interface LogsTableProps {
@@ -164,7 +175,7 @@ const LogsTable = ({ data, loading, pagination, onPageChange, onLimitChange, new
 	});
 
 	return (
-		<div className="bg-gray-50 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+		<div className="bg-gray-50 dark:bg-neutral-800 shadow-sm rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 			<div className="w-full relative">
 				{/* Loading Overlay */}
 				<LoadingOverlay show={loading} />

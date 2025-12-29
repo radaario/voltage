@@ -32,7 +32,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 	isLoading = false,
 	loadingText
 }) => {
-	// Variant-based styling
+	// variant-based styling
 	const variantConfig = {
 		danger: {
 			iconBg: "bg-red-100 dark:bg-red-900/20",
@@ -71,24 +71,25 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 			closeOnBackdrop={!isLoading}
 			closeOnEscape={!isLoading}
 			data-modal-id="ConfirmModal">
-			<Modal.Content noPadding>
-				<div className="p-6">
-					<div className="flex items-start gap-4">
-						{/* Icon */}
-						{!noIcon && (
-							<div className={`shrink-0 w-12 h-12 rounded-full ${config.iconBg} flex items-center justify-center`}>
-								<IconComponent className={`h-6 w-6 ${config.iconColor}`} />
-							</div>
-						)}
-
-						{/* Content */}
-						<div className="flex-1 min-w-0">
-							<h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
-							<div className="mt-2 text-sm text-gray-600 dark:text-gray-400">{message}</div>
+			{/* Modal Content */}
+			<Modal.Content>
+				<div className="flex items-start gap-4">
+					{/* Icon */}
+					{!noIcon && (
+						<div className={`shrink-0 w-12 h-12 rounded-full ${config.iconBg} flex items-center justify-center`}>
+							<IconComponent className={`h-6 w-6 ${config.iconColor}`} />
 						</div>
+					)}
+
+					{/* Content */}
+					<div className="flex-1 min-w-0">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+						<div className="mt-2 text-sm text-gray-600 dark:text-gray-400">{message}</div>
 					</div>
 				</div>
 			</Modal.Content>
+
+			{/* Modal Footer */}
 			<Modal.Footer>
 				<Button
 					variant="ghost"

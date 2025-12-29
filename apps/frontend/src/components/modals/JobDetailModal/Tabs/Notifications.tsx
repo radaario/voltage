@@ -151,7 +151,9 @@ const Notifications: React.FC = () => {
 										e.stopPropagation();
 										handleRetryNotification(notification);
 									}}
-									disabled={!["FAILED"].includes(notification?.status as string) || retryNotificationMutation.isPending}>
+									disabled={
+										!["FAILED"].includes(notification?.status as string) || retryNotificationMutation.isPending
+									}>
 									<ArrowPathIcon className="w-4 h-4" />
 								</Button>
 							</Tooltip>
@@ -185,7 +187,7 @@ const Notifications: React.FC = () => {
 
 	return (
 		<div className="space-y-4">
-			<div className="bg-gray-50 dark:bg-neutral-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+			<div className="bg-gray-50 dark:bg-neutral-800 shadow-sm rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
 				<div className="w-full relative">
 					{/* Loading Overlay */}
 					<LoadingOverlay show={isLoading} />

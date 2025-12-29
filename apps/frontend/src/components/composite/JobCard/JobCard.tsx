@@ -8,11 +8,12 @@ import { Job } from "@/interfaces";
 interface JobCardProps {
 	jobKey: string;
 	title?: string;
+	showDisplayJobKey?: boolean;
 	onClick?: () => void;
 	className?: string;
 }
 
-const JobCard = ({ jobKey, title, onClick, className }: JobCardProps) => {
+const JobCard = ({ jobKey, title, showDisplayJobKey = true, onClick, className }: JobCardProps) => {
 	const navigate = useNavigate();
 	const { authToken } = useAuth();
 
@@ -56,13 +57,13 @@ const JobCard = ({ jobKey, title, onClick, className }: JobCardProps) => {
 					className="w-4 h-4 relative shrink-0 bg-gray-100 dark:bg-neutral-700 rounded overflow-hidden"
 				/>
 				{/* Content */}
-				<div className="flex-1 min-w-0">
+				<div className="flex-1 min-w-0 empty:hidden">
 					{displayTitle && (
 						<div className="text-sm font-medium text-gray-900 dark:text-white sm:truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
 							{displayTitle}
 						</div>
 					)}
-					<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{jobKey}</div>
+					{showDisplayJobKey && <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{jobKey}</div>}
 				</div>
 			</button>
 		</Tooltip>

@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRouteModal } from "@/hooks/useRouteModal";
 import { api, ApiResponse } from "@/utils";
 import type { Instance } from "@/interfaces/instance";
-import { Modal, Label, Button, Tooltip, TabsNavigation } from "@/components";
+import { Modal, Label, Button, Tooltip, TabsNavigation, Alert, LoadingSpinner } from "@/components";
 import { getWorkerName, getInstanceNameForWorker } from "@/utils/naming";
 
 interface ParentOutletContext {
@@ -52,10 +52,6 @@ const WorkerDetailModal = () => {
 	}, [isStandalone, instancesResponse, outletContext, workerKey]);
 
 	const isLoading = isStandalone ? instancesLoading : false;
-
-	if (!workerKey) {
-		return null;
-	}
 
 	// Determine the back navigation path based on mode
 	const navigateBackTo = isStandalone ? `/instances` : `/instances/${instanceKey}/workers`;
@@ -121,7 +117,7 @@ const WorkerDetailModal = () => {
 			</Modal.Header>
 
 			{/* Tabs Navigation - Only show if worker is found */}
-			{worker && <TabsNavigation tabs={tabs} />}
+			<TabsNavigation tabs={tabs} />
 
 			{/* Content */}
 			<Modal.Content
@@ -129,15 +125,15 @@ const WorkerDetailModal = () => {
 				className="h-[60vh]">
 				<div className="p-6 h-full overflow-y-auto">
 					{isLoading ? (
-						<div className="text-center py-12">
-							<p className="text-gray-500 dark:text-gray-400">Loading worker data...</p>
-						</div>
-					) : worker ? (
-						<Outlet context={{ worker, instance }} />
+						<LoadingSpinner />
+					) : !worker ? (
+						<Alert
+							variant="error"
+							onClose={modalProps.handleClose}>
+							Worker not found
+						</Alert>
 					) : (
-						<div className="text-center py-12">
-							<p className="text-gray-500 dark:text-gray-400">Worker not found</p>
-						</div>
+						<Outlet context={{ worker, instance }} />
 					)}
 				</div>
 			</Modal.Content>

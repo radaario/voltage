@@ -4,7 +4,7 @@ import { DocumentTextIcon, InformationCircleIcon, CircleStackIcon, XMarkIcon } f
 import { useAuth } from "@/hooks/useAuth";
 import { useRouteModal } from "@/hooks/useRouteModal";
 import type { Log } from "@/interfaces/log";
-import { Modal, Label, Button, Tooltip, TabsNavigation, LoadingSpinner } from "@/components";
+import { Modal, Label, Button, Tooltip, TabsNavigation, LoadingSpinner, Alert } from "@/components";
 import { api, ApiResponse } from "@/utils";
 import { useMemo } from "react";
 
@@ -123,17 +123,11 @@ const LogDetailModal: React.FC = () => {
 					{isLoading ? (
 						<LoadingSpinner />
 					) : isError || !log ? (
-						<div className="flex flex-col justify-center items-center py-12 gap-3">
-							<p className="text-sm text-gray-600 dark:text-gray-400">
-								{isError ? "Failed to load log. The log may not exist." : "Log not found."}
-							</p>
-							<Button
-								variant="secondary"
-								size="sm"
-								onClick={modalProps.handleClose}>
-								Close
-							</Button>
-						</div>
+						<Alert
+							variant="error"
+							onClose={modalProps.handleClose}>
+							Log not found.
+						</Alert>
 					) : (
 						<Outlet context={{ log: log }} />
 					)}
