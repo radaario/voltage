@@ -131,24 +131,24 @@ export const createJob = async (body: JobRequest) => {
 			retry_in: undefined
 		};
 
-		if (jobOutputConfig.threads === undefined && jobConfig.ffmpeg_threads) {
-			jobOutputConfig.threads = jobConfig.ffmpeg_threads || appConfig.utils.ffmpeg.threads || null;
+		if (jobOutputConfig.threads === undefined) {
+			jobOutputConfig.threads = jobConfig.ffmpeg_threads;
 		}
 
-		if (!jobOutputConfig.preset) {
-			jobOutputConfig.preset = jobConfig.ffmpeg_preset || appConfig.utils.ffmpeg.preset || "DEFAULT";
+		if (jobOutputConfig.preset === undefined) {
+			jobOutputConfig.preset = jobConfig.ffmpeg_preset;
 		}
 
-		if (jobOutputConfig.quality === undefined && jobConfig.ffmpeg_quality) {
-			jobOutputConfig.quality = jobConfig.ffmpeg_quality || null;
+		if (jobOutputConfig.quality === undefined) {
+			jobOutputConfig.quality = jobConfig.ffmpeg_quality;
 		}
 
-		if (jobOutputConfig.bit_rate_min === undefined && jobConfig.ffmpeg_bit_rate_min) {
-			jobOutputConfig.bit_rate_min = jobConfig.ffmpeg_bit_rate_min || null;
+		if (jobOutputConfig.bit_rate_min === undefined) {
+			jobOutputConfig.bit_rate_min = jobConfig.ffmpeg_bit_rate_min;
 		}
 
-		if (jobOutputConfig.bit_rate_max === undefined && jobConfig.ffmpeg_bit_rate_max) {
-			jobOutputConfig.bit_rate_max = jobConfig.ffmpeg_bit_rate_max || null;
+		if (jobOutputConfig.bit_rate_max === undefined) {
+			jobOutputConfig.bit_rate_max = jobConfig.ffmpeg_bit_rate_max;
 		}
 
 		if (["SUBTITLE"].includes(jobOutputType)) {

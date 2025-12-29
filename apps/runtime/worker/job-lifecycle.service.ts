@@ -109,6 +109,8 @@ export class JobLifecycleService {
 			job.progress += progressIncrement;
 		}
 
+		job.progress = parseFloat((job.progress || 0.0).toFixed(2));
+
 		try {
 			await database
 				.table("jobs")
@@ -121,7 +123,6 @@ export class JobLifecycleService {
 					notification: job.notification ? JSON.stringify(job.notification) : null,
 					metadata: job.metadata ? JSON.stringify(job.metadata) : null,
 					outcome: job.outcome ? JSON.stringify(job.outcome) : null,
-					progress: parseFloat((job.progress || 0.0).toFixed(2)),
 					updated_at: getNow()
 				});
 
