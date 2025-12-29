@@ -131,7 +131,7 @@ export const createJob = async (body: JobRequest) => {
 			retry_in: undefined
 		};
 
-		if (!jobOutputConfig.threads) {
+		if (jobOutputConfig.threads === undefined && jobConfig.ffmpeg_threads) {
 			jobOutputConfig.threads = jobConfig.ffmpeg_threads || appConfig.utils.ffmpeg.threads || null;
 		}
 

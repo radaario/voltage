@@ -403,6 +403,18 @@ export class JobOutputProcessor {
 					videoFilters.push(
 						`scale=${this.output.config.width}:${this.output.config.height}:force_original_aspect_ratio=decrease,pad=${this.output.config.width}:${this.output.config.height}:(ow-iw)/2:(oh-ih)/2`
 					);
+
+					/*
+					videoFilters.push(
+						`scale=${this.output.config.width}:${this.output.config.height}:force_original_aspect_ratio=decrease,pad=ceil(iw/2)*2:ceil(ih/2)*2`
+					);
+					*/
+
+					/*
+					videoFilters.push(
+						`scale=${this.output.config.width}:${this.output.config.height}:force_original_aspect_ratio=decrease,pad=${this.output.config.width}:${this.output.config.height}:0:0:color=black`
+					);
+					*/
 					break;
 			}
 		}
