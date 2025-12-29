@@ -138,8 +138,9 @@ export const config = {
 		online_timeout: getEnvNumber("VOLTAGE_INSTANCES_ONLINE_TIMEOUT", 15 * 1000), // 15 seconds
 		purge_after: getEnvNumber("VOLTAGE_INSTANCES_PURGE_AFTER", 60 * 1000), // 1 minute
 		workers: {
-			per_cpu_core: getEnvNumber("VOLTAGE_WORKERS_PER_CPU_CORE", 1), // e.g., 1 worker per CPU core
-			max: cpuCoresCount * getEnvNumber("VOLTAGE_WORKERS_PER_CPU_CORE", 1), // e.g., maximum workers
+			// per_cpu_core: getEnvNumber("VOLTAGE_WORKERS_PER_CPU_CORE", 1), // e.g., 1 worker per CPU core
+			// max: cpuCoresCount * getEnvNumber("VOLTAGE_WORKERS_PER_CPU_CORE", 1), // e.g., maximum workers
+			max: getEnvNumber("VOLTAGE_WORKERS_MAX", cpuCoresCount), // e.g., maximum workers
 			busy_interval: getEnvNumber("VOLTAGE_WORKERS_BUSY_INTERVAL", 1 * 1000), // 1 second
 			busy_timeout: getEnvNumber("VOLTAGE_WORKERS_BUSY_TIMEOUT", 5 * 60 * 1000), // 5 minutes
 			idle_after: getEnvNumber("VOLTAGE_WORKERS_IDLE_AFTER", 10 * 1000) // 10 seconds
