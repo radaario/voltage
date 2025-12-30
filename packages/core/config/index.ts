@@ -196,7 +196,7 @@ export const config = {
 
 	// Jobs configuration
 	jobs: {
-		queue_timeout: getEnvNumber("VOLTAGE_JOBS_QUEUE_TIMEOUT", 5 * 60 * 1000), // 5 minutes
+		queue_timeout: getEnvNumberOrNull("VOLTAGE_JOBS_QUEUE_TIMEOUT", null), // null to disable
 		process_interval: getEnvNumber("VOLTAGE_JOBS_PROCESS_INTERVAL", 1 * 1000), // 1 second
 		process_timeout: getEnvNumber("VOLTAGE_JOBS_PROCESS_TIMEOUT", 30 * 60 * 1000), // 30 minutes
 		enqueue_on_receive: getEnvBoolean("VOLTAGE_JOBS_ENQUEUE_ON_RECEIVE", true), // Enqueue job immediately on receive

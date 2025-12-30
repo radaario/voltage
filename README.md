@@ -749,7 +749,7 @@ Delete all data (stats, logs, instances, jobs, notifications)
 
 | Variable                                | Type    | Default    | Description                          |
 | --------------------------------------- | ------- | ---------- | ------------------------------------ |
-| `VOLTAGE_JOBS_QUEUE_TIMEOUT`            | number  | `300000`   | Queue timeout (ms, 5 minutes)        |
+| `VOLTAGE_JOBS_QUEUE_TIMEOUT`            | number  | -          | Queue timeout (ms, 5 minutes)        |
 | `VOLTAGE_JOBS_PROCESS_INTERVAL`         | number  | `1000`     | Processing interval (ms)             |
 | `VOLTAGE_JOBS_PROCESS_TIMEOUT`          | number  | `1800000`  | Processing timeout (ms, 30 minutes)  |
 | `VOLTAGE_JOBS_ENQUEUE_ON_RECEIVE`       | boolean | `true`     | Auto-enqueue on receive              |

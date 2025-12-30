@@ -8,6 +8,8 @@ import { spawnInstanceWorkerForJob } from "@/services/workers.service.js";
 const selfInstanceKey = getInstanceKey();
 
 export const timeoutQueuedJobs = async (): Promise<void> => {
+	if (!appConfig.jobs.queue_timeout) return;
+
 	const now = getNow();
 
 	try {
