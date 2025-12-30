@@ -314,11 +314,14 @@ const jobOutputConfigCommonFileSchema = {
 };
 
 const jobOutputConfigCommonFfmpegSchema = {
+	threads: Joi.number().failover(null).allow(null),
 	preset: Joi.any().constantcase().validOrFallback(FFMPEG_PRESETS, FFMPEG_PRESETS[0]).failover(FFMPEG_PRESETS[0]),
 	quality: Joi.number()
 		.range(0, 100)
 		// .failover(appConfig.utils.ffmpeg.quality ?? null)
-		.allow(null)
+		.allow(null),
+	bit_rate_min: Joi.number().failover(null).allow(null),
+	bit_rate_max: Joi.number().failover(null).allow(null)
 };
 
 const jobOutputConfigCommonVideoSchema = {
