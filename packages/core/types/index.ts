@@ -177,6 +177,8 @@ type JobOutputConfigCommon = {
 	bit_rate_max?: number | null; // maximum bit rate to use for this output (in bps)
 	// try?: number; // maximum number of tries for this output
 	// retry_in?: number; // retry interval for this output in milliseconds
+	whisper_model?: WHISPER_MODEL;
+	whisper_with_cuda?: boolean;
 };
 
 type JobOutputConfigTrim = {
@@ -252,8 +254,6 @@ export type JobOutputRequest = JobOutputConfig & {
 	cache_control?: string; // optional if destination is S3
 	try?: number; // maximum number of tries for this output
 	retry_in?: number; // retry interval for this output in milliseconds
-	whisper_model?: WHISPER_MODEL;
-	whisper_with_cuda?: boolean;
 };
 
 export type JobOutputRow = {
