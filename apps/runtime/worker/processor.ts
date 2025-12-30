@@ -12,8 +12,6 @@ export class JobOutputProcessor {
 	private jobInputDuration: number | null;
 	private output: any;
 
-	private ffmpegQuality: number | null;
-
 	private tempJobDir: string;
 	private tempJobInputFilePath: string;
 	private tempJobOutputFilePath: string;
