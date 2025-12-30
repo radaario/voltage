@@ -28,8 +28,6 @@ export class JobOutputProcessor {
 			this.validateOutputOffset();
 			this.validateOutputDuration();
 
-			this.ffmpegQuality = this.getConfigQuality();
-
 			this.tempJobDir = path.join(appConfig.temp_dir, "jobs", job.key);
 			this.tempJobInputFilePath = path.join(this.tempJobDir, "input");
 
@@ -195,8 +193,10 @@ export class JobOutputProcessor {
 			// Offset
 			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
 
-			if (this.output.config?.image_quality || this.ffmpegQuality) {
-				ffmpegArgs.push("-quality", String(this.calculateQuality(this.output.config.image_quality || this.ffmpegQuality, 1, 31)));
+			// Image quality
+			const imageQuality = this.getConfigQuality(this.output.config?.image_quality);
+			if (imageQuality) {
+				ffmpegArgs.push("-quality", String(this.calculateQuality(imageQuality, 1, 31)));
 			}
 
 			// Extract only one frame
@@ -289,8 +289,9 @@ export class JobOutputProcessor {
 			if (this.output.config?.audio_channels) ffmpegArgs.push("-ac", String(this.output.config.audio_channels));
 
 			// Audio quality
-			if (this.output.config?.audio_quality || this.ffmpegQuality) {
-				ffmpegArgs.push("-q:a", String(this.calculateQuality(this.output.config.audio_quality || this.ffmpegQuality, 0, 9)));
+			const audioQuality = this.getConfigQuality(this.output.config?.audio_quality);
+			if (audioQuality) {
+				ffmpegArgs.push("-q:a", String(this.calculateQuality(audioQuality, 0, 9)));
 			}
 			// }
 
@@ -349,8 +350,10 @@ export class JobOutputProcessor {
 				if (this.output.config?.video_deinterlace) ffmpegArgs.push("-vf", "yadif");
 
 				// Video quality
-				if (this.output.config?.video_quality || this.ffmpegQuality) {
-					ffmpegArgs.push("-q:v", String(this.calculateQuality(this.output.config.video_quality || this.ffmpegQuality, 0, 51)));
+				const videoQuality = this.getConfigQuality(this.output.config?.video_quality);
+				if (videoQuality) {
+					// ffmpegArgs.push("-crf", String(this.calculateQuality(videoQuality, 0, 51)));
+					ffmpegArgs.push("-q:v", String(this.calculateQuality(videoQuality, 0, 51)));
 				}
 
 				// Video filters
@@ -631,7 +634,15 @@ export class JobOutputProcessor {
 		return null;
 	}
 
-	private getConfigQuality(): number | null {
+	private getConfigQuality(quality: number | null | undefined = undefined): number | null {
+		if (quality === null) {
+			return null;
+		}
+
+		if (typeof quality === "number" && quality >= 0) {
+			return quality;
+		}
+
 		if (this.output.config?.quality === null) {
 			return null;
 		}
