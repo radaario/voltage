@@ -1,5 +1,5 @@
 import { config as appConfig } from "@voltage/core/config";
-import { THUMBNAIL_FORMATS } from "@voltage/core/constants";
+import { THUMBNAIL_FORMATS, FFMPEG_PRESETS } from "@voltage/core/constants";
 import { storage } from "@voltage/utils";
 
 import { spawn } from "child_process";
@@ -50,11 +50,12 @@ export class JobThumbnailer {
 			const ffmpegArgs: string[] = ["-y"];
 
 			// Ffmpeg Threads
-			/*
-			if (this.job.config?.ffmpeg_threads) {
-				ffmpegArgs.push("-threads", String(this.job.config?.ffmpeg_threads ?? 0));
+			const ffmpegThreads = this.getConfigThreads();
+			if (ffmpegThreads) ffmpegArgs.push("-threads", ffmpegThreads);
+
+			if (typeof this.job.config?.ffmpeg_threads === "number" && this.job.config.ffmpeg_threads >= 0) {
+				ffmpegArgs.push("-threads", String(this.job.config.ffmpeg_threads));
 			}
-			*/
 
 			ffmpegArgs.push(
 				"-ss",
@@ -65,9 +66,14 @@ export class JobThumbnailer {
 				"1",
 				// '-vf', 'scale=640:-1', // width 640, height auto to maintain aspect ratio
 				"-quality",
-				(options.quality || appConfig.jobs.preview.quality || 75).toString(), // quality
-				tempJobInputPreviewFilePath
+				(options.quality || appConfig.jobs.preview.quality || 75).toString() // quality
 			);
+
+			// Ffmpeg Preset
+			const ffmpegPreset = this.getConfigPreset();
+			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
+
+			ffmpegArgs.push(tempJobInputPreviewFilePath);
 
 			await new Promise<void>((resolve, reject) => {
 				let stderrData = "";
@@ -111,5 +117,37 @@ export class JobThumbnailer {
 			// throw new Error(`Job input preview couldn't be generated! ${error.message || ""}`.trim());
 			// return { ...error || { message: 'Job input preview couldn't be generated!' } };
 		}
+	}
+
+	private getConfigThreads(): string | null {
+		if (this.job.config?.ffmpeg_threads === null) {
+			return null;
+		}
+
+		if (typeof this.job.config?.ffmpeg_threads === "number" && this.job.config.ffmpeg_threads >= 0) {
+			return String(this.job.config.ffmpeg_threads);
+		}
+
+		if (typeof appConfig.utils.ffmpeg?.threads === "number" && appConfig.utils.ffmpeg?.threads >= 0) {
+			return String(appConfig.utils.ffmpeg.threads);
+		}
+
+		return null;
+	}
+
+	private getConfigPreset(): string | null {
+		if (this.job.config?.ffmpeg_preset === null) {
+			return null;
+		}
+
+		if (this.job.config?.ffmpeg_preset && FFMPEG_PRESETS.includes(this.job.config.ffmpeg_preset.toUpperCase())) {
+			return this.job.config.ffmpeg_preset.toLocaleLowerCase().replace("_", "");
+		}
+
+		if (appConfig.utils.ffmpeg?.preset && FFMPEG_PRESETS.includes(appConfig.utils.ffmpeg.preset)) {
+			return appConfig.utils.ffmpeg.preset.toLocaleLowerCase().replace("_", "");
+		}
+
+		return null;
 	}
 }

@@ -132,27 +132,27 @@ export const createJob = async (body: JobRequest) => {
 		};
 
 		if (jobOutputConfig.threads === undefined) {
-			jobOutputConfig.threads = jobConfig.ffmpeg_threads;
+			jobOutputConfig.threads = jobConfig.ffmpeg_threads || appConfig.utils.ffmpeg.threads || null;
 		}
 
 		if (jobOutputConfig.preset === undefined) {
-			jobOutputConfig.preset = jobConfig.ffmpeg_preset;
+			jobOutputConfig.preset = jobConfig.ffmpeg_preset || appConfig.utils.ffmpeg.preset || "DEFAULT";
 		}
 
 		if (jobOutputConfig.quality === undefined) {
-			jobOutputConfig.quality = jobConfig.ffmpeg_quality;
+			jobOutputConfig.quality = jobConfig.ffmpeg_quality || appConfig.utils.ffmpeg.quality || null;
 		}
 
 		if (jobOutputConfig.bit_rate_min === undefined) {
-			jobOutputConfig.bit_rate_min = jobConfig.ffmpeg_bit_rate_min;
+			jobOutputConfig.bit_rate_min = jobConfig.ffmpeg_bit_rate_min || appConfig.utils.ffmpeg.bit_rate_min || null;
 		}
 
 		if (jobOutputConfig.bit_rate_max === undefined) {
-			jobOutputConfig.bit_rate_max = jobConfig.ffmpeg_bit_rate_max;
+			jobOutputConfig.bit_rate_max = jobConfig.ffmpeg_bit_rate_max || appConfig.utils.ffmpeg.bit_rate_max || null;
 		}
 
 		if (["SUBTITLE"].includes(jobOutputType)) {
-			if (!jobOutputConfig.whisper_model) {
+			if (jobOutputConfig.whisper_model === undefined) {
 				jobOutputConfig.whisper_model = jobConfig.whisper_model || appConfig.utils.whisper.model || "BASE";
 			}
 

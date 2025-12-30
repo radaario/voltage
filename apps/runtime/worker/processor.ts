@@ -12,6 +12,8 @@ export class JobOutputProcessor {
 	private jobInputDuration: number | null;
 	private output: any;
 
+	private ffmpegQuality: number | null;
+
 	private tempJobDir: string;
 	private tempJobInputFilePath: string;
 	private tempJobOutputFilePath: string;
@@ -25,6 +27,8 @@ export class JobOutputProcessor {
 
 			this.validateOutputOffset();
 			this.validateOutputDuration();
+
+			this.ffmpegQuality = this.getConfigQuality();
 
 			this.tempJobDir = path.join(appConfig.temp_dir, "jobs", job.key);
 			this.tempJobInputFilePath = path.join(this.tempJobDir, "input");
@@ -79,8 +83,8 @@ export class JobOutputProcessor {
 			const ffmpegArgs: string[] = ["-y"];
 
 			// Ffmpeg Threads
-			const ffmpegThreads = this.outputThreads();
-			if (!ffmpegThreads) ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
+			const ffmpegThreads = this.getConfigThreads();
+			if (ffmpegThreads) ffmpegArgs.push("-threads", ffmpegThreads);
 
 			ffmpegArgs.push("-i", this.tempJobInputFilePath, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le");
 
@@ -91,7 +95,7 @@ export class JobOutputProcessor {
 			if (this.output.config?.duration) ffmpegArgs.push("-t", String(this.output.config.duration));
 
 			// Ffmpeg Preset
-			const ffmpegPreset = this.outputPreset();
+			const ffmpegPreset = this.getConfigPreset();
 			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
 
 			ffmpegArgs.push(jobInputAudioFilePath);
@@ -183,19 +187,16 @@ export class JobOutputProcessor {
 			const ffmpegArgs: string[] = ["-y"];
 
 			// Ffmpeg Threads
-			const ffmpegThreads = this.outputThreads();
-			if (!ffmpegThreads) ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
+			const ffmpegThreads = this.getConfigThreads();
+			if (ffmpegThreads) ffmpegArgs.push("-threads", ffmpegThreads);
 
 			ffmpegArgs.push("-i", this.tempJobInputFilePath);
 
 			// Offset
 			if (this.output.config?.offset) ffmpegArgs.push("-ss", String(this.output.config.offset));
 
-			if (this.output.config?.image_quality || this.output.config?.quality) {
-				ffmpegArgs.push(
-					"-quality",
-					String(this.calculateQuality(this.output.config.image_quality || this.output.config?.quality, 1, 31))
-				);
+			if (this.output.config?.image_quality || this.ffmpegQuality) {
+				ffmpegArgs.push("-quality", String(this.calculateQuality(this.output.config.image_quality || this.ffmpegQuality, 1, 31)));
 			}
 
 			// Extract only one frame
@@ -206,7 +207,7 @@ export class JobOutputProcessor {
 			if (videoFilters.length > 0) ffmpegArgs.push("-vf", videoFilters.join(","));
 
 			// Ffmpeg Preset
-			const ffmpegPreset = this.outputPreset();
+			const ffmpegPreset = this.getConfigPreset();
 			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
 
 			ffmpegArgs.push(this.tempJobOutputFilePath);
@@ -238,8 +239,8 @@ export class JobOutputProcessor {
 			const ffmpegArgs: string[] = ["-y"];
 
 			// Ffmpeg Threads
-			const ffmpegThreads = this.outputThreads();
-			if (!ffmpegThreads) ffmpegArgs.push("-threads", String(this.output.config?.threads ?? 0));
+			const ffmpegThreads = this.getConfigThreads();
+			if (ffmpegThreads) ffmpegArgs.push("-threads", ffmpegThreads);
 
 			ffmpegArgs.push("-i", this.tempJobInputFilePath);
 
@@ -288,11 +289,8 @@ export class JobOutputProcessor {
 			if (this.output.config?.audio_channels) ffmpegArgs.push("-ac", String(this.output.config.audio_channels));
 
 			// Audio quality
-			if (this.output.config?.audio_quality || this.output.config?.quality) {
-				ffmpegArgs.push(
-					"-q:a",
-					String(this.calculateQuality(this.output.config.audio_quality || this.output.config?.quality, 0, 9))
-				);
+			if (this.output.config?.audio_quality || this.ffmpegQuality) {
+				ffmpegArgs.push("-q:a", String(this.calculateQuality(this.output.config.audio_quality || this.ffmpegQuality, 0, 9)));
 			}
 			// }
 
@@ -351,11 +349,8 @@ export class JobOutputProcessor {
 				if (this.output.config?.video_deinterlace) ffmpegArgs.push("-vf", "yadif");
 
 				// Video quality
-				if (this.output.config?.video_quality || this.output.config?.quality) {
-					ffmpegArgs.push(
-						"-q:v",
-						String(this.calculateQuality(this.output.config.video_quality || this.output.config?.quality, 0, 51))
-					);
+				if (this.output.config?.video_quality || this.ffmpegQuality) {
+					ffmpegArgs.push("-q:v", String(this.calculateQuality(this.output.config.video_quality || this.ffmpegQuality, 0, 51)));
 				}
 
 				// Video filters
@@ -364,17 +359,17 @@ export class JobOutputProcessor {
 			}
 
 			// Ffmpeg Preset
-			const ffmpegPreset = this.outputPreset();
+			const ffmpegPreset = this.getConfigPreset();
 			if (ffmpegPreset) ffmpegArgs.push("-preset", ffmpegPreset);
 
 			// Ffmpeg Minimum & Maximum Bit Rate
-			if (this.output.config?.bit_rate_min || this.job.config?.ffmpeg_bit_rate_min) {
-				if (this.output.config?.bit_rate_min) ffmpegArgs.push("-minrate", this.parseBitRate(this.output.config.bit_rate_min));
-				if (this.output.config?.bit_rate_max) ffmpegArgs.push("-maxrate", this.parseBitRate(this.output.config.bit_rate_max));
-				ffmpegArgs.push(
-					"-bufsize",
-					this.parseBitRate((this.output.config.bit_rate_max || this.job.config?.ffmpeg_bit_rate_max || 0) * 2)
-				);
+			const ffmpegBitRateMin = this.getConfigBitRateMin();
+			const ffmpegBitRateMax = this.getConfigBitRateMax();
+
+			if (ffmpegBitRateMin) ffmpegArgs.push("-minrate", this.parseBitRate(ffmpegBitRateMin));
+			if (ffmpegBitRateMax) {
+				ffmpegArgs.push("-maxrate", this.parseBitRate(ffmpegBitRateMax));
+				ffmpegArgs.push("-bufsize", this.parseBitRate(ffmpegBitRateMax * 2));
 			}
 
 			ffmpegArgs.push(this.tempJobOutputFilePath);
@@ -588,27 +583,124 @@ export class JobOutputProcessor {
 		return Math.round(bottom + (value / 100) * (top - bottom));
 	}
 
-	private outputThreads(): number | null {
-		let threads = null;
-
-		if (this.job.config?.ffmpeg_threads !== undefined) {
-			threads = this.job.config.ffmpeg_threads;
+	private getConfigThreads(): string | null {
+		if (this.output.config?.threads === null) {
+			return null;
 		}
 
-		if (this.output.config?.threads !== undefined) {
-			threads = this.output.config.threads;
+		if (typeof this.output.config?.threads === "number" && this.output.config.threads >= 0) {
+			return String(this.output.config.threads);
 		}
 
-		return threads;
+		if (this.job.config?.ffmpeg_threads === null) {
+			return null;
+		}
+
+		if (typeof this.job.config?.ffmpeg_threads === "number" && this.job.config.ffmpeg_threads >= 0) {
+			return String(this.job.config.ffmpeg_threads);
+		}
+
+		if (typeof appConfig.utils.ffmpeg?.threads === "number" && appConfig.utils.ffmpeg?.threads >= 0) {
+			return String(appConfig.utils.ffmpeg.threads);
+		}
+
+		return null;
 	}
 
-	private outputPreset(): string | null {
-		let preset = "DEFAULT";
+	private getConfigPreset(): string | null {
+		if (this.output.config?.preset === null) {
+			return null;
+		}
 
-		const outputPreset = this.output.config?.preset || this.job.config?.ffmpeg_preset;
-		if (outputPreset && FFMPEG_PRESETS.includes(outputPreset.toUpperCase())) preset = outputPreset.toUpperCase();
+		if (this.output.config?.preset && FFMPEG_PRESETS.includes(this.output.config.preset.toUpperCase())) {
+			return this.output.config.preset.toLocaleLowerCase().replace("_", "");
+		}
 
-		return preset == "DEFAULT" ? null : preset.toLocaleLowerCase().replace("_", "");
+		if (this.job.config?.ffmpeg_preset === null) {
+			return null;
+		}
+
+		if (this.job.config?.ffmpeg_preset && FFMPEG_PRESETS.includes(this.job.config.ffmpeg_preset.toUpperCase())) {
+			return this.job.config.ffmpeg_preset.toLocaleLowerCase().replace("_", "");
+		}
+
+		if (appConfig.utils.ffmpeg?.preset && FFMPEG_PRESETS.includes(appConfig.utils.ffmpeg.preset)) {
+			return appConfig.utils.ffmpeg.preset.toLocaleLowerCase().replace("_", "");
+		}
+
+		return null;
+	}
+
+	private getConfigQuality(): number | null {
+		if (this.output.config?.quality === null) {
+			return null;
+		}
+
+		if (typeof this.output.config?.quality === "number" && this.output.config.quality >= 0) {
+			return this.output.config.quality;
+		}
+
+		if (this.job.config?.ffmpeg_quality === null) {
+			return null;
+		}
+
+		if (typeof this.job.config?.ffmpeg_quality === "number" && this.job.config.ffmpeg_quality >= 0) {
+			return this.job.config.ffmpeg_quality;
+		}
+
+		if (typeof appConfig.utils.ffmpeg?.quality === "number" && appConfig.utils.ffmpeg?.quality >= 0) {
+			return appConfig.utils.ffmpeg.quality;
+		}
+
+		return null;
+	}
+
+	private getConfigBitRateMin(): number | null {
+		if (this.output.config?.bit_rate_min === null) {
+			return null;
+		}
+
+		if (typeof this.output.config?.bit_rate_min === "number" && this.output.config.bit_rate_min >= 0) {
+			return this.output.config.bit_rate_min;
+		}
+
+		if (this.job.config?.ffmpeg_bit_rate_min === null) {
+			return null;
+		}
+
+		if (typeof this.job.config?.ffmpeg_bit_rate_min === "number" && this.job.config.ffmpeg_bit_rate_min >= 0) {
+			return this.job.config.ffmpeg_bit_rate_min;
+		}
+
+		if (typeof appConfig.utils.ffmpeg?.bit_rate_min === "number" && appConfig.utils.ffmpeg?.bit_rate_min >= 0) {
+			return appConfig.utils.ffmpeg.bit_rate_min;
+		}
+
+		return null;
+	}
+
+	private getConfigBitRateMax(): number | null {
+		if (this.output.config?.bit_rate_max === null) {
+			return null;
+		}
+
+		if (typeof this.output.config?.bit_rate_max === "number" && this.output.config.bit_rate_max >= 0) {
+			return this.output.config.bit_rate_max;
+		}
+
+		if (this.job.config?.ffmpeg_bit_rate_max === null) {
+			return null;
+		}
+
+		if (typeof this.job.config?.ffmpeg_bit_rate_max === "number" && this.job.config.ffmpeg_bit_rate_max >= 0) {
+			return this.job.config.ffmpeg_bit_rate_max;
+		}
+
+		if (typeof appConfig.utils.ffmpeg?.bit_rate_max === "number" && appConfig.utils.ffmpeg?.bit_rate_max >= 0) {
+			return appConfig.utils.ffmpeg.bit_rate_max;
+		}
+
+		return null;
 	}
 
 	private validateOutputOffset(): void {
