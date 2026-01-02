@@ -84,7 +84,7 @@ function Pagination({
 	return (
 		<div
 			className={clsx(
-				"pr-6 pl-0 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700",
+				"pr-6 pl-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-neutral-700",
 				className
 			)}>
 			{/* Pagination Controls */}
