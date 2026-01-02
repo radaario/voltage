@@ -16,7 +16,7 @@
 
 ---
 
-![Screenshot 1](assets/voltage-frontend-overview-ss-001.webp) ![Screenshot 2](assets/voltage-frontend-overview-ss-002.webp) ![Screenshot 3](assets/voltage-frontend-overview-ss-003.webp)
+![Screenshot 1](assets/voltage-frontend-overview-ss-001.jpg) ![Screenshot 2](assets/voltage-frontend-overview-ss-002.jpg) ![Screenshot 3](assets/voltage-frontend-overview-ss-003.jpg)
 
 ---
 
