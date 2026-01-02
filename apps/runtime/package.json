@@ -13,7 +13,10 @@
 		"dev": "tsx watch index.ts",
 		"build": "tsc --build tsconfig.json && tsc-alias",
 		"start": "node dist/index.js",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "vitest",
+		"test:watch": "vitest --watch",
+		"test:coverage": "vitest --coverage"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.901.0",
