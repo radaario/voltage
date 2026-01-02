@@ -113,7 +113,7 @@ describe("Response Util", () => {
 				const mockRes = {
 					json: vi.fn().mockReturnThis(),
 					status: vi.fn().mockReturnThis()
-				};
+				} as any;
 
 				sendError(mockRes, statusCode, errorCode, errorMessage);
 
@@ -197,7 +197,7 @@ describe("Response Util", () => {
 				const mockRes = {
 					json: vi.fn().mockReturnThis(),
 					status: vi.fn().mockReturnThis()
-				};
+				} as any;
 
 				sendPaginatedSuccess(mockRes, [], { limit, page: 1, total });
 
