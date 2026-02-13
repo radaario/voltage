@@ -1,21 +1,7 @@
 import { useOutletContext } from "react-router-dom";
 import { TableKeyValuePreview } from "@/components";
+import { formatBytes, formatPercent, formatMHz } from "@/utils/format";
 import type { InstanceOutletContext } from "@/types/modal";
-
-// Format helper functions
-const formatBytes = (bytes: number): string => {
-	const gb = bytes / 1024 ** 3;
-	return `${gb.toFixed(2)} GB`;
-};
-
-const formatPercent = (value: number): string => {
-	return `${value.toFixed(1)}%`;
-};
-
-const formatMHz = (mhz: number): string => {
-	const ghz = mhz / 1000;
-	return `${ghz.toFixed(2)} GHz`;
-};
 
 const Info: React.FC = () => {
 	const { instance } = useOutletContext<InstanceOutletContext>();
