@@ -23,5 +23,5 @@ export * from "./helpers/content-type";
 
 export { stats } from "./stats";
 export { logger } from "./logger";
-export { storage } from "./storage";
+export { storage, StorageFacade } from "./storage";
 export { database } from "./database";
