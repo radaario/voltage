@@ -17,7 +17,7 @@ async function processJobs(): Promise<void> {
 	// JOBs: PENDINGs
 	logger.console("INSTANCE", "INFO", "Enqueuing pending jobs...");
 
-	// await timeoutQueuedJobs();
+	await timeoutQueuedJobs();
 	await enqueuePendingJobs();
 
 	// JOBs: QUEUEDs: PROCESSING
