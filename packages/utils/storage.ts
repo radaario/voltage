@@ -244,6 +244,7 @@ class S3StorageDriver implements StorageDriver {
 
 		const clientConfig: any = {
 			region: this.region,
+			maxAttempts: 3,
 			credentials:
 				accessKeyId && secretAccessKey
 					? {
@@ -874,7 +875,7 @@ class FTPStorageDriver implements StorageDriver {
 }
 
 // Facade
-class StorageFacade implements StorageDriver {
+export class StorageFacade implements StorageDriver {
 	private driver: StorageDriver | null = null;
 	private type: STORAGE_TYPE | null = null;
 

@@ -1,6 +1,6 @@
 import { config as appConfig } from "@voltage/core/config";
 import { HTTPS_TYPES, BASE64_TYPES, STORAGE_S3_LIKE_TYPES, STORAGE_FTP_TYPES } from "@voltage/core/constants";
-import { storage } from "@voltage/utils";
+import { StorageFacade } from "@voltage/utils";
 
 import path from "path";
 import fs from "fs/promises";
@@ -70,6 +70,7 @@ export class JobDownloader {
 
 	private async downloadFromStorage(): Promise<{ temp_path: string }> {
 		if (!this.job.input?.path) throw new Error("No path specified for job input!");
+		const storage = new StorageFacade();
 		await storage.config(this.job.input);
 		await storage.download(this.job.input.path, this.tempJobInputFilePath);
 		return { temp_path: this.tempJobInputFilePath };

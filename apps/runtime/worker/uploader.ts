@@ -1,6 +1,6 @@
 import { config as appConfig } from "@voltage/core/config";
 import { HTTPS_TYPES, STORAGE_S3_LIKE_TYPES, STORAGE_FTP_TYPES } from "@voltage/core/constants";
-import { storage, guessContentType } from "@voltage/utils";
+import { StorageFacade, guessContentType } from "@voltage/utils";
 
 import path from "path";
 import fs from "fs/promises";
@@ -35,18 +35,43 @@ export class JobUploader {
 	}
 
 	async upload(): Promise<Record<string, unknown>> {
-		try {
-			// DESTINATION: TYPE: HTTP & HTTPS
-			if (HTTPS_TYPES.includes(this.destination.type.toUpperCase())) {
-				return await this.uploadHttp();
-			}
+		const maxRetries = 3;
+		const baseDelay = 2000; // 2 seconds
 
-			// DESTINATION: TYPE: OTHERs
-			return await this.uploadToStorage();
-		} catch (error: Error | any) {
-			throw new Error(`Failed to upload job output! ${error.message || ""}`.trim());
-			// return { ...error || { message: 'Failed to upload job output!' } };
+		for (let attempt = 1; attempt <= maxRetries; attempt++) {
+			try {
+				// DESTINATION: TYPE: HTTP & HTTPS
+				if (HTTPS_TYPES.includes(this.destination.type.toUpperCase())) {
+					return await this.uploadHttp();
+				}
+
+				return await this.uploadToStorage();
+			} catch (error: Error | any) {
+				const isRetryable = this.isRetryableError(error);
+
+				if (attempt === maxRetries || !isRetryable) {
+					throw new Error(`Failed to upload job output! ${error.message || ""}`.trim());
+				}
+
+				const delay = baseDelay * Math.pow(2, attempt - 1); // 1s, 2s, 4s
+				await new Promise((resolve) => setTimeout(resolve, delay));
+			}
 		}
+
+		throw new Error("Failed to upload job output!");
+	}
+
+	private isRetryableError(error: Error | any): boolean {
+		const retryableNames = ["InternalError", "ServiceUnavailable", "SlowDown", "RequestTimeout"];
+		if (retryableNames.includes(error?.name)) return true;
+
+		const status = error?.response?.status || error?.$metadata?.httpStatusCode;
+		if (status && (status >= 500 || status === 429)) return true;
+
+		const msg = (error?.message || "").toLowerCase();
+		if (msg.includes("internal") || msg.includes("timeout") || msg.includes("econnreset")) return true;
+
+		return false;
 	}
 
 	private async uploadHttp(): Promise<Record<string, unknown>> {
@@ -97,6 +122,7 @@ export class JobUploader {
 		const expires_in = jobOutputDestination?.expires_in || undefined;
 		const cacheControl = jobOutputDestination?.cache_control || undefined;
 
+		const storage = new StorageFacade();
 		await storage.config(jobOutputDestination);
 		await storage.upload(this.tempJobOutputFilePath, key, contentType, acl, expires_in, cacheControl);
 
