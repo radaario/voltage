@@ -74,7 +74,11 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 			notification.retry_at = addNow(notification.retry_in, "milliseconds");
 
 			// JOB: NOTIFICATION: QUEUE: INSERT
-			await database.table("jobs_notifications_queue").insert(notification); // .onConflict('key').merge();
+			try {
+				await database.table("jobs_notifications_queue").insert(notification); // .onConflict('key').merge();
+			} catch (error: Error | any) {
+				logger.console("NOTIFIER", "ERROR", "Failed to insert notification queue!", { ...error });
+			}
 
 			notificationStats.notifications_retried_count = 1;
 		} else {
@@ -107,7 +111,11 @@ export async function createJobNotification(job: any, jobStatus: string): Promis
 		notificationStats.notifications_failed_count = 1;
 	}
 
-	await stats.update(notificationStats);
+	try {
+		await stats.update(notificationStats);
+	} catch (error: Error | any) {
+		logger.console("NOTIFIER", "ERROR", "Failed to update notification stats!", { ...error });
+	}
 
 	return notifyOutcome;
 }
@@ -186,7 +194,11 @@ export async function retryJobNotification(notification: any): Promise<any> {
 		notificationStats.notifications_failed_count = 1;
 	}
 
-	await stats.update(notificationStats);
+	try {
+		await stats.update(notificationStats);
+	} catch (error: Error | any) {
+		logger.console("NOTIFIER", "ERROR", "Failed to update notification stats!", { ...error });
+	}
 
 	return notifyOutcome;
 }

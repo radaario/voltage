@@ -174,6 +174,14 @@ export const spawnInstanceWorkerForJob = async (
 
 			workersProcessMap.delete(workerKey);
 			await idleInstanceWorker(instanceKey, workerKey, { message: "Worker exited!", exit_code: code, exit_signal: signal });
+
+			if (code !== 0) {
+				await database
+					.table("jobs")
+					.where("key", jobKey)
+					.whereNotIn("status", ["COMPLETED", "CANCELLED", "DELETED", "FAILED", "TIMEOUT"])
+					.update({ status: "PENDING", updated_at: getNow(), locked_by: null });
+			}
 		});
 
 		child.on("error", async (error: Error | any) => {
