@@ -389,7 +389,7 @@ export class JobOutputProcessor {
 
 		// Deinterlace
 		if (this.output.config?.video_deinterlace) {
-			videoFilters.push("yadif");
+			videoFilters.push("yadif=deint=interlaced");
 		}
 
 		if (this.output.config?.width && this.output.config?.height) {
