@@ -81,12 +81,10 @@ export class JobLifecycleService {
 	}
 
 	startWorkerStatusInterval(): void {
-		this.workerStatusInterval = setInterval(
-			async () => {
-				await this.updateWorker({ status: "BUSY", job_key: this.jobKey });
-			},
-			1000 // 1 second
-		);
+		this.workerStatusInterval = setInterval(async () => {
+			await this.updateWorker({ status: "BUSY", job_key: this.jobKey });
+			await database.table("jobs").where("key", this.jobKey).update({ updated_at: getNow() });
+		}, 1000);
 	}
 
 	stopWorkerStatusInterval(): void {

@@ -189,6 +189,7 @@ export const timeoutProcessingJobs = async (): Promise<void> => {
 			await database
 				.table("jobs")
 				.whereIn("key", timeoutedJobsKeys)
+				.whereNotIn("status", ["COMPLETED", "CANCELLED", "DELETED", "FAILED", "TIMEOUT"])
 				.update({
 					outcome: JSON.stringify({ message: "Job processing timed out!" }),
 					status: "TIMEOUT",
