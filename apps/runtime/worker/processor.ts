@@ -344,9 +344,6 @@ export class JobOutputProcessor {
 				// Video frame rate
 				if (this.output.config?.video_frame_rate) ffmpegArgs.push("-r", this.parseFrameRate(this.output.config.video_frame_rate));
 
-				// Deinterlace
-				if (this.output.config?.video_deinterlace) ffmpegArgs.push("-vf", "yadif");
-
 				// Video quality
 				const videoQuality = this.getConfigQuality(this.output.config?.video_quality);
 				if (videoQuality) {
@@ -390,6 +387,11 @@ export class JobOutputProcessor {
 	private buildVideoFilters(): string[] {
 		const videoFilters: string[] = [];
 
+		// Deinterlace
+		if (this.output.config?.video_deinterlace) {
+			videoFilters.push("yadif");
+		}
+
 		if (this.output.config?.width && this.output.config?.height) {
 			const fit = (this.output.config?.fit || "PAD").toUpperCase();
 
@@ -409,21 +411,25 @@ export class JobOutputProcessor {
 					break;
 				case "PAD":
 				default:
+					const outputWidth = Math.ceil(this.output.config.width / 2) * 2;
+					const outputHeight = Math.ceil(this.output.config.height / 2) * 2;
+
 					videoFilters.push(
-						`scale=${this.output.config.width}:${this.output.config.height}:force_original_aspect_ratio=decrease,pad=${this.output.config.width}:${this.output.config.height}:(ow-iw)/2:(oh-ih)/2`
+						`scale=${outputWidth}:${outputHeight}:force_original_aspect_ratio=decrease,pad=${outputWidth}:${outputHeight}:(ow-iw)/2:(oh-ih)/2`
 					);
 
 					/*
 					videoFilters.push(
-						`scale=${this.output.config.width}:${this.output.config.height}:force_original_aspect_ratio=decrease,pad=ceil(iw/2)*2:ceil(ih/2)*2`
+						`scale=${outputWidth}:${outputHeight}:force_original_aspect_ratio=decrease,pad=ceil(iw/2)*2:ceil(ih/2)*2`
 					);
 					*/
 
 					/*
 					videoFilters.push(
-						`scale=${this.output.config.width}:${this.output.config.height}:force_original_aspect_ratio=decrease,pad=${this.output.config.width}:${this.output.config.height}:0:0:color=black`
+						`scale=${outputWidth}:${outputHeight}:force_original_aspect_ratio=decrease,pad=${outputWidth}:${outputHeight}:0:0:color=black`
 					);
 					*/
+
 					break;
 			}
 		}
